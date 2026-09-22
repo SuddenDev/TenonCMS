@@ -4,8 +4,8 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 
 ## Commands
 
-- `pnpm dev:astro` / `pnpm dev:nuxt`: build packages, then start the example
-- `pnpm build`: packages and both examples
+- `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack`: build packages, then start the example (ports 4321 / 3000 / 3100)
+- `pnpm build`: packages and all examples
 - `pnpm typecheck`: all workspaces. Run it before calling work done.
 - `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`
 - `pnpm --filter integral-cms db:generate`: after editing `packages/core/src/db/schema.ts`
@@ -24,6 +24,7 @@ There are no automated tests yet. Verify end to end with the curl smoke test bel
   - `src/nuxt/index.ts`: `addTemplate` handler plus `addServerHandler` for `/admin`, `/admin/**`, `/api/cms/**`. Adds the libsql native binaries to Nitro's `traceInclude`.
 - `packages/admin` is `@integral-cms/admin` (private). It's a Vue 3 + vue-router + Tailwind v4 SPA with base `/admin/`. `scripts/embed.mjs` turns `dist/` into `dist/assets.js` (a path → base64 map), which tsdown bundles into core.
 - `examples/astro`: user code lives in `src/cms.ts`. Secrets come via `astro:env`.
+- `examples/tanstack-start`: no adapter package. Splat server routes `src/routes/admin.$.ts` and `src/routes/api/cms/$.ts` call `cms.fetch`. Pages read content through `createServerFn` in loaders (loaders also run on the client). Nitro v3 via `nitro/vite`. Secrets come from `process.env` (`.env` loads in dev and `vite preview`).
 - `examples/nuxt`: user code lives in `server/cms.ts`. Secrets come via `runtimeConfig` (`NUXT_CMS_SECRET`, `NUXT_DATABASE_URL`). Pages use `useFetch` against the app's own `server/api/*` routes.
 
 ## Design decisions
@@ -43,6 +44,8 @@ There are no automated tests yet. Verify end to end with the curl smoke test bel
 - libsql loads `@libsql/<platform>` with a dynamic require:
   - If Vite bundles core, the native binding breaks. That's why core is `ssr.external` in Astro.
   - Nitro's tracer misses the binary. That's why the Nuxt module adds `traceInclude`.
+- Nitro v3 (TanStack Start) traces the libsql binary on its own. Nitro 2 (Nuxt) does not.
+- TanStack Start streams HTML. Use `grep -a` on curl output, or grep treats it as binary and prints nothing.
 - `nuxt preview` runs with cwd `.output/`, so a relative `file:./cms.db` lands in the build output and gets wiped. Use absolute paths; the Nuxt example uses `resolve('cms.db')`.
 - Astro 7 `astro dev` / `astro preview` run as daemons. Use `npx astro dev stop`, `npx astro preview logs`.
 - `astro preview` does not load `.env`. The script runs it through `node --env-file-if-exists=.env`.
@@ -71,7 +74,7 @@ Expect 200, 201, and the post in the page HTML. Delete the example's `cms.db` be
 - TypeScript strict. Keep the file count small and add no abstraction until a second use exists.
 - Validate all API input with `dataSchema()`. Every write route MUST stay behind the session middleware.
 - Admin UI: plain Vue SFCs with `<script setup>`, Tailwind classes, and the shared `.input` / `.btn` / `.btn-ghost` classes in `style.css`.
-- Versions in use: Astro 7, Nuxt 4.5 (nitropack 2, h3 v1), Vite 8, TypeScript 6, better-auth 1.7, drizzle-orm 0.45, Hono 4, zod 4.
+- Versions in use: Astro 7, Nuxt 4.5 (nitropack 2, h3 v1), TanStack Start 1.168 (nitro 3 beta, React 19), Vite 8, TypeScript 6, better-auth 1.7, drizzle-orm 0.45, Hono 4, zod 4.
 
 ## Next up
 

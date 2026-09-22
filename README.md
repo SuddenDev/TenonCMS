@@ -2,7 +2,7 @@
 
 A CMS that lives **inside** your Vite-based app. One repo, one deployment, one database file.
 
-> Status: proof of concept. Works with Astro and Nuxt on Node. Not published to npm yet.
+> Status: proof of concept. Works with Astro, Nuxt and TanStack Start on Node. Not published to npm yet.
 
 ## Why
 
@@ -29,6 +29,9 @@ pnpm dev:astro                                        # http://localhost:4321/ad
 
 cp examples/nuxt/.env.example examples/nuxt/.env     # set NUXT_CMS_SECRET (32+ chars)
 pnpm dev:nuxt                                         # http://localhost:3000/admin
+
+cp examples/tanstack-start/.env.example examples/tanstack-start/.env   # set CMS_SECRET (32+ chars)
+pnpm dev:tanstack                                     # http://localhost:3100/admin
 ```
 
 Generate a secret with `openssl rand -hex 32`.
@@ -124,13 +127,35 @@ export default defineEventHandler(() => cms.find('posts'))
 
 Pages load data with `useFetch('/api/posts')`. The types flow through.
 
+### TanStack Start
+
+No module needed. Two splat server routes hand requests to the CMS:
+
+```ts
+// src/routes/api/cms/$.ts (and the same with GET only in src/routes/admin.$.ts)
+const handle = ({ request }: { request: Request }) => cms.fetch(request)
+
+export const Route = createFileRoute('/api/cms/$')({
+  server: { handlers: { GET: handle, POST: handle, PUT: handle, DELETE: handle } },
+})
+```
+
+```tsx
+// src/routes/index.tsx: loaders run on client and server, so read content in a server function
+const getPosts = createServerFn().handler(() => cms.find('posts'))
+
+export const Route = createFileRoute('/')({ loader: () => getPosts(), component: Home })
+```
+
+Add `ssr: { external: ['integral-cms'] }` to `vite.config.ts` when you link the package from a workspace.
+
 ### Any other framework
 
 Send `/admin/*` and `/api/cms/*` to `cms.fetch(request)`.
 
 ## Environment and deployment
 
-- `dev` and `preview` load `.env` in both examples. The examples' `start` scripts pass `--env-file-if-exists=.env` to Node.
+- `dev` and `preview` load `.env` in all examples. The examples' `start` scripts pass `--env-file-if-exists=.env` to Node.
 - In production, set variables in your host or process manager.
 - **Use an absolute database path or a `libsql://` URL in production.** A relative `file:` path resolves against the working directory. For example, `nuxt preview` runs from `.output/`, which every build deletes.
 - Build on the same OS and CPU you deploy to. libsql ships a native binary per platform.
@@ -142,14 +167,15 @@ packages/core    integral-cms: schema, Hono app, local API, auth, Astro integrat
 packages/admin   Vue 3 + Tailwind admin SPA, bundled into core at build time (private)
 examples/astro   Astro 7 app, mixing prerendered pages and SSR pages, on @astrojs/node
 examples/nuxt    Nuxt 4 app
+examples/tanstack-start  TanStack Start (React) app on Nitro v3
 ```
 
 ## Scripts
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev:astro` / `pnpm dev:nuxt` | Build packages, start the example |
-| `pnpm build` | Build packages and both examples |
+| `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` | Build packages, start the example |
+| `pnpm build` | Build packages and all examples |
 | `pnpm typecheck` | Type-check everything |
 | `pnpm --filter integral-cms db:generate` | New migration after editing `packages/core/src/db/schema.ts` |
 
@@ -160,7 +186,7 @@ Working:
 - Schema-in-code collections and globals with inferred types
 - Admin: list, create, edit, delete; globals; email/password login
 - Validation at the API (zod), CSRF protection, first-user-only sign-up
-- Astro integration and Nuxt module; dev, preview and production on Node
+- Astro integration, Nuxt module, TanStack Start routes; dev, preview and production on Node
 - SQLite via libsql (local file or Turso)
 
 Roadmap, roughly in order:
