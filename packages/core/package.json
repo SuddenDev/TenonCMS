@@ -1,0 +1,61 @@
+{
+  "name": "integral-cms",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./astro": {
+      "types": "./dist/astro/index.d.mts",
+      "default": "./dist/astro/index.mjs"
+    },
+    "./nuxt": {
+      "types": "./dist/nuxt/index.d.mts",
+      "default": "./dist/nuxt/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "db:generate": "drizzle-kit generate && node scripts/embed-migrations.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "better-auth": "^1.7.5",
+    "drizzle-orm": "^0.45.3",
+    "hono": "^4.13.8",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "@nuxt/kit": ">=3",
+    "@nuxt/schema": ">=3",
+    "astro": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "astro": {
+      "optional": true
+    },
+    "@nuxt/kit": {
+      "optional": true
+    },
+    "@nuxt/schema": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@integral-cms/admin": "workspace:*",
+    "@nuxt/kit": "^4.5.2",
+    "@nuxt/nitro-server": "4.5.2",
+    "@nuxt/schema": "^4.5.2",
+    "astro": "^7.3.4",
+    "drizzle-kit": "^0.31.11",
+    "tsdown": "^0.23.0",
+    "typescript": "^6.0.3"
+  },
+  "files": [
+    "dist"
+  ]
+}
