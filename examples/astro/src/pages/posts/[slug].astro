@@ -1,0 +1,21 @@
+---
+import { cms } from '../../cms'
+
+export const prerender = false
+
+const post = await cms.findOne('posts', { where: { slug: Astro.params.slug! } })
+if (!post) return new Response('Not found', { status: 404 })
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{post.title}</title>
+  </head>
+  <body>
+    <a href="/">← Home</a>
+    <h1>{post.title}</h1>
+    {post.publishedAt && <time datetime={post.publishedAt}>{post.publishedAt}</time>}
+    <p style="white-space: pre-wrap">{post.body}</p>
+  </body>
+</html>

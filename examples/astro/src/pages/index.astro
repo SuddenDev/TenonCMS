@@ -1,0 +1,28 @@
+---
+import { cms } from '../cms'
+
+export const prerender = false
+
+const site = await cms.getGlobal('site')
+const posts = await cms.find('posts')
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{site.title ?? 'My site'}</title>
+  </head>
+  <body>
+    <h1>{site.title ?? 'My site'}</h1>
+    {site.tagline && <p>{site.tagline}</p>}
+    <ul>
+      {posts.map((post) => (
+        <li>
+          <a href={`/posts/${post.slug}`}>{post.title}</a>
+          {post.featured && ' ★'}
+        </li>
+      ))}
+    </ul>
+    <p><a href="/admin">Admin</a></p>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "example-astro",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "node --env-file-if-exists=.env node_modules/astro/bin/astro.mjs preview",
+    "start": "node --env-file-if-exists=.env ./dist/server/entry.mjs",
+    "typecheck": "astro sync && tsc --noEmit"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.6",
+    "astro": "^7.3.4",
+    "integral-cms": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
