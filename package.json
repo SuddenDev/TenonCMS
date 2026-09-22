@@ -1,0 +1,17 @@
+{
+  "name": "integral-cms-monorepo",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "build:packages": "pnpm --filter @integral-cms/admin build && pnpm --filter integral-cms build",
+    "dev:astro": "pnpm build:packages && pnpm --filter example-astro dev",
+    "dev:nuxt": "pnpm build:packages && pnpm --filter example-nuxt dev",
+    "build": "pnpm build:packages && pnpm --filter \"./examples/*\" build",
+    "typecheck": "pnpm build:packages && pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
