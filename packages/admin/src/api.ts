@@ -10,6 +10,7 @@ export type Fields = Record<string, Field>
 export type Schema = {
   collections?: Record<string, { label?: string; titleField?: string; fields: Fields }>
   globals?: Record<string, { label?: string; fields: Fields }>
+  dev?: boolean
 }
 export type Doc = Record<string, unknown> & { id: string }
 

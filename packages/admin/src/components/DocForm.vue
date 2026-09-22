@@ -15,8 +15,16 @@ async function submit() {
   error.value = ''
   saved.value = false
   try {
+    // Fields can change after mount, so the payload follows the current fields.
     // Empty strings become null, so cleared optional fields pass validation.
-    await props.save(Object.fromEntries(Object.entries(data.value).map(([k, v]) => [k, v === '' ? null : v])))
+    await props.save(
+      Object.fromEntries(
+        Object.entries(props.fields).map(([k, f]) => {
+          const v = data.value[k] ?? (f.type === 'boolean' ? false : null)
+          return [k, v === '' ? null : v]
+        }),
+      ),
+    )
     saved.value = true
   } catch (e) {
     error.value = (e as Error).message

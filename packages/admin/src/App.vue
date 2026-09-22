@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { api, schema } from './api'
+import { api, schema, type Schema } from './api'
 import Login from './components/Login.vue'
 
 const user = ref<{ email: string } | null>(null)
@@ -13,12 +13,25 @@ async function load() {
   loading.value = false
 }
 
+// The config can change while the admin is open, e.g. when editing cms.ts in dev.
+// Unchanged responses are skipped, so polling does not re-render open forms.
+function refreshSchema() {
+  if (!user.value || document.hidden) return
+  api<Schema>('/schema').then((s) => {
+    if (JSON.stringify(s) !== JSON.stringify(schema.value)) schema.value = s
+  }, load)
+}
+
 async function signOut() {
   await api('/auth/sign-out', { method: 'POST', body: {} })
   user.value = null
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  window.addEventListener('focus', refreshSchema)
+  setInterval(() => schema.value.dev && refreshSchema(), 2000)
+})
 </script>
 
 <template>

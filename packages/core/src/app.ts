@@ -50,7 +50,9 @@ export function createApp(cms: Cms<Config>) {
     await next()
   })
 
-  api.get('/schema', (c) => c.json(config))
+  // Dev servers (Vite, Nitro) set NODE_ENV to development. The admin polls the schema only then.
+  const dev = globalThis.process?.env.NODE_ENV === 'development'
+  api.get('/schema', (c) => c.json({ ...config, dev }))
 
   api.get('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
