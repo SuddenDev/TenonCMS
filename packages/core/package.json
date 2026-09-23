@@ -19,6 +19,18 @@
     "./nuxt": {
       "types": "./dist/nuxt/index.d.mts",
       "default": "./dist/nuxt/index.mjs"
+    },
+    "./admin": {
+      "types": "./dist/admin/index.d.ts",
+      "default": "./dist/admin/index.js"
+    },
+    "./admin/vue": {
+      "types": "./dist/admin/vue.d.mts",
+      "default": "./dist/admin/vue.mjs"
+    },
+    "./admin/react": {
+      "types": "./dist/admin/react.d.mts",
+      "default": "./dist/admin/react.mjs"
     }
   },
   "scripts": {
@@ -39,7 +51,10 @@
     "@nuxt/kit": ">=3",
     "@nuxt/schema": ">=3",
     "astro": ">=5",
-    "h3": ">=1.15"
+    "h3": ">=1.15",
+    "react": ">=18",
+    "react-dom": ">=18",
+    "vue": ">=3.5"
   },
   "peerDependenciesMeta": {
     "@nuxt/kit": {
@@ -53,19 +68,32 @@
     },
     "h3": {
       "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
     }
   },
   "devDependencies": {
-    "@integral-cms/admin": "workspace:*",
     "@nuxt/kit": "^4.5.2",
     "@nuxt/nitro-server": "4.5.2",
     "@nuxt/schema": "^4.5.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "astro": "^7.3.4",
     "drizzle-kit": "^0.31.11",
     "h3": "^1.15.11",
     "nuxt": "^4.5.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "tsdown": "^0.23.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vue": "^3.5.43"
   },
   "files": [
     "dist"

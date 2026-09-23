@@ -4,29 +4,31 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 
 ## Commands
 
-- `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack`: build packages, then run the example (ports 4321 / 3000 / 3100), the core watcher and the admin dev server in parallel. Core changes reload in the example without a restart. The admin has HMR on `localhost:5173/admin/` and proxies `/api/cms` to the example (`CMS_URL`). `INTEGRAL_ADMIN_DEV_URL` makes `/admin` on the example redirect there; without it, `/admin` serves the embedded build
+- `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack`: build packages, then run the example (ports 4321 / 3000 / 3100), the core watcher and the admin playground in parallel. Core changes reload in the example without a restart. The playground has HMR on `localhost:5173/admin/` and proxies `/api/cms` to the example (`CMS_URL`). The example's `/admin` uses the admin built at startup; `pnpm --filter @integral-cms/admin watch` rebuilds it on change (full reload)
 - `pnpm build`: packages and all examples
 - `pnpm typecheck`: all workspaces. Run it before calling work done.
-- `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`
+- `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`. Core builds first, then the admin writes into `packages/core/dist/admin`
 - `pnpm --filter integral-cms db:generate`: after editing `packages/core/src/db/schema.ts`
 
 There are no automated tests yet. Verify end to end with the curl smoke test below.
 
 ## Architecture
 
-- `packages/core` publishes as `integral-cms`, with exports `.`, `./astro`, `./nuxt`. It is built with tsdown to `dist/`.
+- `packages/core` publishes as `integral-cms`, with exports `.`, `./astro`, `./nuxt`, `./admin`, `./admin/vue`, `./admin/react`. It is built with tsdown to `dist/`. `vue`, `react` and `react-dom` are optional peers used only by the two helpers.
   - `src/schema.ts`: field and config types, type inference (`Data`, `Doc`), `defineCollection()` / `defineGlobal()` identity helpers for `const` inference, `dataSchema()` builds the zod validator.
   - `src/index.ts`: `createCms()` returns the local API (`find`, `findOne`, `findById`, `create`, `update`, `delete`, `getGlobal`, `setGlobal`) plus `fetch(request)`.
-  - `src/app.ts`: Hono app. `/admin/*` serves the embedded SPA. `/api/cms/*` has `auth/*` (better-auth) and the public GET read routes (`collections/:name[/:id]`, `globals/:name`; query params are equality filters coerced to the field type), then CSRF and session middleware, then `schema` and the write routes.
+  - `src/app.ts`: Hono app. `/api/cms/*` has `auth/*` (better-auth) and the public GET read routes (`collections/:name[/:id]`, `globals/:name`; query params are equality filters coerced to the field type), then CSRF and session middleware, then `schema` and the write routes.
   - `src/auth.ts`: better-auth with the Drizzle adapter and email/password. A database hook allows only the first user to sign up.
   - `src/db/`: Drizzle schema (`cms_documents`, `cms_globals`, better-auth tables), libsql client, migration runner. `migrations.gen.ts` is generated.
   - Adapters generate no code. They alias `#integral/config` to the host's `integral.config.ts` and point the framework at runtime files that ship as `.ts` source in `dist/` (tsdown `copy`). The host's Vite or Nitro compiles them. `env.d.ts` stubs `#integral/config`, `#app` and `App.Locals` so core can typecheck them; it is not published.
-  - `src/astro/index.ts`: `injectRoute` for `/admin/[...path]` and `/api/cms/[...path]` with `src/astro/route.ts`, `addMiddleware` with `src/astro/middleware.ts` (sets `locals.integral`), the Vite alias, `ssr.external`. `injectTypes` augments `App.Locals` with `typeof import(entry).cms`; that one line is a string because Astro's API takes a string.
-  - `src/nuxt/index.ts`: `nuxt.options.alias` (Nuxt forwards it to Nitro and to tsconfig `paths`), `build.transpile` for the runtime dir, `addServerHandler` with `runtime/server/handler.ts`, `addImports` of `useIntegral` from `runtime/composables.ts` (`useAsyncData` + `useRequestFetch` against the public read API, typed via `import type { cms } from '#integral/config'`). Adds the libsql native binaries to Nitro's `traceInclude`. `h3` is an optional peer because the handler imports it.
-- `packages/admin` is `@integral-cms/admin` (private). It's a Vue 3 + vue-router + Tailwind v4 SPA with base `/admin/`. `scripts/embed.mjs` turns `dist/` into `dist/assets.js` (a path → base64 map), which tsdown bundles into core.
+  - `src/admin/`: hand-written `index.d.ts` for `integral-cms/admin` and `default.ts`, the stub `#integral/admin` resolves to when the host has no `integral.admin.ts`. Both are copied to `dist/admin`, where the admin's Vite build writes `index.js`. `vue.ts` and `react.ts` are tsdown entries: `renderVue(Component)` / `renderReact(Component)` wrap a host component into a `Mount` with reactive props and `update`.
+  - `src/astro/index.ts`: `injectRoute` for `/api/cms/[...path]` with `src/astro/route.ts` and, unless `admin: false`, `/admin/[...path]` with `src/astro/admin.astro` (mounts the admin, imports `#integral/admin`). `addMiddleware` with `src/astro/middleware.ts` (sets `locals.integral`), the Vite alias, `ssr.external`. `injectTypes` augments `App.Locals` with `typeof import(entry).cms`; that one line is a string because Astro's API takes a string.
+  - `src/nuxt/index.ts`: `nuxt.options.alias` (Nuxt forwards it to Nitro and to tsconfig `paths`), `build.transpile` for the runtime dir, `addServerHandler` for `/api/cms/**` with `runtime/server/handler.ts`, `extendPages` with `runtime/admin.vue` for `/admin/**` (page `key: 'admin'`, or Nuxt remounts it on back/forward) unless `admin: false`, `addImports` of `useIntegral` from `runtime/composables.ts` (`useAsyncData` + `useRequestFetch` against the public read API, typed via `import type { cms } from '#integral/config'`). Adds the libsql native binaries to Nitro's `traceInclude`. `h3` is an optional peer because the handler imports it.
+- `packages/admin` is `@integral-cms/admin` (private). It's a Vue 3 + vue-router + Tailwind v4 app built in Vite lib mode to `packages/core/dist/admin/index.js`, with Vue bundled in and the CSS inlined (`?inline`), injected by `mountAdmin()` and removed on unmount. `src/index.ts` exports `mountAdmin(el, options)` and `defineAdmin()`; `src/options.ts` holds `optionsKey` and `pagePath()`. Its types come from `packages/core/src/admin/index.d.ts`, the only copy. Options are named slots (`fields` by custom type name, `pages` by key with optional `route`), each a `Mount<Ctx>` function: `(el, ctx) => cleanup | { update?(ctx), unmount() }`. `Mount.vue` runs one and forwards context changes to `update`; `FieldInput.vue` and the router use it. Host pages are registered before the built-in routes; on an equal path vue-router keeps the first, so a host page on `/` or `/collections/...` replaces the built-in view. `index.html` + `src/main.ts` are the dev playground.
+- Hosts customize the admin with `integral.admin.ts` at the project root (`export default defineAdmin({ fields, pages })`). A page's `route` starts with `/` and defaults to `/<key>`. Pages without `label` stay out of the sidebar. Adapters alias `#integral/admin` to it if it exists, else to the stub. Adding or removing it needs a dev server restart.
 - All examples: the instance lives in `integral.config.ts` at the project root, collections in `collections/*.ts`.
 - `examples/astro`: pages use `Astro.locals.integral`. Secrets come via `astro:env`.
-- `examples/tanstack-start`: no adapter package. Splat server routes `src/routes/admin.$.ts` and `src/routes/api/cms/$.ts` call `cms.fetch`. Pages read content through `createServerFn` in loaders (loaders also run on the client). Nitro v3 via `nitro/vite`. Secrets come from `process.env` (`.env` loads in dev and `vite preview`).
+- `examples/tanstack-start`: no adapter package. The splat server route `src/routes/api/cms/$.ts` calls `cms.fetch`. `src/routes/admin.$.tsx` is a client-only route (`ssr: false`) that mounts the admin with `integral.admin.ts`. Pages read content through `createServerFn` in loaders (loaders also run on the client). Nitro v3 via `nitro/vite`. Secrets come from `process.env` (`.env` loads in dev and `vite preview`).
 - `examples/nuxt`: `integral.config.ts` calls `useRuntimeConfig()` (`NUXT_CMS_SECRET`, `NUXT_DATABASE_URL`); Nitro's auto-import transform covers root files. Pages use `useIntegral()`; there are no hand-written API routes.
 
 ## Design decisions
@@ -35,19 +37,21 @@ There are no automated tests yet. Verify end to end with the curl smoke test bel
 - **Core owns the fixed tables only.** Migrations come from drizzle-kit and are embedded as strings, so they run without a filesystem (Cloudflare later). They run lazily on the first DB access.
 - **No module-level state.** Everything lives in the `createCms()` closure, so several instances can coexist.
 - **Lazy DB and auth.** Nothing connects at import time. The secret is checked when auth is first used, so public pages keep working with a bad config.
-- **The admin is prebuilt and embedded** as base64. The host's Vite config never compiles it, and it needs no filesystem at runtime.
-- **One published package.** Framework adapters are subpath exports with optional peer deps (`astro`, `@nuxt/kit`, `@nuxt/schema`).
+- **The admin is a compiled library the host bundles.** Core never imports it, so headless is free. Extensions come from `integral.admin.ts`, compiled by the host's Vite with HMR.
+- **Extension contract is `mount(el, ctx)` only.** No framework components cross the boundary, so the admin bundles its own Vue and hosts install nothing. Reactivity is by callbacks: `ctx.onChange` in, `update(ctx)` out. New admin slots MUST use `Mount<Ctx>` too.
+- **One published package.** Framework adapters are subpath exports with optional peer deps (`astro`, `@nuxt/kit`, `@nuxt/schema`, `h3`, and `vue` / `react` / `react-dom` for the admin helpers).
 - **SQLite only for now**, through libsql (a file or Turso). D1 and Postgres come later, behind the same `documents` shape.
 - **Fixed paths** `/admin` and `/api/cms`. Make them configurable only when someone needs it.
 - **Reads are public, writes need a session.** Pages render the content anyway, and the Nuxt composable needs an HTTP read path for client-side navigation. Drafts will have to gate here later.
 
 ## Gotchas (each cost a debugging round)
 
-- Nitro rewrites `typeof window` to `"undefined"` as plain text, even inside strings. That's why the admin assets are base64.
+- Nitro rewrites `typeof window` to `"undefined"` as plain text, even inside strings. Keep browser-only code out of server bundles.
 - libsql loads `@libsql/<platform>` with a dynamic require:
   - If Vite bundles core, the native binding breaks. That's why core is `ssr.external` in Astro and TanStack builds. Dev does not bundle, so it stays internal there and Vite reloads it.
   - Nitro's tracer misses the binary. That's why the Nuxt module adds `traceInclude`.
-- `tsdown --watch` MUST run with `--no-clean`. Otherwise Nitro rebuilds while `dist/` is empty and logs ENOENT errors. Never run `build:packages` while the watcher runs: the admin build empties `assets.js` and the core build deletes files under the watcher.
+- `tsdown --watch` MUST run with `--no-clean`. Otherwise Nitro rebuilds while `dist/` is empty and logs ENOENT errors. Never run `build:packages` while the watcher runs: the core build deletes `dist/` (including `dist/admin`) under the watcher.
+- `Object.assign(el, { dataset: ... })` throws: `dataset` is a getter. Use `setAttribute`.
 - Nitro v3 (TanStack Start) traces the libsql binary on its own. Nitro 2 (Nuxt) does not.
 - TanStack Start streams HTML. Use `grep -a` on curl output, or grep treats it as binary and prints nothing.
 - `nuxt preview` runs with cwd `.output/`, so a relative `file:./cms.db` lands in the build output and gets wiped. Use absolute paths; the Nuxt example uses `resolve('cms.db')`.
@@ -82,7 +86,7 @@ Expect 200, 201, and the post in the page HTML. Delete the example's `cms.db` be
 
 - TypeScript strict. Keep the file count small and add no abstraction until a second use exists.
 - Validate all API input with `dataSchema()`. Every write route MUST stay behind the session middleware. Read routes are public and MUST only accept field names that exist in the schema.
-- Admin UI: plain Vue SFCs with `<script setup>`, Tailwind classes, and the shared `.input` / `.btn` / `.btn-ghost` classes in `style.css`.
+- Admin UI: plain Vue SFCs with `<script setup>`, Tailwind classes, and the shared `.input` / `.btn` / `.btn-ghost` classes in `style.css`. Host inputs render in the admin's light DOM, so they can use those classes too.
 - Versions in use: Astro 7, Nuxt 4.5 (nitropack 2, h3 v1), TanStack Start 1.168 (nitro 3 beta, React 19), Vite 8, TypeScript 6, better-auth 1.7, drizzle-orm 0.45, Hono 4, zod 4.
 
 ## Next up

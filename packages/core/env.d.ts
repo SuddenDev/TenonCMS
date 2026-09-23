@@ -8,6 +8,12 @@ declare module '#integral/config' {
   export const cms: import('./src/index.ts').Cms<import('./src/schema.ts').Config>
 }
 
+// The host's optional admin customization. Adapters alias `#integral/admin` to it or to a stub.
+declare module '#integral/admin' {
+  const options: import('./src/admin/index.d.ts').AdminOptions
+  export default options
+}
+
 declare module '#app' {
   export * from 'nuxt/app'
 }

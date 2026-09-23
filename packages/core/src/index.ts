@@ -124,7 +124,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return data as GlobalData<T, K>
     },
 
-    // Handles /admin and /api/cms requests. Mount it in any framework that speaks Request/Response.
+    // Handles /api/cms requests. Mount it in any framework that speaks Request/Response.
     fetch(request: Request): Promise<Response> {
       return app.fetch(request) as Promise<Response>
     },

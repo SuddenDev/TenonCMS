@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { inject } from 'vue'
 import type { Field } from '../api'
+import { optionsKey } from '../options'
+import Mount from './Mount.vue'
 
-defineProps<{ name: string; field: Field }>()
+const props = defineProps<{ name: string; field: Field }>()
 const model = defineModel<any>()
+const custom = props.field.type.startsWith('custom:') ? inject(optionsKey, {}).fields?.[props.field.type.slice(7)] : undefined
 </script>
 
 <template>
@@ -15,7 +19,8 @@ const model = defineModel<any>()
       {{ field.label ?? name }}
       <span v-if="field.required" class="text-red-600" aria-hidden="true">*</span>
     </span>
-    <textarea v-if="field.type === 'textarea'" v-model="model" class="input min-h-40" :required="field.required" />
+    <Mount v-if="custom" :mount="custom" :ctx="{ name, field, value: model, onChange: (v: any) => (model = v) }" />
+    <textarea v-else-if="field.type === 'textarea'" v-model="model" class="input min-h-40" :required="field.required" />
     <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="field.required">
       <option :value="null" />
       <option v-for="o in field.options" :key="o" :value="o">{{ o }}</option>

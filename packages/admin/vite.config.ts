@@ -6,10 +6,14 @@ import { defineConfig } from 'vite'
 const target = process.env.CMS_URL ?? 'http://localhost:4321'
 
 export default defineConfig({
-  base: '/admin/',
   plugins: [vue(), tailwindcss()],
+  build: {
+    // Vue is bundled in. Hosts plug in through `mount(el)`, so no shared runtime is needed.
+    lib: { entry: 'src/index.ts', formats: ['es'], fileName: 'index' },
+    outDir: '../core/dist/admin',
+    emptyOutDir: false,
+  },
   server: {
-    // The dev scripts redirect `/admin` on the example to this port.
     port: 5173,
     strictPort: true,
     // better-auth rejects requests whose origin differs from the API host.

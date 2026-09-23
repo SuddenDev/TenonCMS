@@ -1,25 +1,33 @@
 import type { AstroIntegration } from 'astro'
+import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 export type Options = {
   // File that exports the `cms` instance, relative to the project root.
   entry?: string
+  // Serve the admin at /admin. `false` leaves only the API (headless).
+  admin?: boolean
 }
 
-export default function integralCms({ entry = './integral.config.ts' }: Options = {}): AstroIntegration {
+export default function integralCms({ entry = './integral.config.ts', admin = true }: Options = {}): AstroIntegration {
   let entryPath: string
   return {
     name: 'integral-cms',
     hooks: {
       'astro:config:setup'({ command, config, injectRoute, addMiddleware, updateConfig }) {
         entryPath = fileURLToPath(new URL(entry, config.root))
-        for (const pattern of ['/admin/[...path]', '/api/cms/[...path]']) {
-          injectRoute({ pattern, entrypoint: new URL('./route.ts', import.meta.url), prerender: false })
+        const alias: Record<string, string> = { '#integral/config': entryPath }
+        injectRoute({ pattern: '/api/cms/[...path]', entrypoint: new URL('./route.ts', import.meta.url), prerender: false })
+        if (admin) {
+          injectRoute({ pattern: '/admin/[...path]', entrypoint: new URL('./admin.astro', import.meta.url), prerender: false })
+          // Optional host file with admin customization, e.g. custom field inputs.
+          const adminFile = fileURLToPath(new URL('./integral.admin.ts', config.root))
+          alias['#integral/admin'] = existsSync(adminFile) ? adminFile : fileURLToPath(new URL('../admin/default.ts', import.meta.url))
         }
         addMiddleware({ entrypoint: new URL('./middleware.ts', import.meta.url), order: 'pre' })
         updateConfig({
           vite: {
-            resolve: { alias: { '#integral/config': entryPath } },
+            resolve: { alias },
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.
             // Dev does not bundle. Keeping core internal there lets Vite reload it when `dist/` changes.
             ssr: command === 'dev' ? {} : { external: ['integral-cms'] },
@@ -33,7 +41,6 @@ export default function integralCms({ entry = './integral.config.ts' }: Options 
           filename: 'types.d.ts',
           content: `declare namespace App {\n  interface Locals {\n    integral: typeof import(${module}).cms\n  }\n}\n`,
         })
-
       },
     },
   }

@@ -1,45 +1,12 @@
-import assets from '@integral-cms/admin'
 import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
 import { API_BASE } from './auth.ts'
 import type { Cms } from './index.ts'
 import { dataSchema, type Config, type Fields } from './schema.ts'
 
-const ADMIN_BASE = '/admin'
-
-const contentTypes: Record<string, string> = {
-  html: 'text/html; charset=utf-8',
-  js: 'text/javascript; charset=utf-8',
-  css: 'text/css; charset=utf-8',
-  svg: 'image/svg+xml',
-}
-
-let decoded: Map<string, Uint8Array<ArrayBuffer>> | undefined
-function adminFile(path: string) {
-  decoded ??= new Map(Object.entries(assets).map(([p, b64]) => [p, Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))]))
-  return decoded.get(path)
-}
-
 export function createApp(cms: Cms<Config>) {
   const { config } = cms
   const app = new Hono()
-
-  app.get(`${ADMIN_BASE}/*`, (c) => {
-    // Set by the repo's dev scripts, so `/admin` opens the admin dev server with HMR.
-    const devUrl = globalThis.process?.env.INTEGRAL_ADMIN_DEV_URL
-    if (devUrl) return c.redirect(devUrl + c.req.path + new URL(c.req.url).search)
-    const path = c.req.path.slice(ADMIN_BASE.length)
-    const file = adminFile(path)
-    if (file) {
-      const ext = path.split('.').pop()!
-      return c.body(file, 200, {
-        'content-type': contentTypes[ext] ?? 'application/octet-stream',
-        'cache-control': path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
-      })
-    }
-    // SPA fallback: the Vue router handles the path.
-    return c.body(adminFile('/index.html')!, 200, { 'content-type': contentTypes.html, 'cache-control': 'no-cache' })
-  })
 
   const api = new Hono<{ Variables: { userId: string } }>()
 

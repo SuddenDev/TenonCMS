@@ -3,15 +3,10 @@
   "version": "0.0.2",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./assets.d.ts",
-      "default": "./dist/assets.js"
-    }
-  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/embed.mjs",
+    "watch": "vite build --watch",
+    "build": "vite build",
     "typecheck": "vue-tsc --noEmit"
   },
   "devDependencies": {

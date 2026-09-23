@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { inject, onMounted, ref } from 'vue'
 import { api, schema, type Schema } from './api'
 import Login from './components/Login.vue'
+import { optionsKey, pagePath } from './options'
 
+const pages = Object.entries(inject(optionsKey, {}).pages ?? {}).filter(([, p]) => p.label)
 const user = ref<{ email: string } | null>(null)
 const loading = ref(true)
 
@@ -61,6 +63,18 @@ onMounted(() => {
           active-class="bg-zinc-100 font-medium"
         >
           {{ g.label ?? name }}
+        </RouterLink>
+      </nav>
+      <nav v-if="pages.length" class="flex flex-col gap-1">
+        <p class="text-xs font-medium uppercase text-zinc-500">Pages</p>
+        <RouterLink
+          v-for="[key, p] in pages"
+          :key="key"
+          :to="pagePath(key, p)"
+          class="rounded px-2 py-1 text-sm hover:bg-zinc-100"
+          active-class="bg-zinc-100 font-medium"
+        >
+          {{ p.label }}
         </RouterLink>
       </nav>
       <div class="mt-auto text-xs text-zinc-500">

@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { cms } from '../../../integral.config'
 
 const getPost = createServerFn()
-  .inputValidator((slug: string) => slug)
+  .validator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
     const post = await cms.findOne('posts', { where: { slug } })
     if (!post) throw notFound()
@@ -22,7 +22,7 @@ function Post() {
   return (
     <main>
       <Link to="/">← Home</Link>
-      <h1>{post.title}</h1>
+      <h1 style={post.color ? { borderLeft: `4px solid ${post.color}`, paddingLeft: 8 } : undefined}>{post.title}</h1>
       {post.publishedAt && <time dateTime={post.publishedAt}>{post.publishedAt}</time>}
       <p style={{ whiteSpace: 'pre-wrap' }}>{post.body}</p>
     </main>

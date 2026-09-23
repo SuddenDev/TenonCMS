@@ -1,0 +1,20 @@
+---
+export const prerender = false
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin</title>
+  </head>
+  <body>
+    <div id="admin"></div>
+    <script>
+      import options from '#integral/admin'
+      import { mountAdmin } from 'integral-cms/admin'
+
+      mountAdmin('#admin', options)
+    </script>
+  </body>
+</html>

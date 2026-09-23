@@ -14,7 +14,7 @@ integral-cms takes the other route, like Pruvious (Nuxt) and Payload 3 (Next.js)
 - **Schema in code.** Collections and globals are TypeScript. Types flow into your pages.
 - **Local API.** Server code calls `cms.find('posts')` directly. No HTTP round trip.
 - **SQLite first.** A file on disk, or Turso via libsql. Cloudflare D1 is planned.
-- **No style clashes.** The admin is its own HTML document at `/admin` and never touches your site's CSS.
+- **Your bundle, your admin.** The admin is a Vue app that your Vite bundles. Add field inputs or styles from one file, or leave it out and go headless.
 - **Web standards.** The core is a [Hono](https://hono.dev) app: `Request` in, `Response` out. Framework adapters are a few lines.
 
 ## Quickstart
@@ -145,15 +145,29 @@ Server routes can import `cms` from `#integral/config` (an alias for `integral.c
 
 ### TanStack Start
 
-No module needed. Two splat server routes hand requests to the CMS:
+No module needed. A splat server route hands API requests to the CMS, and a client-only route mounts the admin:
 
 ```ts
-// src/routes/api/cms/$.ts (and the same with GET only in src/routes/admin.$.ts)
+// src/routes/api/cms/$.ts
 const handle = ({ request }: { request: Request }) => cms.fetch(request)
 
 export const Route = createFileRoute('/api/cms/$')({
   server: { handlers: { GET: handle, POST: handle, PUT: handle, DELETE: handle } },
 })
+```
+
+```tsx
+// src/routes/admin.$.tsx
+import { mountAdmin } from 'integral-cms/admin'
+import options from '../../integral.admin'
+
+export const Route = createFileRoute('/admin/$')({ ssr: false, component: Admin })
+
+function Admin() {
+  const el = useRef<HTMLDivElement>(null)
+  useEffect(() => mountAdmin(el.current!, options), [])
+  return <div ref={el} />
+}
 ```
 
 ```tsx
@@ -169,7 +183,68 @@ Add `ssr: { external: ['integral-cms'] }` to `vite.config.ts` when you link the 
 
 ### Any other framework
 
-Send `/admin/*` and `/api/cms/*` to `cms.fetch(request)`.
+Send `/api/cms/*` to `cms.fetch(request)`. For the admin, serve a page with an empty element and mount into it:
+
+```ts
+import { mountAdmin } from 'integral-cms/admin'
+
+mountAdmin('#admin')
+```
+
+## Customize the admin
+
+Create `integral.admin.ts` next to `integral.config.ts`. Astro and Nuxt pick it up at startup; delete it to go back to the default. Restart the dev server after adding or removing it. TanStack imports it in the admin route.
+
+```ts
+// integral.admin.ts
+import { defineAdmin } from 'integral-cms/admin'
+
+export default defineAdmin({
+  fields: { color: mountColorInput },
+  pages: {
+    home: { route: '/', mount: mountHome },
+    stats: { label: 'Stats', mount: mountStats },
+  },
+})
+```
+
+- `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
+- `pages` adds routes under `/admin`. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`. Pages with a `label` are linked in the sidebar.
+- A page on a built-in path replaces that view: `route: '/'` replaces the start page, `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
+
+Every slot is one function, `mount(el, ctx)`, so any framework can plug in. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers:
+
+```ts
+import { renderVue } from 'integral-cms/admin/vue'
+import { renderReact } from 'integral-cms/admin/react'
+
+fields: { color: renderVue(ColorInput) }      // a .vue component, gets the context as reactive props
+fields: { color: renderReact(ColorInput) }    // a React component, re-rendered on context changes
+```
+
+They import your `vue` or `react-dom`, so the components run in your app's runtime with HMR. Other frameworks, or no framework, write the function directly:
+
+```ts
+// Plain DOM
+color(el, { value, onChange }) {
+  const input = Object.assign(document.createElement('input'), { type: 'color', value })
+  input.oninput = () => onChange(input.value)
+  el.append(input)
+  return () => input.remove()
+}
+
+// Svelte 5
+color: (el, ctx) => {
+  const app = mount(ColorInput, { target: el, props: ctx })
+  return () => unmount(app)
+}
+```
+
+The admin bundles its own Vue, so hosts install nothing extra and no runtime is shared with it.
+
+Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ api, params, query }`: a same-origin fetch helper for `/api/cms`, the route params and the query string. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
+
+To ship no admin at all, pass `admin: false` to the Astro integration or the Nuxt module. Core never imports the admin, so it only lands in your bundle when you mount it.
 
 ## Environment and deployment
 
@@ -182,7 +257,7 @@ Send `/admin/*` and `/api/cms/*` to `cms.fetch(request)`.
 
 ```
 packages/core    integral-cms: schema, Hono app, local API, auth, Astro integration, Nuxt module
-packages/admin   Vue 3 + Tailwind admin SPA, bundled into core at build time (private)
+packages/admin   Vue 3 + Tailwind admin, built as a library into core's dist/admin (private)
 examples/astro   Astro 7 app, mixing prerendered pages and SSR pages, on @astrojs/node
 examples/nuxt    Nuxt 4 app
 examples/tanstack-start  TanStack Start (React) app on Nitro v3
@@ -192,7 +267,8 @@ examples/tanstack-start  TanStack Start (React) app on Nitro v3
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` | Build packages, start the example |
+| `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` | Build packages, start the example and the admin playground on `:5173/admin/` |
+| `pnpm --filter @integral-cms/admin watch` | Rebuild the admin into the example on change |
 | `pnpm build` | Build packages and all examples |
 | `pnpm typecheck` | Type-check everything |
 | `pnpm --filter integral-cms db:generate` | New migration after editing `packages/core/src/db/schema.ts` |
@@ -202,7 +278,7 @@ examples/tanstack-start  TanStack Start (React) app on Nitro v3
 Working:
 
 - Schema-in-code collections and globals with inferred types
-- Admin: list, create, edit, delete; globals; email/password login
+- Admin: list, create, edit, delete; globals; email/password login; custom fields and pages via `integral.admin.ts` (`mount(el, ctx)` from any framework)
 - Public read API with equality filters; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Validation at the API (zod), CSRF protection, first-user-only sign-up
 - Astro integration, Nuxt module, TanStack Start routes; dev, preview and production on Node
@@ -216,7 +292,7 @@ Roadmap, roughly in order:
 4. Rich text (format still open: Tiptap JSON or Markdown)
 5. Relations between collections
 6. Invites, roles and access control
-7. Plugin hooks (`beforeChange`, `afterChange`, extra fields)
+7. Plugin hooks (`beforeChange`, `afterChange`)
 8. Cloudflare Workers: D1 driver, per-request bindings
 9. Postgres
 10. SvelteKit adapter

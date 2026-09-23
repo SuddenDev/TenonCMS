@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 export type Field = {
-  type: 'text' | 'textarea' | 'date' | 'number' | 'boolean' | 'select'
+  type: string
   label?: string
   required?: boolean
   options?: string[]
