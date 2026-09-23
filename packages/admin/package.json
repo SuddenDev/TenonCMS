@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "dev": "vite build --watch",
+    "dev": "vite",
     "build": "vite build && node scripts/embed.mjs",
     "typecheck": "vue-tsc --noEmit"
   },

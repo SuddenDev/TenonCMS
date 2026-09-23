@@ -11,7 +11,7 @@ export default function integralCms({ entry = './integral.config.ts' }: Options 
   return {
     name: 'integral-cms',
     hooks: {
-      'astro:config:setup'({ config, injectRoute, addMiddleware, updateConfig }) {
+      'astro:config:setup'({ command, config, injectRoute, addMiddleware, updateConfig }) {
         entryPath = fileURLToPath(new URL(entry, config.root))
         for (const pattern of ['/admin/[...path]', '/api/cms/[...path]']) {
           injectRoute({ pattern, entrypoint: new URL('./route.ts', import.meta.url), prerender: false })
@@ -21,7 +21,8 @@ export default function integralCms({ entry = './integral.config.ts' }: Options 
           vite: {
             resolve: { alias: { '#integral/config': entryPath } },
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.
-            ssr: { external: ['integral-cms'] },
+            // Dev does not bundle. Keeping core internal there lets Vite reload it when `dist/` changes.
+            ssr: command === 'dev' ? {} : { external: ['integral-cms'] },
           },
         })
       },

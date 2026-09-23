@@ -4,7 +4,7 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 
 ## Commands
 
-- `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack`: build packages, then start the example (ports 4321 / 3000 / 3100)
+- `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack`: build packages, then run the example (ports 4321 / 3000 / 3100), the core watcher and the admin dev server in parallel. Core changes reload in the example without a restart. The admin has HMR on `localhost:5173/admin/` and proxies `/api/cms` to the example (`CMS_URL`). `INTEGRAL_ADMIN_DEV_URL` makes `/admin` on the example redirect there; without it, `/admin` serves the embedded build
 - `pnpm build`: packages and all examples
 - `pnpm typecheck`: all workspaces. Run it before calling work done.
 - `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`
@@ -45,8 +45,9 @@ There are no automated tests yet. Verify end to end with the curl smoke test bel
 
 - Nitro rewrites `typeof window` to `"undefined"` as plain text, even inside strings. That's why the admin assets are base64.
 - libsql loads `@libsql/<platform>` with a dynamic require:
-  - If Vite bundles core, the native binding breaks. That's why core is `ssr.external` in Astro.
+  - If Vite bundles core, the native binding breaks. That's why core is `ssr.external` in Astro and TanStack builds. Dev does not bundle, so it stays internal there and Vite reloads it.
   - Nitro's tracer misses the binary. That's why the Nuxt module adds `traceInclude`.
+- `tsdown --watch` MUST run with `--no-clean`. Otherwise Nitro rebuilds while `dist/` is empty and logs ENOENT errors. Never run `build:packages` while the watcher runs: the admin build empties `assets.js` and the core build deletes files under the watcher.
 - Nitro v3 (TanStack Start) traces the libsql binary on its own. Nitro 2 (Nuxt) does not.
 - TanStack Start streams HTML. Use `grep -a` on curl output, or grep treats it as binary and prints nothing.
 - `nuxt preview` runs with cwd `.output/`, so a relative `file:./cms.db` lands in the build output and gets wiped. Use absolute paths; the Nuxt example uses `resolve('cms.db')`.

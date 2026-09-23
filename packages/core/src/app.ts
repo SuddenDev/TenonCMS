@@ -25,6 +25,9 @@ export function createApp(cms: Cms<Config>) {
   const app = new Hono()
 
   app.get(`${ADMIN_BASE}/*`, (c) => {
+    // Set by the repo's dev scripts, so `/admin` opens the admin dev server with HMR.
+    const devUrl = globalThis.process?.env.INTEGRAL_ADMIN_DEV_URL
+    if (devUrl) return c.redirect(devUrl + c.req.path + new URL(c.req.url).search)
     const path = c.req.path.slice(ADMIN_BASE.length)
     const file = adminFile(path)
     if (file) {

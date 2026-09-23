@@ -23,7 +23,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "dev": "tsdown --watch",
+    "dev": "tsdown --watch --no-clean",
     "db:generate": "drizzle-kit generate && node scripts/embed-migrations.mjs",
     "typecheck": "tsc --noEmit"
   },
