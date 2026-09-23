@@ -48,6 +48,14 @@ export function defineConfig<const T extends Config>(config: T): T {
   return config
 }
 
+export function defineCollection<const T extends Collection>(collection: T): T {
+  return collection
+}
+
+export function defineGlobal<const T extends Global>(global: T): T {
+  return global
+}
+
 function fieldSchema(field: Field): z.ZodType {
   switch (field.type) {
     case 'number':

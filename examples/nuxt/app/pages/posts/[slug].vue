@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
-const { data: post } = await useFetch(`/api/posts/${route.params.slug}`)
+const { data: post } = await useIntegral().findOne('posts', { where: { slug: String(route.params.slug) } })
 if (!post.value) throw createError({ statusCode: 404, statusMessage: 'Post not found', fatal: true })
 
 useHead({ title: post.value.title })

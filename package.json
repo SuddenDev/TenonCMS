@@ -1,6 +1,11 @@
 {
   "name": "integral-cms-monorepo",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "author": {
+    "email": "hello@dtampe.com",
+    "name": "Dominik Tampe",
+    "url": "https://dtampe.com"
+  },
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.11.0",

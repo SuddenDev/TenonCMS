@@ -1,10 +1,11 @@
+import { consola } from 'consola'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { createApp } from './app.ts'
 import { createAuth } from './auth.ts'
 import { createDb, migrate, schema } from './db/index.ts'
 import type { Config, Data, Doc } from './schema.ts'
 
-export { defineConfig } from './schema.ts'
+export { defineCollection, defineConfig, defineGlobal } from './schema.ts'
 export type { Collection, Config, Data, Doc, Field, Fields, Global } from './schema.ts'
 
 export type CmsOptions<T extends Config> = {
@@ -35,6 +36,8 @@ function toDoc(row: Row) {
 }
 
 export function createCms<const T extends Config>({ config, database, secret }: CmsOptions<T>) {
+  const count = (o?: object) => Object.keys(o ?? {}).length
+  consola.withTag('integral').info(`Initialized with ${count(config.collections)} collection(s), ${count(config.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
   let ready: Promise<ReturnType<typeof createDb>> | undefined
   const db = () =>

@@ -1,4 +1,4 @@
-import { addServerHandler, addTemplate, defineNuxtModule } from '@nuxt/kit'
+import { addImports, addServerHandler, createResolver, defineNuxtModule } from '@nuxt/kit'
 import type {} from '@nuxt/nitro-server/augments'
 import type { NuxtModule } from '@nuxt/schema'
 import { createRequire, findPackageJSON } from 'node:module'
@@ -11,22 +11,16 @@ export type Options = {
 
 const integralCms: NuxtModule<Options> = defineNuxtModule<Options>({
   meta: { name: 'integral-cms', configKey: 'integralCms' },
-  defaults: { entry: './server/cms.ts' },
+  defaults: { entry: './integral.config.ts' },
   setup(options, nuxt) {
-    const entryPath = resolve(nuxt.options.rootDir, options.entry!)
-    const handler = addTemplate({
-      filename: 'integral-cms/handler.ts',
-      write: true,
-      getContents: () =>
-        [
-          `import { defineEventHandler, toWebRequest } from 'h3'`,
-          `import { cms } from ${JSON.stringify(entryPath)}`,
-          `export default defineEventHandler((event) => cms.fetch(toWebRequest(event)))`,
-        ].join('\n'),
-    })
+    const runtime = createResolver(import.meta.url).resolve('./runtime')
+    // Nuxt forwards aliases to Nitro and to the generated tsconfig paths.
+    nuxt.options.alias['#integral/config'] = resolve(nuxt.options.rootDir, options.entry!)
+    nuxt.options.build.transpile.push(runtime)
     for (const route of ['/admin', '/admin/**', '/api/cms/**']) {
-      addServerHandler({ route, handler: handler.dst })
+      addServerHandler({ route, handler: `${runtime}/server/handler` })
     }
+    addImports({ name: 'useIntegral', from: `${runtime}/composables` })
     nuxt.hook('nitro:config', (config) => {
       config.externals ??= {}
       config.externals.traceInclude = [...(config.externals.traceInclude ?? []), ...libsqlBinaries()]

@@ -13,8 +13,8 @@ async function load() {
   loading.value = false
 }
 
-// The config can change while the admin is open, e.g. when editing cms.ts in dev.
-// Unchanged responses are skipped, so polling does not re-render open forms.
+// The config can change while the admin is open, e.g. when editing integral.config.ts in dev.
+// Unchanged responses are skipped, so a refresh does not re-render open forms.
 function refreshSchema() {
   if (!user.value || document.hidden) return
   api<Schema>('/schema').then((s) => {
@@ -30,7 +30,6 @@ async function signOut() {
 onMounted(() => {
   load()
   window.addEventListener('focus', refreshSchema)
-  setInterval(() => schema.value.dev && refreshSchema(), 2000)
 })
 </script>
 

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { cms } from '../../../cms'
+import { cms } from '../../../../integral.config'
 
 const handle = ({ request }: { request: Request }) => cms.fetch(request)
 

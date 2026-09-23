@@ -1,6 +1,7 @@
 <script setup lang="ts">
-const { data: site } = await useFetch('/api/site')
-const { data: posts } = await useFetch('/api/posts')
+const cms = useIntegral()
+const { data: site } = await cms.getGlobal('site')
+const { data: posts } = await cms.find('posts')
 
 useHead({ title: () => site.value?.title ?? 'My site' })
 </script>

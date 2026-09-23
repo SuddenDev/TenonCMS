@@ -1,6 +1,6 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { cms } from '../../cms'
+import { cms } from '../../../integral.config'
 
 const getPost = createServerFn()
   .inputValidator((slug: string) => slug)

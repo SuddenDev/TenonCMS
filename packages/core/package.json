@@ -1,6 +1,11 @@
 {
   "name": "integral-cms",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "author": {
+    "email": "hello@dtampe.com",
+    "name": "Dominik Tampe",
+    "url": "https://dtampe.com"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -25,6 +30,7 @@
   "dependencies": {
     "@libsql/client": "^0.18.0",
     "better-auth": "^1.7.5",
+    "consola": "^3.4.2",
     "drizzle-orm": "^0.45.3",
     "hono": "^4.13.8",
     "zod": "^4.6.5"
@@ -32,16 +38,20 @@
   "peerDependencies": {
     "@nuxt/kit": ">=3",
     "@nuxt/schema": ">=3",
-    "astro": ">=5"
+    "astro": ">=5",
+    "h3": ">=1.15"
   },
   "peerDependenciesMeta": {
-    "astro": {
-      "optional": true
-    },
     "@nuxt/kit": {
       "optional": true
     },
     "@nuxt/schema": {
+      "optional": true
+    },
+    "astro": {
+      "optional": true
+    },
+    "h3": {
       "optional": true
     }
   },
@@ -52,6 +62,8 @@
     "@nuxt/schema": "^4.5.2",
     "astro": "^7.3.4",
     "drizzle-kit": "^0.31.11",
+    "h3": "^1.15.11",
+    "nuxt": "^4.5.2",
     "tsdown": "^0.23.0",
     "typescript": "^6.0.3"
   },

@@ -42,37 +42,42 @@ On first visit, choose "Create the admin account". Only the first user can sign 
 
 ### 1. Define the schema and create the instance
 
-```ts
-import { createCms, defineConfig } from 'integral-cms'
+`integral.config.ts` in the project root exports the instance. Collections can live in their own files.
 
-const config = defineConfig({
-  collections: {
-    posts: {
-      label: 'Posts',
-      titleField: 'title',
-      fields: {
-        title: { type: 'text', required: true },
-        slug: { type: 'text', required: true },
-        publishedAt: { type: 'date' },
-        category: { type: 'select', options: ['news', 'guide'] },
-        featured: { type: 'boolean' },
-        body: { type: 'textarea' },
-      },
-    },
-  },
-  globals: {
-    site: { fields: { title: { type: 'text', required: true } } },
+```ts
+// collections/posts.ts
+import { defineCollection } from 'integral-cms'
+
+export const posts = defineCollection({
+  label: 'Posts',
+  titleField: 'title',
+  fields: {
+    title: { type: 'text', required: true },
+    slug: { type: 'text', required: true },
+    publishedAt: { type: 'date' },
+    category: { type: 'select', options: ['news', 'guide'] },
+    featured: { type: 'boolean' },
+    body: { type: 'textarea' },
   },
 })
+```
+
+```ts
+// integral.config.ts
+import { createCms } from 'integral-cms'
+import { posts } from './collections/posts'
 
 export const cms = createCms({
-  config,
+  config: {
+    collections: { posts },
+    globals: { site: { fields: { title: { type: 'text', required: true } } } },
+  },
   database: { url: 'file:/absolute/path/cms.db' }, // or libsql://…, plus authToken
   secret: process.env.CMS_SECRET!, // at least 32 characters
 })
 ```
 
-Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`.
+Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`. `defineGlobal()` does the same for globals.
 
 ### 2. Read content
 
@@ -86,6 +91,10 @@ await cms.getGlobal('site')
 
 Everything is typed from the schema. Unknown collections or fields are type errors.
 
+Reads are also available over HTTP without a session, because the site renders that content anyway.
+Query params are equality filters: `GET /api/cms/collections/posts?slug=hello`, `GET /api/cms/globals/site`.
+Writes and the schema endpoint need an admin session.
+
 ### Astro
 
 ```ts
@@ -94,38 +103,45 @@ import integralCms from 'integral-cms/astro'
 
 export default defineConfig({
   adapter: node({ mode: 'standalone' }),
-  integrations: [integralCms()], // reads ./src/cms.ts, option: { entry }
+  integrations: [integralCms()], // reads ./integral.config.ts, option: { entry }
 })
 ```
 
+The integration adds a middleware that exposes the instance as `Astro.locals.integral`, fully typed.
+
 ```astro
 ---
-import { cms } from '../cms'
 export const prerender = false
-const posts = await cms.find('posts')
+const posts = await Astro.locals.integral.find('posts')
 ---
 ```
 
 Pages with `prerender = false` read live content. Prerendered pages read content at build time.
-Secrets go through `astro:env`; see `examples/astro/astro.config.ts`.
+Secrets go through `astro:env`; see `examples/astro/integral.config.ts`.
 
 ### Nuxt
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['integral-cms/nuxt'], // reads ./server/cms.ts, option: integralCms: { entry }
+  modules: ['integral-cms/nuxt'], // reads ./integral.config.ts, option: integralCms: { entry }
   runtimeConfig: { cmsSecret: '', databaseUrl: `file:${resolve('cms.db')}` },
 })
 ```
 
-```ts
-// server/api/posts.get.ts
-import { cms } from '../cms'
-export default defineEventHandler(() => cms.find('posts'))
+`integral.config.ts` can call `useRuntimeConfig()` for the secret and database URL.
+
+The module auto-imports `useIntegral()`, which mirrors the local API but returns `useAsyncData` results.
+During SSR it calls the CMS in-process; on client-side navigation it fetches the public read API.
+
+```vue
+<script setup lang="ts">
+const { data: posts } = await useIntegral().find('posts')
+const { data: post } = await useIntegral().findOne('posts', { where: { slug: 'hello' } })
+</script>
 ```
 
-Pages load data with `useFetch('/api/posts')`. The types flow through.
+Server routes can import `cms` from `#integral/config` (an alias for `integral.config.ts`) for writes or custom queries.
 
 ### TanStack Start
 
@@ -142,6 +158,8 @@ export const Route = createFileRoute('/api/cms/$')({
 
 ```tsx
 // src/routes/index.tsx: loaders run on client and server, so read content in a server function
+import { cms } from '../../integral.config'
+
 const getPosts = createServerFn().handler(() => cms.find('posts'))
 
 export const Route = createFileRoute('/')({ loader: () => getPosts(), component: Home })
@@ -185,6 +203,7 @@ Working:
 
 - Schema-in-code collections and globals with inferred types
 - Admin: list, create, edit, delete; globals; email/password login
+- Public read API with equality filters; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Validation at the API (zod), CSRF protection, first-user-only sign-up
 - Astro integration, Nuxt module, TanStack Start routes; dev, preview and production on Node
 - SQLite via libsql (local file or Turso)

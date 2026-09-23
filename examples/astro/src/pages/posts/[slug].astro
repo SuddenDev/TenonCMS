@@ -1,9 +1,7 @@
 ---
-import { cms } from '../../cms'
-
 export const prerender = false
 
-const post = await cms.findOne('posts', { where: { slug: Astro.params.slug! } })
+const post = await Astro.locals.integral.findOne('posts', { where: { slug: Astro.params.slug! } })
 if (!post) return new Response('Not found', { status: 404 })
 ---
 

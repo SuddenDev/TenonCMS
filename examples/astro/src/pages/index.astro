@@ -1,8 +1,7 @@
 ---
-import { cms } from '../cms'
-
 export const prerender = false
 
+const { integral: cms } = Astro.locals
 const site = await cms.getGlobal('site')
 const posts = await cms.find('posts')
 ---
