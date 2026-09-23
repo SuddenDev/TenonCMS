@@ -9,8 +9,13 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 - `pnpm typecheck`: runs `build:packages`, then typechecks all workspaces. Run it before calling work done. While a dev watcher runs, use `pnpm -r typecheck` instead (see Gotchas).
 - `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`. Core builds first, then the admin writes into `packages/core/dist/admin`
 - `pnpm --filter integral-cms db:generate`: after editing `packages/core/src/db/schema.ts`
+- `pnpm test`: Vitest in `packages/core` (`pnpm --filter integral-cms test:watch` to watch). No build needed, tests import `src/`.
 
-There are no automated tests yet. Verify end to end with the curl smoke test below.
+## Testing
+
+- TDD, RED then GREEN: write a failing test first and run it to see it fail for the right reason. Then write the least code that makes it pass. A bug fix starts with a test that reproduces it.
+- Tests live next to the code as `*.test.ts`. Unit tests cover pure functions. `src/app.test.ts` is the integration suite: a real `createCms()` on `:memory:` libsql, driven through `createClient()` with a `fetch` that calls `cms.fetch` and keeps the session cookie. Add HTTP behavior there.
+- Examples and adapters are not tested yet. Verify them with the curl smoke test below.
 
 ## Architecture
 
