@@ -7,7 +7,8 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node", "integral-cms/register"],
+    "paths": { "#integral/config": ["./integral.config.ts"] }
   },
   "include": ["src", "collections", "integral.config.ts", "integral.admin.ts", "vite.config.ts"]
 }

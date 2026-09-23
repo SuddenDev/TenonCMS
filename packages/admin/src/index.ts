@@ -1,7 +1,6 @@
 import { createApp, h } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import type { AdminOptions, Mount as MountFn, PageContext } from '../../core/src/admin/index.d.ts'
-import { api } from './api'
 import App from './App.vue'
 import Mount from './components/Mount.vue'
 import CollectionList from './pages/CollectionList.vue'
@@ -25,7 +24,7 @@ export function mountAdmin(el: string | Element, options: AdminOptions = {}) {
     document.head.append(style)
   }
   const page = (mount: MountFn<PageContext>) => ({
-    render: () => h(Mount, { mount, ctx: { api, params: router.currentRoute.value.params, query: router.currentRoute.value.query } }),
+    render: () => h(Mount, { mount, ctx: { params: router.currentRoute.value.params, query: router.currentRoute.value.query } }),
   })
   const router = createRouter({
     history: createWebHistory('/admin/'),

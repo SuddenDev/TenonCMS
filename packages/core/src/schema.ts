@@ -7,7 +7,7 @@ export type Field =
   | (Base & { type: 'number' })
   | (Base & { type: 'boolean' })
   | (Base & { type: 'select'; options: readonly string[] })
-  // Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`.
+  /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
   | (Base & { type: `custom:${string}` })
 
 export type Fields = Record<string, Field>
@@ -15,7 +15,7 @@ export type Fields = Record<string, Field>
 export type Collection = {
   label?: string
   fields: Fields
-  // Field shown in the admin list view. Defaults to the first field.
+  /** Field shown in the admin list view. Defaults to the first field. */
   titleField?: string
 }
 
@@ -73,7 +73,7 @@ function fieldSchema(field: Field): z.ZodType {
   }
 }
 
-// Builds the validator for data coming from the admin API. Unknown keys are stripped.
+/** Builds the validator for data coming from the admin API. Unknown keys are stripped. */
 export function dataSchema(fields: Fields) {
   return z.object(
     Object.fromEntries(

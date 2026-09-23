@@ -3,9 +3,9 @@ import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 export type Options = {
-  // File that exports the `cms` instance, relative to the project root.
+  /** File that exports the `cms` instance, relative to the project root. Defaults to `./integral.config.ts`. */
   entry?: string
-  // Serve the admin at /admin. `false` leaves only the API (headless).
+  /** Serve the admin at `/admin`. `false` leaves only the API (headless). */
   admin?: boolean
 }
 
@@ -36,10 +36,24 @@ export default function integralCms({ entry = './integral.config.ts', admin = tr
       },
       'astro:config:done'({ injectTypes }) {
         // Astro's type injection takes a string. This is the only generated code.
+        // `export {}` makes it a module, so `declare module` augments the client instead of replacing it.
         const module = JSON.stringify(entryPath.replace(/\.[cm]?[jt]s$/, ''))
         injectTypes({
           filename: 'types.d.ts',
-          content: `declare namespace App {\n  interface Locals {\n    integral: typeof import(${module}).cms\n  }\n}\n`,
+          content: `declare global {
+  namespace App {
+    interface Locals {
+      integral: typeof import(${module}).cms
+    }
+  }
+}
+declare module 'integral-cms/client' {
+  interface Register {
+    cms: typeof import(${module}).cms
+  }
+}
+export {}
+`,
         })
       },
     },

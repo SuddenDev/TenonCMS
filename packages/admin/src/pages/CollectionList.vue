@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, schema, type Doc } from '../api'
+import { client, schema } from '../api'
 
 const name = useRoute().params.name as string
 const collection = computed(() => schema.value.collections?.[name])
 const titleField = computed(() => collection.value?.titleField ?? Object.keys(collection.value?.fields ?? {})[0])
-const docs = ref<Doc[]>([])
+const docs = ref<Record<string, any>[]>([])
 
-api<Doc[]>(`/collections/${name}`).then((d) => (docs.value = d))
+client.find(name).then((d) => (docs.value = d))
 </script>
 
 <template>

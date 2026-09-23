@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import type { PageContext } from 'integral-cms/admin'
+import { createClient } from 'integral-cms/client'
 
-const props = defineProps<{ api: PageContext['api'] }>()
-const posts = await props.api<{ id: string; title: string }[]>('/collections/posts')
+const posts = await createClient().find('posts')
 </script>
 
 <template>

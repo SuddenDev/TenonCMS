@@ -1,6 +1,7 @@
 import { defineAdmin, type PageContext } from 'integral-cms/admin'
+import { createClient } from 'integral-cms/client'
 
-type Post = { id: string; title: string; body?: string }
+const client = createClient()
 
 // Content and URL parts are untrusted. Escape everything that lands in innerHTML.
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
@@ -18,8 +19,8 @@ export default defineAdmin({
   pages: {
     stats: {
       label: 'Stats',
-      mount(el, { api }) {
-        api<Post[]>('/collections/posts').then((posts) => {
+      mount(el) {
+        client.find('posts').then((posts) => {
           el.innerHTML = `<h1 class="text-2xl font-semibold">Stats</h1>
             <p class="mt-2 text-sm text-zinc-600">${posts.length} post(s)</p>
             <ul class="mt-4 flex flex-col gap-1 text-sm">
@@ -33,8 +34,8 @@ export default defineAdmin({
     // `update` runs on every route change, so the page refetches when `:id` or `?tab` changes.
     post: {
       mount(el, ctx) {
-        const render = async ({ api, params, query }: PageContext) => {
-          const post = await api<Post>(`/collections/posts/${params.id}`)
+        const render = async ({ params, query }: PageContext) => {
+          const post = await client.findById('posts', String(params.id))
           el.innerHTML = `<h1 class="text-2xl font-semibold">${esc(post.title)}</h1>
             <p class="mt-2 text-sm text-zinc-600">id ${esc(params.id)}, tab ${esc(query.tab ?? 'none')}</p>
             ${query.tab === 'body' ? `<pre class="mt-4 text-sm">${esc(post.body)}</pre>` : ''}`

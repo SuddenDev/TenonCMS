@@ -11,7 +11,7 @@ export type { Collection, Config, Data, Doc, Field, Fields, Global } from './sch
 export type CmsOptions<T extends Config> = {
   config: T
   database: { url: string; authToken?: string }
-  // Secret for signing sessions. MUST be at least 32 random characters in production.
+  /** Secret for signing sessions. MUST be at least 32 random characters in production. */
   secret: string
 }
 
@@ -20,7 +20,7 @@ type Globals<T extends Config> = NonNullable<T['globals']>
 type CollectionDoc<T extends Config, K extends keyof Collections<T>> = Doc<Collections<T>[K]['fields']>
 type GlobalData<T extends Config, K extends keyof Globals<T>> = Data<Globals<T>[K]['fields']>
 type FindOptions<T extends Config, K extends keyof Collections<T>> = {
-  // Equality filters on field values.
+  /** Equality filters on field values. */
   where?: Partial<Record<keyof Collections<T>[K]['fields'], string | number | boolean>>
 }
 
@@ -35,6 +35,11 @@ function toDoc(row: Row) {
   }
 }
 
+/**
+ * Creates a CMS instance. Export it as `cms` from `integral.config.ts`.
+ *
+ * The returned object is the local API for server code. Nothing connects until the first call.
+ */
 export function createCms<const T extends Config>({ config, database, secret }: CmsOptions<T>) {
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(config.collections)} collection(s), ${count(config.globals)} global(s)`)
@@ -59,6 +64,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
     config,
     auth,
 
+    /** Lists documents of a collection, newest first. */
     async find<K extends keyof Collections<T> & string>(
       collection: K,
       options: FindOptions<T, K> = {},
@@ -75,6 +81,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return rows.map(toDoc) as CollectionDoc<T, K>[]
     },
 
+    /** Returns the newest document that matches `where`, or `undefined`. */
     async findOne<K extends keyof Collections<T> & string>(
       collection: K,
       options: FindOptions<T, K>,
@@ -82,6 +89,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return (await cms.find(collection, options))[0]
     },
 
+    /** Returns one document, or `undefined`. */
     async findById<K extends keyof Collections<T> & string>(collection: K, id: string) {
       const [row] = await (await db())
         .select()
@@ -90,6 +98,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return row && (toDoc(row) as CollectionDoc<T, K>)
     },
 
+    /** Creates a document. Does not validate `data`. */
     async create<K extends keyof Collections<T> & string>(collection: K, data: Record<string, unknown>) {
       const [row] = await (await db())
         .insert(documents)
@@ -98,6 +107,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return toDoc(row) as CollectionDoc<T, K>
     },
 
+    /** Replaces the data of a document. Returns `undefined` if it does not exist. Does not validate `data`. */
     async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
       const [row] = await (await db())
         .update(documents)
@@ -107,15 +117,18 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return row && (toDoc(row) as CollectionDoc<T, K>)
     },
 
+    /** Deletes a document. */
     async delete(collection: keyof Collections<T> & string, id: string) {
       await (await db()).delete(documents).where(and(eq(documents.collection, collection), eq(documents.id, id)))
     },
 
+    /** Returns a global. Fields that were never saved are missing. */
     async getGlobal<K extends keyof Globals<T> & string>(name: K): Promise<Partial<GlobalData<T, K>>> {
       const [row] = await (await db()).select().from(globals).where(eq(globals.name, name))
       return (row?.data ?? {}) as Partial<GlobalData<T, K>>
     },
 
+    /** Replaces the data of a global. Does not validate `data`. */
     async setGlobal<K extends keyof Globals<T> & string>(name: K, data: Record<string, unknown>) {
       await (await db())
         .insert(globals)
@@ -124,7 +137,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return data as GlobalData<T, K>
     },
 
-    // Handles /api/cms requests. Mount it in any framework that speaks Request/Response.
+    /** Handles `/api/cms` requests. Mount it in any framework that speaks Request/Response. */
     fetch(request: Request): Promise<Response> {
       return app.fetch(request) as Promise<Response>
     },

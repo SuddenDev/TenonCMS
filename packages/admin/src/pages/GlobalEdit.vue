@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, schema } from '../api'
+import { client, schema, type Data, type Fields } from '../api'
 import DocForm from '../components/DocForm.vue'
 
 const name = useRoute().params.name as string
 const global = computed(() => schema.value.globals?.[name])
 const data = ref<Record<string, unknown> | null>(null)
 
-api(`/globals/${name}`).then((d) => (data.value = d))
+client.getGlobal(name).then((d) => (data.value = d))
 
-async function save(body: Record<string, unknown>) {
-  data.value = await api(`/globals/${name}`, { method: 'PUT', body })
+async function save(body: Data<Fields>) {
+  data.value = await client.setGlobal(name, body)
 }
 </script>
 

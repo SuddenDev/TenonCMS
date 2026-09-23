@@ -1,4 +1,4 @@
-import { addImports, addServerHandler, createResolver, defineNuxtModule, extendPages } from '@nuxt/kit'
+import { addImports, addServerHandler, addTypeTemplate, createResolver, defineNuxtModule, extendPages } from '@nuxt/kit'
 import type {} from '@nuxt/nitro-server/augments'
 import type { NuxtModule } from '@nuxt/schema'
 import { existsSync } from 'node:fs'
@@ -6,9 +6,9 @@ import { createRequire, findPackageJSON } from 'node:module'
 import { resolve } from 'node:path'
 
 export type Options = {
-  // File that exports the `cms` instance, relative to the project root.
+  /** File that exports the `cms` instance, relative to the project root. Defaults to `./integral.config.ts`. */
   entry?: string
-  // Serve the admin at /admin. `false` leaves only the API (headless).
+  /** Serve the admin at `/admin`. `false` leaves only the API (headless). */
   admin?: boolean
 }
 
@@ -31,6 +31,14 @@ const integralCms: NuxtModule<Options> = defineNuxtModule<Options>({
       })
     }
     addImports({ name: 'useIntegral', from: `${runtime}/composables` })
+    // Types `createClient()` from `integral-cms/client` without a type argument.
+    addTypeTemplate(
+      {
+        filename: 'types/integral-cms.d.ts',
+        getContents: () => `/// <reference types="integral-cms/register" />\nexport {}\n`,
+      },
+      { nuxt: true, nitro: true },
+    )
     nuxt.hook('nitro:config', (config) => {
       config.externals ??= {}
       config.externals.traceInclude = [...(config.externals.traceInclude ?? []), ...libsqlBinaries()]

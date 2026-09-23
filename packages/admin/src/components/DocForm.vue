@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { Fields } from '../api'
+import type { Data, Fields } from '../api'
 import FieldInput from './FieldInput.vue'
 
-const props = defineProps<{ fields: Fields; initial: Record<string, unknown>; save: (data: Record<string, unknown>) => Promise<void> }>()
+const props = defineProps<{ fields: Fields; initial: Record<string, unknown>; save: (data: Data<Fields>) => Promise<void> }>()
 
 const data = ref(Object.fromEntries(Object.entries(props.fields).map(([k, f]) => [k, props.initial[k] ?? (f.type === 'boolean' ? false : null)])))
 const error = ref('')
@@ -23,7 +23,7 @@ async function submit() {
           const v = data.value[k] ?? (f.type === 'boolean' ? false : null)
           return [k, v === '' ? null : v]
         }),
-      ),
+      ) as Data<Fields>,
     )
     saved.value = true
   } catch (e) {

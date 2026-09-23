@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import type { Doc } from 'integral-cms'
 import type { PageContext } from 'integral-cms/admin'
+import { createClient } from 'integral-cms/client'
 import { ref, watch } from 'vue'
+import type { posts } from '../../collections/posts'
 
 // Props stay in sync with the route, so a watcher refetches when `:id` changes.
 const props = defineProps<PageContext>()
-const post = ref<{ title: string; body?: string } | null>(null)
+const client = createClient()
+const post = ref<Doc<typeof posts.fields> | null>(null)
 watch(
   () => props.params.id,
-  async (id) => (post.value = await props.api(`/collections/posts/${id}`)),
+  async (id) => (post.value = await client.findById('posts', String(id))),
   { immediate: true },
 )
 </script>

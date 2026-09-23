@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject, onMounted, ref } from 'vue'
-import { api, schema, type Schema } from './api'
+import { client, schema } from './api'
 import Login from './components/Login.vue'
 import { optionsKey, pagePath } from './options'
 
@@ -9,9 +9,9 @@ const user = ref<{ email: string } | null>(null)
 const loading = ref(true)
 
 async function load() {
-  const session = await api<{ user: { email: string } } | null>('/auth/get-session')
+  const session = await client.getSession()
   user.value = session?.user ?? null
-  if (user.value) schema.value = await api('/schema')
+  if (user.value) schema.value = await client.getSchema()
   loading.value = false
 }
 
@@ -19,13 +19,13 @@ async function load() {
 // Unchanged responses are skipped, so a refresh does not re-render open forms.
 function refreshSchema() {
   if (!user.value || document.hidden) return
-  api<Schema>('/schema').then((s) => {
+  client.getSchema().then((s) => {
     if (JSON.stringify(s) !== JSON.stringify(schema.value)) schema.value = s
   }, load)
 }
 
 async function signOut() {
-  await api('/auth/sign-out', { method: 'POST', body: {} })
+  await client.signOut()
   user.value = null
 }
 

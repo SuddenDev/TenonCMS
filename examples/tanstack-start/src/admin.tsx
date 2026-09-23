@@ -1,17 +1,21 @@
 import type { FieldContext, PageContext } from 'integral-cms/admin'
+import { createClient } from 'integral-cms/client'
 import { useEffect, useState } from 'react'
+import type { Doc } from 'integral-cms'
+import type { posts } from '../collections/posts'
 
-type Post = { id: string; title: string; body?: string }
+const client = createClient()
+type Post = Doc<typeof posts.fields>
 
 export function ColorInput({ value, onChange }: FieldContext) {
   return <input type="color" value={value ?? '#000000'} onChange={(e) => onChange(e.target.value)} />
 }
 
-export function Stats({ api }: PageContext) {
+export function Stats() {
   const [posts, setPosts] = useState<Post[]>()
   useEffect(() => {
-    api<Post[]>('/collections/posts').then(setPosts)
-  }, [api])
+    client.find('posts').then(setPosts)
+  }, [])
   return (
     <>
       <h1 className="text-2xl font-semibold">Stats</h1>
@@ -30,11 +34,11 @@ export function Stats({ api }: PageContext) {
 }
 
 // Re-rendered by `renderReact` on every route change, so the effect refetches when `:id` changes.
-export function PostReport({ api, params, query }: PageContext) {
+export function PostReport({ params, query }: PageContext) {
   const [post, setPost] = useState<Post>()
   useEffect(() => {
-    api<Post>(`/collections/posts/${params.id}`).then(setPost)
-  }, [api, params.id])
+    client.findById('posts', String(params.id)).then(setPost)
+  }, [params.id])
   return (
     <>
       <h1 className="text-2xl font-semibold">{post?.title ?? '…'}</h1>

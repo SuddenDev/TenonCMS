@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { api } from '../api'
+import { client } from '../api'
 
 const emit = defineEmits<{ done: [] }>()
 const signUp = ref(false)
@@ -12,7 +12,7 @@ async function submit() {
   busy.value = true
   error.value = ''
   try {
-    await api(signUp.value ? '/auth/sign-up/email' : '/auth/sign-in/email', { method: 'POST', body: form.value })
+    await (signUp.value ? client.signUp(form.value) : client.signIn(form.value))
     emit('done')
   } catch (e) {
     error.value = (e as Error).message

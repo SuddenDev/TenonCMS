@@ -95,6 +95,28 @@ Reads are also available over HTTP without a session, because the site renders t
 Query params are equality filters: `GET /api/cms/collections/posts?slug=hello`, `GET /api/cms/globals/site`.
 Writes and the schema endpoint need an admin session.
 
+In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your config:
+
+```ts
+import { createClient } from 'integral-cms/client'
+
+const client = createClient()
+await client.find('posts', { where: { featured: true } })
+await client.update('posts', id, post) // needs a session, so it works in admin pages
+await client.getSession() // the signed-in admin, or null
+```
+
+The Astro and Nuxt adapters register your `cms` type, so `createClient()` needs no type argument. Without an adapter, add this to `tsconfig.json`:
+
+```jsonc
+"compilerOptions": {
+  "types": ["integral-cms/register"],
+  "paths": { "#integral/config": ["./integral.config.ts"] }
+}
+```
+
+`createClient<typeof otherCms>()` overrides the registered type.
+
 ### Astro
 
 ```ts
@@ -242,7 +264,7 @@ color: (el, ctx) => {
 
 The admin bundles its own Vue, so hosts install nothing extra and no runtime is shared with it.
 
-Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ api, params, query }`: a same-origin fetch helper for `/api/cms`, the route params and the query string. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
+Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ params, query }`: the route params and the query string. For content, use `createClient()` from `integral-cms/client`; the admin's session cookie makes writes work. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
 
 To ship no admin at all, pass `admin: false` to the Astro integration or the Nuxt module. Core never imports the admin, so it only lands in your bundle when you mount it.
 
