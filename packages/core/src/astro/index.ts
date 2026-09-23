@@ -50,6 +50,14 @@ declare module 'integral-cms/client' {
 export {}
 `,
         })
+        // No `export {}`: the declaration MUST stay ambient to declare the alias.
+        injectTypes({
+          filename: 'config.d.ts',
+          content: `declare module '#integral/config' {
+  export const cms: typeof import(${module}).cms
+}
+`,
+        })
       },
     },
   }
