@@ -167,7 +167,7 @@ Server routes can import `cms` from `#integral/config` (an alias for `integral.c
 
 ### TanStack Start
 
-No module needed. A splat server route hands API requests to the CMS, and a client-only route mounts the admin:
+No module needed. A splat server route hands API requests to the CMS. `integralAdmin()` builds the admin, and a server route serves its page:
 
 ```ts
 // src/routes/api/cms/$.ts
@@ -178,18 +178,20 @@ export const Route = createFileRoute('/api/cms/$')({
 })
 ```
 
-```tsx
-// src/routes/admin.$.tsx
-import { mountAdmin } from 'integral-cms/admin'
-import options from '../../integral.admin'
+```ts
+// vite.config.ts
+import { integralAdmin } from 'integral-cms/vite'
 
-export const Route = createFileRoute('/admin/$')({ ssr: false, component: Admin })
+export default defineConfig({ plugins: [tanstackStart(), nitro(), viteReact(), integralAdmin()] })
+```
 
-function Admin() {
-  const el = useRef<HTMLDivElement>(null)
-  useEffect(() => mountAdmin(el.current!, options), [])
-  return <div ref={el} />
-}
+```ts
+// src/routes/admin.$.ts
+import html from '#integral/admin-html'
+
+export const Route = createFileRoute('/admin/$')({
+  server: { handlers: { GET: () => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } }) } },
+})
 ```
 
 ```tsx
@@ -205,7 +207,7 @@ Add `ssr: { external: ['integral-cms'] }` to `vite.config.ts` when you link the 
 
 ### Any other framework
 
-Send `/api/cms/*` to `cms.fetch(request)`. For the admin, serve a page with an empty element and mount into it:
+Send `/api/cms/*` to `cms.fetch(request)`. With Vite, use `integralAdmin()` as in TanStack Start and return `#integral/admin-html` for `/admin` and `/admin/*`. Otherwise serve a page of its own with an empty element and mount into it:
 
 ```ts
 import { mountAdmin } from 'integral-cms/admin'
@@ -215,7 +217,7 @@ mountAdmin('#admin')
 
 ## Customize the admin
 
-Create `integral.admin.ts` next to `integral.config.ts`. Astro and Nuxt pick it up at startup; delete it to go back to the default. Restart the dev server after adding or removing it. TanStack imports it in the admin route.
+Create `integral.admin.ts` next to `integral.config.ts`. Astro, Nuxt and `integralAdmin()` pick it up at startup; delete it to go back to the default. Restart the dev server after adding or removing it.
 
 ```ts
 // integral.admin.ts
@@ -266,7 +268,7 @@ The admin bundles its own Vue, so hosts install nothing extra and no runtime is 
 
 Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ params, query }`: the route params and the query string. For content, use `createClient()` from `integral-cms/client`; the admin's session cookie makes writes work. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
 
-To ship no admin at all, pass `admin: false` to the Astro integration or the Nuxt module. Core never imports the admin, so it only lands in your bundle when you mount it.
+To serve the admin elsewhere, pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `integralAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
 
 ## Environment and deployment
 
