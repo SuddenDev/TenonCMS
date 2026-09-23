@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHead } from '@unhead/vue'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { client, schema, type Data, type Fields } from '../api'
@@ -7,6 +8,8 @@ import DocForm from '../components/DocForm.vue'
 const name = useRoute().params.name as string
 const global = computed(() => schema.value.globals?.[name])
 const data = ref<Record<string, unknown> | null>(null)
+
+useHead({ title: () => global.value?.label ?? name })
 
 client.getGlobal(name).then((d) => (data.value = d))
 

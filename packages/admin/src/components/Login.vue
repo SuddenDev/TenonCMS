@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHead } from "@unhead/vue";
 import { ref } from "vue";
 import { client } from "../api";
 import { Button } from "./ui/button";
@@ -8,6 +9,8 @@ const signUp = ref(false);
 const form = ref({ name: "", email: "", password: "" });
 const error = ref("");
 const busy = ref(false);
+
+useHead({ title: () => (signUp.value ? "Create account" : "Sign in") });
 
 async function submit() {
   busy.value = true;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHead } from '@unhead/vue'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { client, schema } from '../api'
@@ -7,6 +8,8 @@ const name = useRoute().params.name as string
 const collection = computed(() => schema.value.collections?.[name])
 const titleField = computed(() => collection.value?.titleField ?? Object.keys(collection.value?.fields ?? {})[0])
 const docs = ref<Record<string, any>[]>([])
+
+useHead({ title: () => collection.value?.label ?? name })
 
 client.find(name).then((d) => (docs.value = d))
 </script>

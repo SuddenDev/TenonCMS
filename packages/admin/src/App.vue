@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHead } from '@unhead/vue'
 import { inject, onMounted, ref } from 'vue'
 import { client, schema } from './api'
 import Login from './components/Login.vue'
@@ -7,6 +8,8 @@ import { optionsKey, pagePath } from './options'
 const pages = Object.entries(inject(optionsKey, {}).pages ?? {}).filter(([, p]) => p.label)
 const user = ref<{ email: string } | null>(null)
 const loading = ref(true)
+
+useHead({ titleTemplate: (title) => (title ? `${title} · Admin` : 'Admin') })
 
 async function load() {
   const session = await client.getSession()
