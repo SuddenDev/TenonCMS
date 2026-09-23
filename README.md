@@ -84,6 +84,7 @@ Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`. `defineG
 ```ts
 await cms.find('posts')                                   // all, newest first
 await cms.find('posts', { where: { category: 'news' } })   // equality filters
+await cms.find('posts', { limit: 5 })                      // the 5 newest
 await cms.findOne('posts', { where: { slug: 'hello' } })
 await cms.findById('posts', id)
 await cms.getGlobal('site')
@@ -92,7 +93,8 @@ await cms.getGlobal('site')
 Everything is typed from the schema. Unknown collections or fields are type errors.
 
 Reads are also available over HTTP without a session, because the site renders that content anyway.
-Query params are equality filters: `GET /api/cms/collections/posts?slug=hello`, `GET /api/cms/globals/site`.
+Query params are equality filters, and `limit` caps the result: `GET /api/cms/collections/posts?slug=hello&limit=1`, `GET /api/cms/globals/site`.
+Because of that, a field named `limit` cannot be filtered over HTTP.
 Writes and the schema endpoint need an admin session.
 
 In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your config:
@@ -125,7 +127,7 @@ import integralCms from 'integral-cms/astro'
 
 export default defineConfig({
   adapter: node({ mode: 'standalone' }),
-  integrations: [integralCms()], // reads ./integral.config.ts, option: { entry }
+  integrations: [integralCms()], // reads ./integral.config.ts, options: { entry, admin }
 })
 ```
 
@@ -146,14 +148,14 @@ Secrets go through `astro:env`; see `examples/astro/integral.config.ts`.
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['integral-cms/nuxt'], // reads ./integral.config.ts, option: integralCms: { entry }
+  modules: ['integral-cms/nuxt'], // reads ./integral.config.ts, options: integralCms: { entry, admin }
   runtimeConfig: { cmsSecret: '', databaseUrl: `file:${resolve('cms.db')}` },
 })
 ```
 
 `integral.config.ts` can call `useRuntimeConfig()` for the secret and database URL.
 
-The module auto-imports `useIntegral()`, which mirrors the local API but returns `useAsyncData` results.
+The module auto-imports `useIntegral()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results.
 During SSR it calls the CMS in-process; on client-side navigation it fetches the public read API.
 
 ```vue
@@ -203,7 +205,7 @@ const getPosts = createServerFn().handler(() => cms.find('posts'))
 export const Route = createFileRoute('/')({ loader: () => getPosts(), component: Home })
 ```
 
-Add `ssr: { external: ['integral-cms'] }` to `vite.config.ts` when you link the package from a workspace.
+`integralAdmin()` also keeps `integral-cms` external in the SSR build, because bundling it breaks libsql's native binding.
 
 ### Any other framework
 
@@ -233,7 +235,7 @@ export default defineAdmin({
 ```
 
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
-- `pages` adds routes under `/admin`. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`. Pages with a `label` are linked in the sidebar.
+- `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`. Pages with a `label` are linked in the sidebar.
 - A page on a built-in path replaces that view: `route: '/'` replaces the start page, `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
 
 Every slot is one function, `mount(el, ctx)`, so any framework can plug in. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers:
@@ -266,7 +268,7 @@ color: (el, ctx) => {
 
 The admin bundles its own Vue, so hosts install nothing extra and no runtime is shared with it.
 
-Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ params, query }`: the route params and the query string. For content, use `createClient()` from `integral-cms/client`; the admin's session cookie makes writes work. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
+Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ params, query }`: the route params and the query string. Both also get `integral`: `base` is the admin path to prefix links with, and `navigate(path)` opens an admin view without a reload. Plain links under `base` also open in the admin. For content, use `createClient()` from `integral-cms/client`; the admin's session cookie makes writes work. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
 
 To serve the admin elsewhere, pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `integralAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
 
@@ -280,7 +282,7 @@ To serve the admin elsewhere, pass a path: `admin: '/cms'` to the Astro integrat
 ## Project layout
 
 ```
-packages/core    integral-cms: schema, Hono app, local API, auth, Astro integration, Nuxt module
+packages/core    integral-cms: schema, Hono app, local API, HTTP client, auth, Astro integration, Nuxt module, Vite plugin
 packages/admin   Vue 3 + Tailwind admin, built as a library into core's dist/admin (private)
 examples/astro   Astro 7 app, mixing prerendered pages and SSR pages, on @astrojs/node
 examples/nuxt    Nuxt 4 app
@@ -294,7 +296,7 @@ examples/tanstack-start  TanStack Start (React) app on Nitro v3
 | `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` | Build packages, start the example and the admin playground on `:5173/admin/` |
 | `pnpm --filter @integral-cms/admin watch` | Rebuild the admin into the example on change |
 | `pnpm build` | Build packages and all examples |
-| `pnpm typecheck` | Type-check everything |
+| `pnpm typecheck` | Build packages, then type-check everything |
 | `pnpm --filter integral-cms db:generate` | New migration after editing `packages/core/src/db/schema.ts` |
 
 ## Status
@@ -303,9 +305,9 @@ Working:
 
 - Schema-in-code collections and globals with inferred types
 - Admin: list, create, edit, delete; globals; email/password login; custom fields and pages via `integral.admin.ts` (`mount(el, ctx)` from any framework)
-- Public read API with equality filters; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
+- Public read API with equality filters and `limit`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Validation at the API (zod), CSRF protection, first-user-only sign-up
-- Astro integration, Nuxt module, TanStack Start routes; dev, preview and production on Node
+- Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso)
 
 Roadmap, roughly in order:
