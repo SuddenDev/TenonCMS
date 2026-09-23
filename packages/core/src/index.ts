@@ -20,8 +20,8 @@ type Globals<T extends Config> = NonNullable<T['globals']>
 type CollectionDoc<T extends Config, K extends keyof Collections<T>> = Doc<Collections<T>[K]['fields']>
 type GlobalData<T extends Config, K extends keyof Globals<T>> = Data<Globals<T>[K]['fields']>
 type FindOptions<T extends Config, K extends keyof Collections<T>> = {
-  /** Equality filters on field values. */
-  where?: Partial<Record<keyof Collections<T>[K]['fields'], string | number | boolean>>
+  /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
+  where?: Partial<Record<keyof Collections<T>[K]['fields'], string | number | boolean | null>>
   /** Maximum number of documents. */
   limit?: number
 }
@@ -66,14 +66,19 @@ export function createCms<const T extends Config>({ config, database, secret }: 
     config,
     auth,
 
-    /** Lists documents of a collection, newest first. */
+    /**
+     * Lists documents of a collection, newest first.
+     * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
+     */
     async find<K extends keyof Collections<T> & string>(
       collection: K,
       options: FindOptions<T, K> = {},
     ): Promise<CollectionDoc<T, K>[]> {
       const filters = Object.entries(options.where ?? {}).map(([key, value]) => {
         if (!Object.hasOwn(config.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
-        return sql`json_extract(${documents.data}, ${`$.${key}`}) = ${value}`
+        if (value === undefined) return undefined
+        const field = sql`json_extract(${documents.data}, ${`$.${key}`})`
+        return value === null ? sql`${field} IS NULL` : sql`${field} = ${value}`
       })
       const query = (await db())
         .select()
@@ -85,7 +90,10 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       return rows.map(toDoc) as CollectionDoc<T, K>[]
     },
 
-    /** Returns the newest document that matches `where`, or `undefined`. */
+    /**
+     * Returns the newest document that matches `where`, or `undefined`.
+     * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
+     */
     async findOne<K extends keyof Collections<T> & string>(
       collection: K,
       options: FindOptions<T, K>,

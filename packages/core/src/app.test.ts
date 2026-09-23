@@ -125,6 +125,10 @@ describe('reads', () => {
     expect((await client.find('posts', { where: { views: 2, featured: false } })).map((p) => p.title)).toEqual(['B'])
   })
 
+  it('ignore undefined filters', async () => {
+    expect(await client.find('posts', { where: { views: undefined } })).toHaveLength(3)
+  })
+
   it('limit results', async () => {
     expect(await client.find('posts', { limit: 2 })).toHaveLength(2)
     expect(await client.findOne('posts', { where: { views: 2 } })).toMatchObject({ title: 'C' })
@@ -144,6 +148,17 @@ describe('reads', () => {
 describe('local API', () => {
   it('rejects unknown filter fields before they reach SQL', async () => {
     await expect(cms.find('posts', { where: { "x') OR 1=1 --": 1 } as never })).rejects.toThrow(/Unknown field/)
+  })
+
+  it('matches empty or missing fields with null and ignores undefined', async () => {
+    await cms.create('posts', { title: 'A', views: null })
+    await cms.create('posts', { title: 'B' })
+    await cms.create('posts', { title: 'C', views: 3 })
+    const titles = async (views: number | null | undefined) =>
+      (await cms.find('posts', { where: { views } })).map((p) => p.title)
+    expect(await titles(null)).toEqual(['B', 'A'])
+    expect(await titles(undefined)).toEqual(['C', 'B', 'A'])
+    expect(await titles(3)).toEqual(['C'])
   })
 
   it('keeps instances apart', async () => {

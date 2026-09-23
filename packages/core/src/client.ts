@@ -62,7 +62,10 @@ export class CmsError extends Error {
  */
 export function createClient<C extends { config: Config } = RegisteredCms>({ baseUrl = '', fetch: fetchFn = fetch }: ClientOptions = {}) {
   async function request<T>(method: string, path: string, body?: unknown, query?: object): Promise<T> {
-    const search = query && Object.keys(query).length ? `?${new URLSearchParams(query as Record<string, string>)}` : ''
+    const params = new URLSearchParams(
+      Object.entries(query ?? {}).flatMap(([key, value]) => (value === undefined ? [] : [[key, String(value)]])),
+    )
+    const search = params.size ? `?${params}` : ''
     const res = await fetchFn(`${baseUrl}${API_BASE}${path}${search}`, {
       method,
       headers: body === undefined ? undefined : { 'content-type': 'application/json' },
@@ -82,7 +85,7 @@ export function createClient<C extends { config: Config } = RegisteredCms>({ bas
     find<K extends keyof Collections<C> & string>(
       collection: K,
       options: {
-        /** Equality filters on field values. */
+        /** Equality filters on field values. An `undefined` value adds no filter. */
         where?: Partial<Record<keyof Fields<C, K>, string | number | boolean>>
         /** Maximum number of documents. */
         limit?: number
@@ -96,7 +99,7 @@ export function createClient<C extends { config: Config } = RegisteredCms>({ bas
     async findOne<K extends keyof Collections<C> & string>(
       collection: K,
       options: {
-        /** Equality filters on field values. */
+        /** Equality filters on field values. An `undefined` value adds no filter. */
         where: Partial<Record<keyof Fields<C, K>, string | number | boolean>>
       },
     ): Promise<Doc<Fields<C, K>> | undefined> {
