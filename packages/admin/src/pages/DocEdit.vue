@@ -2,7 +2,7 @@
 import { useHead } from '@unhead/vue'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { client, schema, type Data, type Fields } from '../api'
+import { client, schema, titleField, type Data, type Fields } from '../api'
 import DocForm from '../components/DocForm.vue'
 
 const route = useRoute()
@@ -13,9 +13,7 @@ const isNew = id === 'new'
 const collection = computed(() => schema.value.collections?.[name])
 const doc = ref<Record<string, unknown> | null>(isNew ? {} : null)
 
-const titleField = computed(() => collection.value?.titleField ?? Object.keys(collection.value?.fields ?? {})[0])
-
-useHead({ title: () => (isNew ? `New · ${collection.value?.label ?? name}` : String(doc.value?.[titleField.value!] || 'Untitled')) })
+useHead({ title: () => (isNew ? `New · ${collection.value?.label ?? name}` : String((collection.value && doc.value?.[titleField(collection.value)]) || 'Untitled')) })
 
 if (!isNew) client.findById(name, id).then((d) => (doc.value = d))
 

@@ -2,11 +2,10 @@
 import { useHead } from '@unhead/vue'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { client, schema } from '../api'
+import { client, schema, titleField } from '../api'
 
 const name = useRoute().params.name as string
 const collection = computed(() => schema.value.collections?.[name])
-const titleField = computed(() => collection.value?.titleField ?? Object.keys(collection.value?.fields ?? {})[0])
 const docs = ref<Record<string, any>[]>([])
 
 useHead({ title: () => collection.value?.label ?? name })
@@ -23,7 +22,7 @@ client.find(name).then((d) => (docs.value = d))
     <ul class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white">
       <li v-for="doc in docs" :key="doc.id">
         <RouterLink :to="`/collections/${name}/${doc.id}`" class="flex justify-between px-4 py-3 text-sm hover:bg-zinc-50">
-          <span>{{ doc[titleField] || '(untitled)' }}</span>
+          <span>{{ doc[titleField(collection)] || '(untitled)' }}</span>
           <span class="text-zinc-500">{{ new Date(doc.updatedAt as string).toLocaleString() }}</span>
         </RouterLink>
       </li>

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
-import type { Mount } from '../../../core/src/admin/index.d.ts'
+import type { Mount, MountHandle } from '../../../core/src/admin/index.d.ts'
 import { integralKey } from '../options'
 
 const props = defineProps<{ mount: Mount<any>; ctx: Record<string, unknown> }>()
 const el = useTemplateRef('el')
 const integral = inject(integralKey)!
-let handle: { update?: (ctx: unknown) => void; unmount: () => void } | undefined
+let handle: MountHandle<unknown> | undefined
 
 onMounted(() => {
-  const r = props.mount(el.value!, props.ctx)
+  const r = props.mount(el.value!, { ...props.ctx, integral })
   handle = typeof r === 'function' ? { unmount: r } : r
 })
-watch(() => props.ctx, (ctx) => handle?.update?.(ctx), { deep: true })
+watch(() => props.ctx, (ctx) => handle?.update?.({ ...ctx, integral }), { deep: true })
 onUnmounted(() => handle?.unmount())
 
 // Host links under the admin path open in the admin without a reload, like RouterLink.

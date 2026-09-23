@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useHead } from '@unhead/vue'
-import { inject, onMounted, ref } from 'vue'
+import { inject, onMounted, onUnmounted, ref } from 'vue'
 import { client, schema } from './api'
 import Login from './components/Login.vue'
 import { optionsKey, pagePath } from './options'
@@ -12,9 +12,10 @@ const loading = ref(true)
 useHead({ titleTemplate: (title) => (title ? `${title} · Admin` : 'Admin') })
 
 async function load() {
-  const session = await client.getSession()
+  // `/schema` answers 401 without a session, so both requests can run at once.
+  const [session, s] = await Promise.all([client.getSession(), client.getSchema().catch(() => undefined)])
   user.value = session?.user ?? null
-  if (user.value) schema.value = await client.getSchema()
+  if (user.value && s) schema.value = s
   loading.value = false
 }
 
@@ -36,6 +37,7 @@ onMounted(() => {
   load()
   window.addEventListener('focus', refreshSchema)
 })
+onUnmounted(() => window.removeEventListener('focus', refreshSchema))
 </script>
 
 <template>

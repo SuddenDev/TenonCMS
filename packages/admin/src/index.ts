@@ -6,7 +6,6 @@ import type {
   AdminOptions,
   IntegralContext,
   Page,
-  PageContext,
 } from "../../core/src/admin/index.d.ts";
 import App from "./App.vue";
 import Mount from "./components/Mount.vue";
@@ -39,7 +38,6 @@ export function mountAdmin(
           ctx: {
             params: router.currentRoute.value.params,
             query: router.currentRoute.value.query,
-            integral,
           },
         });
     },
