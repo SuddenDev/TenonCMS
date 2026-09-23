@@ -38,6 +38,10 @@
     "./admin/react": {
       "types": "./dist/admin/react.d.mts",
       "default": "./dist/admin/react.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite/index.d.mts",
+      "default": "./dist/vite/index.mjs"
     }
   },
   "scripts": {
@@ -61,6 +65,7 @@
     "h3": ">=1.15",
     "react": ">=18",
     "react-dom": ">=18",
+    "vite": ">=7",
     "vue": ">=3.5"
   },
   "peerDependenciesMeta": {
@@ -82,6 +87,9 @@
     "react-dom": {
       "optional": true
     },
+    "vite": {
+      "optional": true
+    },
     "vue": {
       "optional": true
     }
@@ -100,6 +108,7 @@
     "react-dom": "^19.3.0",
     "tsdown": "^0.23.0",
     "typescript": "^6.0.3",
+    "vite": "^8.3.0",
     "vue": "^3.5.43"
   },
   "files": [

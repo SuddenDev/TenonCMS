@@ -1,7 +1,7 @@
 import { createApp, h, reactive, Suspense, type Component } from 'vue'
 import type { Mount } from './index.d.ts'
 
-export type { FieldContext, Mount, PageContext } from './index.d.ts'
+export type { FieldContext, IntegralContext, Mount, PageContext } from './index.d.ts'
 
 /**
  * Turns a Vue component into a {@link Mount} for `integral.admin.ts`.

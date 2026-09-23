@@ -2,7 +2,7 @@ import { createElement, type ComponentType } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Mount } from './index.d.ts'
 
-export type { FieldContext, Mount, PageContext } from './index.d.ts'
+export type { FieldContext, IntegralContext, Mount, PageContext } from './index.d.ts'
 
 /**
  * Turns a React component into a {@link Mount} for `integral.admin.ts`.
@@ -13,7 +13,7 @@ export type { FieldContext, Mount, PageContext } from './index.d.ts'
  * pages: { stats: { label: 'Stats', mount: renderReact(Stats) } }
  *
  * // admin.tsx
- * export function Stats({ api, params }: PageContext) { … }
+ * export function Stats({ params, integral }: PageContext) { … }
  */
 export function renderReact<Ctx extends object>(Component: ComponentType<Ctx>): Mount<Ctx> {
   return (el, ctx) => {

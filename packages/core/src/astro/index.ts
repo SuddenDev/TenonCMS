@@ -1,12 +1,13 @@
 import type { AstroIntegration } from 'astro'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { adminPath, type AdminOption } from '../admin/html.ts'
 
 export type Options = {
   /** File that exports the `cms` instance, relative to the project root. Defaults to `./integral.config.ts`. */
   entry?: string
-  /** Serve the admin at `/admin`. `false` leaves only the API (headless). */
-  admin?: boolean
+  /** Path of the admin, e.g. `/cms`. Defaults to `/admin`. `false` leaves only the API (headless). `true` is default behavior */
+  admin?: AdminOption
 }
 
 export default function integralCms({ entry = './integral.config.ts', admin = true }: Options = {}): AstroIntegration {
@@ -18,8 +19,9 @@ export default function integralCms({ entry = './integral.config.ts', admin = tr
         entryPath = fileURLToPath(new URL(entry, config.root))
         const alias: Record<string, string> = { '#integral/config': entryPath }
         injectRoute({ pattern: '/api/cms/[...path]', entrypoint: new URL('./route.ts', import.meta.url), prerender: false })
-        if (admin) {
-          injectRoute({ pattern: '/admin/[...path]', entrypoint: new URL('./admin.astro', import.meta.url), prerender: false })
+        const path = adminPath(admin)
+        if (path) {
+          injectRoute({ pattern: `${path}/[...path]`, entrypoint: new URL('./admin.astro', import.meta.url), prerender: false })
           // Optional host file with admin customization, e.g. custom field inputs.
           const adminFile = fileURLToPath(new URL('./integral.admin.ts', config.root))
           alias['#integral/admin'] = existsSync(adminFile) ? adminFile : fileURLToPath(new URL('../admin/default.ts', import.meta.url))

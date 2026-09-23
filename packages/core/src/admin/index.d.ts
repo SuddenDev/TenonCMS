@@ -25,6 +25,22 @@ export type MountHandle<Ctx> = {
   unmount: () => void
 }
 
+/** Helpers from the admin, in every context as `integral`. */
+export type IntegralContext = {
+  /**
+   * Path the admin is served at, e.g. `/admin`. Prefix links with it: `${base}/collections/posts`.
+   *
+   * Same-origin links under it open in the admin without a page reload. Links with `target`, `download`
+   * or a modifier key, links elsewhere, and clicks with `preventDefault()` stay normal links.
+   */
+  base: string
+  /**
+   * Opens an admin view without reloading the page. For links, a plain `href` under `base` is enough.
+   * @param path Relative to {@link IntegralContext.base}, e.g. `/reports/posts/1?tab=body`.
+   */
+  navigate: (path: string) => void
+}
+
 /** Context of a custom field input. */
 export type FieldContext = {
   /** Field name in the collection or global, e.g. `color`. */
@@ -42,6 +58,8 @@ export type FieldContext = {
   value: any
   /** Sets the value in the form. The admin saves it with the document. */
   onChange: (value: any) => void
+  /** Helpers from the admin. */
+  integral: IntegralContext
 }
 
 /**
@@ -55,6 +73,8 @@ export type PageContext = {
   params: Record<string, string | string[]>
   /** Query string, e.g. `{ tab: 'body' }` for `?tab=body`. */
   query: Record<string, string | string[] | null | (string | null)[]>
+  /** Helpers from the admin. */
+  integral: IntegralContext
 }
 
 /** A custom admin page. */
@@ -100,8 +120,10 @@ export function defineAdmin(options: AdminOptions): AdminOptions
 /**
  * Mounts the admin into `el` and returns an unmount function.
  *
- * Astro and Nuxt call it for you on `/admin`. Call it yourself in other frameworks, on a client-only route.
+ * Astro, Nuxt and `integral-cms/vite` call it for you on `/admin`. Elsewhere, call it on a page of its own:
+ * the admin's styles are global and stay after unmount.
  * @param el Element or CSS selector.
  * @param options Usually the default export of `integral.admin.ts`.
+ * @param base Path the admin is served at. Defaults to `/admin`.
  */
-export function mountAdmin(el: string | Element, options?: AdminOptions): () => void
+export function mountAdmin(el: string | Element, options?: AdminOptions, base?: string): () => void
