@@ -19,14 +19,30 @@ export default defineAdmin({
   pages: {
     stats: {
       label: 'Stats',
-      mount(el) {
+      mount(el, { integral }) {
         client.find('posts').then((posts) => {
           el.innerHTML = `<h1 class="text-2xl font-semibold">Stats</h1>
             <p class="mt-2 text-sm text-zinc-600">${posts.length} post(s)</p>
             <ul class="mt-4 flex flex-col gap-1 text-sm">
-              ${posts.map((p) => `<li><a class="underline" href="/admin/reports/posts/${esc(p.id)}?tab=body">${esc(p.title)}</a></li>`).join('')}
+              ${posts.map((p) => `<li><a class="underline" href="${integral.base}/reports/posts/${esc(p.id)}?tab=body">${esc(p.title)}</a></li>`).join('')}
             </ul>`
         })
+        return () => (el.innerHTML = '')
+      },
+    },
+    dashboard: {
+      route: '/',
+      mount: (el, { integral }) => {
+        const render = async () => {
+          const posts = await client.find('posts')
+          const session = await client.getSession()
+          el.innerHTML = `<h1 class="text-2xl font-semibold">Hi, ${session?.user.name ?? 'Guest'}</h1>
+            <p class="mt-2 text-sm text-zinc-600">${posts.length} post(s)</p>
+            <ul class="mt-4 flex flex-col gap-1 text-sm">
+              ${posts.map((p) => `<li><a class="underline" href="${integral.base}/reports/posts/${esc(p.id)}?tab=body">${esc(p.title)}</a></li>`).join('')}
+            </ul>`
+        }
+        render()
         return () => (el.innerHTML = '')
       },
     },

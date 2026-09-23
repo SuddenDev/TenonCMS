@@ -11,7 +11,7 @@ export function ColorInput({ value, onChange }: FieldContext) {
   return <input type="color" value={value ?? '#000000'} onChange={(e) => onChange(e.target.value)} />
 }
 
-export function Stats() {
+export function Stats({ integral }: PageContext) {
   const [posts, setPosts] = useState<Post[]>()
   useEffect(() => {
     client.find('posts').then(setPosts)
@@ -23,7 +23,7 @@ export function Stats() {
       <ul className="mt-4 flex flex-col gap-1 text-sm">
         {posts?.map((post) => (
           <li key={post.id}>
-            <a href={`/admin/reports/posts/${post.id}?tab=body`} className="underline">
+            <a href={`${integral.base}/reports/posts/${post.id}?tab=body`} className="underline">
               {post.title}
             </a>
           </li>
