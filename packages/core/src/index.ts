@@ -79,7 +79,8 @@ export function createCms<const T extends Config>({ config, database, secret }: 
         .select()
         .from(documents)
         .where(and(eq(documents.collection, collection), ...filters))
-        .orderBy(desc(documents.createdAt))
+        // `rowid` orders documents created in the same millisecond.
+        .orderBy(desc(documents.createdAt), desc(sql`rowid`))
       const rows = await (options.limit ? query.limit(options.limit) : query)
       return rows.map(toDoc) as CollectionDoc<T, K>[]
     },
