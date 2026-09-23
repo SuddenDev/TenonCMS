@@ -1,40 +1,27 @@
-import { useAsyncData, useRequestFetch } from '#app'
+import { useAsyncData, useRequestEvent } from '#app'
 import type { cms } from '#integral/config'
-import type { Data, Doc } from 'integral-cms'
+import { createClient } from 'integral-cms/client'
 
-type Cms = typeof cms
-type Collections = NonNullable<Cms['config']['collections']>
-type Globals = NonNullable<Cms['config']['globals']>
-type CollectionDoc<K extends keyof Collections> = Doc<Collections[K]['fields']>
-type Where<K extends keyof Collections> = Partial<Record<keyof Collections[K]['fields'], string | number | boolean>>
+type Collections = NonNullable<(typeof cms)['config']['collections']>
+type Globals = NonNullable<(typeof cms)['config']['globals']>
 
-const base = '/api/cms'
-
-// Mirrors the local API for pages. During SSR the request stays in-process; on client-side
+// The client's read methods for pages. During SSR the request stays in-process; on client-side
 // navigation it hits the public read API.
 export function useIntegral() {
-  const fetch = useRequestFetch()
+  const event = useRequestEvent()
+  const client = createClient<typeof cms>({ fetch: event && ((input, init) => event.fetch(String(input), init)) })
   return {
-    find<K extends keyof Collections & string>(collection: K, options: { where?: Where<K> } = {}) {
-      return useAsyncData(`integral:${collection}:${JSON.stringify(options.where ?? {})}`, () =>
-        fetch<CollectionDoc<K>[]>(`${base}/collections/${collection}`, { query: options.where }),
-      )
+    find<K extends keyof Collections & string>(collection: K, options: Parameters<typeof client.find<K>>[1] = {}) {
+      return useAsyncData(`integral:${collection}:${JSON.stringify(options)}`, () => client.find(collection, options))
     },
-    findOne<K extends keyof Collections & string>(collection: K, options: { where: Where<K> }) {
-      return useAsyncData(`integral:${collection}:one:${JSON.stringify(options.where)}`, async () => {
-        const docs = await fetch<CollectionDoc<K>[]>(`${base}/collections/${collection}`, { query: options.where })
-        return docs[0] ?? null
-      })
+    findOne<K extends keyof Collections & string>(collection: K, options: Parameters<typeof client.findOne<K>>[1]) {
+      return useAsyncData(`integral:${collection}:one:${JSON.stringify(options.where)}`, async () => (await client.findOne(collection, options)) ?? null)
     },
     findById<K extends keyof Collections & string>(collection: K, id: string) {
-      return useAsyncData(`integral:${collection}:${id}`, () =>
-        fetch<CollectionDoc<K>>(`${base}/collections/${collection}/${id}`),
-      )
+      return useAsyncData(`integral:${collection}:${id}`, () => client.findById(collection, id))
     },
     getGlobal<K extends keyof Globals & string>(name: K) {
-      return useAsyncData(`integral:global:${name}`, () =>
-        fetch<Partial<Data<Globals[K]['fields']>>>(`${base}/globals/${name}`),
-      )
+      return useAsyncData(`integral:global:${name}`, () => client.getGlobal(name))
     },
   }
 }

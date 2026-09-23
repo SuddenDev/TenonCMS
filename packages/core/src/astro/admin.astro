@@ -13,11 +13,7 @@ const base = Astro.routePattern.replace('/[...path]', '')
   <body>
     <div id="admin" data-base={base}></div>
     <script>
-      import options from '#integral/admin'
-      import { mountAdmin } from 'integral-cms/admin'
-
-      const el = document.getElementById('admin')!
-      mountAdmin(el, options, el.dataset.base)
+      import '../admin/entry.ts'
     </script>
   </body>
 </html>

@@ -82,7 +82,7 @@ export type Page = {
   /** Sidebar label. Pages without one stay out of the sidebar, e.g. detail routes with params. */
   label?: string
   /**
-   * Path under `/admin`. Defaults to `/<key>`. `/` is the start page. Params work: `/reports/:id`.
+   * Path under the admin path. Defaults to `/<key>`. `/` is the start page. Params work: `/reports/:id`.
    *
    * A page on a built-in path, e.g. `/collections/posts`, replaces the built-in view.
    */
@@ -120,7 +120,7 @@ export function defineAdmin(options: AdminOptions): AdminOptions
 /**
  * Mounts the admin into `el` and returns an unmount function.
  *
- * Astro, Nuxt and `integral-cms/vite` call it for you on `/admin`. Elsewhere, call it on a page of its own:
+ * Astro, Nuxt and `integral-cms/vite` call it for you on the admin path. Elsewhere, call it on a page of its own:
  * the admin's styles are global and stay after unmount.
  * @param el Element or CSS selector.
  * @param options Usually the default export of `integral.admin.ts`.

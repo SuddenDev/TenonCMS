@@ -22,6 +22,8 @@ type GlobalData<T extends Config, K extends keyof Globals<T>> = Data<Globals<T>[
 type FindOptions<T extends Config, K extends keyof Collections<T>> = {
   /** Equality filters on field values. */
   where?: Partial<Record<keyof Collections<T>[K]['fields'], string | number | boolean>>
+  /** Maximum number of documents. */
+  limit?: number
 }
 
 type Row = typeof schema.documents.$inferSelect
@@ -73,11 +75,12 @@ export function createCms<const T extends Config>({ config, database, secret }: 
         if (!Object.hasOwn(config.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
         return sql`json_extract(${documents.data}, ${`$.${key}`}) = ${value}`
       })
-      const rows = await (await db())
+      const query = (await db())
         .select()
         .from(documents)
         .where(and(eq(documents.collection, collection), ...filters))
         .orderBy(desc(documents.createdAt))
+      const rows = await (options.limit ? query.limit(options.limit) : query)
       return rows.map(toDoc) as CollectionDoc<T, K>[]
     },
 
@@ -86,7 +89,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       collection: K,
       options: FindOptions<T, K>,
     ): Promise<CollectionDoc<T, K> | undefined> {
-      return (await cms.find(collection, options))[0]
+      return (await cms.find(collection, { ...options, limit: 1 }))[0]
     },
 
     /** Returns one document, or `undefined`. */

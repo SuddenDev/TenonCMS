@@ -1,9 +1,8 @@
 import { APIError, betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { count } from 'drizzle-orm'
+import { API_BASE } from './client.ts'
 import { type Db, schema } from './db/index.ts'
-
-export const API_BASE = '/api/cms'
 
 export function createAuth(db: Db, secret: string) {
   return betterAuth({
@@ -25,4 +24,3 @@ export function createAuth(db: Db, secret: string) {
   })
 }
 
-export type Auth = ReturnType<typeof createAuth>

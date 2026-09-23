@@ -1,5 +1,8 @@
 import type { Config, Data, Doc } from './schema.ts'
 
+/** Path of the HTTP API. */
+export const API_BASE = '/api/cms'
+
 type Collections<C extends { config: Config }> = NonNullable<C['config']['collections']>
 type Globals<C extends { config: Config }> = NonNullable<C['config']['globals']>
 type Fields<C extends { config: Config }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
@@ -60,7 +63,7 @@ export class CmsError extends Error {
 export function createClient<C extends { config: Config } = RegisteredCms>({ baseUrl = '', fetch: fetchFn = fetch }: ClientOptions = {}) {
   async function request<T>(method: string, path: string, body?: unknown, query?: object): Promise<T> {
     const search = query && Object.keys(query).length ? `?${new URLSearchParams(query as Record<string, string>)}` : ''
-    const res = await fetchFn(`${baseUrl}/api/cms${path}${search}`, {
+    const res = await fetchFn(`${baseUrl}${API_BASE}${path}${search}`, {
       method,
       headers: body === undefined ? undefined : { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -81,9 +84,12 @@ export function createClient<C extends { config: Config } = RegisteredCms>({ bas
       options: {
         /** Equality filters on field values. */
         where?: Partial<Record<keyof Fields<C, K>, string | number | boolean>>
+        /** Maximum number of documents. */
+        limit?: number
       } = {},
     ) {
-      return request<Doc<Fields<C, K>>[]>('GET', `/collections/${encodeURIComponent(collection)}`, undefined, options.where)
+      const query = { ...options.where, ...(options.limit && { limit: options.limit }) }
+      return request<Doc<Fields<C, K>>[]>('GET', `/collections/${encodeURIComponent(collection)}`, undefined, query)
     },
 
     /** Returns the newest document that matches `where`, or `undefined`. */
@@ -94,7 +100,7 @@ export function createClient<C extends { config: Config } = RegisteredCms>({ bas
         where: Partial<Record<keyof Fields<C, K>, string | number | boolean>>
       },
     ): Promise<Doc<Fields<C, K>> | undefined> {
-      return (await client.find(collection, options))[0]
+      return (await client.find(collection, { ...options, limit: 1 }))[0]
     },
 
     /**
