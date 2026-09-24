@@ -3,7 +3,7 @@ import { csrf } from 'hono/csrf'
 import { HTTPException } from 'hono/http-exception'
 import { API_BASE } from './client.ts'
 import type { Cms } from './index.ts'
-import { HttpError } from './relations.ts'
+import { HttpError, parsePopulate } from './relations.ts'
 import { dataSchema, filterable, type Schema, type Fields } from './schema.ts'
 
 export function createApp(cms: Cms<Schema>) {
@@ -24,27 +24,35 @@ export function createApp(cms: Cms<Schema>) {
   api.on(['GET', 'POST'], '/auth/*', async (c) => (await cms.auth()).handler(c.req.raw))
 
   // Reads are public: the site renders this content anyway. Query params are equality filters,
-  // except `limit`, so a field named `limit` cannot be filtered over HTTP.
+  // except `limit`, `populate` and `depth`, so fields with these names cannot be filtered over HTTP.
   api.get('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const { limit, ...query } = c.req.query()
-    const where = whereFromQuery(schema.collections![name].fields, query)
+    const { limit, populate, depth, ...query } = c.req.query()
+    const fields = schema.collections![name].fields
+    const where = whereFromQuery(fields, query)
     if (!where) return c.json({ error: 'Invalid filter' }, 400)
     if (limit !== undefined && !/^[1-9]\d*$/.test(limit)) return c.json({ error: 'Invalid limit' }, 400)
-    return c.json(await cms.find(name, { where, limit: limit ? Number(limit) : undefined }))
+    const read = readOptions(fields, { populate, depth })
+    if (!read) return c.json({ error: 'Invalid populate' }, 400)
+    return c.json(await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read }))
   })
 
   api.get('/collections/:name/:id', async (c) => {
     const name = collectionName(c.req.param('name'))
-    const doc = name && (await cms.findById(name, c.req.param('id')))
+    if (!name) return c.notFound()
+    const read = readOptions(schema.collections![name].fields, c.req.query())
+    if (!read) return c.json({ error: 'Invalid populate' }, 400)
+    const doc = await cms.findById(name, c.req.param('id'), read)
     return doc ? c.json(doc) : c.notFound()
   })
 
   api.get('/globals/:name', async (c) => {
     const name = globalName(c.req.param('name'))
     if (!name) return c.notFound()
-    return c.json(await cms.getGlobal(name))
+    const read = readOptions(schema.globals![name].fields, c.req.query())
+    if (!read) return c.json({ error: 'Invalid populate' }, 400)
+    return c.json(await cms.getGlobal(name, read))
   })
 
   api.use(csrf())
@@ -90,6 +98,11 @@ export function createApp(cms: Cms<Schema>) {
 
   return api
 
+  function readOptions(fields: Fields, query: { populate?: string; depth?: string }): { populate?: boolean | Record<string, unknown>; depth?: number } | undefined {
+    const spec = parsePopulate(schema.collections ?? {}, fields, query, cms.populate)
+    if (spec === undefined) return undefined
+    return spec === false ? { populate: false } : typeof spec === 'number' ? { depth: spec } : { populate: spec }
+  }
   function collectionName(name: string) {
     return Object.hasOwn(schema.collections ?? {}, name) ? name : undefined
   }

@@ -639,3 +639,41 @@ describe('populate', () => {
     expect(await cms.findOne('posts', { where: { title: 'Hi' } })).toMatchObject({ author: { id: a.id, name: 'Ann' } })
   })
 })
+
+describe('populate over HTTP', () => {
+  let r: ReturnType<typeof setup<ReturnType<typeof relational>>>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    r = setup(relational())
+    ids = await seed(r.cms)
+  })
+  const get = async (path: string) => {
+    const res = await r.cms.fetch(new Request(`${origin}/api/cms${path}`))
+    return { status: res.status, body: await res.json().catch(() => null) }
+  }
+
+  it('resolves relations by default', async () => {
+    expect((await get('/collections/posts')).body[0].author.name).toBe('Ann')
+  })
+
+  it('reads populate and depth from the query', async () => {
+    const { a, m, p } = ids
+    expect((await get('/collections/posts?populate=false')).body[0].author).toBe(a.id)
+    expect((await get('/collections/posts?depth=1')).body[0].author.avatar).toBe(m.id)
+    for (const q of ['seo.image', 'seo']) {
+      const post = (await get(`/collections/posts?populate=${q}`)).body[0]
+      expect(post.seo.image.url).toBe('/a.png')
+      expect(post.author).toBe(a.id)
+    }
+    expect((await get(`/collections/authors/${a.id}?populate=posts`)).body.posts[0].id).toBe(p.id)
+    await r.cms.setGlobal('site', { logo: m.id })
+    expect((await get('/globals/site?populate=false')).body).toEqual({ logo: m.id })
+    expect((await get('/collections/posts?populate=false&title=Hi')).body).toHaveLength(1)
+    expect((await get('/collections/posts?populate=false&title=No')).body).toHaveLength(0)
+  })
+
+  it.each(['?depth=6', '?populate=title', '?populate=nope', '?populate=author.posts.author.posts.author.posts'])('rejects %s', async (q) => {
+    expect((await get(`/collections/posts${q}`)).status).toBe(400)
+    expect((await get(`/collections/posts/${ids.p.id}${q}`)).status).toBe(400)
+  })
+})
