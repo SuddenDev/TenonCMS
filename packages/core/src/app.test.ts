@@ -107,6 +107,32 @@ describe('auth', () => {
     expect(await client.getSession()).not.toBeNull()
   })
 
+  it('runs host database hooks after the first-user rule', async () => {
+    const calls: string[] = []
+    const { client } = setup(
+      defineCms({
+        ...base,
+        auth: {
+          databaseHooks: {
+            user: {
+              create: {
+                before: async () => {
+                  calls.push('before')
+                },
+                after: async (user) => {
+                  calls.push(`after:${user.email}`)
+                },
+              },
+            },
+          },
+        },
+      }),
+    )
+    await client.signUp(admin)
+    expect(await status(client.signUp({ ...admin, email: 'c@d.co' }))).toBe(403)
+    expect(calls).toEqual(['before', 'after:a@b.co'])
+  })
+
   it('signs out and in again', async () => {
     await client.signUp(admin)
     await client.signOut()

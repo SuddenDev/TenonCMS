@@ -16,8 +16,9 @@ export type CmsOptions<C extends Record<string, Collection>, G extends Record<st
   database: { url: string; authToken?: string }
   /** Secret for signing sessions. MUST be at least 32 random characters in production. */
   secret: string
+  // `& AuthOptions` types hook parameters. Inference alone leaves them `any`.
   /** better-auth options. Core owns `database`, `basePath` and `secret`. */
-  auth?: A
+  auth?: A & AuthOptions
 }
 
 type Collections<T extends Schema> = NonNullable<T['collections']>
