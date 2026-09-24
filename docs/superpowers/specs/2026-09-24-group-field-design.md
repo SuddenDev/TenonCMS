@@ -1,6 +1,6 @@
 # Group field
 
-Spec 1 of 5: group field, relation field, hooks, auth hooks, page preset. Execution order: 4, 1, 2, 3, 5.
+Spec 1 of 6: group field, relation field, hooks, auth, page preset, field options. Execution order: 4, 1, 2, 3, 6, 5.
 
 ## Goal
 

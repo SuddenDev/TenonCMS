@@ -1,6 +1,6 @@
 # Hooks
 
-Spec 3 of 5: group field, relation field, hooks, auth hooks, page preset. Execution order: 4, 1, 2, 3, 5. Requires specs 1 and 2 (hooks see groups, relations and `onDelete`).
+Spec 3 of 6: group field, relation field, hooks, auth, page preset, field options. Execution order: 4, 1, 2, 3, 6, 5. Requires specs 1 and 2 (hooks see groups, relations and `onDelete`).
 
 ## Goal
 
@@ -56,7 +56,7 @@ Delete: `beforeOperation → beforeDelete → delete + onDelete effects → afte
 
 At each stage, field hooks run first, in field order and depth-first into groups, then collection or global hooks.
 
-`beforeValidate` receives unvalidated input. Its result is validated. `beforeChange` receives validated data; its result MUST pass validation again before the write, so a hook cannot store invalid data.
+`beforeValidate` receives unvalidated input. Its result is validated. `beforeChange` receives validated data; its result MUST pass schema validation (zod) again before the write; `validate` functions (spec 6) run once, so a hook cannot store invalid data.
 
 ## Arguments and return values
 

@@ -1,6 +1,6 @@
 # Page and SEO preset
 
-Spec 5 of 5: group field, relation field, hooks, auth hooks, page preset. Execution order: 4, 1, 2, 3, 5. Requires specs 1–3.
+Spec 5 of 6: group field, relation field, hooks, auth, page preset, field options. Execution order: 4, 1, 2, 3, 6, 5. Requires specs 1–3 and 6.
 
 ## Goal
 
@@ -53,6 +53,8 @@ No `findByPath` helper: `path` is a stored field, so existing filters cover it.
 
 ## Core addition: `readOnly`
 
+`pattern` for `slug` comes from spec 6.
+
 A field option for values only hooks set.
 
 - `Base` gets `readOnly?: boolean`.
@@ -65,7 +67,7 @@ A field option for values only hooks set.
 | Field | Definition |
 |---|---|
 | `title` | `{ type: 'text', required: true }` |
-| `slug` | `{ type: 'text', required: true }`, MUST match `^[a-z0-9]+(-[a-z0-9]+)*$` (checked in a hook) |
+| `slug` | `{ type: 'text', required: true, pattern: '[a-z0-9]+(-[a-z0-9]+)*' }` |
 | `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }` |
 | `path` | `{ type: 'text', readOnly: true }` |
 
@@ -86,7 +88,6 @@ Named records, built by `treeHooks()` with the default field names.
 | Stage | Name | Does |
 |---|---|---|
 | `beforeValidate` | `slugFromTitle` | Fills an empty `slug` from `title`: lowercase, ASCII, non-alphanumerics to `-`, trimmed. |
-| `beforeChange` | `slugFormat` | `ValidationError` on `slug` if it does not match the pattern. |
 | `beforeChange` | `noCycle` | `ValidationError` on `parent` if the parent is the document itself or one of its descendants. |
 | `beforeChange` | `path` | Computes `path` from the parent's stored path and the slug. |
 | `beforeChange` | `uniquePath` | `ValidationError` on `slug` if another document in the collection has the same path. |

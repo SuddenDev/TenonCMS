@@ -1,6 +1,6 @@
 # Relation and join fields
 
-Spec 2 of 5: group field, relation field, hooks, auth hooks, page preset. Execution order: 4, 1, 2, 3, 5. Requires the group field (spec 1).
+Spec 2 of 6: group field, relation field, hooks, auth, page preset, field options. Execution order: 4, 1, 2, 3, 6, 5. Requires the group field (spec 1).
 
 ## Goal
 

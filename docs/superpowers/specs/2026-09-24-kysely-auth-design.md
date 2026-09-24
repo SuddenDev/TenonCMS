@@ -1,6 +1,6 @@
 # Kysely and better-auth pass-through
 
-Spec 4 of 5: group field, relation field, hooks, auth hooks, page preset. Execution order: 4, 1, 2, 3, 5. This spec runs first, so specs 2 and 3 (populate, delete scans, transactions) are written against Kysely once.
+Spec 4 of 6: group field, relation field, hooks, auth, page preset, field options. Execution order: 4, 1, 2, 3, 6, 5. This spec runs first, so specs 2 and 3 (populate, delete scans, transactions) are written against Kysely once.
 
 ## Goal
 
