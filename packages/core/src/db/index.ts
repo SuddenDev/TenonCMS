@@ -5,6 +5,7 @@ import {
   type DatabaseConnection,
   type Dialect,
   Kysely,
+  type Selectable,
   SqliteAdapter,
   SqliteIntrospector,
   SqliteQueryCompiler,
@@ -15,6 +16,17 @@ import { type Migration, Migrator } from 'kysely/migration'
 export interface Database {
   cms_documents: { id: string; collection: string; data: string; created_at: number; updated_at: number }
   cms_globals: { name: string; data: string; created_at: number; updated_at: number }
+}
+
+export type Row = Selectable<Database['cms_documents']>
+
+export function toDoc(row: Row): Record<string, any> & { id: string } {
+  return {
+    ...JSON.parse(row.data),
+    id: row.id,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  }
 }
 
 export function createDb(url: string, authToken?: string) {

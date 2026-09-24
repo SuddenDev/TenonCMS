@@ -1,6 +1,6 @@
 import { type Kysely, sql } from 'kysely'
-import type { Database } from './db/index.ts'
-import type { Field, Fields, Schema } from './schema.ts'
+import { type Database, toDoc } from './db/index.ts'
+import type { Collection, Field, Fields, Schema } from './schema.ts'
 
 export type RelationField = Extract<Field, { type: 'relation' }>
 
@@ -81,4 +81,45 @@ export async function checkRefs(
       .execute()
     if (found.length !== new Set(ids).size) fail(`Unknown id in "${field.collection}"`)
   }
+}
+
+/** `false`: ids. Number: hops left. Object: listed paths only; `true` inside means one hop. */
+export type Spec = false | number | { [key: string]: true | Spec }
+
+/** Resolves relation ids in `docs` in place. One query per relation or join field per hop. */
+export async function populate(
+  q: Kysely<Database>,
+  collections: Record<string, Collection>,
+  fields: Fields,
+  docs: Record<string, any>[],
+  spec: Spec | true,
+) {
+  if (!spec || !docs.length) return
+  for (const [key, field] of Object.entries(fields)) {
+    const sub = typeof spec === 'object' ? spec[key] : spec
+    if (!sub) continue
+    if (field.type === 'group') {
+      await populate(q, collections, field.fields, docs.map((d) => d[key]).filter(Boolean), sub === true ? 1 : sub)
+      continue
+    }
+    if (field.type !== 'relation') continue
+    const next = sub === true ? false : typeof sub === 'number' ? sub - 1 : sub
+    const found = new Map((await byIds(q, field.collection, [...new Set(docs.flatMap((d) => d[key] ?? []))])).map((d) => [d.id, d]))
+    await populate(q, collections, collections[field.collection].fields, [...found.values()], next)
+    for (const d of docs) {
+      if (d[key] == null) continue
+      d[key] = field.many ? d[key].map((id: string) => found.get(id)).filter(Boolean) : (found.get(d[key]) ?? null)
+    }
+  }
+}
+
+async function byIds(q: Kysely<Database>, collection: string, ids: string[]) {
+  if (!ids.length) return []
+  const rows = await q
+    .selectFrom('cms_documents')
+    .selectAll()
+    .where('collection', '=', collection)
+    .where(sql<boolean>`id IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`)
+    .execute()
+  return rows.map(toDoc)
 }

@@ -1,9 +1,9 @@
 import { consola } from 'consola'
-import { type Selectable, sql } from 'kysely'
+import { sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
-import { createDb, type Database, migrate } from './db/index.ts'
-import { checkRefs, checkSchema } from './relations.ts'
+import { createDb, migrate, toDoc } from './db/index.ts'
+import { checkRefs, checkSchema, populate, type Spec } from './relations.ts'
 import {
   type Collection,
   type Data,
@@ -80,16 +80,6 @@ type ReadGlobal<T extends Schema, K extends keyof Globals<T>, O, D extends numbe
   Read<Collections<T>, Globals<T>[K]['fields'], PopulateOf<O, D>>
 >
 
-type Row = Selectable<Database['cms_documents']>
-
-function toDoc(row: Row) {
-  return {
-    ...JSON.parse(row.data),
-    id: row.id,
-    createdAt: new Date(row.created_at).toISOString(),
-    updatedAt: new Date(row.updated_at).toISOString(),
-  }
-}
 
 /**
  * Creates a CMS instance. Export it as the default export of `integral.config.ts`.
@@ -104,8 +94,11 @@ export function defineCms<
 >({ database, secret, auth: host = {} as A, populate: config = {} as P, ...schema }: CmsOptions<C, G, A, P>) {
   type T = typeof schema
   type D = DefaultDepth<P>
-  const populate = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 }
-  checkSchema(schema, populate)
+  const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 }
+  checkSchema(schema, defaults)
+  const collections: Record<string, Collection> = schema.collections ?? {}
+  const spec = (options: { populate?: boolean | object; depth?: number }): Spec =>
+    options.populate === false ? false : typeof options.populate === 'object' ? (options.populate as Spec) : (options.depth ?? defaults.depth)
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
@@ -129,7 +122,7 @@ export function defineCms<
     schema,
     auth,
     /** The `populate` config with defaults. */
-    populate: populate as { depth: D; maxDepth: number },
+    populate: defaults as { depth: D; maxDepth: number },
 
     /**
      * Lists documents of a collection, newest first.
@@ -151,7 +144,9 @@ export function defineCms<
       // `rowid` orders documents created in the same millisecond.
       query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
       if (options.limit) query = query.limit(options.limit)
-      return (await query.execute()).map(toDoc) as ReadCollection<T, K, O, D>[]
+      const docs = (await query.execute()).map(toDoc)
+      await populate(await db(), collections, collections[collection].fields, docs, spec(options))
+      return docs as ReadCollection<T, K, O, D>[]
     },
 
     /**
@@ -177,7 +172,10 @@ export function defineCms<
         .where('collection', '=', collection)
         .where('id', '=', id)
         .executeTakeFirst()
-      return row && (toDoc(row) as ReadCollection<T, K, O, D>)
+      if (!row) return undefined
+      const doc = toDoc(row)
+      await populate(await db(), collections, collections[collection].fields, [doc], spec(options))
+      return doc as ReadCollection<T, K, O, D>
     },
 
     /** Creates a document. Checks relation ids, but does not validate the rest of `data`. */

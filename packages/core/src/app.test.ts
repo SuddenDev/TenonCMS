@@ -524,3 +524,44 @@ describe('relation filters', () => {
     }
   })
 })
+
+describe('populate', () => {
+  let cms: ReturnType<typeof relational>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    cms = relational()
+    ids = await seed(cms)
+  })
+
+  it('resolves relations up to the default depth', async () => {
+    const { a, m } = ids
+    expect((await cms.find('posts'))[0]).toMatchObject({
+      author: { id: a.id, name: 'Ann', avatar: { id: m.id, url: '/a.png' } },
+      tags: [{ name: 'one' }, { name: 'two' }],
+      seo: { image: { url: '/a.png' } },
+    })
+  })
+
+  it('returns ids with populate: false', async () => {
+    const { a, m, t1, t2 } = ids
+    expect((await cms.find('posts', { populate: false }))[0]).toMatchObject({ author: a.id, tags: [t1.id, t2.id], seo: { image: m.id } })
+  })
+
+  it('resolves a missing target to null and drops it from many', async () => {
+    const url = tmpDb()
+    const cms = relational(url)
+    const { a, t2 } = await seed(cms)
+    const db = createLibsql({ url })
+    await db.execute({ sql: 'DELETE FROM cms_documents WHERE id IN (?, ?)', args: [a.id, t2.id] })
+    db.close()
+    const post = (await cms.find('posts'))[0]
+    expect(post.author).toBeNull()
+    expect(post.tags).toMatchObject([{ name: 'one' }])
+  })
+
+  it('findById and findOne populate too', async () => {
+    const { a, p } = ids
+    expect(await cms.findById('posts', p.id)).toMatchObject({ author: { id: a.id, name: 'Ann' } })
+    expect(await cms.findOne('posts', { where: { title: 'Hi' } })).toMatchObject({ author: { id: a.id, name: 'Ann' } })
+  })
+})
