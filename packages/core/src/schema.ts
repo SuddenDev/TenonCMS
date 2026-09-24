@@ -10,6 +10,10 @@ export type Field =
   /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
   | (Base & { type: `custom:${string}` })
   | (Base & { type: 'group'; fields: Fields })
+  /** Stores the id of a document in `collection`, or an array of ids with `many`. */
+  | (Base & { type: 'relation'; collection: string; many?: boolean; onDelete?: 'set-null' | 'restrict' | 'cascade' })
+  /** Not stored. Lists the documents of `collection` whose relation at `on` points here. */
+  | { type: 'join'; label?: string; collection: string; on: string; required?: never }
 
 export type Fields = Record<string, Field>
 
@@ -77,6 +81,12 @@ function fieldSchema(field: Field): z.ZodType {
       return z.enum(field.options as [string, ...string[]])
     case 'group':
       return dataSchema(field.fields)
+    case 'relation': {
+      const id = z.string().min(1)
+      if (!field.many) return id
+      const ids = z.array(id).refine((a) => new Set(a).size === a.length, 'Duplicate id')
+      return field.required ? ids.min(1) : ids
+    }
     default:
       return field.required ? z.string().min(1) : z.string()
   }
@@ -86,9 +96,10 @@ function fieldSchema(field: Field): z.ZodType {
 export function dataSchema(fields: Fields) {
   return z.object(
     Object.fromEntries(
-      Object.entries(fields).map(([name, field]) => {
+      Object.entries(fields).flatMap(([name, field]) => {
+        if (field.type === 'join') return []
         const s = fieldSchema(field)
-        return [name, field.required ? s : s.optional().nullable()]
+        return [[name, field.required ? s : s.optional().nullable()]]
       }),
     ),
   )

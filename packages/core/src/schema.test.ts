@@ -91,3 +91,23 @@ describe('group types', () => {
     }
   })
 })
+
+describe('relation values', () => {
+  const s = dataSchema({
+    author: { type: 'relation', collection: 'authors' },
+    tags: { type: 'relation', collection: 'tags', many: true },
+    lead: { type: 'relation', collection: 'authors', required: true, many: true },
+    posts: { type: 'join', collection: 'posts', on: 'author' },
+  })
+
+  it('accepts ids, keeps order and strips joins', () => {
+    expect(s.parse({ author: 'a', tags: ['y', 'x'], lead: ['a'], posts: ['p'] })).toEqual({ author: 'a', tags: ['y', 'x'], lead: ['a'] })
+  })
+
+  it('rejects duplicates, empty ids and an empty required many', () => {
+    expect(s.safeParse({ lead: ['a', 'a'] }).success).toBe(false)
+    expect(s.safeParse({ lead: ['a'], author: '' }).success).toBe(false)
+    expect(s.safeParse({ lead: [] }).success).toBe(false)
+    expect(s.safeParse({ lead: ['a'], tags: 'x' }).success).toBe(false)
+  })
+})
