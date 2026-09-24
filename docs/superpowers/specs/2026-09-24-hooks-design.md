@@ -85,12 +85,13 @@ Field `afterRead` runs once per value. Collection and global `beforeRead` / `aft
 
 ### Types
 
-`data`, `doc`, `docs`, `value` and `originalDoc` are typed from the fields of the collection, global or field the hook belongs to. Inference from hooks inside the same `defineCollection` literal MUST be covered by a typecheck test.
+Collection and global hooks type `data`, `doc`, `docs` and `originalDoc` from the fields of the collection or global they belong to. Field hooks type `value` from their field. Inference from hooks inside the same `defineCollection` literal MUST be covered by a typecheck test.
 
 Accepted limits:
 
 - Only `defineCollection` and `defineGlobal` give typed hook arguments. Hooks in a collection written inline in `defineCms` get untyped (`any`) arguments. The docs MUST say so.
 - `cms` in hook arguments is untyped (the local API over any schema). Typing it from the host's config would be circular.
+- Field hooks type only `value` in v1. Their `data`, `siblingData` and `originalDoc` are untyped (`Record<string, unknown>`).
 
 ## Populated documents
 
@@ -99,7 +100,8 @@ Documents loaded by `populate` run through their own collection's `beforeRead` a
 ## Errors
 
 - `ValidationError` is exported from `integral-cms`: `throw new ValidationError({ slug: 'Already used on this level' })`. Keys are field paths. HTTP returns 400 with `{ errors: { [path]: message } }`. The admin shows each message next to its field.
-- Expected errors do not run `afterError`: `ValidationError` (400) and the `restrict` conflict from spec 2 (409). They roll back the transaction and are rethrown.
+- `ValidationError` lives in `src/errors.ts`, next to spec 2's `ConflictError`. The file MUST have no imports. Presets (spec 5) run in browser bundles and import errors from it, so zod MUST NOT reach the browser through them.
+- Expected errors do not run `afterError`: `ValidationError` (400) and `ConflictError` (409, the `restrict` conflict from spec 2). They roll back the transaction and are rethrown.
 - Any other error rolls back the transaction, runs collection `afterError`, then root `afterError`, and is rethrown. HTTP returns 500 without the message.
 - For global operations (`getGlobal`, `setGlobal`), only root `afterError` runs, with `global` set.
 - An error inside `afterError` is logged and does not replace the original error.
@@ -138,7 +140,7 @@ A hook that writes to its own collection triggers its own hooks again. Core does
 - `beforeChange` result is validated again: invalid data returns 400
 - `ValidationError` returns 400 with field errors
 - a thrown error rolls back the write and a nested `cms` write, runs collection then root `afterError`, and HTTP returns 500 without the message
-- `ValidationError` and a `restrict` 409 run no `afterError`
+- `ValidationError` and a `ConflictError` (`restrict` 409) run no `afterError`
 - an error in a global operation runs only root `afterError`, with `global` set
 - `afterRead` runs once per `find` with all docs, and once per collection per hop for populated docs
 - field hooks inside groups receive `path: 'seo.title'`; a group's own hooks run before its children's

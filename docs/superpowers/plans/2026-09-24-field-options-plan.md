@@ -26,6 +26,7 @@ The plan names these places by role. If the earlier plans chose other names, use
 - **Hidden fields survive HTTP updates (spec).** HTTP `PUT` replaces the whole document, and the admin never sees hidden values. The route copies hidden values from the stored document into the input.
 - **Group defaults (spec).** On `create`, only children of a group present in the input get defaults. An absent group stays absent.
 - **`set-null` updates skip `validate` (spec 3).** The write pipeline takes an internal `effect` flag. `onDeleteEffects` sets it; `runValidate` does not run when it is set. The flag is not part of the public local API.
+- **`unique` on `slug` comes with spec 5.** The spec allows `unique` on `slug`, but the type does not exist yet. This plan allows the other types; spec 5 adds `'slug'` to the `unique` list in the startup check (Task 7) and to the `Base.unique` doc comment, with its own tests.
 - **Private and hidden are an HTTP concern** in `src/app.ts`. The local API and hooks see everything. One walker, `strip(fields, doc, level)`, removes fields the caller cannot see, recursing into groups, populated relations and joins with the target collection's fields.
 - **Reads look up the session only when a cookie is sent.** Reads stay public and keep working with a bad `secret`: a failed lookup counts as no session.
 
@@ -178,7 +179,7 @@ type Base = {
   validate?: (value: any, args: ValidateArgs) => true | string | Promise<true | string>
   /** The field applies only when this matches. See `matchCondition`. */
   condition?: Condition
-  /** Top-level `text`, `textarea`, `number`, `date`, `select` and single `relation` fields only. */
+  /** Top-level `text`, `textarea`, `number`, `date`, `select` and single `relation` fields only. Spec 5 adds `slug`. */
   unique?: boolean
   /** Sent over HTTP only with a session. */
   private?: boolean
@@ -318,7 +319,7 @@ RED
   - `throws for a condition on an unknown field`: `{ a: { type: 'text', condition: { nope: 1 } } }`, also with `'/g.nope'`, a nested `$some`, and a sibling key inside a group that only exists at the root. Each: `toThrow(/unknown field "nope"/)`.
   - `throws for a condition on a hidden field`: `{ t: { type: 'text', hidden: true }, a: { type: 'text', condition: { t: 'x' } } }` → `toThrow(/hidden field "t"/)`. Same with `'/g.t'` where `t` is hidden inside group `g`.
   - `throws for unique inside a group, in a global, on boolean, custom, group, join and many relations`.
-  - `accepts unique on top-level text, textarea, number, date, select and single relation fields`.
+  - `accepts unique on top-level text, textarea, number, date, select and single relation fields`. Spec 5 extends this test with `slug`.
   - `throws for an invalid pattern`.
 - Run: `pnpm --filter integral-cms test -- src/schema.test.ts -t 'defineCms checks'`. Expected failure: `defineCms` does not throw.
 

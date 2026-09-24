@@ -11,8 +11,9 @@ All paths are relative to `packages/core` unless noted. Run one test with `pnpm 
 - Writes are single statements without a transaction (spec 4 plan left them unwrapped). This plan wraps every write.
 - `Field` has `group`, `relation`, `join`. `populate()` loads relations in batches per hop. `delete` runs `onDelete` effects (`set-null`, `restrict` 409, `cascade`) with direct SQL.
 - Validation runs in `app.ts` (HTTP only). The local API does not validate.
+- `src/errors.ts` exists, has no imports and exports `ConflictError` (409, with `references`). `integral-cms` re-exports it. Spec 2's 400s use `HttpError` in `src/relations.ts`.
 
-Before Task 1, read `src/index.ts` as it is then: where `populate()`, the relation id checks (400) and the `onDelete` scan live, and which error class spec 2 uses for 409. Task sketches below name them `populate()`, `checkRelations()`, `onDeleteEffects()` and `ConflictError`; use the real names.
+Before Task 1, read `src/index.ts` as it is then: where `populate()`, the relation id checks (400) and the `onDelete` scan live. Task sketches below name them `populate()`, `checkRelations()` and `onDeleteEffects()`; use the real names.
 
 ## Design
 
@@ -72,7 +73,7 @@ async function hooks<V>(slot: Slot<any> | undefined, key: string, value: V, args
 
 - `createApp(cms, asUser)` gets `asUser(user) => bind({ user, context: {}, nested: false })` from `defineCms`, so no internal API is public. The session middleware stores `asUser(session.user)` in `c.var.cms`. Write routes use it; read routes use `cms` (`user: null`).
 - `app.ts` stops validating. It passes the raw JSON body to the local API.
-- `api.onError`: `ValidationError` → 400 `{ errors }`; spec 2's `ConflictError` → 409 as today; anything else → 500 `{ error: 'Internal Server Error' }`.
+- `api.onError`: `ValidationError` → 400 `{ errors }`; `ConflictError` → 409 as today; anything else → 500 `{ error: 'Internal Server Error' }`. Spec 2's `HttpError` goes away (Task 2).
 
 ## Tasks
 
@@ -144,6 +145,8 @@ If the spike fails:
 
 Inline collections in `defineCms({ collections: { posts: { fields, hooks } } })` get untyped (`any`) hook arguments. Typed hooks need `defineCollection`. The docs say so.
 
+Field hooks type only `value`. Their `data`, `siblingData` and `originalDoc` stay `Record<string, unknown>` (accepted limit in the spec), so the test checks `value` only.
+
 Commit: `feat(core): add hook types`
 
 ### Task 2: `ValidationError`, validation in the local API
@@ -155,7 +158,7 @@ RED
 - Run `-t validation`. Expected failure: `ValidationError` is not exported; the local create resolves.
 
 GREEN
-- `src/schema.ts`:
+- `src/errors.ts` (spec 2 created it with `ConflictError`). It MUST stay free of imports: presets (spec 5) import it in browser bundles.
 
 ```ts
 /** Thrown by hooks and validation. Keys are field paths, e.g. `seo.title`. HTTP returns 400 with `{ errors }`. */
@@ -164,7 +167,11 @@ export class ValidationError extends Error {
     super(Object.values(errors)[0] ?? 'Invalid data')
   }
 }
+```
 
+- `src/schema.ts` imports `ValidationError` from `./errors.ts`:
+
+```ts
 export function parseData(schema: z.ZodType, data: unknown) {
   const result = schema.safeParse(data)
   if (!result.success) throw new ValidationError(Object.fromEntries(result.error.issues.map((i) => [i.path.join('.'), i.message])))
@@ -172,7 +179,7 @@ export function parseData(schema: z.ZodType, data: unknown) {
 }
 ```
 
-- `src/index.ts`: export `ValidationError`. Build the validators once in `defineCms` (move them from `app.ts`). `create`, `update`, `setGlobal` call `parseData` first. Spec 2's relation id checks throw `ValidationError` keyed by field path.
+- `src/index.ts`: `export { ConflictError, ValidationError } from './errors.ts'`. Build the validators once in `defineCms` (move them from `app.ts`). `create`, `update`, `setGlobal` call `parseData` first. Spec 2's relation id checks throw `ValidationError` keyed by field path; delete `HttpError` from `src/relations.ts`.
 - Unknown names: `create` / `setGlobal` throw `Unknown collection`, `update` returns `undefined`, `delete` is a no-op (keeps `do not find a document through another collection` green).
 - `src/app.ts`: drop `validators` and the `safeParse` calls; pass `await c.req.json().catch(() => undefined)` through. Add `api.onError` (see Design). A malformed body fails zod, so it stays 400.
 - `src/client.ts`: `CmsError` message falls back to `Object.values(body?.errors ?? {})[0]`. Remove the `body?.error?.[0]` branch if nothing else sends it.
@@ -328,7 +335,7 @@ RED
   - `cms.create` rejects with `secret`; `calls` is `['collection', 'root']`; `afterError` got `operation: 'create'`, `collection: 'posts'`.
   - Over HTTP: status 500, body does not contain `secret`.
   - A `ValidationError` from `beforeChange` runs no `afterError` and returns 400.
-  - A `restrict` 409 from a delete runs no `afterError`: `posts` gets a required relation `notes.post` (restrict by default); deleting a referenced post leaves `calls` empty.
+  - A `ConflictError` (`restrict` 409) from a delete runs no `afterError`: `posts` gets a required relation `notes.post` (restrict by default); deleting a referenced post leaves `calls` empty.
   - A global operation runs only root `afterError`: a `site` global whose `beforeChange` throws; `cms.setGlobal` → `calls` is `['root']`, with `global: 'site'`.
   - A throwing `afterError` logs and the original error is rethrown.
   - A nested call that throws runs `afterError` once, for the outer operation.
@@ -426,12 +433,12 @@ Commit: `feat(admin): show field errors from the API`
 ### Task 17: Docs
 
 - `README.md`:
-  - Usage: a "Hooks" section with one collection example (`beforeChange` record, `afterRead`), the order diagrams from the spec, the argument table in short form, `ValidationError`, `context` loop guard, and the typing limits: "use `defineCollection` for typed hook arguments; `cms` in hooks is untyped". `afterError` runs for unexpected errors only (not 400 or 409); global operations run only root `afterError`.
+  - Usage: a "Hooks" section with one collection example (`beforeChange` record, `afterRead`), the order diagrams from the spec, the argument table in short form, `ValidationError`, `context` loop guard, and the typing limits: "use `defineCollection` for typed hook arguments; `cms` in hooks is untyped; field hooks type only `value`". `afterError` runs for unexpected errors only (not 400 or 409); global operations run only root `afterError`.
   - Transactions: every write runs in one transaction with its hooks and nested `cms` calls. On drivers without interactive transactions (D1 later), hooks run in the same order without isolation (the spec requires this sentence).
   - Payload mapping: same hook names; `req.user` → `user`, `req.context` → `context`, `req.payload` → `cms`.
   - Status: add hooks; remove roadmap item 7.
 - `CLAUDE.md`:
-  - Architecture, `src/index.ts`: every local API method goes through `run()` with a `Scope` (`trx`, `user`, `context`, `nested`); `bind(scope)` builds the API that hooks get; `write()`, `read()`, `afterRead()`, `fieldHooks()`. `src/schema.ts`: hook types, `ValidationError`, `parseData`. `src/app.ts`: no validation of its own; `onError` maps errors; `asUser()` for the session user.
+  - Architecture, `src/index.ts`: every local API method goes through `run()` with a `Scope` (`trx`, `user`, `context`, `nested`); `bind(scope)` builds the API that hooks get; `write()`, `read()`, `afterRead()`, `fieldHooks()`. `src/schema.ts`: hook types, `parseData`. `src/errors.ts`: `ValidationError` and `ConflictError`, no imports. `src/app.ts`: no validation of its own; `onError` maps errors; `asUser()` for the session user.
   - Design decisions: "Validation and hooks live in the local API; HTTP is a thin layer." "Writes run in one transaction; nested calls MUST go through the hook's `cms`."
   - Conventions: replace "Validate all API input with `dataSchema()`" with "The local API validates every write with `parseData()`".
   - Gotchas: any query inside a write MUST use `q(s)`, and nested calls MUST use the hook's `cms`, or `:memory:` fails with `TRANSACTION_ACTIVE`; `JSON.stringify` turns functions in arrays into `null`, so `/schema` strips `hooks`.
@@ -447,7 +454,6 @@ Commit: `docs: describe hooks`
 
 ## Open risks and spec gaps
 
-- **Hook typing (Task 1).** Inference from `fields` into `hooks` in one literal is not proven until the spike runs. Field hooks type `value` only; `data` / `siblingData` are `Record<string, unknown>`.
 - **Behavior change: the local API validates.** Today it stores anything. Server code that relied on that now gets `ValidationError`. HTTP 400 bodies change from `{ error: issues }` to `{ errors }`.
 - **`:memory:` concurrency.** A request that arrives while another write's transaction is open fails with `TRANSACTION_ACTIVE`. Tests and demos only.
 - **Operation names.** `beforeOperation` `args` shapes (`{ collection, id?, data?, options? }`) and `afterOperation` `result` (what the method returns) are not fixed by the spec. The plan uses them as listed.

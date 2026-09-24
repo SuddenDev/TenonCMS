@@ -118,8 +118,10 @@ defineCms({ ..., populate: { depth: 2, maxDepth: 5 } })
 When a document is deleted, every relation in every collection and global that targets its collection is checked. All effects run in one transaction.
 
 - `set-null` (default): a single relation becomes `null`; the id is removed from a `many` array.
-- `restrict` (default when `required: true`): the delete fails with 409 and lists the references: `{ collection, id }` for a document, `{ global }` for a global. Nothing changes.
+- `restrict` (default when `required: true`): the delete throws `ConflictError` and changes nothing. HTTP returns 409 and lists the references: `{ collection, id }` for a document, `{ global }` for a global.
 - `cascade`: the referencing documents are deleted too, recursively, with their own `onDelete` rules. A visited set ends cycles.
+
+`ConflictError` is exported from `integral-cms`. It lives in `src/errors.ts`, which MUST have no imports, so code that runs in the browser (presets, spec 5) can import errors without pulling in zod. Spec 3 adds `ValidationError` to the same file.
 
 Known gap: restrict is checked per document, as the cascade reaches it. A `restrict` reference from a document that a later cascade step would delete still blocks the whole delete. A two-phase check (collect the full cascade first) would fix it; it is not planned.
 
@@ -145,4 +147,4 @@ Known gap: restrict is checked per document, as the cascade reaches it. A `restr
   - startup errors for each `defineCms` check;
   - writes: unknown id 400, self-reference 400;
   - reads over HTTP: default populate, `depth`, `populate` paths through groups, `true` on a group key, `populate=false`, join, missing target as `null`, `maxDepth` 400, invalid path 400;
-  - delete: `set-null` on single and `many`, `restrict` 409 with nothing changed and a global listed as `{ global }`, `cascade` recursive and over a cycle.
+  - delete: `set-null` on single and `many`, `restrict` 409 with nothing changed and a global listed as `{ global }` (the local API throws `ConflictError`), `cascade` recursive and over a cycle.

@@ -85,7 +85,8 @@ Behavior:
 
 ## `unique`
 
-- Allowed on top-level `text`, `textarea`, `number`, `date`, `select` and single `relation` fields. `defineCms` MUST throw elsewhere.
+- Allowed on top-level `text`, `textarea`, `number`, `date`, `select`, `slug` and single `relation` fields. `defineCms` MUST throw elsewhere.
+- `slug` does not exist yet when this spec runs. Spec 5 adds the type and adds `slug` to this list in the same change.
 - Checked in the write transaction after `beforeChange` hooks, so values set by hooks are checked too.
 - A collision returns 400 with `Already used` on the field. The document being updated does not collide with itself.
 - `null` and missing values never collide. Comparison is exact and case-sensitive.

@@ -64,19 +64,20 @@ An admin-only field option.
 ## Core addition: `slug` field type
 
 ```ts
-slug: { type: 'slug', from: 'title', parent: 'parent' }
+slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' }
 ```
 
-- Shape: `{ type: 'slug', from?: string, parent?: string }` plus the `Base` options except `required`. `from` names a sibling field to fill the slug from. `parent` names a sibling `relation` field.
+- Shape: `{ type: 'slug', from?: string, parent?: string, path?: string }` plus the `Base` options except `required`. `from` names a sibling field to fill the slug from. `parent` names a sibling `relation` field. `path` names the field on the parent document whose value the admin shows as the prefix; it defaults to `'path'`.
 - Stored as a string. Always required; there is no `required` option. In `Data` and `Doc` the key is a required `string`.
 - The pattern `^[a-z0-9]+(-[a-z0-9]+)*$` is built in. zod checks it on the server; the admin sets it as the input's `pattern` attribute.
+- `unique` (spec 6) is allowed on a top-level `slug`. Spec 6 runs first and cannot know the type, so this spec adds `slug` to spec 6's list of `unique` types. Flat collections such as blog posts use `{ type: 'slug', from: 'title', unique: true }`. Trees use the `uniquePath` hook instead, because the same slug may repeat under different parents.
 - One shared `slugify()` turns text into a slug: lowercase ASCII, non-alphanumerics to `-`, trimmed. It lives in its own import-free file (`src/slugify.ts`), like `matchCondition` in spec 6. The admin imports it by relative path; the preset hook imports it on the server.
 
 Admin:
 
 - On a new document, the slug fills live from the `from` field while the editor types, until the editor edits the slug. After that it stays.
 - On an existing document, changing the `from` field does not change the slug. URLs stay stable.
-- If `parent` names a relation field, the input shows the selected parent's `path` as a prefix, e.g. `/about/` [team]. The prefix updates when the parent changes. Without a parent, the prefix is `/`. The editor types only the last segment.
+- If `parent` names a relation field, the input shows the value of the selected parent's `path` field (the field named by the `path` option) as a prefix, e.g. `/about/` [team]. The prefix updates when the parent changes. Without a parent, the prefix is `/`. The editor types only the last segment.
 
 Server:
 
@@ -87,7 +88,7 @@ Server:
 | Field | Definition |
 |---|---|
 | `title` | `{ type: 'text', required: true }` |
-| `slug` | `{ type: 'slug', from: 'title', parent: 'parent' }` |
+| `slug` | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path' }` |
 | `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }` |
 | `path` | `{ type: 'text', readOnly: true }` |
 
@@ -121,7 +122,7 @@ All run inside the write transaction (spec 3), so two parallel saves cannot clai
 treeHooks({ title: 'name', parent: 'parentCategory', slug: 'handle', path: 'url' })
 ```
 
-Returns the same records for other field names. Every option defaults to the name used in `page.fields`. `title` is the field `slugFromTitle` reads. For trees without URLs, a host omits `path` and `uniquePath` and keeps `noCycle`.
+Returns the same records for other field names. Every option defaults to the name used in `page.fields`. `title` is the field `slugFromTitle` reads. The slug field MUST name the same path field, so the admin prefix reads it: with `treeHooks({ path: 'url' })`, the slug is `{ type: 'slug', from: 'name', parent: 'parentCategory', path: 'url' }`. For trees without URLs, a host omits `path` and `uniquePath` and keeps `noCycle`.
 
 ## `seo.fields`
 
@@ -180,6 +181,7 @@ Unit:
 
 - `slug`: missing, `null`, `''` and values that break the pattern fail; valid slugs pass
 - `slug` fields type as a required `string` in `Data` and `Doc`
+- `defineCms` accepts `unique: true` on a top-level `slug`
 - `readOnly` is accepted at any depth and does not change the input type
 
 `app.test.ts` with a `pages` collection from the preset:
@@ -197,5 +199,6 @@ Unit:
 - `GET /api/cms/collections/pages?path=/about/team` returns the page
 - omitting a hook by name disables it (e.g. without `uniquePath`, duplicates are allowed)
 - `treeHooks()` with other field names, including `title`
+- a flat collection with `{ type: 'slug', from: 'title', unique: true }` returns 400 on `slug` for a used slug
 
-Admin (manual): `readOnly` fields are disabled; the slug fills live on new documents only, stops after a manual edit, and shows the parent's path as a prefix.
+Admin (manual): `readOnly` fields are disabled; the slug fills live on new documents only, stops after a manual edit, and shows the parent's path as a prefix, also when the slug's `path` option names another field.

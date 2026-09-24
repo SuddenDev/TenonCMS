@@ -4,7 +4,7 @@ Spec: `docs/superpowers/specs/2026-09-24-page-preset-design.md`. Runs last, afte
 
 Paths are relative to `packages/core` unless noted. Run one test with `pnpm --filter integral-cms test -- <file> -t '<name>'`, type tests with `pnpm --filter integral-cms typecheck` (vitest does not typecheck, so `@ts-expect-error` only fails there). No build is needed for tests.
 
-Names from earlier specs (the module that defines `ValidationError`, the HTTP error body shape, admin props) are written as they appear in the specs and plans. If the code uses other names, use those.
+`ValidationError` and `ConflictError` live in `src/errors.ts`, a file with no imports (specs 2 and 3). Other names from earlier specs (the HTTP error body shape, admin props, the `unique` list in spec 6's startup check) are written as they appear in the specs and plans. If the code uses other names, use those.
 
 ## Decisions
 
@@ -13,7 +13,9 @@ Names from earlier specs (the module that defines `ValidationError`, the HTTP er
 - **`slugify` rules**: `normalize('NFKD')`, drop combining marks, `ß` → `ss`, lowercase, runs of non-`[a-z0-9]` to `-`, trim `-`. So `Über uns!` → `uber-uns`.
 - **A `slug` counts as required everywhere `required: true` does**: the key filter in `Data`, `Req` in the read types (spec 2) and the `required` branch of `dataSchema()` (spec 6).
 - **The slug input needs its siblings.** `FieldInput.vue` gets a `siblings: { fields: Fields; data: Record<string, unknown> }` prop. `DocForm.vue` passes the collection's fields and `data`; the group branch passes the group's fields and model. The slug input reads `from` and `parent` through it.
-- **The parent prefix reads the parent document's `path` field** (spec), loaded with `client.findById(target, id, { populate: false })`.
+- **The parent prefix reads the parent document's field named by the slug's `path` option** (default `'path'`, spec), loaded with `client.findById(target, id, { populate: false })`.
+- **`unique` on `slug` is wired here** (spec). Spec 6 ran first and allows `unique` on the other types only. Task 4 adds `'slug'` to spec 6's `unique` list.
+- **Presets import errors from `./errors.ts`**, never from `./index.ts` or `./schema.ts`. `src/errors.ts` has no imports, so zod does not reach browser bundles that import `seoMeta`.
 
 ## Tasks
 
@@ -108,7 +110,7 @@ it('requires a slug that matches the pattern', () => {
 })
 
 it('types a slug as a required string', () => {
-  const f = { slug: { type: 'slug', from: 'title', parent: 'parent' } } as const satisfies Fields
+  const f = { slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' } } as const satisfies Fields
   ;(d: Data<typeof f>) => d.slug satisfies string
   // @ts-expect-error a slug is always required
   const missing: Data<typeof f> = {}
@@ -117,13 +119,16 @@ it('types a slug as a required string', () => {
 })
 ```
 
-- Run: `pnpm --filter integral-cms test -- src/schema.test.ts -t slug` and `pnpm --filter integral-cms typecheck`. Expected failure: `fieldSchema` falls to its default branch (any string, optional), so `{}` and `'Not Valid'` pass; `type: 'slug'` is not in `Field`.
+- `src/schema.test.ts`, in spec 6's `describe('defineCms checks')`, extend `accepts unique on top-level …` with `{ s: { type: 'slug', from: 'title', unique: true } }`. Add `throws for unique on a slug inside a group`.
+- `src/app.test.ts`, spec 6's `describe('unique')`, test `rejects a used slug`: a `posts` collection with `title` and `slug: { type: 'slug', from: 'title', unique: true }` (the blog post case). A second `client.create` with the same slug → 400 with `errors: { slug: 'Already used' }`.
+- Run: `pnpm --filter integral-cms test -- src/schema.test.ts -t slug`, `pnpm --filter integral-cms test -- src/app.test.ts -t unique` and `pnpm --filter integral-cms typecheck`. Expected failure: `fieldSchema` falls to its default branch (any string, optional), so `{}` and `'Not Valid'` pass; `type: 'slug'` is not in `Field`; `defineCms` throws `"posts.slug" cannot be unique`.
 
 GREEN
 - `src/schema.ts`:
 
 ```ts
-| (Omit<Base, 'required'> & { type: 'slug'; from?: string; parent?: string })
+// `path`: the parent's field shown as the admin prefix. Default 'path'.
+| (Omit<Base, 'required'> & { type: 'slug'; from?: string; parent?: string; path?: string })
 
 // fieldSchema
 case 'slug':
@@ -132,9 +137,10 @@ case 'slug':
 
 - `dataSchema()`: the required branch becomes `on && (field.required || field.type === 'slug')`.
 - `Data`: the required-key filter becomes `F[K] extends { required: true } | { type: 'slug' }`. Same for `Req` in the read types from spec 2.
+- Spec 6's startup check: add `'slug'` to the `unique` list. Update the `Base.unique` doc comment to name `slug`.
 - Run both commands again, then `pnpm --filter integral-cms test`. Expect green.
 
-Commit: `feat(core): add slug field type`
+Commit: `feat(core): add slug field type with unique support`
 
 ### Task 5: Slug input in the admin
 
@@ -164,11 +170,12 @@ watch(() => props.field.type === 'slug' && props.field.parent ? props.siblings?.
   const parent = typeof id === 'string' && relation?.type === 'relation'
     ? await client.findById(relation.collection, id, { populate: false })
     : undefined
-  prefix.value = `${typeof parent?.path === 'string' ? parent.path.replace(/\/$/, '') : ''}/`
+  const value = parent?.[props.field.type === 'slug' ? props.field.path ?? 'path' : 'path']
+  prefix.value = `${typeof value === 'string' ? value.replace(/\/$/, '') : ''}/`
 }, { immediate: true })
 ```
 
-- Manual check with the Astro example's `pages` collection (Task 14) or a temporary one: a new page's slug follows the title while typing; editing the slug stops that; an existing page keeps its slug when the title changes; picking a parent shows its path as the prefix (`/about/`), clearing it shows `/`; `Not Valid` blocks the save.
+- Manual check with the Astro example's `pages` collection (Task 14) or a temporary one: a new page's slug follows the title while typing; editing the slug stops that; an existing page keeps its slug when the title changes; picking a parent shows its path as the prefix (`/about/`), clearing it shows `/`; a temporary slug with `path: 'url'` on a collection whose parents have a `url` field shows that value; `Not Valid` blocks the save.
 - `pnpm --filter @integral-cms/admin typecheck`.
 
 Commit: `feat(admin): fill slugs from their source field`
@@ -205,7 +212,7 @@ import { slugify } from './slugify.ts'
 
 const fields = {
   title: { type: 'text', required: true },
-  slug: { type: 'slug', from: 'title', parent: 'parent' },
+  slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' },
   parent: { type: 'relation', collection: 'pages', onDelete: 'restrict' },
   path: { type: 'text', readOnly: true },
 } as const satisfies Fields
@@ -328,7 +335,7 @@ async uniquePath({ data, id, collection, cms }: any) {
 },
 ```
 
-  Import `ValidationError` from the module that defines it (spec 3), not from `./index.ts`.
+  Import `ValidationError` from `./errors.ts`, not from `./index.ts` or `./schema.ts`. Both import zod, and `presets.ts` runs in browser bundles.
 - Run again, then the full suite.
 
 Commit: `feat(core): reject duplicate page paths`
@@ -402,7 +409,7 @@ const cms = defineCms({
     categories: {
       fields: {
         name: { type: 'text', required: true },
-        handle: { type: 'slug', from: 'name', parent: 'parentCategory' },
+        handle: { type: 'slug', from: 'name', parent: 'parentCategory', path: 'url' },
         parentCategory: { type: 'relation', collection: 'categories' },
         url: { type: 'text', readOnly: true },
       },
@@ -563,7 +570,7 @@ useSeoMeta({ title: meta.title, description: meta.description, robots: meta.noin
 </template>
 ```
 
-- `seoMeta` runs in the browser bundle too. After the production build, `grep -l ZodError .output/public/_nuxt/*.js` MUST print nothing (see Open risks).
+- `seoMeta` runs in the browser bundle too. Bundle check after the production build: `grep -l ZodError .output/public/_nuxt/*.js` prints nothing. It passes because `presets.ts` imports only `./errors.ts` and `./slugify.ts`, which have no imports.
 - Coexistence: `/api/cms/**` and `/admin` are Nitro handlers and run before the page renderer. `index.vue` and `posts/[slug].vue` rank above `[...path].vue`.
 - Smoke test as in Task 14 with `pnpm dev:nuxt`, `B=localhost:3000`, `examples/nuxt/cms.db`. Also once on the production build (`HOST=127.0.0.1 PORT=3200` and an absolute `NUXT_DATABASE_URL`), because `integral-cms/presets` must resolve from the Nitro output.
 - `pnpm --filter example-nuxt typecheck`.
@@ -619,7 +626,7 @@ function Page() {
 
 - Coexistence: `/`, `/posts/$slug`, `/admin/$` and `/api/cms/$` are more specific than `/$`. The dev server regenerates `src/routeTree.gen.ts`; commit it.
 - Smoke test as in Task 14 with `pnpm dev:tanstack`, `B=localhost:3100`. HTML is streamed, so `grep -a` (already in the commands). If `/nope` answers 200 with "Page not found", check the body instead of the status and note it.
-- After `pnpm build`, the client assets MUST NOT contain zod (`grep -l ZodError` over the client output prints nothing), as for Nuxt.
+- Bundle check after `pnpm build`: `grep -l ZodError` over the client output prints nothing, as for Nuxt.
 - `pnpm --filter example-tanstack-start typecheck`.
 
 Commit: `feat(examples): add pages to the tanstack start example`
@@ -628,7 +635,7 @@ Commit: `feat(examples): add pages to the tanstack start example`
 
 - `README.md`:
   - New section "Pages and SEO" after "Read content": the spec's usage and customizing snippets, the path rules, the hook table (names and what they do), `treeHooks()` for other field names (including `title`), reading by `path` (`findOne` and `?path=`), `seoMeta()` in `<head>`, the catch-all route per framework in one line each.
-  - Field types: add `slug` (`from`, `parent`, always required, built-in pattern, live fill on new documents, parent path prefix in the admin).
+  - Field types: add `slug` (`from`, `parent`, `path`, always required, built-in pattern, live fill on new documents, parent path prefix in the admin). `unique: true` for flat collections such as blog posts: `{ type: 'slug', from: 'title', unique: true }`. A tree with another path field name sets `path` on the slug to match `treeHooks({ path })`.
   - Field options: add `readOnly` (admin only: shown disabled; the API and hooks can still write it; hooks that own the value overwrite it).
   - Status: add "Page and SEO preset (`integral-cms/presets`)".
 - `CLAUDE.md`:
@@ -649,8 +656,6 @@ Commit: `docs: describe page and seo preset`
 
 ## Open risks and spec gaps
 
-- **`seoMeta` in browser bundles.** Nuxt pages and TanStack routes run on the client too. `integral-cms/presets` imports `ValidationError`, whose module imports zod. If the Nuxt or TanStack check finds zod in the client output, move `seoMeta` into an import-free file with its own subpath (`integral-cms/presets/seo`).
-- **The admin prefix reads the parent's `path` field by that name** (spec). A tree built with `treeHooks({ path: 'url' })` shows `/` as the prefix. Add a `path` option to the `slug` type if a host needs it.
 - **Static routes shadow CMS pages.** `/` and `/about` in the Astro example, `/` in the others, never reach the catch-all. Documented, not solved.
 - **`ß` and other letters without an NFKD decomposition** (`ø`, `æ`, `ł`) become `-`. Only `ß` is mapped.
 - **Error body shape.** The `fieldErrors` helper reads both `{ errors }` (ValidationError) and `{ error: issues }` (zod). If spec 3 unified them, drop the second branch.

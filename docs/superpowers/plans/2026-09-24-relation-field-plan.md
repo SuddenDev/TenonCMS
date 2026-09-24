@@ -28,7 +28,10 @@ Checked with `@libsql/client` 0.18 and TypeScript 6.0.3 (spike in the session sc
 
 - **One new file, `src/relations.ts`,** for the runtime: startup checks, write checks, populate, HTTP path parsing, delete effects. Types go into `src/schema.ts`, because `client.ts` MUST import types only. `toDoc` moves to `src/db/index.ts` so both `index.ts` and `relations.ts` use it.
 - **One path helper, `relationPaths(fields)`,** returns `{ path: string[]; field }` for every `relation` at the top level and inside groups. Four users: startup checks, write checks, delete scans, join `on` lookup.
-- **Errors with a status.** `relations.ts` exports `class HttpError extends Error { constructor(public status: 400 | 409, public body: object) }`. The local API throws it. `app.ts` gets `api.onError`, which answers `HttpError` with `c.json(body, status)` and anything else with Hono's default 500. Bodies use the zod issue shape (`{ error: [{ path, message }] }`), so `CmsError.message` and the admin show the message. Spec 3 folds the 400 case into `ValidationError`.
+- **Errors.** Two classes, both thrown by the local API:
+  - 400: `relations.ts` exports `class HttpError extends Error { constructor(public status: 400, public body: object) }`. Spec 3 replaces it with `ValidationError`.
+  - 409: `ConflictError` in a new file, `src/errors.ts`, exported from `integral-cms` (spec). The file MUST have no imports, so presets (spec 5) can import errors in browser bundles without zod. Spec 3 adds `ValidationError` to it.
+  - `app.ts` gets `api.onError`: `HttpError` → `c.json(body, status)`, `ConflictError` → 409, anything else → Hono's default 500. Bodies use the zod issue shape (`{ error: [{ path, message }] }`), so `CmsError.message` and the admin show the message.
 - **Relation checks run in the local API** (`create`, `update`, `setGlobal`), because they need the database. Zod (`dataSchema`) still does shape checks at the HTTP layer.
 - **Delete is one recursive function with one write helper,** so spec 3 can swap in the normal operations:
   - `remove(trx, collection, id, visited)` deletes one document and applies the effects of references to it. Cascade calls `remove` again.
@@ -292,7 +295,7 @@ GREEN
 
 ```ts
 export class HttpError extends Error {
-  constructor(public status: 400 | 409, public body: object) { super(JSON.stringify(body)) }
+  constructor(public status: 400, public body: object) { super(JSON.stringify(body)) }
 }
 
 // Every id MUST exist in its target collection. One query per relation field.
@@ -784,24 +787,38 @@ Commit: `feat(core): clear references on delete`
 RED
 - `onDelete › restrict blocks the delete and changes nothing`: `cms.create('notes', { post: p.id })` (required → restrict by default). Also set `site.featured = [p.id]` (set-null). Over HTTP, `client.delete('posts', p.id)` → 409, `CmsError.body.references` equals `[{ collection: 'notes', id: note.id }]`. After it, `p` exists and `site.featured` still holds `p.id` (the rollback covers set-null writes done before the check).
 - `onDelete › explicit restrict`: a `restrict` relation without `required` in a small `defineCms` also blocks. In the same instance, a global `g` with `pin: { type: 'relation', collection: 'posts', onDelete: 'restrict' }` pointing at the post: `references` contains `{ global: 'g' }`.
-- Run. Expected failure: 204, and the note points to a deleted post.
+- `onDelete › restrict throws ConflictError locally`: `cms.delete('posts', p.id)` rejects with `toBeInstanceOf(ConflictError)` and `toMatchObject({ references: [{ collection: 'notes', id: note.id }] })`. Import `ConflictError` from `./index.ts`.
+- Run. Expected failure: `ConflictError` is not exported; over HTTP 204, and the note points to a deleted post.
 
 GREEN
+- New `src/errors.ts`, no imports:
+
+```ts
+// This file MUST stay free of imports. Presets import it in browser bundles, where zod MUST NOT go.
+export type Reference = { collection: string; id: string } | { global: string }
+
+/** Thrown when a delete hits `restrict` references. HTTP returns 409 with `references`. */
+export class ConflictError extends Error {
+  constructor(public references: Reference[]) {
+    super('Referenced by other documents')
+  }
+}
+```
+
+- `src/index.ts`: `export { ConflictError } from './errors.ts'`.
+- `src/app.ts` `onError`: `err instanceof ConflictError` → `c.json({ error: [{ path: [], message: err.message }], references: err.references }, 409)`.
 - In `remove`, before any write:
 
 ```ts
 const blocking = refs.filter((r) => (r.field.onDelete ?? (r.field.required ? 'restrict' : 'set-null')) === 'restrict')
 if (blocking.length)
-  throw new HttpError(409, {
-    error: [{ path: [], message: 'Referenced by other documents' }],
-    references: blocking.map((r) => (r.global ? { global: r.global } : { collection: r.collection, id: r.id })),
-  })
+  throw new ConflictError(blocking.map((r) => (r.global ? { global: r.global } : { collection: r.collection!, id: r.id! })))
 ```
 
 - The `set-null` loop filters to `set-null` refs only. The throw rolls back the transaction, including effects of outer cascade levels.
 - Run again. Expect pass.
 
-Commit: `feat(core): block deletes of restricted references`
+Commit: `feat(core): block deletes of restricted references with ConflictError`
 
 ### Task 20: Delete: `cascade`
 
@@ -864,11 +881,11 @@ Commit: `feat(nuxt): pass populate options through useIntegral`
 
 - `README.md`:
   - Schema example: `author: { type: 'relation', collection: 'authors' }`, `tags` with `many: true`, and a `join` on `authors`.
-  - New section "Relations": field options table from the spec; `populate` and `depth` with the spec's examples; `populate: { depth, maxDepth }` in `defineCms`; HTTP (`?populate=author.avatar,tags`, `?populate=false`, `?depth=`); `onDelete` rules, the 409 body (`{ collection, id }` or `{ global }`) and the known cascade gap from the spec; filters only on single top-level relations; the scan ceiling (fine up to roughly 10k–50k documents per collection).
+  - New section "Relations": field options table from the spec; `populate` and `depth` with the spec's examples; `populate: { depth, maxDepth }` in `defineCms`; HTTP (`?populate=author.avatar,tags`, `?populate=false`, `?depth=`); `onDelete` rules, `ConflictError` and the 409 body (`{ collection, id }` or `{ global }`) and the known cascade gap from the spec; filters only on single top-level relations; the scan ceiling (fine up to roughly 10k–50k documents per collection).
   - Read API: `limit`, `populate` and `depth` are not filters over HTTP.
   - Status: move "Relations between collections" from the roadmap to "Working"; renumber.
 - `CLAUDE.md`:
-  - Architecture: `src/relations.ts` (startup checks, write checks, `populate()`, `parsePopulate()`, delete effects in one transaction, `HttpError`); read types in `src/schema.ts` (`Resolve`, `Populate`, `Exact`, the `Wide` guard); `cms.populate` exposes the depth config.
+  - Architecture: `src/relations.ts` (startup checks, write checks, `populate()`, `parsePopulate()`, delete effects in one transaction, `HttpError` for 400); `src/errors.ts` (`ConflictError`, no imports, exported from `integral-cms`); read types in `src/schema.ts` (`Resolve`, `Populate`, `Exact`, the `Wide` guard); `cms.populate` exposes the depth config.
   - Design decisions: relation ids live in the document JSON; reverse lookups scan with `json_extract` / `json_each`; id lists go in as one JSON parameter (`IN (SELECT value FROM json_each(?))`), so there is no variable limit.
   - Gotchas: generic inference skips excess property checks, so `populate` objects need `Exact`; recursive read types on the admin's untyped schema hit TS2589 without `Wide`; delete code MUST use `trx` (one connection on `:memory:`).
   - Next up: unchanged unless the roadmap order changed.
