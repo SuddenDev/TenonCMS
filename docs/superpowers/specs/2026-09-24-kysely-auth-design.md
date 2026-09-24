@@ -55,7 +55,7 @@ defineCms({
 - Type: `BetterAuthOptions` without `database`, `basePath` and `secret`, and without `modelName` in `user`, `session`, `account` and `verification`. Core reads the `user` table by name, so auth tables MUST keep their default names. `cms.auth` is inferred with the host's options, so plugin endpoints are typed.
 - Core owns `database` (the shared Kysely instance, `type: 'sqlite'`), `basePath` (`${API_BASE}/auth`) and `secret`.
 - `emailAndPassword` is merged with the host's; `enabled: true` is forced, because the admin login needs it.
-- The first-user rule applies to public sign-up (`/sign-up/email`) only: once a user exists, it returns 403. Users created by a signed-in admin (e.g. through the `admin()` plugin) are allowed.
+- The first-user rule is session-based: once a user exists, a request MAY only create a user when it has a signed-in session (e.g. `admin()`'s `createUser` from a signed-in admin). Any user creation from a request without a session returns 403, whatever the endpoint (email sign-up, social sign-in, magic link, other plugins). Server code without a request is trusted, as in better-auth's `admin()` plugin.
 - Core's `user.create.before` runs first, then the host's. A host hook MUST NOT be able to reopen public sign-up.
 - The docs MUST say that `auth` is better-auth's API and follows its versioning, and map Payload's auth hooks (`afterLogin`, …) to `hooks.after` with `ctx.path`.
 
@@ -79,6 +79,7 @@ Later, out of this spec: built-in admin screens for popular first-party plugins,
 - A host `databaseHooks.user.create.after` runs on sign-up.
 - A host `user.create.before` runs after core's; a second public sign-up still returns 403.
 - A signed-in admin creates a second user through the `admin()` plugin.
+- A second user created without a session through another endpoint (e.g. `anonymous()`) returns 403.
 - `modelName` in `auth.user` (and the other three models) fails to compile (`@ts-expect-error`).
 - A host `hooks.after` sees the sign-in path.
 - `emailAndPassword: { enabled: false }` from the host is overridden; sign-in works.

@@ -39,9 +39,11 @@ export function authOptions<A extends AuthOptions>(db: Kysely<Database>, secret:
   } satisfies BetterAuthOptions
 }
 
-// Only public sign-up is limited to the first user. A signed-in admin MAY create more users.
+// Once a user exists, only a request with a session MAY create users, whatever the endpoint.
+// Server code without a request is trusted, as in better-auth's admin plugin.
 async function firstUserOnly(db: Kysely<Database>, ctx: BeforeCreate[1]) {
-  if (ctx?.path !== '/sign-up/email') return
+  if (!ctx?.request && !ctx?.headers) return
+  if (ctx.context.session) return
   const { rows } = await sql<{ n: number }>`SELECT count(*) AS n FROM "user"`.execute(db)
   if (rows[0].n > 0) throw new APIError('FORBIDDEN', { message: 'Sign-up is closed' })
 }

@@ -228,7 +228,7 @@ mountAdmin('#admin')
 
 - Core owns `database`, `basePath` and `secret`. It always turns `emailAndPassword` on, because the admin login needs it; your other email options stay.
 - `modelName` is not accepted: core reads the `user` table by name, so auth tables keep their default names.
-- Only the first user can sign up publicly (`/sign-up/email`). A signed-in admin can create more users, for example with the `admin()` plugin. Other public sign-up paths, like social sign-in or magic links, are not limited yet.
+- Only the first user can sign up without a session. After that, any user creation without a signed-in session returns 403, on every endpoint (email sign-up, social sign-in, magic link, other plugins). A signed-in admin can create more users, for example with the `admin()` plugin. Server code that calls better-auth without a request is trusted.
 - Tables of plugins are created at runtime on the first database access. There is no CLI step.
 - Core's first-user rule runs before your `databaseHooks.user.create.before`.
 - The admin login supports email and password only. Plugins that need UI (2FA, passkey, magic link) work on the server, but not in the admin yet.

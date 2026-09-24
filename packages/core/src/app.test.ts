@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createClient as createLibsql } from '@libsql/client'
 import { createAuthMiddleware } from 'better-auth/api'
-import { admin as adminPlugin, twoFactor } from 'better-auth/plugins'
+import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { defineCms, type Schema } from './index.ts'
@@ -136,7 +136,8 @@ describe('auth', () => {
 
   it('lets a signed-in admin create users', async () => {
     // `defaultRole: 'admin'` makes the first user an admin.
-    const { client, fetch } = setup(defineCms({ ...base, auth: { plugins: [adminPlugin({ defaultRole: 'admin' })] } }))
+    const cms = defineCms({ ...base, auth: { plugins: [adminPlugin({ defaultRole: 'admin' })] } })
+    const { client, fetch } = setup(cms)
     await client.signUp(admin)
     const res = await fetch(`${origin}/api/cms/auth/admin/create-user`, {
       method: 'POST',
@@ -145,6 +146,15 @@ describe('auth', () => {
     })
     expect(res.status).toBe(200)
     expect(await status(client.signUp({ ...admin, email: 'e@f.co' }))).toBe(403)
+    const auth = await cms.auth()
+    await expect(auth.api.createUser({ body: { email: 'g@h.co', password: 'password123', name: 'G' } })).resolves.toBeDefined()
+  })
+
+  it('rejects user creation without a session on any endpoint', async () => {
+    const cms = defineCms({ ...base, auth: { plugins: [anonymous()] } })
+    await setup(cms).client.signUp(admin)
+    const res = await cms.fetch(new Request(`${origin}/api/cms/auth/sign-in/anonymous`, { method: 'POST', headers: { origin } }))
+    expect(res.status).toBe(403)
   })
 
   it('runs host request hooks', async () => {

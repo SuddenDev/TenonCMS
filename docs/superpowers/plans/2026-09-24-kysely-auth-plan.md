@@ -10,7 +10,7 @@ All paths are relative to `packages/core` unless noted. Run tests with `pnpm --f
 - better-auth 1.7.5 accepts `database: { db: Kysely<any>, type: 'sqlite' }` and uses it as is (`createKyselyAdapter`, `"db" in database`). Its `transaction` option defaults to `false`, so auth runs no transactions of its own.
 - `getMigrations(options)` from `better-auth/db/migration` needs no secret. It introspects, creates missing tables, adds missing columns and indexes. It throws `UnsafeMigrationError` when it would add a required column without a default to a populated table.
 - better-auth's default column names are **camelCase** (`emailVerified`, `createdAt`, `userId`) and it stores dates as ISO strings. Databases from the Drizzle version use **snake_case** columns and millisecond dates. The spec gives no upgrade path: hosts delete `cms.db`.
-- `databaseHooks.user.create.before(user, ctx)` gets the endpoint context. `ctx.path` is `/sign-up/email` for public sign-up and the plugin's path (e.g. `/admin/create-user`) for other creates.
+- `databaseHooks.user.create.before(user, ctx)` gets the endpoint context from async local storage, or `null` outside an endpoint. Session-protected endpoints put the session on `ctx.context.session` (`admin()`'s `createUser` reads it with `getAuthoritativeSessionFromCtx`). Server calls like `auth.api.createUser({ body })` get a context without `request` and `headers`.
 - `@libsql/client@0.18`: a `:memory:` database has exactly one connection. While a transaction holds it, any other query on the client rejects with `TRANSACTION_ACTIVE` (no hang). File databases use a pool.
 - `@libsql/kysely-libsql@0.4.1` (latest) depends on `@libsql/client ^0.8.0` and imports it at module top. That installs and loads a second `@libsql/client` and a second native `libsql` binary next to our 0.18. The Nuxt module's `traceInclude` only covers the binary of our client, so a Nuxt production build would crash on the other one.
 
@@ -22,7 +22,7 @@ All paths are relative to `packages/core` unless noted. Run tests with `pnpm --f
 - Kysely's `Migrator` records runs in `cms_kysely_migration` (and `cms_kysely_migration_lock`), so all core tables share the `cms_` prefix.
 - No upgrade path (spec): no legacy fixture, no rename migration, no upgrade test.
 - The first-user rule counts rows with raw SQL on the `user` table, as today. `AuthOptions` leaves out `modelName`, so the table is always `user`.
-- The first-user rule checks `ctx?.path === '/sign-up/email'`, so plugin creates by a signed-in admin pass (Task 9).
+- The first-user rule is session-based (Task 9): with a user in the table, a request without `ctx.context.session` gets 403 on any endpoint. Server code without a request is trusted, as in `admin()`.
 
 ## Tasks
 
@@ -247,12 +247,12 @@ databaseHooks: {
 },
 ```
 
-- `firstUserOnly(db, ctx)` throws `APIError('FORBIDDEN')` when `user` has rows. The second sign-up throws before the host hook, so `calls` has one `before`. Task 9 narrows it to public sign-up.
+- `firstUserOnly(db, ctx)` throws `APIError('FORBIDDEN')` when `user` has rows. The second sign-up throws before the host hook, so `calls` has one `before`. Task 9 lets requests with a session through.
 - Run again. Expect pass.
 
 Commit: `feat(core): run host database hooks after the first-user rule`
 
-### Task 9: The first-user rule covers public sign-up only
+### Task 9: The first-user rule is session-based
 
 RED
 - Test `auth › lets a signed-in admin create users`:
@@ -277,10 +277,11 @@ expect(await status(client.signUp({ ...admin, email: 'e@f.co' }))).toBe(403)
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'admin create'`. Expected failure: 403, because `firstUserOnly` blocks every create.
 
 GREEN
-- `firstUserOnly(db, ctx)`: return early unless `ctx?.path === '/sign-up/email'`. Comment above it: only public sign-up is limited; a signed-in admin MAY create more users.
+- `firstUserOnly(db, ctx)`: return early when `ctx.context.session` is set, or when there is no request (`!ctx?.request && !ctx?.headers`: trusted server code). Comment above it: once a user exists, only a request with a session MAY create users, whatever the endpoint.
+- Test `auth › rejects user creation without a session on any endpoint`: with `anonymous()`, sign up the first user, then `POST /api/cms/auth/sign-in/anonymous` without a cookie. Expect 403. A path check on `/sign-up/email` lets it through with 200.
 - Run again, then `-t 'database hooks'`. Expect pass.
 
-Commit: `feat(core): limit only public sign-up to the first user`
+Commit: `feat(core): limit only public sign-up to the first user`, then `fix(core): limit user creation without a session to the first user`
 
 ### Task 10: Host `hooks.after` sees the auth path
 
@@ -304,7 +305,7 @@ Commit: `test(core): cover host auth request hooks`
 
 - `README.md`:
   - Config example: an optional `auth` block (plugins, `databaseHooks`, `session`), as in the spec.
-  - New section "Auth": `auth` is better-auth's options object and follows better-auth's versioning. Core owns `database`, `basePath` and `secret`, forces `emailAndPassword.enabled`, and does not accept `modelName`. Only the first user can sign up publicly; a signed-in admin can create more (e.g. with `admin()`). Plugin tables are created at runtime. The admin login supports email and password only; plugins that need UI work on the server only.
+  - New section "Auth": `auth` is better-auth's options object and follows better-auth's versioning. Core owns `database`, `basePath` and `secret`, forces `emailAndPassword.enabled`, and does not accept `modelName`. Once a user exists, only a request with a session can create users, on any endpoint; a signed-in admin can create more (e.g. with `admin()`). Plugin tables are created at runtime. The admin login supports email and password only; plugins that need UI work on the server only.
   - Payload mapping: `beforeLogin` → `hooks.before`, `afterLogin` → `hooks.after` with `ctx.path === '/sign-in/email'`, `afterLogout` → `ctx.path === '/sign-out'`, `afterForgotPassword` → `ctx.path === '/request-password-reset'`. Check each path against better-auth 1.7 before writing it.
   - Upgrade note: there is no upgrade path from the Drizzle version. Delete `cms.db` before upgrading; content and users are lost.
   - Scripts table: remove `db:generate`. Status: "SQLite via libsql (local file or Turso), Kysely".
@@ -330,6 +331,6 @@ Commit: `docs: describe kysely layer and auth options`
 
 ## Open risks
 
-- **Other public sign-up paths.** The first-user rule checks `/sign-up/email` only. A host that adds social sign-in or magic links opens sign-up through those paths. Document it; extend the check when such a plugin is supported.
+- **Social sign-in and magic links for new users.** The session-based rule blocks them once a user exists. Invited users need an account created by a signed-in admin first.
 - **`:memory:` and concurrency.** With one connection, a request that arrives while another request's transaction is open fails with `TRANSACTION_ACTIVE`. Only matters for tests and in-memory demos; spec 3 must pass `trx` down to nested `cms` calls.
 - **Transactions in writes.** The spec says writes use `db.transaction()`. This plan leaves single-statement writes as they are and defers wrapping to spec 3.
