@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type Data, dataSchema, type Fields } from './schema.ts'
+import { type Data, dataSchema, defineCollection, type Fields } from './schema.ts'
 
 describe('dataSchema', () => {
   const schema = dataSchema({
@@ -111,3 +111,22 @@ describe('relation values', () => {
     expect(s.safeParse({ lead: ['a'], tags: 'x' }).success).toBe(false)
   })
 })
+
+// Checked by `pnpm typecheck` only.
+function writeTypes() {
+  const fields = defineCollection({
+    fields: {
+      author: { type: 'relation', collection: 'authors', required: true },
+      tags: { type: 'relation', collection: 'tags', many: true },
+      posts: { type: 'join', collection: 'posts', on: 'author' },
+    },
+  }).fields
+  const d: Data<typeof fields> = { author: 'a', tags: ['t'] }
+  const t: string[] | null | undefined = d.tags
+  // @ts-expect-error joins are not stored
+  d.posts
+  // @ts-expect-error a relation is written as ids
+  const bad: Data<typeof fields> = { author: { id: 'a' } }
+  // @ts-expect-error `required` does not apply to joins
+  defineCollection({ fields: { p: { type: 'join', collection: 'posts', on: 'author', required: true } } })
+}

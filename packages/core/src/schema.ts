@@ -39,12 +39,16 @@ type FieldValue<F extends Field> = F extends { type: 'group'; fields: infer G ex
       ? boolean
       : F extends { type: 'select'; options: readonly (infer O)[] }
         ? O
-        : string
+        : F extends { type: 'relation' }
+          ? F extends { many: true }
+            ? string[]
+            : string
+          : string
 
 export type Data<F extends Fields> = {
-  [K in keyof F as F[K]['required'] extends true ? K : never]: FieldValue<F[K]>
+  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K]['required'] extends true ? K : never]: FieldValue<F[K]>
 } & {
-  [K in keyof F as F[K]['required'] extends true ? never : K]?: FieldValue<F[K]> | null
+  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K]['required'] extends true ? never : K]?: FieldValue<F[K]> | null
 }
 
 /** Field keys that `where` accepts. Groups are not filterable. */
