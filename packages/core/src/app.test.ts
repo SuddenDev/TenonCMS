@@ -600,6 +600,30 @@ describe('populate', () => {
     expect((await cms.find('posts', { populate: { author: true }, depth: 5 }))[0].author?.avatar).toBe(ids.m.id)
   })
 
+  it('resolves a named join newest first', async () => {
+    const { a, p } = ids
+    const p2 = await cms.create('posts', { title: 'Two', author: a.id })
+    const author = await cms.findById('authors', a.id, { populate: { posts: true } })
+    expect(author?.posts.map((x) => x.id)).toEqual([p2.id, p.id])
+    expect(author?.posts[0].author).toBe(a.id)
+  })
+
+  it('leaves unnamed joins out', async () => {
+    expect(await cms.findById('authors', ids.a.id)).not.toHaveProperty('posts')
+  })
+
+  it('joins over many relations and groups', async () => {
+    const { m, t2, p } = ids
+    expect((await cms.findById('tags', t2.id, { populate: { posts: true } }))?.posts.map((x) => x.id)).toEqual([p.id])
+    expect((await cms.findById('media', m.id, { populate: { usedIn: true } }))?.usedIn.map((x) => x.id)).toEqual([p.id])
+    const b = await cms.create('authors', { name: 'Bo' })
+    expect((await cms.findById('authors', b.id, { populate: { posts: true } }))?.posts).toEqual([])
+  })
+
+  it('nested paths go through a join', async () => {
+    expect((await cms.findById('authors', ids.a.id, { populate: { posts: { tags: true } } }))?.posts[0].tags?.[0].name).toBe('one')
+  })
+
   it('findById and findOne populate too', async () => {
     const { a, p } = ids
     expect(await cms.findById('posts', p.id)).toMatchObject({ author: { id: a.id, name: 'Ann' } })

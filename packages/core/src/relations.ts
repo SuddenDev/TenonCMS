@@ -1,5 +1,5 @@
 import { type Kysely, sql } from 'kysely'
-import { type Database, toDoc } from './db/index.ts'
+import { type Database, type Row, toDoc } from './db/index.ts'
 import type { Collection, Field, Fields, Schema } from './schema.ts'
 
 export type RelationField = Extract<Field, { type: 'relation' }>
@@ -102,10 +102,30 @@ export async function populate(
       await populate(q, collections, field.fields, docs.map((d) => d[key]).filter(Boolean), sub === true ? 1 : sub)
       continue
     }
-    if (field.type !== 'relation') continue
+    if (field.type !== 'relation' && field.type !== 'join') continue
+    // Joins resolve only when named in a populate object.
+    if (field.type === 'join' && typeof spec !== 'object') continue
     const next = sub === true ? false : typeof sub === 'number' ? sub - 1 : sub
+    const target = collections[field.collection].fields
+    if (field.type === 'join') {
+      const source = relationPaths(target).find((r) => r.path.join('.') === field.on)!.field
+      const path = `$.${field.on}`
+      const ids = JSON.stringify(docs.map((d) => d.id))
+      const query = source.many
+        ? sql<Row & { ref: string }>`SELECT d.*, j.value AS ref FROM cms_documents d, json_each(d.data, ${path}) j
+            WHERE d.collection = ${field.collection} AND j.value IN (SELECT value FROM json_each(${ids}))
+            ORDER BY d.created_at DESC, d.rowid DESC`
+        : sql<Row & { ref: string }>`SELECT d.*, json_extract(d.data, ${path}) AS ref FROM cms_documents d
+            WHERE d.collection = ${field.collection} AND json_extract(d.data, ${path}) IN (SELECT value FROM json_each(${ids}))
+            ORDER BY d.created_at DESC, d.rowid DESC`
+      const rows = (await query.execute(q)).rows
+      const byId = new Map(rows.map((r) => [r.id, toDoc(r)]))
+      await populate(q, collections, target, [...byId.values()], next)
+      for (const d of docs) d[key] = rows.filter((r) => r.ref === d.id).map((r) => byId.get(r.id))
+      continue
+    }
     const found = new Map((await byIds(q, field.collection, [...new Set(docs.flatMap((d) => d[key] ?? []))])).map((d) => [d.id, d]))
-    await populate(q, collections, collections[field.collection].fields, [...found.values()], next)
+    await populate(q, collections, target, [...found.values()], next)
     for (const d of docs) {
       if (d[key] == null) continue
       d[key] = field.many ? d[key].map((id: string) => found.get(id)).filter(Boolean) : (found.get(d[key]) ?? null)
