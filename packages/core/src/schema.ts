@@ -159,12 +159,6 @@ export type Resolve<Cs, F extends Fields, P> = Simplify<
 type Wide<Cs> = string extends keyof Cs ? true : false
 export type Read<Cs, F extends Fields, P> = Wide<Cs> extends true ? Record<string, any> : Resolve<Cs, F, P>
 export type ReadDoc<Cs, F extends Fields, P> = Simplify<Read<Cs, F, P> & Meta>
-export type ReadOptions = {
-  /** `false` returns ids. An object resolves only the listed paths. Default: every relation up to `depth`. */
-  populate?: boolean | object
-  /** Hops resolved by `populate: true`. */
-  depth?: number
-}
 export type PopulateOf<O, D extends number> = O extends { populate: false }
   ? false
   : O extends { populate: infer P extends object }
@@ -192,3 +186,15 @@ export type PopulateArg<Cs, F extends Fields> = Wide<Cs> extends true ? Record<s
 export type Exact<P, A> = P extends object
   ? { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
   : P
+
+/** Read options of `find`, `findOne`, `findById` and `getGlobal`. */
+export type ReadOptions<Cs, F extends Fields> = {
+  /** `false` returns ids. An object resolves only the listed paths, `true` one hop. Default: every relation up to `depth`. */
+  populate?: boolean | PopulateArg<Cs, F>
+  /** Hops resolved when `populate` is not an object. */
+  depth?: number
+}
+/** Checks a `populate` object literal in `O` against the fields at every level. */
+export type Checked<O extends ReadOptions<Cs, F>, Cs, F extends Fields> = O & {
+  populate?: Exact<O['populate'], PopulateArg<Cs, F>>
+}

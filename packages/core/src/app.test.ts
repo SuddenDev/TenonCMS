@@ -672,6 +672,32 @@ describe('populate over HTTP', () => {
     expect((await get('/collections/posts?populate=false&title=No')).body).toHaveLength(0)
   })
 
+  it('populates through the client', async () => {
+    const { client } = r
+    const { a, m, p } = ids
+    expect((await client.find('posts', { populate: { author: { avatar: true } } }))[0].author?.avatar?.url).toBe('/a.png')
+    expect((await client.findById('posts', p.id, { populate: false })).author).toBe(a.id)
+    expect((await client.find('posts', { populate: {} }))[0].author).toBe(a.id)
+    expect((await client.findOne('posts', { where: { title: 'Hi' }, populate: false }))?.author).toBe(a.id)
+    await r.cms.setGlobal('site', { logo: m.id })
+    expect((await client.getGlobal('site', { depth: 0 })).logo).toBe(m.id)
+    expect((await client.getGlobal('site')).logo?.url).toBe('/a.png')
+  })
+
+  it('types client reads', () => {
+    ;async () => {
+      const { client } = r
+      const c = (await client.find('posts'))[0]
+      const n: string = c.author!.name
+      // @ts-expect-error unknown populate key
+      client.find('posts', { populate: { autor: true } })
+      const ids = await client.findById('posts', 'x', { populate: false })
+      const aid: string | null | undefined = ids.author
+      const j = await client.findById('authors', 'x', { populate: { posts: true } })
+      const t: string = j.posts[0].title
+    }
+  })
+
   it.each(['?depth=6', '?populate=title', '?populate=nope', '?populate=author.posts.author.posts.author.posts'])('rejects %s', async (q) => {
     expect((await get(`/collections/posts${q}`)).status).toBe(400)
     expect((await get(`/collections/posts/${ids.p.id}${q}`)).status).toBe(400)

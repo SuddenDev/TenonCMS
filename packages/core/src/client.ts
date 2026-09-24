@@ -1,4 +1,6 @@
-import type { Schema, Data, Doc, FilterKey } from './schema.ts'
+import type { Checked, Data, Doc, FilterKey, PopulateOf, Read, ReadDoc, ReadOptions, Schema } from './schema.ts'
+
+export type { Checked, ReadOptions } from './schema.ts'
 
 /** Path of the HTTP API. */
 export const API_BASE = '/api/cms'
@@ -6,6 +8,34 @@ export const API_BASE = '/api/cms'
 type Collections<C extends { schema: Schema }> = NonNullable<C['schema']['collections']>
 type Globals<C extends { schema: Schema }> = NonNullable<C['schema']['globals']>
 type Fields<C extends { schema: Schema }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
+type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2
+type ReadCollection<C extends { schema: Schema }, K extends keyof Collections<C>, O> = ReadDoc<
+  Collections<C>,
+  Fields<C, K>,
+  PopulateOf<O, Depth<C>>
+>
+/** Options of `find` and `findOne` for collection `K`. */
+export type FindOptions<C extends { schema: Schema }, K extends keyof Collections<C>> = ReadOptions<Collections<C>, Fields<C, K>> & {
+  /** Equality filters on field values. An `undefined` value adds no filter. */
+  where?: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean>>
+  /** Maximum number of documents. */
+  limit?: number
+}
+
+// `{ author: { avatar: true } }` becomes `author.avatar`. An empty object ends a path too.
+function paths(populate: object, prefix = ''): string[] {
+  return Object.entries(populate).flatMap(([key, value]) =>
+    value === true || (value && typeof value === 'object' && !Object.keys(value).length)
+      ? [prefix + key]
+      : value && typeof value === 'object'
+        ? paths(value, `${prefix}${key}.`)
+        : [],
+  )
+}
+function readQuery(options: { populate?: boolean | object; depth?: number }) {
+  const { populate, depth } = options
+  return { populate: populate === false ? 'false' : typeof populate === 'object' ? paths(populate).join(',') || 'false' : undefined, depth }
+}
 
 /**
  * Holds the host's `cms` type, so `createClient()` is typed without a type argument.
@@ -82,36 +112,32 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * Lists documents of a collection, newest first.
      * `GET /api/cms/collections/:collection`
      */
-    find<K extends keyof Collections<C> & string>(
+    find<K extends keyof Collections<C> & string, const O extends FindOptions<C, K> = {}>(
       collection: K,
-      options: {
-        /** Equality filters on field values. An `undefined` value adds no filter. */
-        where?: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean>>
-        /** Maximum number of documents. */
-        limit?: number
-      } = {},
+      options: Checked<O, Collections<C>, Fields<C, K>> = {} as never,
     ) {
-      const query = { ...options.where, ...(options.limit && { limit: options.limit }) }
-      return request<Doc<Fields<C, K>>[]>('GET', `/collections/${encodeURIComponent(collection)}`, undefined, query)
+      const query = { ...options.where, ...(options.limit && { limit: options.limit }), ...readQuery(options) }
+      return request<ReadCollection<C, K, O>[]>('GET', `/collections/${encodeURIComponent(collection)}`, undefined, query)
     },
 
     /** Returns the newest document that matches `where`, or `undefined`. */
-    async findOne<K extends keyof Collections<C> & string>(
+    async findOne<K extends keyof Collections<C> & string, const O extends FindOptions<C, K>>(
       collection: K,
-      options: {
-        /** Equality filters on field values. An `undefined` value adds no filter. */
-        where: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean>>
-      },
-    ): Promise<Doc<Fields<C, K>> | undefined> {
-      return (await client.find(collection, { ...options, limit: 1 }))[0]
+      options: Checked<O, Collections<C>, Fields<C, K>>,
+    ): Promise<ReadCollection<C, K, O> | undefined> {
+      return (await client.find(collection, { ...options, limit: 1 } as never))[0] as ReadCollection<C, K, O> | undefined
     },
 
     /**
      * Returns one document. Throws a `CmsError` with status `404` if it does not exist.
      * `GET /api/cms/collections/:collection/:id`
      */
-    findById<K extends keyof Collections<C> & string>(collection: K, id: string) {
-      return request<Doc<Fields<C, K>>>('GET', doc(collection, id))
+    findById<K extends keyof Collections<C> & string, const O extends ReadOptions<Collections<C>, Fields<C, K>> = {}>(
+      collection: K,
+      id: string,
+      options: Checked<O, Collections<C>, Fields<C, K>> = {} as never,
+    ) {
+      return request<ReadCollection<C, K, O>>('GET', doc(collection, id), undefined, readQuery(options))
     },
 
     /**
@@ -142,8 +168,16 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * Returns a global. Fields that were never saved are missing.
      * `GET /api/cms/globals/:name`
      */
-    getGlobal<K extends keyof Globals<C> & string>(name: K) {
-      return request<Partial<Data<Globals<C>[K]['fields']>>>('GET', `/globals/${encodeURIComponent(name)}`)
+    getGlobal<K extends keyof Globals<C> & string, const O extends ReadOptions<Collections<C>, Globals<C>[K]['fields']> = {}>(
+      name: K,
+      options: Checked<O, Collections<C>, Globals<C>[K]['fields']> = {} as never,
+    ) {
+      return request<Partial<Read<Collections<C>, Globals<C>[K]['fields'], PopulateOf<O, Depth<C>>>>>(
+        'GET',
+        `/globals/${encodeURIComponent(name)}`,
+        undefined,
+        readQuery(options),
+      )
     },
 
     /**
