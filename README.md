@@ -82,7 +82,26 @@ export default defineCms({
 })
 ```
 
-Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`. `defineGlobal()` does the same for globals.
+Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `group`. `defineGlobal()` does the same for globals.
+
+A `group` nests fields under one key and renders as one section in the admin:
+
+```ts
+seo: {
+  type: 'group',
+  label: 'SEO',
+  fields: {
+    title: { type: 'text' },
+    description: { type: 'textarea' },
+    noindex: { type: 'boolean' },
+  },
+}
+```
+
+- An optional group can be missing or `null`, so read it as `doc.seo?.title`.
+- Inner `required` fields apply only when the group is present.
+- The admin saves an optional group with only empty values as `null`.
+- Filters (`where`, query strings) accept top-level fields only, not groups or their inner fields.
 
 ### 2. Read content
 
