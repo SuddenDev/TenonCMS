@@ -13,6 +13,7 @@ if (!post) return new Response('Not found', { status: 404 })
   <body>
     <a href="/">← Home</a>
     <h1 style={post.color ? `border-left: 4px solid ${post.color}; padding-left: 8px` : undefined}>{post.title}</h1>
+    {post.author && <p style="color:blue">{post.author.name}</p>}
     {post.publishedAt && <time datetime={post.publishedAt}>{post.publishedAt}</time>}
     <p style="white-space: pre-wrap">{post.body}</p>
   </body>
