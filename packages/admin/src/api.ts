@@ -10,5 +10,11 @@ export const schema = ref<Schema>({})
 
 /** Field shown as a document's title in lists and page titles. */
 export function titleField(collection: Collection) {
-  return collection.titleField ?? Object.keys(collection.fields)[0]
+  return collection.titleField ?? Object.keys(collection.fields).find((k) => collection.fields[k].type !== 'group') ?? ''
+}
+
+/** A group value is empty when every value is null, '', false, [] or an empty group. */
+export function isEmpty(value: unknown): boolean {
+  if (value === null || value === undefined || value === '' || value === false) return true
+  return typeof value === 'object' && Object.values(value).every(isEmpty)
 }

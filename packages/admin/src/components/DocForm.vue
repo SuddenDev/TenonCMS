@@ -1,12 +1,28 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { Data, Field, Fields } from '../api'
+import { type Data, type Fields, isEmpty } from '../api'
 import FieldInput from './FieldInput.vue'
 
 const props = defineProps<{ fields: Fields; initial: Record<string, unknown>; save: (data: Data<Fields>) => Promise<void> }>()
 
-const empty = (f: Field) => (f.type === 'boolean' ? false : null)
-const data = ref(Object.fromEntries(Object.entries(props.fields).map(([k, f]) => [k, props.initial[k] ?? empty(f)])))
+// Groups always render as objects, so their inputs have a model to bind to.
+// On save, an optional group with only empty values becomes null, so its required children do not apply.
+// Empty strings become null, so cleared optional fields pass validation.
+function normalize(fields: Fields, value: Record<string, any> | null | undefined, save = false): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(fields).map(([k, f]) => {
+      const v = value?.[k]
+      if (f.type === 'group') {
+        const g = normalize(f.fields, v, save)
+        return [k, save && !f.required && isEmpty(g) ? null : g]
+      }
+      if (f.type === 'boolean') return [k, v ?? false]
+      return [k, v === '' || v === undefined ? null : v]
+    }),
+  )
+}
+
+const data = ref(normalize(props.fields, props.initial))
 const error = ref('')
 const saved = ref(false)
 const busy = ref(false)
@@ -17,15 +33,7 @@ async function submit() {
   saved.value = false
   try {
     // Fields can change after mount, so the payload follows the current fields.
-    // Empty strings become null, so cleared optional fields pass validation.
-    await props.save(
-      Object.fromEntries(
-        Object.entries(props.fields).map(([k, f]) => {
-          const v = data.value[k] ?? empty(f)
-          return [k, v === '' ? null : v]
-        }),
-      ) as Data<Fields>,
-    )
+    await props.save(normalize(props.fields, data.value, true) as Data<Fields>)
     saved.value = true
   } catch (e) {
     error.value = (e as Error).message

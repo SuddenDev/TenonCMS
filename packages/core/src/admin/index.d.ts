@@ -43,7 +43,7 @@ export type IntegralContext = {
 
 /** Context of a custom field input. */
 export type FieldContext = {
-  /** Field name in the collection or global, e.g. `color`. */
+  /** Field name in the collection, global or group, e.g. `color`. */
   name: string
   /** Field definition from the config. */
   field: {

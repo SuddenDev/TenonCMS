@@ -1,27 +1,43 @@
 <script setup lang="ts">
-import { inject } from 'vue'
-import type { Field } from '../api'
+import { computed, inject } from 'vue'
+import { type Field, isEmpty } from '../api'
 import { optionsKey } from '../options'
 import Mount from './Mount.vue'
 
-const props = defineProps<{ name: string; field: Field }>()
+// `loose`: the field sits in an optional group that is empty, so `required` does not apply yet.
+const props = defineProps<{ name: string; field: Field; loose?: boolean }>()
 const model = defineModel<any>()
+const required = computed(() => props.field.required && !props.loose)
 const custom = props.field.type.startsWith('custom:') ? inject(optionsKey, {}).fields?.[props.field.type.slice(7)] : undefined
 </script>
 
 <template>
-  <label v-if="field.type === 'boolean'" class="flex items-center gap-2 text-sm">
+  <fieldset v-if="field.type === 'group'" class="flex flex-col gap-4 rounded border border-gray-200 p-4">
+    <legend class="px-1 text-sm font-medium">
+      {{ field.label ?? name }}
+      <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
+    </legend>
+    <FieldInput
+      v-for="(child, key) in field.fields"
+      :key="key"
+      v-model="model[key]"
+      :name="String(key)"
+      :field="child"
+      :loose="loose || (!field.required && isEmpty(model))"
+    />
+  </fieldset>
+  <label v-else-if="field.type === 'boolean'" class="flex items-center gap-2 text-sm">
     <input v-model="model" type="checkbox" />
     {{ field.label ?? name }}
   </label>
   <label v-else class="flex flex-col gap-1 text-sm">
     <span>
       {{ field.label ?? name }}
-      <span v-if="field.required" class="text-red-600" aria-hidden="true">*</span>
+      <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
     </span>
     <Mount v-if="custom" :mount="custom" :ctx="{ name, field, value: model, onChange: (v: any) => (model = v) }" />
-    <textarea v-else-if="field.type === 'textarea'" v-model="model" class="input min-h-40" :required="field.required" />
-    <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="field.required">
+    <textarea v-else-if="field.type === 'textarea'" v-model="model" class="input min-h-40" :required="required" />
+    <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="required">
       <option :value="null" />
       <option v-for="o in field.options" :key="o" :value="o">{{ o }}</option>
     </select>
@@ -30,8 +46,8 @@ const custom = props.field.type.startsWith('custom:') ? inject(optionsKey, {}).f
       v-model.number="model"
       type="number"
       class="input"
-      :required="field.required"
+      :required="required"
     />
-    <input v-else v-model="model" :type="field.type === 'date' ? 'date' : 'text'" class="input" :required="field.required" />
+    <input v-else v-model="model" :type="field.type === 'date' ? 'date' : 'text'" class="input" :required="required" />
   </label>
 </template>
