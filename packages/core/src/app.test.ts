@@ -445,6 +445,7 @@ describe('relation schema', () => {
       { collections: { a: { fields: { g: { type: 'group', fields: { p: join } } } }, posts: { fields: { author: { type: 'relation', collection: 'a' } } } } },
       /join/,
     ],
+    ['depth above maxDepth', { collections: {}, populate: { depth: 6 } }, /maxDepth/],
     ['cascade in a global', { collections: { a: { fields: {} } }, globals: { g: { fields: { a: { type: 'relation', collection: 'a', onDelete: 'cascade' } } } } }, /cascade/],
   ])('rejects %s', (_, config, message) => {
     expect(() => defineCms({ ...(config as object), database: { url: ':memory:' }, secret: '' } as never)).toThrow(message)

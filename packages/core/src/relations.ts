@@ -16,11 +16,12 @@ function hasJoin(fields: Fields): boolean {
 }
 
 /** Throws when a relation or join does not fit the schema. */
-export function checkSchema(schema: Schema) {
+export function checkSchema(schema: Schema, populate: { depth: number; maxDepth: number }) {
   const collections = schema.collections ?? {}
   const fail = (message: string) => {
     throw new Error(`integral-cms: ${message}`)
   }
+  if (populate.depth > populate.maxDepth) fail(`populate.depth (${populate.depth}) is above populate.maxDepth (${populate.maxDepth})`)
   const owners = [
     ...Object.entries(collections).map(([name, c]) => ({ name, fields: c.fields, global: false })),
     ...Object.entries(schema.globals ?? {}).map(([name, g]) => ({ name, fields: g.fields, global: true })),

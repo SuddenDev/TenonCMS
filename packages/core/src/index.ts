@@ -23,9 +23,24 @@ export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './sch
 
 export type { AuthOptions } from './auth.ts'
 
-export type CmsOptions<C extends Record<string, Collection>, G extends Record<string, Global>, A extends AuthOptions = {}> = {
+export type PopulateConfig = {
+  /** Hops resolved by `populate: true`. Default 2. */
+  depth?: number
+  /** Limit for HTTP requests. Default 5. The local API has no limit. */
+  maxDepth?: number
+}
+type DefaultDepth<P extends PopulateConfig> = P['depth'] extends number ? P['depth'] : 2
+
+export type CmsOptions<
+  C extends Record<string, Collection>,
+  G extends Record<string, Global>,
+  A extends AuthOptions = {},
+  P extends PopulateConfig = {},
+> = {
   collections?: C
   globals?: G
+  /** Defaults for reads that resolve relations. */
+  populate?: P
   database: { url: string; authToken?: string }
   /** Secret for signing sessions. MUST be at least 32 random characters in production. */
   secret: string
@@ -73,9 +88,12 @@ export function defineCms<
   const C extends Record<string, Collection> = {},
   const G extends Record<string, Global> = {},
   const A extends AuthOptions = {},
->({ database, secret, auth: host = {} as A, ...schema }: CmsOptions<C, G, A>) {
+  const P extends PopulateConfig = {},
+>({ database, secret, auth: host = {} as A, populate: config = {} as P, ...schema }: CmsOptions<C, G, A, P>) {
   type T = typeof schema
-  checkSchema(schema)
+  type D = DefaultDepth<P>
+  const populate = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 }
+  checkSchema(schema, populate)
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
@@ -98,6 +116,8 @@ export function defineCms<
   const cms = {
     schema,
     auth,
+    /** The `populate` config with defaults. */
+    populate: populate as { depth: D; maxDepth: number },
 
     /**
      * Lists documents of a collection, newest first.
@@ -106,7 +126,7 @@ export function defineCms<
     async find<K extends keyof Collections<T> & string, const O extends FindOptions<T, K> = {}>(
       collection: K,
       options: O = {} as O,
-    ): Promise<ReadCollection<T, K, O, 2>[]> {
+    ): Promise<ReadCollection<T, K, O, D>[]> {
       let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
       for (const [key, value] of Object.entries(options.where ?? {})) {
         const fields = schema.collections![collection].fields
@@ -119,7 +139,7 @@ export function defineCms<
       // `rowid` orders documents created in the same millisecond.
       query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
       if (options.limit) query = query.limit(options.limit)
-      return (await query.execute()).map(toDoc) as ReadCollection<T, K, O, 2>[]
+      return (await query.execute()).map(toDoc) as ReadCollection<T, K, O, D>[]
     },
 
     /**
@@ -129,8 +149,8 @@ export function defineCms<
     async findOne<K extends keyof Collections<T> & string, const O extends FindOptions<T, K>>(
       collection: K,
       options: O,
-    ): Promise<ReadCollection<T, K, O, 2> | undefined> {
-      return (await cms.find(collection, { ...options, limit: 1 }))[0] as ReadCollection<T, K, O, 2> | undefined
+    ): Promise<ReadCollection<T, K, O, D> | undefined> {
+      return (await cms.find(collection, { ...options, limit: 1 }))[0] as ReadCollection<T, K, O, D> | undefined
     },
 
     /** Returns one document, or `undefined`. */
@@ -138,14 +158,14 @@ export function defineCms<
       collection: K,
       id: string,
       options: O = {} as O,
-    ): Promise<ReadCollection<T, K, O, 2> | undefined> {
+    ): Promise<ReadCollection<T, K, O, D> | undefined> {
       const row = await (await db())
         .selectFrom('cms_documents')
         .selectAll()
         .where('collection', '=', collection)
         .where('id', '=', id)
         .executeTakeFirst()
-      return row && (toDoc(row) as ReadCollection<T, K, O, 2>)
+      return row && (toDoc(row) as ReadCollection<T, K, O, D>)
     },
 
     /** Creates a document. Checks relation ids, but does not validate the rest of `data`. */
@@ -184,9 +204,9 @@ export function defineCms<
     async getGlobal<K extends keyof Globals<T> & string, const O extends ReadOptions = {}>(
       name: K,
       options: O = {} as O,
-    ): Promise<ReadGlobal<T, K, O, 2>> {
+    ): Promise<ReadGlobal<T, K, O, D>> {
       const row = await (await db()).selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
-      return (row ? JSON.parse(row.data) : {}) as ReadGlobal<T, K, O, 2>
+      return (row ? JSON.parse(row.data) : {}) as ReadGlobal<T, K, O, D>
     },
 
     /** Replaces the data of a global. Checks relation ids, but does not validate the rest of `data`. */

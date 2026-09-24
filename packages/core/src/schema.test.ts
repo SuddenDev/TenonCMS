@@ -176,6 +176,21 @@ async function readTypes() {
   // @ts-expect-error `populate: false` returns ids
   ids.author?.name
 
+  const d1 = (await cms.find('posts', { depth: 1 }))[0]
+  const av: string | null | undefined = d1.author?.avatar
+  const d0 = (await cms.find('posts', { depth: 0 }))[0]
+  const s: string | null | undefined = d0.author
+  const deep = defineCms({
+    collections: { pages: { fields: { parent: { type: 'relation', collection: 'pages' } } } },
+    populate: { depth: 3 },
+    database,
+    secret: '',
+  })
+  const pg = (await deep.find('pages'))[0]
+  const p3: string | null | undefined = pg.parent?.parent?.parent?.parent
+  // @ts-expect-error depth 3 ends at the fourth hop
+  pg.parent?.parent?.parent?.parent?.id
+
   const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: '' })
   const w = (await wide.find('x'))[0]
   w.anything
