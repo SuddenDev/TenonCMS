@@ -130,7 +130,7 @@ await cms.getGlobal('site')
 Everything is typed from the schema. Unknown collections or fields are type errors.
 
 Reads are also available over HTTP without a session, because the site renders that content anyway.
-Query params are equality filters, and `limit` caps the result: `GET /api/cms/collections/posts?slug=hello&limit=1`, `GET /api/cms/globals/site`.
+Query params are equality filters, and `limit` caps the result: `GET /api/cms/collections/posts?slug=hello&limit=1`, `GET /api/cms/globals/site`. `?category=null` matches an empty or missing field, like `null` in `where`; an empty value (`?category=`) adds no filter.
 `populate` and `depth` control [relations](#relations). Because of that, fields named `limit`, `populate` or `depth` cannot be filtered over HTTP.
 Writes and the schema endpoint need an admin session.
 

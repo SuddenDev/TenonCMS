@@ -118,11 +118,17 @@ function mapValues<T, R>(record: Record<string, T> | undefined, fn: (value: T) =
 }
 
 // Coerces query strings to the field's type, so `?featured=true` matches a boolean column.
+// `null` matches an empty or missing field, like `null` in the local API. An empty value adds no filter.
 // Returns `undefined` for an unknown field or a value that does not fit its type.
 function whereFromQuery(fields: Fields, query: Record<string, string>) {
-  const where: Record<string, string | number | boolean> = {}
+  const where: Record<string, string | number | boolean | null> = {}
   for (const [key, value] of Object.entries(query)) {
     if (!filterable(fields, key)) return undefined
+    if (value === '') continue
+    if (value === 'null') {
+      where[key] = null
+      continue
+    }
     const type = fields[key].type
     if (type === 'number') {
       if (value.trim() === '' || !Number.isFinite(Number(value))) return undefined

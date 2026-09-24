@@ -296,6 +296,19 @@ describe('reads', () => {
     expect((await client.find('posts', { where: { views: 2, featured: false } })).map((p) => p.title)).toEqual(['B'])
   })
 
+  it('filter by null as the query value null', async () => {
+    await cms.create('posts', { title: 'D' })
+    expect((await client.find('posts', { where: { views: null } })).map((p) => p.title)).toEqual(['D'])
+    expect((await client.find('posts', { where: { featured: null, views: null } })).map((p) => p.title)).toEqual(['D'])
+    const res = await cms.fetch(new Request(`${origin}/api/cms/collections/posts?views=null`))
+    expect((await res.json()).map((p: { title: string }) => p.title)).toEqual(['D'])
+  })
+
+  it('ignore empty query values', async () => {
+    const res = await cms.fetch(new Request(`${origin}/api/cms/collections/posts?views=&title=`))
+    expect(await res.json()).toHaveLength(3)
+  })
+
   it('ignore undefined filters', async () => {
     expect(await client.find('posts', { where: { views: undefined } })).toHaveLength(3)
   })
