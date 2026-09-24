@@ -103,6 +103,10 @@ Documents loaded by `populate` run through their own collection's `beforeRead` a
 - On drivers without interactive transactions (Cloudflare D1 later), hooks run in the same order without isolation. The docs MUST say so.
 - Reads do not open a transaction. A read nested in a write uses the write's transaction.
 
+## `onDelete` effects
+
+`set-null` and `cascade` effects from spec 2 MUST run through the normal `update` and `delete` operations, with all their hooks, in the same transaction. Hooks that keep derived data (e.g. tree paths in spec 5) then stay correct when a referenced document is deleted.
+
 ## Loops
 
 A hook that writes to its own collection triggers its own hooks again. Core does not prevent this; hooks use `context` to stop it, as in Payload. Tests MUST show the pattern.
@@ -128,6 +132,7 @@ A hook that writes to its own collection triggers its own hooks again. Core does
 - field hooks inside groups receive `path: 'seo.title'`
 - `context` is shared with nested calls; a hook writing to its own collection stops via `context`
 - `user` is set for authenticated HTTP writes and `null` for public reads
+- `onDelete` `set-null` and `cascade` effects run the referencing collection's update and delete hooks
 
 `schema.test.ts`:
 
