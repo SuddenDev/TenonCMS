@@ -173,3 +173,61 @@ export function parsePopulate(
   }
   return spec
 }
+
+type Ref = { collection?: string; id?: string; global?: string; data: Record<string, any>; path: string[]; field: RelationField }
+
+const owner = (r: Ref) => (r.global ? `global:${r.global}` : `${r.collection}:${r.id}`)
+
+/** Every document and global that holds `id` in a relation to `collection`. One query per relation field. */
+async function references(q: Kysely<Database>, schema: Schema, collection: string, id: string) {
+  const refs: Ref[] = []
+  // A document with several matching fields shares one `data` object, so all edits land in one write.
+  const parsed = new Map<string, Record<string, any>>()
+  const data = (key: string, json: string) => parsed.get(key) ?? parsed.set(key, JSON.parse(json)).get(key)!
+  const match = (path: string[], many?: boolean) => {
+    const json = `$.${path.join('.')}`
+    return many
+      ? sql<boolean>`EXISTS (SELECT 1 FROM json_each(data, ${json}) WHERE value = ${id})`
+      : sql<boolean>`json_extract(data, ${json}) = ${id}`
+  }
+  for (const [name, c] of Object.entries(schema.collections ?? {})) {
+    for (const { path, field } of relationPaths(c.fields)) {
+      if (field.collection !== collection) continue
+      const rows = await q
+        .selectFrom('cms_documents')
+        .select(['id', 'data'])
+        .where('collection', '=', name)
+        .where(match(path, field.many))
+        .execute()
+      for (const row of rows) refs.push({ collection: name, id: row.id, data: data(`${name}:${row.id}`, row.data), path, field })
+    }
+  }
+  for (const [name, g] of Object.entries(schema.globals ?? {})) {
+    for (const { path, field } of relationPaths(g.fields)) {
+      if (field.collection !== collection) continue
+      const row = await q.selectFrom('cms_globals').select('data').where('name', '=', name).where(match(path, field.many)).executeTakeFirst()
+      if (row) refs.push({ global: name, data: data(`global:${name}`, row.data), path, field })
+    }
+  }
+  return refs
+}
+
+async function writeData(trx: Kysely<Database>, ref: Ref) {
+  const values = { data: JSON.stringify(ref.data), updated_at: Date.now() }
+  if (ref.global) await trx.updateTable('cms_globals').set(values).where('name', '=', ref.global).execute()
+  else await trx.updateTable('cms_documents').set(values).where('collection', '=', ref.collection!).where('id', '=', ref.id!).execute()
+}
+
+/** Deletes one document and applies `onDelete` to every reference to it. MUST run inside a transaction. */
+export async function remove(trx: Kysely<Database>, schema: Schema, collection: string, id: string, visited: Set<string>) {
+  if (visited.has(`${collection}:${id}`)) return
+  visited.add(`${collection}:${id}`)
+  const refs = (await references(trx, schema, collection, id)).filter((r) => r.global || !visited.has(owner(r)))
+  for (const r of refs) {
+    const parent = at(r.data, r.path.slice(0, -1))
+    const key = r.path.at(-1)!
+    parent[key] = r.field.many ? parent[key].filter((x: string) => x !== id) : null
+  }
+  for (const r of new Map(refs.map((r) => [owner(r), r])).values()) await writeData(trx, r)
+  await trx.deleteFrom('cms_documents').where('collection', '=', collection).where('id', '=', id).execute()
+}

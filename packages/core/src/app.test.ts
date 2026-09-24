@@ -703,3 +703,46 @@ describe('populate over HTTP', () => {
     expect((await get(`/collections/posts/${ids.p.id}${q}`)).status).toBe(400)
   })
 })
+
+describe('onDelete', () => {
+  let cms: ReturnType<typeof relational>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    cms = relational()
+    ids = await seed(cms)
+  })
+  const ids0 = { populate: false } as const
+
+  it('set-null clears single, many, grouped and global references', async () => {
+    const { m, a, p, t1, t2 } = ids
+    await cms.setGlobal('site', { logo: m.id, featured: [p.id] })
+    await cms.delete('media', m.id)
+    expect((await cms.findById('posts', p.id, ids0))?.seo).toEqual({ image: null })
+    expect((await cms.findById('authors', a.id, ids0))?.avatar).toBeNull()
+    expect((await cms.getGlobal('site', ids0)).logo).toBeNull()
+    await cms.delete('tags', t1.id)
+    expect((await cms.findById('posts', p.id, ids0))?.tags).toEqual([t2.id])
+  })
+
+  it('set-null clears several fields of one document', async () => {
+    const cms = defineCms({
+      collections: {
+        a: { fields: {} },
+        b: { fields: { x: { type: 'relation', collection: 'a' }, y: { type: 'relation', collection: 'a', many: true } } },
+      },
+      database: { url: ':memory:' },
+      secret: '',
+    })
+    const a = await cms.create('a', {})
+    const b = await cms.create('b', { x: a.id, y: [a.id] })
+    await cms.delete('a', a.id)
+    expect(await cms.findById('b', b.id, { populate: false })).toMatchObject({ x: null, y: [] })
+  })
+
+  it('set-null updates updatedAt', async () => {
+    const { t1, p } = ids
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    await cms.delete('tags', t1.id)
+    expect((await cms.findById('posts', p.id))?.updatedAt).not.toBe(p.updatedAt)
+  })
+})

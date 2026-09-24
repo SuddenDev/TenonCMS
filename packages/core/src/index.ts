@@ -3,7 +3,7 @@ import { sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, migrate, toDoc } from './db/index.ts'
-import { checkRefs, checkSchema, populate, type Spec } from './relations.ts'
+import { checkRefs, checkSchema, populate, remove, type Spec } from './relations.ts'
 import {
   type Checked,
   type Collection,
@@ -194,9 +194,9 @@ export function defineCms<
       return row && (toDoc(row) as CollectionDoc<T, K>)
     },
 
-    /** Deletes a document. */
+    /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
     async delete(collection: keyof Collections<T> & string, id: string) {
-      await (await db()).deleteFrom('cms_documents').where('collection', '=', collection).where('id', '=', id).execute()
+      await (await db()).transaction().execute((trx) => remove(trx, schema, collection, id, new Set()))
     },
 
     /** Returns a global. Fields that were never saved are missing. */
