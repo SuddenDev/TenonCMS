@@ -57,6 +57,11 @@ export function defineGlobal<const T extends Global>(global: T): T {
   return global
 }
 
+/** Whether `where` accepts `key`. Groups are not filterable. */
+export function filterable(fields: Fields, key: string) {
+  return Object.hasOwn(fields, key) && fields[key].type !== 'group'
+}
+
 function fieldSchema(field: Field): z.ZodType {
   switch (field.type) {
     case 'number':

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
 import { API_BASE } from './client.ts'
 import type { Cms } from './index.ts'
-import { dataSchema, type Schema, type Fields } from './schema.ts'
+import { dataSchema, filterable, type Schema, type Fields } from './schema.ts'
 
 export function createApp(cms: Cms<Schema>) {
   const { schema } = cms
@@ -99,7 +99,7 @@ function mapValues<T, R>(record: Record<string, T> | undefined, fn: (value: T) =
 function whereFromQuery(fields: Fields, query: Record<string, string>) {
   const where: Record<string, string | number | boolean> = {}
   for (const [key, value] of Object.entries(query)) {
-    if (!Object.hasOwn(fields, key)) return undefined
+    if (!filterable(fields, key)) return undefined
     const type = fields[key].type
     if (type === 'number') {
       if (value.trim() === '' || !Number.isFinite(Number(value))) return undefined

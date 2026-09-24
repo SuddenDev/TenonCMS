@@ -3,7 +3,7 @@ import { type Selectable, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate } from './db/index.ts'
-import type { Collection, Data, Doc, Global, Schema } from './schema.ts'
+import { type Collection, type Data, type Doc, filterable, type Global, type Schema } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
 export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './schema.ts'
@@ -87,7 +87,7 @@ export function defineCms<
     ): Promise<CollectionDoc<T, K>[]> {
       let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
       for (const [key, value] of Object.entries(options.where ?? {})) {
-        if (!Object.hasOwn(schema.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
+        if (!filterable(schema.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
         if (value === undefined) continue
         const field = sql`json_extract(data, ${`$.${key}`})`
         query = query.where(value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`)

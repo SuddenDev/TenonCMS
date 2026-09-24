@@ -261,7 +261,7 @@ describe('reads', () => {
     expect(await client.findOne('posts', { where: { views: 2 } })).toMatchObject({ title: 'C' })
   })
 
-  it.each(['?nope=1', '?limit=0', '?limit=-1', '?limit=abc'])('reject %s', async (query) => {
+  it.each(['?nope=1', '?seo=x', '?limit=0', '?limit=-1', '?limit=abc'])('reject %s', async (query) => {
     expect((await cms.fetch(new Request(`${origin}/api/cms/collections/posts${query}`))).status).toBe(400)
   })
 
@@ -275,6 +275,10 @@ describe('reads', () => {
 describe('local API', () => {
   it('rejects unknown filter fields before they reach SQL', async () => {
     await expect(cms.find('posts', { where: { "x') OR 1=1 --": 1 } as never })).rejects.toThrow(/Unknown field/)
+  })
+
+  it('rejects group keys in where', async () => {
+    await expect(cms.find('posts', { where: { seo: null } as never })).rejects.toThrow(/Unknown field/)
   })
 
   it('matches empty or missing fields with null and ignores undefined', async () => {
