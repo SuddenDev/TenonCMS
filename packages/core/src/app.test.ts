@@ -281,6 +281,15 @@ describe('local API', () => {
     await expect(cms.find('posts', { where: { seo: null } as never })).rejects.toThrow(/Unknown field/)
   })
 
+  it('rejects group keys in where at the type level', () => {
+    ;() => {
+      // @ts-expect-error `seo` is a group
+      cms.find('posts', { where: { seo: null } })
+      // @ts-expect-error `seo` is a group
+      client.find('posts', { where: { seo: 'x' } })
+    }
+  })
+
   it('matches empty or missing fields with null and ignores undefined', async () => {
     await cms.create('posts', { title: 'A', views: null })
     await cms.create('posts', { title: 'B' })

@@ -43,6 +43,9 @@ export type Data<F extends Fields> = {
   [K in keyof F as F[K]['required'] extends true ? never : K]?: FieldValue<F[K]> | null
 }
 
+/** Field keys that `where` accepts. Groups are not filterable. */
+export type FilterKey<F extends Fields> = { [K in keyof F]: F[K] extends { type: 'group' } ? never : K }[keyof F]
+
 export type Doc<F extends Fields> = Data<F> & {
   id: string
   createdAt: string

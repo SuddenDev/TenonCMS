@@ -3,7 +3,7 @@ import { type Selectable, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate } from './db/index.ts'
-import { type Collection, type Data, type Doc, filterable, type Global, type Schema } from './schema.ts'
+import { type Collection, type Data, type Doc, type FilterKey, filterable, type Global, type Schema } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
 export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './schema.ts'
@@ -27,7 +27,7 @@ type CollectionDoc<T extends Schema, K extends keyof Collections<T>> = Doc<Colle
 type GlobalData<T extends Schema, K extends keyof Globals<T>> = Data<Globals<T>[K]['fields']>
 type FindOptions<T extends Schema, K extends keyof Collections<T>> = {
   /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
-  where?: Partial<Record<keyof Collections<T>[K]['fields'], string | number | boolean | null>>
+  where?: Partial<Record<FilterKey<Collections<T>[K]['fields']>, string | number | boolean | null>>
   /** Maximum number of documents. */
   limit?: number
 }

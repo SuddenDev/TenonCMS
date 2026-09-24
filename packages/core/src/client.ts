@@ -1,4 +1,4 @@
-import type { Schema, Data, Doc } from './schema.ts'
+import type { Schema, Data, Doc, FilterKey } from './schema.ts'
 
 /** Path of the HTTP API. */
 export const API_BASE = '/api/cms'
@@ -86,7 +86,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
       collection: K,
       options: {
         /** Equality filters on field values. An `undefined` value adds no filter. */
-        where?: Partial<Record<keyof Fields<C, K>, string | number | boolean>>
+        where?: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean>>
         /** Maximum number of documents. */
         limit?: number
       } = {},
@@ -100,7 +100,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
       collection: K,
       options: {
         /** Equality filters on field values. An `undefined` value adds no filter. */
-        where: Partial<Record<keyof Fields<C, K>, string | number | boolean>>
+        where: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean>>
       },
     ): Promise<Doc<Fields<C, K>> | undefined> {
       return (await client.find(collection, { ...options, limit: 1 }))[0]
