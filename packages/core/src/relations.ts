@@ -230,6 +230,8 @@ export async function remove(trx: Kysely<Database>, schema: Schema, collection: 
     const owners = new Map(blocking.map((r) => [owner(r), r])).values()
     throw new ConflictError([...owners].map((r) => (r.global ? { global: r.global } : { collection: r.collection!, id: r.id! })))
   }
+  // Globals cannot cascade (checked at startup), so `collection` and `id` are set.
+  for (const r of refs.filter((r) => rule(r) === 'cascade')) await remove(trx, schema, r.collection!, r.id!, visited)
   const cleared = refs.filter((r) => rule(r) === 'set-null')
   for (const r of cleared) {
     const parent = at(r.data, r.path.slice(0, -1))

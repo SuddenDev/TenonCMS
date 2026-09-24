@@ -89,7 +89,12 @@ const relational = (url = ':memory:', populate: PopulateConfig = {}) =>
           seo: { type: 'group', fields: { image: { type: 'relation', collection: 'media' } } },
         },
       },
-      notes: { fields: { post: { type: 'relation', collection: 'posts', required: true } } },
+      notes: {
+        fields: {
+          post: { type: 'relation', collection: 'posts', required: true },
+          pin: { type: 'relation', collection: 'pages', required: true },
+        },
+      },
       pages: { fields: { title: { type: 'text', required: true }, parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } } },
     },
     globals: { site: { fields: { logo: { type: 'relation', collection: 'media' }, featured: { type: 'relation', collection: 'posts', many: true } } } },
@@ -789,5 +794,40 @@ describe('onDelete restrict', () => {
     const note = await cms.create('notes', { post: p.id })
     await cms.setGlobal('g', { pin: p.id })
     await expect(cms.delete('posts', p.id)).rejects.toMatchObject({ references: [{ collection: 'notes', id: note.id }, { global: 'g' }] })
+  })
+})
+
+describe('onDelete cascade', () => {
+  let cms: ReturnType<typeof relational>
+  beforeEach(() => {
+    cms = relational()
+  })
+  const tree = async () => {
+    const root = await cms.create('pages', { title: 'root' })
+    const child = await cms.create('pages', { title: 'child', parent: root.id })
+    const grandchild = await cms.create('pages', { title: 'grandchild', parent: child.id })
+    return [root, child, grandchild]
+  }
+
+  it('deletes recursively', async () => {
+    const [root] = await tree()
+    await cms.delete('pages', root.id)
+    expect(await cms.find('pages')).toEqual([])
+  })
+
+  it('ends cycles', async () => {
+    const x = await cms.create('pages', { title: 'x' })
+    const y = await cms.create('pages', { title: 'y', parent: x.id })
+    await cms.update('pages', x.id, { title: 'x', parent: y.id })
+    await cms.delete('pages', x.id)
+    expect(await cms.find('pages')).toEqual([])
+  })
+
+  it('applies the rules of deleted documents', async () => {
+    const [root, child] = await tree()
+    const { p } = await seed(cms)
+    await cms.create('notes', { post: p.id, pin: child.id })
+    await expect(cms.delete('pages', root.id)).rejects.toBeInstanceOf(ConflictError)
+    expect(await cms.find('pages')).toHaveLength(3)
   })
 })
