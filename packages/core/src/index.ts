@@ -89,7 +89,9 @@ export function defineCms<
     ): Promise<CollectionDoc<T, K>[]> {
       let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
       for (const [key, value] of Object.entries(options.where ?? {})) {
-        if (!filterable(schema.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
+        const fields = schema.collections![collection].fields
+        if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`)
+        if (!filterable(fields, key)) throw new Error(`Field "${key}" is not filterable`)
         if (value === undefined) continue
         const field = sql`json_extract(data, ${`$.${key}`})`
         query = query.where(value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`)

@@ -316,7 +316,7 @@ describe('local API', () => {
   })
 
   it('rejects group keys in where', async () => {
-    await expect(cms.find('posts', { where: { seo: null } as never })).rejects.toThrow(/Unknown field/)
+    await expect(cms.find('posts', { where: { seo: null } as never })).rejects.toThrow(/not filterable/)
   })
 
   it('rejects group keys in where at the type level', () => {
@@ -488,5 +488,38 @@ describe('relation writes', () => {
 
   it('rejects duplicates over HTTP', async () => {
     expect(await status(r.client.create('posts', { title: 'x', tags: [ids.t1.id, ids.t1.id] }))).toBe(400)
+  })
+})
+
+describe('relation filters', () => {
+  let r: ReturnType<typeof setup<ReturnType<typeof relational>>>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    r = setup(relational())
+    ids = await seed(r.cms)
+  })
+  const get = (path: string) => r.cms.fetch(new Request(`${origin}/api/cms${path}`))
+
+  it('filters by a single relation', async () => {
+    expect((await r.cms.find('posts', { where: { author: ids.a.id } })).map((p) => p.id)).toEqual([ids.p.id])
+    expect((await (await get(`/collections/posts?author=${ids.a.id}`)).json()).map((p: { id: string }) => p.id)).toEqual([ids.p.id])
+  })
+
+  it('rejects many relations and joins', async () => {
+    await expect(r.cms.find('posts', { where: { tags: 'x' } as never })).rejects.toThrow(/not filterable/)
+    await expect(r.cms.find('authors', { where: { posts: 'x' } as never })).rejects.toThrow(/not filterable/)
+    expect((await get('/collections/posts?tags=x')).status).toBe(400)
+    expect((await get('/collections/authors?posts=x')).status).toBe(400)
+  })
+
+  it('rejects many relations and joins at the type level', () => {
+    ;() => {
+      // @ts-expect-error many relations are not filterable
+      r.cms.find('posts', { where: { tags: 'x' } })
+      // @ts-expect-error joins are not filterable
+      r.cms.find('authors', { where: { posts: 'x' } })
+      // @ts-expect-error many relations are not filterable
+      r.client.find('posts', { where: { tags: 'x' } })
+    }
   })
 })

@@ -51,8 +51,10 @@ export type Data<F extends Fields> = {
   [K in keyof F as F[K] extends { type: 'join' } ? never : F[K]['required'] extends true ? never : K]?: FieldValue<F[K]> | null
 }
 
-/** Field keys that `where` accepts. Groups are not filterable. */
-export type FilterKey<F extends Fields> = { [K in keyof F]: F[K] extends { type: 'group' } ? never : K }[keyof F]
+/** Field keys that `where` accepts. Groups, joins and `many` relations are not filterable. */
+export type FilterKey<F extends Fields> = {
+  [K in keyof F]: F[K] extends { type: 'group' | 'join' } | { many: true } ? never : K
+}[keyof F]
 
 export type Doc<F extends Fields> = Data<F> & {
   id: string
@@ -68,9 +70,11 @@ export function defineGlobal<const T extends Global>(global: T): T {
   return global
 }
 
-/** Whether `where` accepts `key`. Groups are not filterable. */
+/** Whether `where` accepts `key`. Groups, joins and `many` relations are not filterable. */
 export function filterable(fields: Fields, key: string) {
-  return Object.hasOwn(fields, key) && fields[key].type !== 'group'
+  if (!Object.hasOwn(fields, key)) return false
+  const field = fields[key]
+  return field.type !== 'group' && field.type !== 'join' && !(field.type === 'relation' && field.many)
 }
 
 function fieldSchema(field: Field): z.ZodType {
