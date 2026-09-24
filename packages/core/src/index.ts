@@ -3,6 +3,7 @@ import { type Selectable, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate } from './db/index.ts'
+import { checkSchema } from './relations.ts'
 import { type Collection, type Data, type Doc, type FilterKey, filterable, type Global, type Schema } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
@@ -54,6 +55,7 @@ export function defineCms<
   const A extends AuthOptions = {},
 >({ database, secret, auth: host = {} as A, ...schema }: CmsOptions<C, G, A>) {
   type T = typeof schema
+  checkSchema(schema)
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.

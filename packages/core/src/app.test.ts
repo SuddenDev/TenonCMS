@@ -68,6 +68,44 @@ async function status(promise: Promise<unknown>) {
   return error instanceof CmsError ? error.status : error
 }
 
+const relational = (url = ':memory:') =>
+  defineCms({
+    collections: {
+      media: { fields: { url: { type: 'text', required: true }, usedIn: { type: 'join', collection: 'posts', on: 'seo.image' } } },
+      authors: {
+        titleField: 'name',
+        fields: {
+          name: { type: 'text', required: true },
+          avatar: { type: 'relation', collection: 'media' },
+          posts: { type: 'join', collection: 'posts', on: 'author' },
+        },
+      },
+      tags: { fields: { name: { type: 'text', required: true }, posts: { type: 'join', collection: 'posts', on: 'tags' } } },
+      posts: {
+        fields: {
+          title: { type: 'text', required: true },
+          author: { type: 'relation', collection: 'authors' },
+          tags: { type: 'relation', collection: 'tags', many: true },
+          seo: { type: 'group', fields: { image: { type: 'relation', collection: 'media' } } },
+        },
+      },
+      notes: { fields: { post: { type: 'relation', collection: 'posts', required: true } } },
+      pages: { fields: { title: { type: 'text', required: true }, parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } } },
+    },
+    globals: { site: { fields: { logo: { type: 'relation', collection: 'media' }, featured: { type: 'relation', collection: 'posts', many: true } } } },
+    database: { url },
+    secret: 'x'.repeat(32),
+  })
+
+// Seeds one graph through the local API and returns the ids.
+async function seed(cms: ReturnType<typeof relational>) {
+  const m = await cms.create('media', { url: '/a.png' })
+  const a = await cms.create('authors', { name: 'Ann', avatar: m.id })
+  const [t1, t2] = [await cms.create('tags', { name: 'one' }), await cms.create('tags', { name: 'two' })]
+  const p = await cms.create('posts', { title: 'Hi', author: a.id, tags: [t1.id, t2.id], seo: { image: m.id } })
+  return { m, a, t1, t2, p }
+}
+
 describe('database', () => {
   it('creates CMS and auth tables on first access', async () => {
     const url = tmpDb()
@@ -376,5 +414,43 @@ describe('errors', () => {
   it('reject unknown options at the type level', () => {
     // @ts-expect-error `globalz` is not an option
     defineCms({ collections: {}, globalz: {}, database: { url: ':memory:' }, secret: '' })
+  })
+})
+
+describe('relation schema', () => {
+  const join = { type: 'join', collection: 'posts', on: 'author' }
+  it.each([
+    ['unknown target', { collections: { posts: { fields: { a: { type: 'relation', collection: 'nope' } } } } }, /unknown collection "nope"/],
+    ['join on unknown field', { collections: { a: { fields: { p: { type: 'join', collection: 'posts', on: 'x' } } }, posts: { fields: {} } } }, /join "a.p"/],
+    [
+      'join on a non-relation',
+      { collections: { a: { fields: { p: { type: 'join', collection: 'posts', on: 'title' } } }, posts: { fields: { title: { type: 'text' } } } } },
+      /join "a.p"/,
+    ],
+    [
+      'join on a relation to another collection',
+      {
+        collections: {
+          a: { fields: { p: join } },
+          b: { fields: {} },
+          posts: { fields: { author: { type: 'relation', collection: 'b' } } },
+        },
+      },
+      /join "a.p"/,
+    ],
+    ['required + set-null', { collections: { a: { fields: { r: { type: 'relation', collection: 'a', required: true, onDelete: 'set-null' } } } } }, /set-null/],
+    ['join in a global', { collections: { posts: { fields: { author: { type: 'relation', collection: 'posts' } } } }, globals: { g: { fields: { p: join } } } }, /join/],
+    [
+      'join in a group',
+      { collections: { a: { fields: { g: { type: 'group', fields: { p: join } } } }, posts: { fields: { author: { type: 'relation', collection: 'a' } } } } },
+      /join/,
+    ],
+    ['cascade in a global', { collections: { a: { fields: {} } }, globals: { g: { fields: { a: { type: 'relation', collection: 'a', onDelete: 'cascade' } } } } }, /cascade/],
+  ])('rejects %s', (_, config, message) => {
+    expect(() => defineCms({ ...(config as object), database: { url: ':memory:' }, secret: '' } as never)).toThrow(message)
+  })
+
+  it('accepts relations, joins through groups and self-references', () => {
+    expect(() => relational()).not.toThrow()
   })
 })
