@@ -505,6 +505,11 @@ describe('relation schema', () => {
       defineCms({ ...db, collections: { posts, authors, joinOnOther } })
       // @ts-expect-error relation in a global to an unknown collection
       defineCms({ ...db, collections: { posts, authors }, globals: { badGlobal } })
+      // @ts-expect-error inline: unknown collection
+      defineCms({ ...db, collections: { a: { fields: { b: { type: 'relation', collection: 'nope' } } } } })
+      // @ts-expect-error inline: join on a field that is not a relation
+      defineCms({ ...db, collections: { a: { fields: { b: { type: 'relation', collection: 'a' }, j: { type: 'join', collection: 'a', on: 'x' } } } } })
+      defineCms({ ...db, collections: { a: { fields: { b: { type: 'relation', collection: 'a' }, j: { type: 'join', collection: 'a', on: 'b' } } } } })
     }
   })
 })

@@ -120,10 +120,13 @@ type RelationPaths<F, Target extends string, P extends string = ''> = {
       : never
 }[keyof F & string]
 
-/** The paths a join may use, or a message when no relation in `N` points to `Self`. */
-type JoinPaths<F, N extends string, Self extends string> = [RelationPaths<F, Self>] extends [never]
-  ? `no relation in "${N}" points to "${Self}"`
-  : RelationPaths<F, Self>
+/** An error type. No value matches it, so the type error shows `message` and the values `use` allows. */
+type Invalid<M extends string, U = never> = { message: M; use: U }
+
+/** The error for an invalid join `on`, with the relation paths it may use. */
+type JoinError<F, N extends string, Self extends string> = [RelationPaths<F, Self>] extends [never]
+  ? Invalid<`no relation in '${N}' points to '${Self}'`>
+  : Invalid<`not a relation in '${N}' that points to '${Self}'`, RelationPaths<F, Self>>
 
 /** `F` with each invalid `collection` or `on` replaced by the values it accepts, so the error names them. */
 // Widened `string` values are not checked; only literals can be.
@@ -139,9 +142,9 @@ type CheckFields<F, C, Self extends string> = {
             ? F[K]
             : O extends RelationPaths<FieldsOf<C, N>, Self>
             ? F[K]
-            : { [P in keyof F[K]]: P extends 'on' ? JoinPaths<FieldsOf<C, N>, N & string, Self> : F[K][P] }
+            : { [P in keyof F[K]]: P extends 'on' ? JoinError<FieldsOf<C, N>, N & string, Self> : F[K][P] }
           : F[K]
-        : { [P in keyof F[K]]: P extends 'collection' ? keyof C & string : F[K][P] }
+        : { [P in keyof F[K]]: P extends 'collection' ? Invalid<`'${N & string}' is not a collection`, keyof C & string> : F[K][P] }
       : F[K]
 }
 
