@@ -143,3 +143,33 @@ async function byIds(q: Kysely<Database>, collection: string, ids: string[]) {
     .execute()
   return rows.map(toDoc)
 }
+
+/** Parses `?populate=` and `?depth=`. Returns `undefined` for an unknown path, a field that cannot populate or too many hops. */
+export function parsePopulate(
+  collections: Record<string, Collection>,
+  fields: Fields,
+  query: { populate?: string; depth?: string },
+  config: { depth: number; maxDepth: number },
+): Spec | undefined {
+  if (query.depth !== undefined && (!/^\d+$/.test(query.depth) || Number(query.depth) > config.maxDepth)) return undefined
+  if (query.populate === 'false') return false
+  if (query.populate === undefined) return query.depth === undefined ? config.depth : Number(query.depth)
+  const spec: Record<string, any> = {}
+  for (const path of query.populate.split(',')) {
+    const keys = path.split('.')
+    let node = spec
+    let current = fields
+    let hops = 0
+    for (const [i, key] of keys.entries()) {
+      const field = Object.hasOwn(current, key) ? current[key] : undefined
+      if (field?.type === 'group') current = field.fields
+      else if (field?.type === 'relation' || field?.type === 'join') {
+        if (++hops > config.maxDepth) return undefined
+        current = collections[field.collection].fields
+      } else return undefined
+      if (i === keys.length - 1) node[key] ??= true
+      else node = node[key] = typeof node[key] === 'object' ? node[key] : {}
+    }
+  }
+  return spec
+}
