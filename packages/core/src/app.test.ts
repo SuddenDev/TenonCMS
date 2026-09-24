@@ -2,6 +2,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createClient as createLibsql } from '@libsql/client'
+import { createAuthMiddleware } from 'better-auth/api'
 import { admin as adminPlugin, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
@@ -144,6 +145,18 @@ describe('auth', () => {
     })
     expect(res.status).toBe(200)
     expect(await status(client.signUp({ ...admin, email: 'e@f.co' }))).toBe(403)
+  })
+
+  it('runs host request hooks', async () => {
+    const paths: string[] = []
+    const after = createAuthMiddleware(async (ctx) => {
+      paths.push(ctx.path)
+    })
+    const { client } = setup(defineCms({ ...base, auth: { hooks: { after } } }))
+    await client.signUp(admin)
+    await client.signOut()
+    await client.signIn(admin)
+    expect(paths).toContain('/sign-in/email')
   })
 
   it('signs out and in again', async () => {
