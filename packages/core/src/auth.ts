@@ -17,7 +17,8 @@ export function authOptions<A extends AuthOptions>(db: Kysely<Database>, secret:
     basePath: `${API_BASE}/auth`,
     secret,
     database: { db, type: 'sqlite' as const },
-    emailAndPassword: { enabled: true },
+    // The admin login needs email and password, so core MUST force it on.
+    emailAndPassword: { ...host.emailAndPassword, enabled: true },
     databaseHooks: {
       user: {
         create: {

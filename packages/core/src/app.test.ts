@@ -5,7 +5,7 @@ import { createClient as createLibsql } from '@libsql/client'
 import { twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
-import { defineCms } from './index.ts'
+import { defineCms, type Schema } from './index.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -24,7 +24,7 @@ const base = {
 } as const
 const define = (secret: string) => defineCms({ ...base, secret })
 
-function setup<C extends ReturnType<typeof define>>(cms: C = define(base.secret) as C) {
+function setup<C extends { schema: Schema; fetch(request: Request): Promise<Response> } = ReturnType<typeof define>>(cms: C = define(base.secret) as never) {
   let cookie = ''
   // Keeps the session cookie between requests, like a browser.
   const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -39,8 +39,8 @@ function setup<C extends ReturnType<typeof define>>(cms: C = define(base.secret)
   return { cms, fetch, client: createClient<typeof cms>({ baseUrl: origin, fetch }) }
 }
 
-let cms: ReturnType<typeof setup>['cms']
-let client: ReturnType<typeof setup>['client']
+let cms: ReturnType<typeof define>
+let client: ReturnType<typeof setup<ReturnType<typeof define>>>['client']
 let fetchWithSession: (path: string, init?: RequestInit) => Promise<Response>
 beforeEach(() => {
   const s = setup()
@@ -95,6 +95,16 @@ describe('auth', () => {
       // @ts-expect-error same for the other models
       defineCms({ ...base, auth: { session: { modelName: 'sessions', expiresIn: 60 } } })
     }
+  })
+
+  it('forces email sign-in on and keeps the host\'s other email options', async () => {
+    const { client } = setup(defineCms({ ...base, auth: { emailAndPassword: { enabled: false, minPasswordLength: 20 } } }))
+    expect(await status(client.signUp(admin))).toBe(400)
+    const password = 'p'.repeat(20)
+    await client.signUp({ ...admin, password })
+    await client.signOut()
+    await client.signIn({ ...admin, password })
+    expect(await client.getSession()).not.toBeNull()
   })
 
   it('signs out and in again', async () => {
