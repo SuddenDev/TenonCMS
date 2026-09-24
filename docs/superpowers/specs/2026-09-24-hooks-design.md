@@ -1,6 +1,6 @@
 # Hooks
 
-Spec 3 of 5: group field, relation field, hooks, auth hooks, page preset. Requires specs 1 and 2 (hooks see groups, relations and `onDelete`).
+Spec 3 of 5: group field, relation field, hooks, auth hooks, page preset. Execution order: 4, 1, 2, 3, 5. Requires specs 1 and 2 (hooks see groups, relations and `onDelete`).
 
 ## Goal
 
@@ -110,7 +110,7 @@ A hook that writes to its own collection triggers its own hooks again. Core does
 ## Out of scope
 
 - `beforeDuplicate`: comes with a duplicate operation
-- Auth hooks: spec 4
+- Auth configuration: spec 4
 - Access control hooks: roadmap #6
 - Typing keys a hook adds to documents (e.g. `path`): spec 5
 
