@@ -3,6 +3,7 @@ import { csrf } from 'hono/csrf'
 import { HTTPException } from 'hono/http-exception'
 import { API_BASE } from './client.ts'
 import type { Cms } from './index.ts'
+import { ConflictError } from './errors.ts'
 import { HttpError, parsePopulate } from './relations.ts'
 import { dataSchema, filterable, type Schema, type Fields } from './schema.ts'
 
@@ -16,6 +17,7 @@ export function createApp(cms: Cms<Schema>) {
   const api = new Hono().basePath(API_BASE)
   api.onError((err, c) => {
     if (err instanceof HttpError) return c.json(err.body, err.status)
+    if (err instanceof ConflictError) return c.json({ error: [{ path: [], message: err.message }], references: err.references }, 409)
     if (err instanceof HTTPException) return err.getResponse()
     console.error(err)
     return c.text('Internal Server Error', 500)

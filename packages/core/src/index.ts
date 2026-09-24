@@ -23,6 +23,7 @@ export { defineCollection, defineGlobal } from './schema.ts'
 export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './schema.ts'
 
 export type { AuthOptions } from './auth.ts'
+export { ConflictError, type Reference } from './errors.ts'
 
 export type PopulateConfig = {
   /** Hops resolved by `populate: true`. Default 2. */

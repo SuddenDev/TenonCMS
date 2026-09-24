@@ -6,7 +6,7 @@ import { createAuthMiddleware } from 'better-auth/api'
 import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
-import { defineCms, type PopulateConfig, type Schema } from './index.ts'
+import { ConflictError, defineCms, type PopulateConfig, type Schema } from './index.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -744,5 +744,50 @@ describe('onDelete', () => {
     await new Promise((resolve) => setTimeout(resolve, 5))
     await cms.delete('tags', t1.id)
     expect((await cms.findById('posts', p.id))?.updatedAt).not.toBe(p.updatedAt)
+  })
+})
+
+describe('onDelete restrict', () => {
+  let r: ReturnType<typeof setup<ReturnType<typeof relational>>>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    r = setup(relational())
+    ids = await seed(r.cms)
+  })
+
+  it('blocks the delete and changes nothing', async () => {
+    const { cms, client } = r
+    const { p } = ids
+    const note = await cms.create('notes', { post: p.id })
+    await cms.setGlobal('site', { featured: [p.id] })
+    await client.signUp(admin)
+    const error = await client.delete('posts', p.id).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(CmsError)
+    expect(error).toMatchObject({ status: 409, body: { references: [{ collection: 'notes', id: note.id }] } })
+    expect(await cms.findById('posts', p.id)).toBeDefined()
+    expect((await cms.getGlobal('site', { populate: false })).featured).toEqual([p.id])
+  })
+
+  it('throws ConflictError locally', async () => {
+    const note = await r.cms.create('notes', { post: ids.p.id })
+    const error = await r.cms.delete('posts', ids.p.id).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ConflictError)
+    expect(error).toMatchObject({ references: [{ collection: 'notes', id: note.id }] })
+  })
+
+  it('applies explicit restrict and lists globals', async () => {
+    const cms = defineCms({
+      collections: {
+        posts: { fields: {} },
+        notes: { fields: { post: { type: 'relation', collection: 'posts', onDelete: 'restrict' } } },
+      },
+      globals: { g: { fields: { pin: { type: 'relation', collection: 'posts', onDelete: 'restrict' } } } },
+      database: { url: ':memory:' },
+      secret: '',
+    })
+    const p = await cms.create('posts', {})
+    const note = await cms.create('notes', { post: p.id })
+    await cms.setGlobal('g', { pin: p.id })
+    await expect(cms.delete('posts', p.id)).rejects.toMatchObject({ references: [{ collection: 'notes', id: note.id }, { global: 'g' }] })
   })
 })

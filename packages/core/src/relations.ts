@@ -1,5 +1,6 @@
 import { type Kysely, sql } from 'kysely'
 import { type Database, type Row, toDoc } from './db/index.ts'
+import { ConflictError } from './errors.ts'
 import type { Collection, Field, Fields, Schema } from './schema.ts'
 
 export type RelationField = Extract<Field, { type: 'relation' }>
@@ -223,11 +224,18 @@ export async function remove(trx: Kysely<Database>, schema: Schema, collection: 
   if (visited.has(`${collection}:${id}`)) return
   visited.add(`${collection}:${id}`)
   const refs = (await references(trx, schema, collection, id)).filter((r) => r.global || !visited.has(owner(r)))
-  for (const r of refs) {
+  const rule = (r: Ref) => r.field.onDelete ?? (r.field.required ? 'restrict' : 'set-null')
+  const blocking = refs.filter((r) => rule(r) === 'restrict')
+  if (blocking.length) {
+    const owners = new Map(blocking.map((r) => [owner(r), r])).values()
+    throw new ConflictError([...owners].map((r) => (r.global ? { global: r.global } : { collection: r.collection!, id: r.id! })))
+  }
+  const cleared = refs.filter((r) => rule(r) === 'set-null')
+  for (const r of cleared) {
     const parent = at(r.data, r.path.slice(0, -1))
     const key = r.path.at(-1)!
     parent[key] = r.field.many ? parent[key].filter((x: string) => x !== id) : null
   }
-  for (const r of new Map(refs.map((r) => [owner(r), r])).values()) await writeData(trx, r)
+  for (const r of new Map(cleared.map((r) => [owner(r), r])).values()) await writeData(trx, r)
   await trx.deleteFrom('cms_documents').where('collection', '=', collection).where('id', '=', id).execute()
 }
