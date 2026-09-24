@@ -1,6 +1,6 @@
 # Group field
 
-Spec 1 of 3 toward a page preset: group field, relation field, page preset.
+Spec 1 of 5: group field, relation field, hooks, auth hooks, page preset.
 
 ## Goal
 
@@ -58,7 +58,7 @@ Inner `required` fields are checked only when the group is present.
 - Collapsible sections, tabs
 - Arrays and repeaters
 
-## Tests (RED first)
+## Tests (TDD: write each test, run it RED, then make it GREEN)
 
 - `schema.test.ts`: nested validation, stripping of unknown nested keys, optional vs. required group, nested groups, type inference checked with `@ts-expect-error`.
 - `app.test.ts`: create and read a document with a group over HTTP; 400 for invalid inner data; 400 for a query-string filter on a group key.

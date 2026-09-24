@@ -1,6 +1,6 @@
 # Relation and join fields
 
-Spec 2 of 3 toward a page preset: group field, relation field, page preset. Requires the group field (spec 1).
+Spec 2 of 5: group field, relation field, hooks, auth hooks, page preset. Requires the group field (spec 1).
 
 ## Goal
 
@@ -132,7 +132,7 @@ When a document is deleted, every relation in every collection and global that t
 - Pagination or `limit` on `join` and `many` (a later long-form `populate` option)
 - Per-relation `where` / field selection
 
-## Tests (RED first)
+## Tests (TDD: write each test, run it RED, then make it GREEN)
 
 - `schema.test.ts`: validation of relation values (single, `many`, duplicates); populate result types for default depth, explicit depth, nested objects, groups and joins; `@ts-expect-error` for invalid populate keys.
 - `app.test.ts`:
