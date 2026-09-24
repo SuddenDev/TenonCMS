@@ -624,6 +624,15 @@ describe('populate', () => {
     expect((await cms.findById('authors', ids.a.id, { populate: { posts: { tags: true } } }))?.posts[0].tags?.[0].name).toBe('one')
   })
 
+  it('resolves global relations', async () => {
+    const { m, p } = ids
+    await cms.setGlobal('site', { logo: m.id, featured: [p.id] })
+    const site = await cms.getGlobal('site')
+    expect(site.logo?.url).toBe('/a.png')
+    expect(site.featured?.[0].author?.name).toBe('Ann')
+    expect(await cms.getGlobal('site', { populate: false })).toEqual({ logo: m.id, featured: [p.id] })
+  })
+
   it('findById and findOne populate too', async () => {
     const { a, p } = ids
     expect(await cms.findById('posts', p.id)).toMatchObject({ author: { id: a.id, name: 'Ann' } })

@@ -215,8 +215,11 @@ export function defineCms<
       name: K,
       options: Checked<O, T, Globals<T>[K]['fields']> = {} as never,
     ): Promise<ReadGlobal<T, K, O, D>> {
-      const row = await (await db()).selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
-      return (row ? JSON.parse(row.data) : {}) as ReadGlobal<T, K, O, D>
+      const q = await db()
+      const row = await q.selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
+      const data = row ? JSON.parse(row.data) : {}
+      await populate(q, collections, schema.globals![name].fields, [data], spec(options))
+      return data as ReadGlobal<T, K, O, D>
     },
 
     /** Replaces the data of a global. Checks relation ids, but does not validate the rest of `data`. */
