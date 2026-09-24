@@ -207,6 +207,18 @@ async function readTypes() {
   // @ts-expect-error an extra key next to a valid one
   cms.find('posts', { populate: { author: true, nope: true } })
 
+  const j = (await cms.find('authors', { populate: { posts: true } }))[0]
+  const title: string = j.posts[0].title
+  const author: string | null | undefined = j.posts[0].author
+  const jj = (await cms.find('authors', { populate: { posts: { tags: true } } }))[0]
+  const tag: string = jj.posts[0].tags![0].name
+  const site = await cms.getGlobal('site')
+  const logo: string | null | undefined = site.logo?.url
+  const siteIds = await cms.getGlobal('site', { populate: false })
+  const logoId: string | null | undefined = siteIds.logo
+  // @ts-expect-error unknown global populate key
+  cms.getGlobal('site', { populate: { nope: true } })
+
   const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: '' })
   const w = (await wide.find('x'))[0]
   w.anything
