@@ -1,30 +1,79 @@
 import { z } from 'zod'
 
-type Base = { label?: string; required?: boolean }
+type Base = {
+  /** Label in the admin. Defaults to the field key. */
+  label?: string
+  /** The value MUST be present on create and update. Optional fields read as `null` or missing. */
+  required?: boolean
+}
 
+/** One field of a collection, a global or a group. `type` picks the kind of value. */
 export type Field =
-  | (Base & { type: 'text' | 'textarea' | 'date' })
+  | (Base & {
+      /** `text`: one line. `textarea`: several lines. `date`: an ISO date string (`2026-09-24`). */
+      type: 'text' | 'textarea' | 'date'
+    })
   | (Base & { type: 'number' })
   | (Base & { type: 'boolean' })
-  | (Base & { type: 'select'; options: readonly string[] })
-  /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
-  | (Base & { type: `custom:${string}` })
-  | (Base & { type: 'group'; fields: Fields })
-  /** Stores the id of a document in `collection`, or an array of ids with `many`. */
-  | (Base & { type: 'relation'; collection: string; many?: boolean; onDelete?: 'set-null' | 'restrict' | 'cascade' })
-  /** Not stored. Lists the documents of `collection` whose relation at `on` points here. */
-  | { type: 'join'; label?: string; collection: string; on: string; required?: never }
+  | (Base & {
+      type: 'select'
+      /** The allowed values. The stored value is one of them. */
+      options: readonly string[]
+    })
+  | (Base & {
+      /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
+      type: `custom:${string}`
+    })
+  | (Base & {
+      /** Nests fields under one key, stored as an object. The admin shows it as its own section. Not filterable. */
+      type: 'group'
+      /** The nested fields. Groups MAY contain groups. */
+      fields: Fields
+    })
+  | (Base & {
+      /** Stores the id of a document in `collection`. Reads resolve it to the document, see `populate`. */
+      type: 'relation'
+      /** Name of the collection the ids point to. It MAY be the collection that holds this field. */
+      collection: string
+      /** Store an array of ids instead of one id. Not filterable. With `required`, at least one id. */
+      many?: boolean
+      /**
+       * What happens to this field when the referenced document is deleted:
+       * - `'set-null'`: this field becomes `null`; in a `many` relation, the id is removed from the array.
+       * - `'restrict'`: the delete fails with 409 and lists the referencing documents. Nothing changes.
+       * - `'cascade'`: this document is deleted too, with its own `onDelete` rules. Not allowed in globals.
+       *
+       * Default: `'restrict'` when `required`, else `'set-null'`. `required` with `'set-null'` is not allowed.
+       */
+      onDelete?: 'set-null' | 'restrict' | 'cascade'
+    })
+  | {
+      /** Not stored. Lists the documents of `collection` whose relation at `on` points here. Only in collections, at the top level. */
+      type: 'join'
+      /** Label in the admin. Defaults to the field key. */
+      label?: string
+      /** Name of the collection whose documents point here. */
+      collection: string
+      /** Path of the relation field in `collection` that points here, e.g. `author` or `seo.image`. */
+      on: string
+      required?: never
+    }
 
 export type Fields = Record<string, Field>
 
 export type Collection = {
+  /** Name in the admin. Defaults to the collection key. */
   label?: string
   fields: Fields
   /** Field shown in the admin list view. Defaults to the first field. */
   titleField?: string
 }
 
-export type Global = { label?: string; fields: Fields }
+export type Global = {
+  /** Name in the admin. Defaults to the global key. */
+  label?: string
+  fields: Fields
+}
 
 export type Schema = {
   collections?: Record<string, Collection>
