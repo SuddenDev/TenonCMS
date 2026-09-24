@@ -16,6 +16,7 @@ const base = {
         title: { type: 'text', required: true },
         views: { type: 'number' },
         featured: { type: 'boolean' },
+        seo: { type: 'group', label: 'SEO', fields: { title: { type: 'text' }, noindex: { type: 'boolean' } } },
       },
     },
   },
@@ -213,6 +214,18 @@ describe('writes', () => {
     expect(await client.findById('posts', post.id)).not.toHaveProperty('views')
     await client.delete('posts', post.id)
     expect(await status(client.findById('posts', post.id))).toBe(404)
+  })
+
+  it('store and read a group', async () => {
+    await client.signUp(admin)
+    const post = await client.create('posts', { title: 'Hi', seo: { title: 'S', noindex: true, extra: 1 } } as never)
+    expect(post.seo).toEqual({ title: 'S', noindex: true })
+    expect((await client.findById('posts', post.id)).seo).toEqual({ title: 'S', noindex: true })
+  })
+
+  it('reject invalid group data', async () => {
+    await client.signUp(admin)
+    expect(await status(client.create('posts', { title: 'Hi', seo: { noindex: 'yes' } } as never))).toBe(400)
   })
 
   it('set a global', async () => {

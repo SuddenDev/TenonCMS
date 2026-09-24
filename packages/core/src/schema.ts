@@ -9,6 +9,7 @@ export type Field =
   | (Base & { type: 'select'; options: readonly string[] })
   /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
   | (Base & { type: `custom:${string}` })
+  | (Base & { type: 'group'; fields: Fields })
 
 export type Fields = Record<string, Field>
 
@@ -64,6 +65,8 @@ function fieldSchema(field: Field): z.ZodType {
       return z.iso.date()
     case 'select':
       return z.enum(field.options as [string, ...string[]])
+    case 'group':
+      return dataSchema(field.fields)
     default:
       return field.required ? z.string().min(1) : z.string()
   }
