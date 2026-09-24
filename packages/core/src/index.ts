@@ -1,19 +1,23 @@
 import { consola } from 'consola'
 import { type Selectable, sql } from 'kysely'
 import { createApp } from './app.ts'
-import { authOptions, createAuth } from './auth.ts'
+import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate } from './db/index.ts'
 import type { Collection, Data, Doc, Global, Schema } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
 export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './schema.ts'
 
-export type CmsOptions<C extends Record<string, Collection>, G extends Record<string, Global>> = {
+export type { AuthOptions } from './auth.ts'
+
+export type CmsOptions<C extends Record<string, Collection>, G extends Record<string, Global>, A extends AuthOptions = {}> = {
   collections?: C
   globals?: G
   database: { url: string; authToken?: string }
   /** Secret for signing sessions. MUST be at least 32 random characters in production. */
   secret: string
+  /** better-auth options. Core owns `database`, `basePath` and `secret`. */
+  auth?: A
 }
 
 type Collections<T extends Schema> = NonNullable<T['collections']>
@@ -43,26 +47,26 @@ function toDoc(row: Row) {
  *
  * The returned object is the local API for server code. Nothing connects until the first call.
  */
-export function defineCms<const C extends Record<string, Collection> = {}, const G extends Record<string, Global> = {}>({
-  database,
-  secret,
-  ...schema
-}: CmsOptions<C, G>) {
+export function defineCms<
+  const C extends Record<string, Collection> = {},
+  const G extends Record<string, Global> = {},
+  const A extends AuthOptions = {},
+>({ database, secret, auth: host = {} as A, ...schema }: CmsOptions<C, G, A>) {
   type T = typeof schema
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
-  let ready: Promise<{ db: ReturnType<typeof createDb>; options: ReturnType<typeof authOptions> }> | undefined
+  let ready: Promise<{ db: ReturnType<typeof createDb>; options: ReturnType<typeof authOptions<A>> }> | undefined
   const connect = () =>
     (ready ??= (async () => {
       const db = createDb(database.url, database.authToken)
-      const options = authOptions(db, secret)
+      const options = authOptions(db, secret, host)
       await migrate(db, options)
       return { db, options }
     })())
   const db = async () => (await connect()).db
 
-  let authInstance: ReturnType<typeof createAuth<ReturnType<typeof authOptions>>> | undefined
+  let authInstance: ReturnType<typeof createAuth<ReturnType<typeof authOptions<A>>>> | undefined
   const auth = async () => {
     if (!secret || secret.length < 32) throw new Error('integral-cms: `secret` MUST be at least 32 characters')
     return (authInstance ??= createAuth((await connect()).options))

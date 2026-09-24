@@ -2,29 +2,29 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createClient as createLibsql } from '@libsql/client'
+import { twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { defineCms } from './index.ts'
 
 const origin = 'http://localhost'
-const define = (secret: string) =>
-  defineCms({
-    collections: {
-      posts: {
-        fields: {
-          title: { type: 'text', required: true },
-          views: { type: 'number' },
-          featured: { type: 'boolean' },
-        },
+const base = {
+  collections: {
+    posts: {
+      fields: {
+        title: { type: 'text', required: true },
+        views: { type: 'number' },
+        featured: { type: 'boolean' },
       },
     },
-    globals: { site: { fields: { name: { type: 'text' } } } },
-    database: { url: ':memory:' },
-    secret,
-  })
+  },
+  globals: { site: { fields: { name: { type: 'text' } } } },
+  database: { url: ':memory:' },
+  secret: 'x'.repeat(32),
+} as const
+const define = (secret: string) => defineCms({ ...base, secret })
 
-function setup() {
-  const cms = define('x'.repeat(32))
+function setup<C extends ReturnType<typeof define>>(cms: C = define(base.secret) as C) {
   let cookie = ''
   // Keeps the session cookie between requests, like a browser.
   const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -81,6 +81,20 @@ describe('auth', () => {
     await client.signUp(admin)
     expect(await client.getSession()).toMatchObject({ user: { email: admin.email } })
     expect(await status(client.signUp({ ...admin, email: 'c@d.co' }))).toBe(403)
+  })
+
+  it('creates plugin tables at runtime and types plugin endpoints', async () => {
+    const url = tmpDb()
+    const cms = defineCms({ ...base, database: { url }, auth: { plugins: [twoFactor()] } })
+    const auth = await cms.auth()
+    expect(typeof auth.api.enableTwoFactor).toBe('function')
+    expect(await tables(url)).toContain('twoFactor')
+    ;() => {
+      // @ts-expect-error core reads the `user` table by name
+      defineCms({ ...base, auth: { user: { modelName: 'users' } } })
+      // @ts-expect-error same for the other models
+      defineCms({ ...base, auth: { session: { modelName: 'sessions', expiresIn: 60 } } })
+    }
   })
 
   it('signs out and in again', async () => {

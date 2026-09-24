@@ -3,8 +3,17 @@ import { type Kysely, sql } from 'kysely'
 import { API_BASE } from './client.ts'
 import type { Database } from './db/index.ts'
 
-export function authOptions(db: Kysely<Database>, secret: string) {
+type Model = 'user' | 'session' | 'account' | 'verification'
+
+// Core reads the `user` table by name, so models MUST keep their default names.
+// `never` also rejects `modelName` next to valid keys; generic inference skips excess property checks.
+export type AuthOptions = Omit<BetterAuthOptions, 'database' | 'basePath' | 'secret' | Model> & {
+  [K in Model]?: Omit<NonNullable<BetterAuthOptions[K]>, 'modelName'> & { modelName?: never }
+}
+
+export function authOptions<A extends AuthOptions>(db: Kysely<Database>, secret: string, host: A) {
   return {
+    ...host,
     basePath: `${API_BASE}/auth`,
     secret,
     database: { db, type: 'sqlite' as const },
