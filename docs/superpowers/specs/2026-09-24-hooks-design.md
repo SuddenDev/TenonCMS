@@ -54,7 +54,7 @@ Read: `beforeOperation → beforeRead → populate → afterRead → afterOperat
 
 Delete: `beforeOperation → beforeDelete → delete + onDelete effects → afterDelete → afterOperation`.
 
-At each stage, field hooks run first, in field order and depth-first into groups, then collection or global hooks.
+At each stage, field hooks run first, in field order and depth-first into groups, then collection or global hooks. A group's own field hooks run before its children's.
 
 `beforeValidate` receives unvalidated input. Its result is validated. `beforeChange` receives validated data; its result MUST pass schema validation (zod) again before the write; `validate` functions (spec 6) run once, so a hook cannot store invalid data.
 
@@ -71,7 +71,7 @@ Every hook gets one object. A hook MAY return a replacement for its main value; 
 | `beforeDelete` | none | `id`, `doc` |
 | `afterDelete` | none | `id`, `doc` |
 | `afterOperation` | `result` | `operation`, `args` |
-| `afterError` | none | `error`, `operation`, `collection` |
+| `afterError` | none | `error`, `operation`, `collection` or `global` |
 | field hooks | `value` | `data`, `siblingData`, `originalDoc`, `path` (e.g. `seo.title`), `operation` |
 
 All hooks also get:
@@ -87,6 +87,11 @@ Field `afterRead` runs once per value. Collection and global `beforeRead` / `aft
 
 `data`, `doc`, `docs`, `value` and `originalDoc` are typed from the fields of the collection, global or field the hook belongs to. Inference from hooks inside the same `defineCollection` literal MUST be covered by a typecheck test.
 
+Accepted limits:
+
+- Only `defineCollection` and `defineGlobal` give typed hook arguments. Hooks in a collection written inline in `defineCms` get untyped (`any`) arguments. The docs MUST say so.
+- `cms` in hook arguments is untyped (the local API over any schema). Typing it from the host's config would be circular.
+
 ## Populated documents
 
 Documents loaded by `populate` run through their own collection's `beforeRead` and `afterRead`, batched per collection per hop. `context` is shared with the outer read.
@@ -94,7 +99,9 @@ Documents loaded by `populate` run through their own collection's `beforeRead` a
 ## Errors
 
 - `ValidationError` is exported from `integral-cms`: `throw new ValidationError({ slug: 'Already used on this level' })`. Keys are field paths. HTTP returns 400 with `{ errors: { [path]: message } }`. The admin shows each message next to its field.
+- Expected errors do not run `afterError`: `ValidationError` (400) and the `restrict` conflict from spec 2 (409). They roll back the transaction and are rethrown.
 - Any other error rolls back the transaction, runs collection `afterError`, then root `afterError`, and is rethrown. HTTP returns 500 without the message.
+- For global operations (`getGlobal`, `setGlobal`), only root `afterError` runs, with `global` set.
 - An error inside `afterError` is logged and does not replace the original error.
 
 ## Transactions
@@ -102,10 +109,13 @@ Documents loaded by `populate` run through their own collection's `beforeRead` a
 - On libsql (and Postgres later), every write operation runs in one interactive transaction: the write, its hooks, `onDelete` effects and nested `cms` calls. An error rolls back all of it.
 - On drivers without interactive transactions (Cloudflare D1 later), hooks run in the same order without isolation. The docs MUST say so.
 - Reads do not open a transaction. A read nested in a write uses the write's transaction.
+- On a `:memory:` libsql database there is one connection. Every call nested inside a transaction MUST use that transaction, or it fails. The `cms` passed to hooks is built on it.
 
 ## `onDelete` effects
 
 `set-null` and `cascade` effects from spec 2 MUST run through the normal `update` and `delete` operations, with all their hooks, in the same transaction. Hooks that keep derived data (e.g. tree paths in spec 5) then stay correct when a referenced document is deleted.
+
+The internal `update` of a `set-null` effect skips `validate` functions (spec 6) and runs only schema (zod) validation. A referencing document that `validate` would reject no longer blocks the delete.
 
 ## Loops
 
@@ -128,11 +138,16 @@ A hook that writes to its own collection triggers its own hooks again. Core does
 - `beforeChange` result is validated again: invalid data returns 400
 - `ValidationError` returns 400 with field errors
 - a thrown error rolls back the write and a nested `cms` write, runs collection then root `afterError`, and HTTP returns 500 without the message
+- `ValidationError` and a `restrict` 409 run no `afterError`
+- an error in a global operation runs only root `afterError`, with `global` set
 - `afterRead` runs once per `find` with all docs, and once per collection per hop for populated docs
-- field hooks inside groups receive `path: 'seo.title'`
+- field hooks inside groups receive `path: 'seo.title'`; a group's own hooks run before its children's
 - `context` is shared with nested calls; a hook writing to its own collection stops via `context`
 - `user` is set for authenticated HTTP writes and `null` for public reads
 - `onDelete` `set-null` and `cascade` effects run the referencing collection's update and delete hooks
+- nested `cms` calls in hooks work on a `:memory:` database
+
+The `set-null` rule for `validate` is tested with spec 6, which adds `validate`.
 
 `schema.test.ts`:
 

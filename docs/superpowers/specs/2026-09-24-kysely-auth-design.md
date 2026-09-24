@@ -16,22 +16,26 @@ Spec 4 of 6: group field, relation field, hooks, auth, page preset, field option
 
 ## Database layer (`src/db/`)
 
-- `createDb(url, authToken)` returns a `Kysely<Database>` over `@libsql/kysely-libsql` (new dependency). Nothing connects at import time, as today.
+- `createDb(url, authToken)` returns a `Kysely<Database>` over core's own small libsql dialect, `libsqlDialect(client)`, built on the existing `@libsql/client`. Nothing connects at import time, as today.
+- Core MUST NOT depend on `@libsql/kysely-libsql`. It pulls an older `@libsql/client` and a second native binary, which the Nuxt build does not trace. Switching to the package later is a one-line change (`new LibsqlDialect({ client })`).
 - `Database` is a hand-written interface for `cms_documents` and `cms_globals` (about 15 lines). Auth tables are not in it; better-auth owns them.
 - Migrations are code, embedded in the bundle: an ordered list of `{ name, up(db) }` run by Kysely's `Migrator` with an inline provider. No filesystem.
-- Migration `001` ports the CMS part of `drizzle/0000_oval_ricochet.sql` with `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS`, so databases created by the current version keep working.
+- Migration `001` creates the CMS tables with the columns of the CMS part of `drizzle/0000_oval_ricochet.sql`.
 - After the CMS migrations, `getMigrations(authOptions).runMigrations()` creates or extends the auth tables. On an existing database it adds only what is missing.
 - Migrations still run lazily on first DB access. The existing ceiling stays: no locking between processes. The `ponytail:` note moves with the code.
-- The old `cms_migrations` table is left in place and no longer read.
 - Removed: `drizzle-orm`, `drizzle-kit`, `drizzle.config.ts`, `drizzle/`, `db/schema.ts`, `migrations.gen.ts`, `scripts/embed-migrations.mjs`, the `db:generate` script. CLAUDE.md and README MUST be updated to match.
 
 All queries in `index.ts` and `app.ts` move to Kysely. `json_extract` filters use Kysely's `sql` template; field names are still checked against the schema before they reach SQL.
 
 ## Transactions
 
-Write operations use `db.transaction().execute(trx => ...)`. The first test of this spec MUST prove an interactive transaction over `@libsql/kysely-libsql` (write, read inside, throw, nothing stored), because spec 3 depends on it.
+Write operations use `db.transaction().execute(trx => ...)`. The first test of this spec MUST prove an interactive transaction over core's libsql dialect (write, read inside, throw, nothing stored), because spec 3 depends on it.
 
 better-auth runs its own queries on the same Kysely instance. Auth endpoints are not part of CMS write transactions.
+
+## Upgrading
+
+There is no upgrade path from the Drizzle version. Its auth tables use other column names and date formats. A host that upgrades MUST delete its `cms.db`; content and users are lost. README (and a changelog, once one exists) MUST say so.
 
 ## Auth pass-through
 
@@ -48,10 +52,11 @@ defineCms({
 })
 ```
 
-- Type: `Omit<BetterAuthOptions, 'database' | 'basePath' | 'secret'>`. `cms.auth` is inferred with the host's options, so plugin endpoints are typed.
+- Type: `BetterAuthOptions` without `database`, `basePath` and `secret`, and without `modelName` in `user`, `session`, `account` and `verification`. Core reads the `user` table by name, so auth tables MUST keep their default names. `cms.auth` is inferred with the host's options, so plugin endpoints are typed.
 - Core owns `database` (the shared Kysely instance, `type: 'sqlite'`), `basePath` (`${API_BASE}/auth`) and `secret`.
 - `emailAndPassword` is merged with the host's; `enabled: true` is forced, because the admin login needs it.
-- The first-user rule stays in force: core's `user.create.before` runs first, then the host's. A host hook MUST NOT be able to reopen sign-up.
+- The first-user rule applies to public sign-up (`/sign-up/email`) only: once a user exists, it returns 403. Users created by a signed-in admin (e.g. through the `admin()` plugin) are allowed.
+- Core's `user.create.before` runs first, then the host's. A host hook MUST NOT be able to reopen public sign-up.
 - The docs MUST say that `auth` is better-auth's API and follows its versioning, and map Payload's auth hooks (`afterLogin`, …) to `hooks.after` with `ctx.path`.
 
 ## Admin
@@ -68,12 +73,13 @@ Later, out of this spec: built-in admin screens for popular first-party plugins,
 
 ## Tests (TDD: write each test, run it RED, then make it GREEN)
 
-- Interactive transaction over `@libsql/kysely-libsql`: a throw inside rolls back a write.
-- Upgrade: a database created with the current `0000_oval_ricochet.sql` migrates cleanly, keeps its documents and users, and sign-in still works.
+- Interactive transaction over core's libsql dialect: a throw inside rolls back a write.
 - Fresh `:memory:` database: CMS and auth tables exist after the first access.
 - A plugin with its own table (e.g. `twoFactor()`) gets that table at runtime.
 - A host `databaseHooks.user.create.after` runs on sign-up.
-- A host `user.create.before` runs after core's; a second sign-up still returns 403.
+- A host `user.create.before` runs after core's; a second public sign-up still returns 403.
+- A signed-in admin creates a second user through the `admin()` plugin.
+- `modelName` in `auth.user` (and the other three models) fails to compile (`@ts-expect-error`).
 - A host `hooks.after` sees the sign-in path.
 - `emailAndPassword: { enabled: false }` from the host is overridden; sign-in works.
 - The whole existing `app.test.ts` suite stays green after the switch.

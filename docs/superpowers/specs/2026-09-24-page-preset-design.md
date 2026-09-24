@@ -4,7 +4,7 @@ Spec 5 of 6: group field, relation field, hooks, auth, page preset, field option
 
 ## Goal
 
-Most websites need pages with nested URLs and SEO fields. The preset gives hosts a working start without hiding anything: it is plain field objects and named hook records, spread into the host's own collection file. Hosts omit, override and add fields and hooks with plain JavaScript. Starter templates and a CLI come later and are out of scope.
+Most websites need pages with nested URLs and SEO fields. The preset gives hosts a working start without hiding anything: it is plain field objects, named hook records and one helper, spread into the host's own collection file. Hosts omit, override and add fields and hooks with plain JavaScript. Starter templates and a CLI come later and are out of scope.
 
 ## Usage
 
@@ -20,7 +20,6 @@ export const pages = defineCollection({
     beforeValidate: page.hooks.beforeValidate,
     beforeChange: page.hooks.beforeChange,
     afterChange: page.hooks.afterChange,
-    afterRead: seo.hooks.afterRead,
   },
 })
 ```
@@ -37,10 +36,13 @@ fields: {
 }
 ```
 
-A catch-all route reads a page by its stored path:
+A catch-all route reads a page by its stored path and builds `<head>` with `seoMeta()`:
 
 ```ts
+import { seoMeta } from 'integral-cms/presets'
+
 const doc = await cms.findOne('pages', { where: { path: '/about/team' } })
+const { title, description, noindex } = seoMeta(doc)
 // HTTP: GET /api/cms/collections/pages?path=/about/team
 ```
 
@@ -48,26 +50,44 @@ No `findByPath` helper: `path` is a stored field, so existing filters cover it.
 
 ## Package
 
-- New subpath export `integral-cms/presets` (`src/presets.ts`, tsdown entry). Exports `page`, `seo`, `treeHooks`.
+- New subpath export `integral-cms/presets` (`src/presets.ts`, tsdown entry). Exports `page`, `seo`, `treeHooks`, `seoMeta`.
 - One file. The preset source MUST stay short enough to read in one screen, because it is the documentation of what a host gets.
 
 ## Core addition: `readOnly`
 
-`pattern` for `slug` comes from spec 6.
+An admin-only field option.
 
-A field option for values only hooks set.
+- `Base` gets `readOnly?: boolean`. It is allowed on every field type, at any depth, including inside groups.
+- The admin shows the field disabled. Nothing else changes: the local API, HTTP and hooks can write it. Input is not stripped, and input types do not change.
+- A hook that owns a value MUST overwrite it. The `path` hook sets `path` in `beforeChange`, whatever the input holds.
 
-- `Base` gets `readOnly?: boolean`.
-- The API strips `readOnly` fields from input before `beforeValidate`. Hooks set them afterwards.
-- The admin shows them disabled.
-- Types: `readOnly` fields are left out of `create` / `update` input types and stay in `Doc`.
+## Core addition: `slug` field type
+
+```ts
+slug: { type: 'slug', from: 'title', parent: 'parent' }
+```
+
+- Shape: `{ type: 'slug', from?: string, parent?: string }` plus the `Base` options except `required`. `from` names a sibling field to fill the slug from. `parent` names a sibling `relation` field.
+- Stored as a string. Always required; there is no `required` option. In `Data` and `Doc` the key is a required `string`.
+- The pattern `^[a-z0-9]+(-[a-z0-9]+)*$` is built in. zod checks it on the server; the admin sets it as the input's `pattern` attribute.
+- One shared `slugify()` turns text into a slug: lowercase ASCII, non-alphanumerics to `-`, trimmed. It lives in its own import-free file (`src/slugify.ts`), like `matchCondition` in spec 6. The admin imports it by relative path; the preset hook imports it on the server.
+
+Admin:
+
+- On a new document, the slug fills live from the `from` field while the editor types, until the editor edits the slug. After that it stays.
+- On an existing document, changing the `from` field does not change the slug. URLs stay stable.
+- If `parent` names a relation field, the input shows the selected parent's `path` as a prefix, e.g. `/about/` [team]. The prefix updates when the parent changes. Without a parent, the prefix is `/`. The editor types only the last segment.
+
+Server:
+
+- The `slug` type fills nothing on its own. The preset hook `slugFromTitle` fills an empty slug for API and script writes (see `page.hooks`).
 
 ## `page.fields`
 
 | Field | Definition |
 |---|---|
 | `title` | `{ type: 'text', required: true }` |
-| `slug` | `{ type: 'text', required: true, pattern: '[a-z0-9]+(-[a-z0-9]+)*' }` |
+| `slug` | `{ type: 'slug', from: 'title', parent: 'parent' }` |
 | `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }` |
 | `path` | `{ type: 'text', readOnly: true }` |
 
@@ -87,9 +107,9 @@ Named records, built by `treeHooks()` with the default field names.
 
 | Stage | Name | Does |
 |---|---|---|
-| `beforeValidate` | `slugFromTitle` | Fills an empty `slug` from `title`: lowercase, ASCII, non-alphanumerics to `-`, trimmed. |
+| `beforeValidate` | `slugFromTitle` | Fills an empty `slug` from `title` with `slugify()`. It runs before `required` is checked, so API and script writes MAY omit the slug. |
 | `beforeChange` | `noCycle` | `ValidationError` on `parent` if the parent is the document itself or one of its descendants. |
-| `beforeChange` | `path` | Computes `path` from the parent's stored path and the slug. |
+| `beforeChange` | `path` | Computes `path` from the parent's stored path and the slug. It overwrites any `path` in the input. |
 | `beforeChange` | `uniquePath` | `ValidationError` on `slug` if another document in the collection has the same path. |
 | `afterChange` | `descendantPaths` | If `path` changed, calls `cms.update` on each direct child. Each child's own hooks recompute its path and recurse to its children. |
 
@@ -98,10 +118,10 @@ All run inside the write transaction (spec 3), so two parallel saves cannot clai
 ### `treeHooks(options?)`
 
 ```ts
-treeHooks({ parent: 'parentCategory', slug: 'handle', path: 'url' })
+treeHooks({ title: 'name', parent: 'parentCategory', slug: 'handle', path: 'url' })
 ```
 
-Returns the same records for other field names. Every option defaults to the name used in `page.fields`. For trees without URLs, a host omits `path` and `uniquePath` and keeps `noCycle`.
+Returns the same records for other field names. Every option defaults to the name used in `page.fields`. `title` is the field `slugFromTitle` reads. For trees without URLs, a host omits `path` and `uniquePath` and keeps `noCycle`.
 
 ## `seo.fields`
 
@@ -119,9 +139,18 @@ seo: {
 
 `image` is added when media exists (roadmap #3).
 
-## `seo.hooks`
+## `seoMeta(doc)`
 
-- `afterRead.fallback`: an empty `seo.title` reads as the document's `title`. Nothing is stored, so the fallback follows title changes. `seo.description` has no fallback; the preset cannot know which field holds body text.
+A pure helper. It has no hooks and stores nothing.
+
+```ts
+seoMeta(doc) // { title, description, noindex }
+```
+
+- `title`: `doc.seo.title`, or `doc.title` when it is empty. So the fallback follows title changes.
+- `description`: `doc.seo.description`, or `undefined`. It has no fallback; the preset cannot know which field holds body text.
+- `noindex`: `true` only when `doc.seo.noindex` is `true`.
+- Works with a missing or `null` `seo` group.
 
 ## Amendment to spec 3
 
@@ -129,7 +158,7 @@ seo: {
 
 ## Examples
 
-The Astro example gets a `pages` collection built from the preset and a catch-all route `[...path].astro` reading by `path`, with `seo` in `<head>`. Nuxt and TanStack Start follow in the same change, each with its catch-all route.
+The Astro example gets a `pages` collection built from the preset and a catch-all route `[...path].astro` reading by `path`, with `seoMeta(page)` in `<head>`. Nuxt and TanStack Start follow in the same change, each with its catch-all route.
 
 ## Out of scope
 
@@ -142,10 +171,16 @@ The Astro example gets a `pages` collection built from the preset and a catch-al
 
 ## Tests (TDD: write each test, run it RED, then make it GREEN)
 
-Unit (`presets.test.ts`):
+Unit:
 
-- `slugFromTitle`: umlauts, spaces, punctuation, leading and trailing dashes
-- path rules: `index` at root is `/`, child of `/` is `/child`, nested child
+- `slugify.test.ts`: umlauts, spaces, punctuation, leading and trailing dashes
+- `presets.test.ts`: `slugFromTitle` fills an empty slug and keeps a given one; path rules (`index` at root is `/`, child of `/` is `/child`, nested child); `seoMeta` falls back to `title`, keeps a custom title, handles a `null` group
+
+`schema.test.ts`:
+
+- `slug`: missing, `null`, `''` and values that break the pattern fail; valid slugs pass
+- `slug` fields type as a required `string` in `Data` and `Doc`
+- `readOnly` is accepted at any depth and does not change the input type
 
 `app.test.ts` with a `pages` collection from the preset:
 
@@ -158,11 +193,9 @@ Unit (`presets.test.ts`):
 - renaming a parent's slug rewrites all descendant paths in one transaction
 - a failing descendant update rolls back the rename
 - deleting a page with children returns 409; a leaf deletes
-- `path` in input is ignored
+- `path` in input is overwritten by the hook
 - `GET /api/cms/collections/pages?path=/about/team` returns the page
-- `seo.title` falls back to `title` on read and is not stored
 - omitting a hook by name disables it (e.g. without `uniquePath`, duplicates are allowed)
+- `treeHooks()` with other field names, including `title`
 
-`schema.test.ts`:
-
-- `path` is in `Doc` and not accepted in the `create` input type (`@ts-expect-error`)
+Admin (manual): `readOnly` fields are disabled; the slug fills live on new documents only, stops after a manual edit, and shows the parent's path as a prefix.

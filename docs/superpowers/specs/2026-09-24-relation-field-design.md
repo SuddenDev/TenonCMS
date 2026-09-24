@@ -30,6 +30,7 @@ posts: { type: 'join', collection: 'posts', on: 'author' }
 - Options: `collection` (target), `many?: boolean`, `onDelete?: 'set-null' | 'restrict' | 'cascade'`, and the usual `label`, `required`.
 - Allowed at the top level and inside groups, in collections and in globals.
 - Targets are collections only.
+- A required `many` relation MUST hold at least one id.
 
 ### `join`
 
@@ -44,7 +45,9 @@ posts: { type: 'join', collection: 'posts', on: 'author' }
 - a `relation` targets a collection that does not exist;
 - a `join`'s `on` does not resolve to a `relation` field in its source collection that targets the join's own collection;
 - a `relation` has `required: true` and `onDelete: 'set-null'`;
-- a `join` appears in a global or inside a group.
+- a `join` appears in a global or inside a group;
+- a `relation` inside a global has `onDelete: 'cascade'` (a global cannot be deleted);
+- the config's `populate.depth` is above `populate.maxDepth`.
 
 ## Storage
 
@@ -74,6 +77,7 @@ cms.find('authors', { populate: { posts: true } })       // join
 
 - `populate: true` (default) resolves every `relation` up to `depth` hops. Group keys do not count as hops.
 - `populate: { ... }` resolves only the listed paths. `true` resolves one hop; a nested object goes further along that path only. `depth` is ignored.
+- `true` on a group key (`populate: { seo: true }`, `?populate=seo`) resolves every relation in that group one hop.
 - `populate: false` returns ids.
 - `join` fields populate only when named in a `populate` object, never through `populate: true`. An unnamed `join` field is absent from the result.
 - Unresolved relations stay ids. A missing target resolves to `null`; in a `many` relation it is dropped from the array.
@@ -114,8 +118,10 @@ defineCms({ ..., populate: { depth: 2, maxDepth: 5 } })
 When a document is deleted, every relation in every collection and global that targets its collection is checked. All effects run in one transaction.
 
 - `set-null` (default): a single relation becomes `null`; the id is removed from a `many` array.
-- `restrict` (default when `required: true`): the delete fails with 409 and lists the referencing documents (`collection`, `id`). Nothing changes.
+- `restrict` (default when `required: true`): the delete fails with 409 and lists the references: `{ collection, id }` for a document, `{ global }` for a global. Nothing changes.
 - `cascade`: the referencing documents are deleted too, recursively, with their own `onDelete` rules. A visited set ends cycles.
+
+Known gap: restrict is checked per document, as the cascade reaches it. A `restrict` reference from a document that a later cascade step would delete still blocks the whole delete. A two-phase check (collect the full cascade first) would fix it; it is not planned.
 
 ## Admin
 
@@ -134,9 +140,9 @@ When a document is deleted, every relation in every collection and global that t
 
 ## Tests (TDD: write each test, run it RED, then make it GREEN)
 
-- `schema.test.ts`: validation of relation values (single, `many`, duplicates); populate result types for default depth, explicit depth, nested objects, groups and joins; `@ts-expect-error` for invalid populate keys.
+- `schema.test.ts`: validation of relation values (single, `many`, duplicates, empty required `many`); populate result types for default depth, explicit depth, nested objects, groups (also `{ seo: true }`) and joins; `@ts-expect-error` for invalid populate keys.
 - `app.test.ts`:
   - startup errors for each `defineCms` check;
   - writes: unknown id 400, self-reference 400;
-  - reads over HTTP: default populate, `depth`, `populate` paths through groups, `populate=false`, join, missing target as `null`, `maxDepth` 400, invalid path 400;
-  - delete: `set-null` on single and `many`, `restrict` 409 with nothing changed, `cascade` recursive and over a cycle.
+  - reads over HTTP: default populate, `depth`, `populate` paths through groups, `true` on a group key, `populate=false`, join, missing target as `null`, `maxDepth` 400, invalid path 400;
+  - delete: `set-null` on single and `many`, `restrict` 409 with nothing changed and a global listed as `{ global }`, `cascade` recursive and over a cycle.

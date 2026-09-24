@@ -35,7 +35,7 @@ Inner `required` fields are checked only when the group is present.
 
 - Add `(Base & { type: 'group'; fields: Fields })` to the `Field` union.
 - `FieldValue<F>` returns `Data<F['fields']>` for a group, so `Data` and `Doc` infer nested types.
-- `FindOptions['where']` excludes group keys.
+- `where` types exclude group keys: `FindOptions['where']` in the local API and the `where` option of the client's `find` and `findOne`.
 
 ## Validation
 
@@ -48,7 +48,9 @@ Inner `required` fields are checked only when the group is present.
 ## Admin
 
 - `FieldInput.vue` renders a group as a `<fieldset>` with its label (or key) as `<legend>` and one `FieldInput` per child, bound to `model[key]`.
-- `DocForm.vue`: `empty()` and the save-time cleanup (empty string to `null`) become one recursive function over `fields`. A group always renders and saves as an object.
+- `DocForm.vue`: `empty()` and the save-time cleanup (empty string to `null`) become one recursive function over `fields`. A group always renders as an object.
+- On save, an optional group whose values are all empty is sent as `null`. Empty means `null`, `''`, `false`, `[]` or an empty nested group. A required group is always sent as an object.
+- Inside an optional group whose values are all empty, inner fields are not marked `required` in the form, so the browser does not block the save. Once any value is filled, they are.
 - Custom fields inside a group get the child key as `name`.
 
 ## Out of scope
@@ -61,4 +63,4 @@ Inner `required` fields are checked only when the group is present.
 ## Tests (TDD: write each test, run it RED, then make it GREEN)
 
 - `schema.test.ts`: nested validation, stripping of unknown nested keys, optional vs. required group, nested groups, type inference checked with `@ts-expect-error`.
-- `app.test.ts`: create and read a document with a group over HTTP; 400 for invalid inner data; 400 for a query-string filter on a group key.
+- `app.test.ts`: create and read a document with a group over HTTP; 400 for invalid inner data; 400 for a query-string filter on a group key; `@ts-expect-error` on a group key in `where` for the local API and the client.

@@ -1,6 +1,6 @@
 # Field options
 
-Spec 6 of 6: group field, relation field, hooks, auth, page preset, field options. Execution order: 4, 1, 2, 3, 6, 5. Requires specs 1–3; spec 5 uses `pattern`.
+Spec 6 of 6: group field, relation field, hooks, auth, page preset, field options. Execution order: 4, 1, 2, 3, 6, 5. Requires specs 1–3; spec 5 builds on it.
 
 ## Goal
 
@@ -28,7 +28,7 @@ The admin reads the schema from `/schema` as JSON. Functions in `integral.config
 | `condition` | all | show / hide, clear on save | skips validation |
 | `unique` | see below | | runs |
 | `private`, `hidden` | all except `group` children of hidden groups | see below | see below |
-| `readOnly` | spec 5 | | |
+| `readOnly` | all, at any depth (spec 5) | shown disabled | none |
 | `hooks` | spec 3 | | |
 
 ## `default`
@@ -39,7 +39,8 @@ author: { type: 'relation', collection: 'users', default: ({ user }) => user?.id
 ```
 
 - A plain value or `({ user, cms }) => value | Promise<value>`.
-- Applied on `create` only, to fields that are `undefined` (not `null`), before `beforeValidate` hooks. Group children get their defaults when the group is created.
+- Applied on `create` only, to fields that are `undefined` (not `null`), before `beforeValidate` hooks.
+- Group children get defaults only when their group is sent on `create`. An absent group stays absent, so its required children do not apply. An `update` that sets a group gets no defaults.
 - Plain values are sent in `/schema`; the admin pre-fills new documents with them. Function defaults are not sent; the admin shows an empty field and the server fills it.
 
 ## Built-in validation
@@ -59,6 +60,7 @@ validate: (value, { data, siblingData, originalDoc, operation, path, cms, user }
 - Server only. Runs after zod, before `beforeChange` hooks.
 - Every field is checked; all messages are collected into one `ValidationError` keyed by field path (HTTP 400).
 - Not run on the re-validation after `beforeChange` (spec 3), which is zod only.
+- Not run on the internal `update` of an `onDelete: 'set-null'` effect (spec 3), which is zod only.
 
 ## `condition`
 
@@ -73,12 +75,12 @@ condition: { '/settings.mode': 'advanced' }
 - Several keys in one object must all match. `$every` and `$some` take arrays of conditions and nest.
 - A key without a leading `/` is a sibling field: at the top level, a field of the document; inside a group, a field of that group. A leading `/` starts at the document root; dots walk into groups.
 - One evaluator, `matchCondition(condition, data, siblingData)`, in core. The admin imports the same function, so both sides agree.
-- `defineCms` MUST throw when a condition names a field that does not exist.
+- `defineCms` MUST throw when a condition names a field that does not exist, or a `hidden` field. The admin never has hidden values, so it could not evaluate such a condition.
 
 Behavior:
 
 - Admin: hides fields whose condition is false and sends `null` for them on save. Values survive toggling until the editor saves.
-- Server: skips `required`, built-in validation and `validate` for fields whose condition is false. It never changes or clears values.
+- Server: skips `required`, built-in validation and `validate` for fields whose condition is false. The type check still runs, so typed reads stay correct. It never changes or clears values.
 - Reads: no effect.
 
 ## `unique`
@@ -98,7 +100,8 @@ Behavior:
 | `hidden` | read and write | not sent, not filterable, not writable, not in `/schema` | not sent, not filterable |
 
 - A filter on a field the caller cannot see returns 400, like an unknown field, so values cannot be probed.
-- Hidden fields in HTTP input are stripped, like `readOnly`.
+- Hidden fields in HTTP input are ignored.
+- An HTTP update replaces the whole document. It MUST keep the stored values of hidden fields, because the admin never sees them.
 - The rules apply to populated and joined documents, by the rules of their own collection.
 - On a `group`, the option applies to the whole group.
 
@@ -125,14 +128,14 @@ Sends field definitions without functions (`validate`, `hooks`, function `defaul
 - `matchCondition`: each operator, several keys, `$every` / `$some` nested, sibling paths inside a group, root paths
 - zod: `minLength`, `maxLength`, `pattern` (whole-value match), `min`, `max`; empty optional values pass
 - client types: `private` optional, `hidden` omitted (`@ts-expect-error`)
-- `defineCms` throws for a condition on an unknown field and for `unique` inside a group
+- `defineCms` throws for a condition on an unknown field, for a condition on a `hidden` field and for `unique` inside a group
 
 `app.test.ts`:
 
-- `default`: value and function on create; not applied on update; not applied to `null`
-- `validate`: messages per field in one 400; skipped when the condition is false
-- `condition`: a hidden `required` field may be missing; values are not cleared by the server
+- `default`: value and function on create; not applied on update; not applied to `null`; group children get defaults only when the group is sent
+- `validate`: messages per field in one 400; skipped when the condition is false; skipped on a `set-null` update, so the delete succeeds
+- `condition`: a hidden `required` field may be missing; a wrong type still returns 400; values are not cleared by the server
 - `unique`: collision 400, `null` never collides, updating the same document passes, a value set in `beforeChange` is checked
 - `private`: missing on public reads, present with a session, filter without session 400, missing in populated docs on public reads
-- `hidden`: never over HTTP, stripped from HTTP input, missing in `/schema`, readable and writable through the local API
+- `hidden`: never over HTTP, ignored in HTTP input, kept on an HTTP update, missing in `/schema`, readable and writable through the local API
 - `/schema` contains no functions
