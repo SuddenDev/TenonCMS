@@ -1,6 +1,6 @@
 import { useAsyncData, useRequestEvent } from '#app'
 import type cms from '#integral/config'
-import { type Checked, createClient, type FindOptions } from 'integral-cms/client'
+import { type Checked, createClient, type FindOptions, type ReadOptions } from 'integral-cms/client'
 
 type Collections = NonNullable<(typeof cms)['schema']['collections']>
 type Globals = NonNullable<(typeof cms)['schema']['globals']>
@@ -22,13 +22,20 @@ export function useIntegral() {
       collection: K,
       options: Checked<O, Collections, Fields<K>>,
     ) {
-      return useAsyncData(`integral:${collection}:one:${JSON.stringify(options.where)}`, async () => (await client.findOne<K, O>(collection, options)) ?? null)
+      return useAsyncData(`integral:${collection}:one:${JSON.stringify(options)}`, async () => (await client.findOne<K, O>(collection, options)) ?? null)
     },
-    findById<K extends keyof Collections & string>(collection: K, id: string) {
-      return useAsyncData(`integral:${collection}:${id}`, () => client.findById(collection, id))
+    findById<K extends keyof Collections & string, const O extends ReadOptions<Collections, Fields<K>> = {}>(
+      collection: K,
+      id: string,
+      options: Checked<O, Collections, Fields<K>> = {} as never,
+    ) {
+      return useAsyncData(`integral:${collection}:${id}:${JSON.stringify(options)}`, () => client.findById<K, O>(collection, id, options))
     },
-    getGlobal<K extends keyof Globals & string>(name: K) {
-      return useAsyncData(`integral:global:${name}`, () => client.getGlobal(name))
+    getGlobal<K extends keyof Globals & string, const O extends ReadOptions<Collections, Globals[K]['fields']> = {}>(
+      name: K,
+      options: Checked<O, Collections, Globals[K]['fields']> = {} as never,
+    ) {
+      return useAsyncData(`integral:global:${name}:${JSON.stringify(options)}`, () => client.getGlobal<K, O>(name, options))
     },
   }
 }
