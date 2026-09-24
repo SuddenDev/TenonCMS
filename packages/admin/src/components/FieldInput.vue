@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
-import { type Field, isEmpty } from '../api'
+import { computed, inject, ref } from 'vue'
+import { client, type Field, isEmpty, schema, titleField } from '../api'
 import { optionsKey } from '../options'
 import Mount from './Mount.vue'
 
@@ -9,10 +9,22 @@ const props = defineProps<{ name: string; field: Field; loose?: boolean }>()
 const model = defineModel<any>()
 const required = computed(() => props.field.required && !props.loose)
 const custom = props.field.type.startsWith('custom:') ? inject(optionsKey, {}).fields?.[props.field.type.slice(7)] : undefined
+
+// ponytail: loads every document of the target collection; add search and paging when collections grow.
+const options = ref<{ id: string; label: string }[]>([])
+if (props.field.type === 'relation') {
+  const target = props.field.collection
+  client.find(target, { populate: false }).then((docs) => {
+    const collection = schema.value.collections?.[target]
+    const key = collection ? titleField(collection) : ''
+    options.value = docs.map((d) => ({ id: d.id, label: String(d[key] || d.id) }))
+  })
+}
 </script>
 
 <template>
-  <fieldset v-if="field.type === 'group'" class="flex flex-col gap-4 rounded border border-gray-200 p-4">
+  <template v-if="field.type === 'join'" />
+  <fieldset v-else-if="field.type === 'group'" class="flex flex-col gap-4 rounded border border-gray-200 p-4">
     <legend class="px-1 text-sm font-medium">
       {{ field.label ?? name }}
       <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
@@ -37,6 +49,13 @@ const custom = props.field.type.startsWith('custom:') ? inject(optionsKey, {}).f
     </span>
     <Mount v-if="custom" :mount="custom" :ctx="{ name, field, value: model, onChange: (v: any) => (model = v) }" />
     <textarea v-else-if="field.type === 'textarea'" v-model="model" class="input min-h-40" :required="required" />
+    <select v-else-if="field.type === 'relation' && field.many" v-model="model" multiple class="input" :required="required">
+      <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
+    </select>
+    <select v-else-if="field.type === 'relation'" v-model="model" class="input" :required="required">
+      <option :value="null" />
+      <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
+    </select>
     <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="required">
       <option :value="null" />
       <option v-for="o in field.options" :key="o" :value="o">{{ o }}</option>

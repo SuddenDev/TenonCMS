@@ -10,7 +10,7 @@ const docs = ref<Record<string, any>[]>([])
 
 useHead({ title: () => collection.value?.label ?? name })
 
-client.find(name).then((d) => (docs.value = d))
+client.find(name, { populate: false }).then((d) => (docs.value = d))
 </script>
 
 <template>

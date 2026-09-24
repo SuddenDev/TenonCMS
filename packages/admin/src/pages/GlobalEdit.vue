@@ -11,7 +11,7 @@ const data = ref<Record<string, unknown> | null>(null)
 
 useHead({ title: () => global.value?.label ?? name })
 
-client.getGlobal(name).then((d) => (data.value = d))
+client.getGlobal(name, { populate: false }).then((d) => (data.value = d))
 
 async function save(body: Data<Fields>) {
   data.value = await client.setGlobal(name, body)

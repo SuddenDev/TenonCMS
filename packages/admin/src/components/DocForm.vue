@@ -8,16 +8,19 @@ const props = defineProps<{ fields: Fields; initial: Record<string, unknown>; sa
 // Groups always render as objects, so their inputs have a model to bind to.
 // On save, an optional group with only empty values becomes null, so its required children do not apply.
 // Empty strings become null, so cleared optional fields pass validation.
+// Joins are not stored, so they stay out of the form data.
 function normalize(fields: Fields, value: Record<string, any> | null | undefined, save = false): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(fields).map(([k, f]) => {
+    Object.entries(fields).flatMap(([k, f]) => {
+      if (f.type === 'join') return []
       const v = value?.[k]
       if (f.type === 'group') {
         const g = normalize(f.fields, v, save)
-        return [k, save && !f.required && isEmpty(g) ? null : g]
+        return [[k, save && !f.required && isEmpty(g) ? null : g]]
       }
-      if (f.type === 'boolean') return [k, v ?? false]
-      return [k, v === '' || v === undefined ? null : v]
+      if (f.type === 'boolean') return [[k, v ?? false]]
+      if (f.type === 'relation' && f.many) return [[k, v ?? []]]
+      return [[k, v === '' || v === undefined ? null : v]]
     }),
   )
 }
