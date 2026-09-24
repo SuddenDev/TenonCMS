@@ -1,27 +1,77 @@
 import { type Client, createClient, type Transaction } from '@libsql/client'
-import { sql } from 'drizzle-orm'
+import { sql as drizzleSql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
-import { type DatabaseConnection, type Dialect, SqliteAdapter, SqliteIntrospector, SqliteQueryCompiler } from 'kysely'
+import {
+  type DatabaseConnection,
+  type Dialect,
+  Kysely,
+  SqliteAdapter,
+  SqliteIntrospector,
+  SqliteQueryCompiler,
+  sql,
+} from 'kysely'
+import { type Migration, Migrator } from 'kysely/migration'
 import migrations from './migrations.gen.ts'
 import * as schema from './schema.ts'
 
 export { schema }
 
-export function createDb(url: string, authToken?: string) {
+export function createDrizzle(url: string, authToken?: string) {
   return drizzle(createClient({ url, authToken }), { schema })
 }
 
-export type Db = ReturnType<typeof createDb>
+export type Drizzle = ReturnType<typeof createDrizzle>
 
-// ponytail: no locking between processes. Use drizzle-kit migrate in CI when running more than one instance.
-export async function migrate(db: Db) {
-  await db.run(sql`CREATE TABLE IF NOT EXISTS cms_migrations (name TEXT PRIMARY KEY)`)
-  const done = new Set((await db.all<{ name: string }>(sql`SELECT name FROM cms_migrations`)).map((r) => r.name))
+export async function migrateDrizzle(db: Drizzle) {
+  await db.run(drizzleSql`CREATE TABLE IF NOT EXISTS cms_migrations (name TEXT PRIMARY KEY)`)
+  const done = new Set((await db.all<{ name: string }>(drizzleSql`SELECT name FROM cms_migrations`)).map((r) => r.name))
   for (const m of migrations) {
     if (done.has(m.name)) continue
-    const statements = m.sql.split('--> statement-breakpoint').map((s) => sql.raw(s))
-    await db.batch([...statements.map((s) => db.run(s)), db.run(sql`INSERT INTO cms_migrations (name) VALUES (${m.name})`)] as any)
+    const statements = m.sql.split('--> statement-breakpoint').map((s) => drizzleSql.raw(s))
+    await db.batch([...statements.map((s) => db.run(s)), db.run(drizzleSql`INSERT INTO cms_migrations (name) VALUES (${m.name})`)] as any)
   }
+}
+
+export interface Database {
+  cms_documents: { id: string; collection: string; data: string; created_at: number; updated_at: number }
+  cms_globals: { name: string; data: string; created_at: number; updated_at: number }
+}
+
+export function createDb(url: string, authToken?: string) {
+  return new Kysely<Database>({ dialect: libsqlDialect(createClient({ url, authToken })) })
+}
+
+// Keys sort by name. Never edit a migration that has shipped; add a new one.
+const cmsMigrations: Record<string, Migration> = {
+  '001_cms_tables': {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_documents (
+        id text PRIMARY KEY NOT NULL,
+        collection text NOT NULL,
+        data text NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL
+      )`.execute(db)
+      await sql`CREATE INDEX IF NOT EXISTS cms_documents_collection_idx ON cms_documents (collection)`.execute(db)
+      await sql`CREATE TABLE IF NOT EXISTS cms_globals (
+        name text PRIMARY KEY NOT NULL,
+        data text NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL
+      )`.execute(db)
+    },
+  },
+}
+
+// ponytail: no locking between processes; Kysely's migration lock is a no-op on SQLite. Run one instance per database until D1/Postgres.
+export async function migrate(db: Kysely<Database>) {
+  const { error } = await new Migrator({
+    db,
+    provider: { getMigrations: async () => cmsMigrations },
+    migrationTableName: 'cms_kysely_migration',
+    migrationLockTableName: 'cms_kysely_migration_lock',
+  }).migrateToLatest()
+  if (error) throw error
 }
 
 type Connection = DatabaseConnection & { tx?: Transaction }

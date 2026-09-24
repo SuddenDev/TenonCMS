@@ -2,9 +2,9 @@ import { APIError, betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { count } from 'drizzle-orm'
 import { API_BASE } from './client.ts'
-import { type Db, schema } from './db/index.ts'
+import { type Drizzle, schema } from './db/index.ts'
 
-export function createAuth(db: Db, secret: string) {
+export function createAuth(db: Drizzle, secret: string) {
   return betterAuth({
     basePath: `${API_BASE}/auth`,
     secret,

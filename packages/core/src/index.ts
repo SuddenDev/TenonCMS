@@ -1,8 +1,8 @@
 import { consola } from 'consola'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { type Selectable, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { createAuth } from './auth.ts'
-import { createDb, migrate, schema as tables } from './db/index.ts'
+import { createDb, createDrizzle, type Database, migrate, migrateDrizzle } from './db/index.ts'
 import type { Collection, Data, Doc, Global, Schema } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
@@ -27,14 +27,14 @@ type FindOptions<T extends Schema, K extends keyof Collections<T>> = {
   limit?: number
 }
 
-type Row = typeof tables.documents.$inferSelect
+type Row = Selectable<Database['cms_documents']>
 
 function toDoc(row: Row) {
   return {
-    ...row.data,
+    ...JSON.parse(row.data),
     id: row.id,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
   }
 }
 
@@ -52,21 +52,22 @@ export function defineCms<const C extends Record<string, Collection> = {}, const
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
-  let ready: Promise<ReturnType<typeof createDb>> | undefined
-  const db = () =>
+  let ready: Promise<{ db: ReturnType<typeof createDb>; drizzle: ReturnType<typeof createDrizzle> }> | undefined
+  const connect = () =>
     (ready ??= (async () => {
+      const drizzle = createDrizzle(database.url, database.authToken)
+      await migrateDrizzle(drizzle)
       const db = createDb(database.url, database.authToken)
       await migrate(db)
-      return db
+      return { db, drizzle }
     })())
+  const db = async () => (await connect()).db
 
   let authInstance: ReturnType<typeof createAuth> | undefined
   const auth = async () => {
     if (!secret || secret.length < 32) throw new Error('integral-cms: `secret` MUST be at least 32 characters')
-    return (authInstance ??= createAuth(await db(), secret))
+    return (authInstance ??= createAuth((await connect()).drizzle, secret))
   }
-
-  const { documents, globals } = tables
 
   const cms = {
     schema,
@@ -80,20 +81,17 @@ export function defineCms<const C extends Record<string, Collection> = {}, const
       collection: K,
       options: FindOptions<T, K> = {},
     ): Promise<CollectionDoc<T, K>[]> {
-      const filters = Object.entries(options.where ?? {}).map(([key, value]) => {
+      let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
+      for (const [key, value] of Object.entries(options.where ?? {})) {
         if (!Object.hasOwn(schema.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
-        if (value === undefined) return undefined
-        const field = sql`json_extract(${documents.data}, ${`$.${key}`})`
-        return value === null ? sql`${field} IS NULL` : sql`${field} = ${value}`
-      })
-      const query = (await db())
-        .select()
-        .from(documents)
-        .where(and(eq(documents.collection, collection), ...filters))
-        // `rowid` orders documents created in the same millisecond.
-        .orderBy(desc(documents.createdAt), desc(sql`rowid`))
-      const rows = await (options.limit ? query.limit(options.limit) : query)
-      return rows.map(toDoc) as CollectionDoc<T, K>[]
+        if (value === undefined) continue
+        const field = sql`json_extract(data, ${`$.${key}`})`
+        query = query.where(value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`)
+      }
+      // `rowid` orders documents created in the same millisecond.
+      query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
+      if (options.limit) query = query.limit(options.limit)
+      return (await query.execute()).map(toDoc) as CollectionDoc<T, K>[]
     },
 
     /**
@@ -109,49 +107,58 @@ export function defineCms<const C extends Record<string, Collection> = {}, const
 
     /** Returns one document, or `undefined`. */
     async findById<K extends keyof Collections<T> & string>(collection: K, id: string) {
-      const [row] = await (await db())
-        .select()
-        .from(documents)
-        .where(and(eq(documents.collection, collection), eq(documents.id, id)))
+      const row = await (await db())
+        .selectFrom('cms_documents')
+        .selectAll()
+        .where('collection', '=', collection)
+        .where('id', '=', id)
+        .executeTakeFirst()
       return row && (toDoc(row) as CollectionDoc<T, K>)
     },
 
     /** Creates a document. Does not validate `data`. */
     async create<K extends keyof Collections<T> & string>(collection: K, data: Record<string, unknown>) {
-      const [row] = await (await db())
-        .insert(documents)
-        .values({ id: crypto.randomUUID(), collection, data })
-        .returning()
+      const now = Date.now()
+      const row = await (await db())
+        .insertInto('cms_documents')
+        .values({ id: crypto.randomUUID(), collection, data: JSON.stringify(data), created_at: now, updated_at: now })
+        .returningAll()
+        .executeTakeFirstOrThrow()
       return toDoc(row) as CollectionDoc<T, K>
     },
 
     /** Replaces the data of a document. Returns `undefined` if it does not exist. Does not validate `data`. */
     async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
-      const [row] = await (await db())
-        .update(documents)
-        .set({ data, updatedAt: new Date() })
-        .where(and(eq(documents.collection, collection), eq(documents.id, id)))
-        .returning()
+      const row = await (await db())
+        .updateTable('cms_documents')
+        .set({ data: JSON.stringify(data), updated_at: Date.now() })
+        .where('collection', '=', collection)
+        .where('id', '=', id)
+        .returningAll()
+        .executeTakeFirst()
       return row && (toDoc(row) as CollectionDoc<T, K>)
     },
 
     /** Deletes a document. */
     async delete(collection: keyof Collections<T> & string, id: string) {
-      await (await db()).delete(documents).where(and(eq(documents.collection, collection), eq(documents.id, id)))
+      await (await db()).deleteFrom('cms_documents').where('collection', '=', collection).where('id', '=', id).execute()
     },
 
     /** Returns a global. Fields that were never saved are missing. */
     async getGlobal<K extends keyof Globals<T> & string>(name: K): Promise<Partial<GlobalData<T, K>>> {
-      const [row] = await (await db()).select().from(globals).where(eq(globals.name, name))
-      return (row?.data ?? {}) as Partial<GlobalData<T, K>>
+      const row = await (await db()).selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
+      return (row ? JSON.parse(row.data) : {}) as Partial<GlobalData<T, K>>
     },
 
     /** Replaces the data of a global. Does not validate `data`. */
     async setGlobal<K extends keyof Globals<T> & string>(name: K, data: Record<string, unknown>) {
+      const now = Date.now()
+      const json = JSON.stringify(data)
       await (await db())
-        .insert(globals)
-        .values({ name, data })
-        .onConflictDoUpdate({ target: globals.name, set: { data, updatedAt: new Date() } })
+        .insertInto('cms_globals')
+        .values({ name, data: json, created_at: now, updated_at: now })
+        .onConflict((oc) => oc.column('name').doUpdateSet({ data: json, updated_at: now }))
+        .execute()
       return data as GlobalData<T, K>
     },
 
