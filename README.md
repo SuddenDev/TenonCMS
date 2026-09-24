@@ -254,10 +254,6 @@ auth: {
 }
 ```
 
-### Upgrading from the Drizzle version
-
-There is no upgrade path. The auth tables changed their column names and date formats. Delete `cms.db` before you upgrade; content and users are lost.
-
 ## Customize the admin
 
 Create `integral.admin.ts` next to `integral.config.ts`. Astro, Nuxt and `integralAdmin()` pick it up at startup; delete it to go back to the default. Restart the dev server after adding or removing it.

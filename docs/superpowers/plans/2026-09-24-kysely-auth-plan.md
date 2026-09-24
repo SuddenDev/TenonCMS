@@ -9,7 +9,7 @@ All paths are relative to `packages/core` unless noted. Run tests with `pnpm --f
 - `kysely@0.29.6` is already in the tree (better-auth peer, range `^0.28.17 || ^0.29.0`). Core adds it as a direct dependency with the same range.
 - better-auth 1.7.5 accepts `database: { db: Kysely<any>, type: 'sqlite' }` and uses it as is (`createKyselyAdapter`, `"db" in database`). Its `transaction` option defaults to `false`, so auth runs no transactions of its own.
 - `getMigrations(options)` from `better-auth/db/migration` needs no secret. It introspects, creates missing tables, adds missing columns and indexes. It throws `UnsafeMigrationError` when it would add a required column without a default to a populated table.
-- better-auth's default column names are **camelCase** (`emailVerified`, `createdAt`, `userId`) and it stores dates as ISO strings. Databases from the Drizzle version use **snake_case** columns and millisecond dates. The spec gives no upgrade path: hosts delete `cms.db`.
+- better-auth's default column names are **camelCase** (`emailVerified`, `createdAt`, `userId`) and it stores dates as ISO strings. Databases from the Drizzle version use **snake_case** columns and millisecond dates. No installs exist yet, so there is no upgrade path.
 - `databaseHooks.user.create.before(user, ctx)` gets the endpoint context from async local storage, or `null` outside an endpoint. Session-protected endpoints put the session on `ctx.context.session` (`admin()`'s `createUser` reads it with `getAuthoritativeSessionFromCtx`). Server calls like `auth.api.createUser({ body })` get a context without `request` and `headers`.
 - `@libsql/client@0.18`: a `:memory:` database has exactly one connection. While a transaction holds it, any other query on the client rejects with `TRANSACTION_ACTIVE` (no hang). File databases use a pool.
 - `@libsql/kysely-libsql@0.4.1` (latest) depends on `@libsql/client ^0.8.0` and imports it at module top. That installs and loads a second `@libsql/client` and a second native `libsql` binary next to our 0.18. The Nuxt module's `traceInclude` only covers the binary of our client, so a Nuxt production build would crash on the other one.
@@ -20,7 +20,7 @@ All paths are relative to `packages/core` unless noted. Run tests with `pnpm --f
 - **Single-statement writes get no transaction yet.** Today every write is one statement. Spec 3 wraps writes when hooks add statements. Task 1 proves transactions work, which is what spec 3 needs.
 - CMS tables keep their snake_case columns and millisecond timestamps. Only the auth tables change.
 - Kysely's `Migrator` records runs in `cms_kysely_migration` (and `cms_kysely_migration_lock`), so all core tables share the `cms_` prefix.
-- No upgrade path (spec): no legacy fixture, no rename migration, no upgrade test.
+- No upgrade path (nothing is public yet): no legacy fixture, no rename migration, no upgrade test.
 - The first-user rule counts rows with raw SQL on the `user` table, as today. `AuthOptions` leaves out `modelName`, so the table is always `user`.
 - The first-user rule is session-based (Task 9): with a user in the table, a request without `ctx.context.session` gets 403 on any endpoint. Server code without a request is trusted, as in `admin()`.
 
@@ -307,7 +307,6 @@ Commit: `test(core): cover host auth request hooks`
   - Config example: an optional `auth` block (plugins, `databaseHooks`, `session`), as in the spec.
   - New section "Auth": `auth` is better-auth's options object and follows better-auth's versioning. Core owns `database`, `basePath` and `secret`, forces `emailAndPassword.enabled`, and does not accept `modelName`. Once a user exists, only a request with a session can create users, on any endpoint; a signed-in admin can create more (e.g. with `admin()`). Plugin tables are created at runtime. The admin login supports email and password only; plugins that need UI work on the server only.
   - Payload mapping: `beforeLogin` → `hooks.before`, `afterLogin` → `hooks.after` with `ctx.path === '/sign-in/email'`, `afterLogout` → `ctx.path === '/sign-out'`, `afterForgotPassword` → `ctx.path === '/request-password-reset'`. Check each path against better-auth 1.7 before writing it.
-  - Upgrade note: there is no upgrade path from the Drizzle version. Delete `cms.db` before upgrading; content and users are lost.
   - Scripts table: remove `db:generate`. Status: "SQLite via libsql (local file or Turso), Kysely".
 - `CLAUDE.md`:
   - Commands: remove `db:generate`. Add: core migrations are code in `src/db/index.ts`; add a new key, never edit a shipped one.

@@ -33,10 +33,6 @@ Write operations use `db.transaction().execute(trx => ...)`. The first test of t
 
 better-auth runs its own queries on the same Kysely instance. Auth endpoints are not part of CMS write transactions.
 
-## Upgrading
-
-There is no upgrade path from the Drizzle version. Its auth tables use other column names and date formats. A host that upgrades MUST delete its `cms.db`; content and users are lost. README (and a changelog, once one exists) MUST say so.
-
 ## Auth pass-through
 
 ```ts
