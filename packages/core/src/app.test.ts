@@ -1,23 +1,26 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
-import { createCms, defineConfig } from './index.ts'
+import { defineCms } from './index.ts'
 
 const origin = 'http://localhost'
-const config = defineConfig({
-  collections: {
-    posts: {
-      fields: {
-        title: { type: 'text', required: true },
-        views: { type: 'number' },
-        featured: { type: 'boolean' },
+const define = (secret: string) =>
+  defineCms({
+    collections: {
+      posts: {
+        fields: {
+          title: { type: 'text', required: true },
+          views: { type: 'number' },
+          featured: { type: 'boolean' },
+        },
       },
     },
-  },
-  globals: { site: { fields: { name: { type: 'text' } } } },
-})
+    globals: { site: { fields: { name: { type: 'text' } } } },
+    database: { url: ':memory:' },
+    secret,
+  })
 
 function setup() {
-  const cms = createCms({ config, database: { url: ':memory:' }, secret: 'x'.repeat(32) })
+  const cms = define('x'.repeat(32))
   let cookie = ''
   // Keeps the session cookie between requests, like a browser.
   const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -227,9 +230,14 @@ describe('errors', () => {
   })
 
   it('keep reads working with a short secret, but fail auth', async () => {
-    const bad = createCms({ config, database: { url: ':memory:' }, secret: 'short' })
+    const bad = define('short')
     expect((await bad.fetch(new Request(`${origin}/api/cms/collections/posts`))).status).toBe(200)
     await expect(bad.auth()).rejects.toThrow(/at least 32 characters/)
     expect((await bad.fetch(new Request(`${origin}/api/cms/schema`))).status).toBe(500)
+  })
+
+  it('reject unknown options at the type level', () => {
+    // @ts-expect-error `globalz` is not an option
+    defineCms({ collections: {}, globalz: {}, database: { url: ':memory:' }, secret: '' })
   })
 })

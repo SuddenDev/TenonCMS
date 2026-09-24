@@ -1,12 +1,12 @@
 import { ref } from 'vue'
 import { createClient } from '../../core/src/client'
-import type { Collection, Config } from '../../core/src/schema'
+import type { Collection, Schema } from '../../core/src/schema'
 
 export type { Data, Field, Fields } from '../../core/src/schema'
 
-export const client = createClient<{ config: Config }>()
+export const client = createClient<{ schema: Schema }>()
 
-export const schema = ref<Config>({})
+export const schema = ref<Schema>({})
 
 /** Field shown as a document's title in lists and page titles. */
 export function titleField(collection: Collection) {

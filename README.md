@@ -64,14 +64,12 @@ export const posts = defineCollection({
 
 ```ts
 // integral.config.ts
-import { createCms } from 'integral-cms'
+import { defineCms } from 'integral-cms'
 import { posts } from './collections/posts'
 
-export const cms = createCms({
-  config: {
-    collections: { posts },
-    globals: { site: { fields: { title: { type: 'text', required: true } } } },
-  },
+export default defineCms({
+  collections: { posts },
+  globals: { site: { fields: { title: { type: 'text', required: true } } } },
   database: { url: 'file:/absolute/path/cms.db' }, // or libsql://…, plus authToken
   secret: process.env.CMS_SECRET!, // at least 32 characters
 })
@@ -97,7 +95,7 @@ Query params are equality filters, and `limit` caps the result: `GET /api/cms/co
 Because of that, a field named `limit` cannot be filtered over HTTP.
 Writes and the schema endpoint need an admin session.
 
-In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your config:
+In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your schema:
 
 ```ts
 import { createClient } from 'integral-cms/client'
@@ -165,7 +163,7 @@ const { data: post } = await useIntegral().findOne('posts', { where: { slug: 'he
 </script>
 ```
 
-Server routes can import `cms` from `#integral/config` (an alias for `integral.config.ts`) for writes or custom queries.
+Server routes can import the instance as the default export of `#integral/config` (an alias for `integral.config.ts`) for writes or custom queries.
 
 ### TanStack Start
 
@@ -198,7 +196,7 @@ export const Route = createFileRoute('/admin/$')({
 
 ```tsx
 // src/routes/index.tsx: loaders run on client and server, so read content in a server function
-import { cms } from '../../integral.config'
+import cms from '../../integral.config'
 
 const getPosts = createServerFn().handler(() => cms.find('posts'))
 

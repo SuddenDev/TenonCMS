@@ -38,13 +38,13 @@ export default function integralCms({ entry = './integral.config.ts', admin = tr
           content: `declare global {
   namespace App {
     interface Locals {
-      integral: typeof import(${module}).cms
+      integral: typeof import(${module}).default
     }
   }
 }
 declare module 'integral-cms/client' {
   interface Register {
-    cms: typeof import(${module}).cms
+    cms: typeof import(${module}).default
   }
 }
 export {}
@@ -54,7 +54,8 @@ export {}
         injectTypes({
           filename: 'config.d.ts',
           content: `declare module '#integral/config' {
-  export const cms: typeof import(${module}).cms
+  const cms: typeof import(${module}).default
+  export default cms
 }
 `,
         })

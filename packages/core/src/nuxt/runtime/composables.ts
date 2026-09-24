@@ -1,9 +1,9 @@
 import { useAsyncData, useRequestEvent } from '#app'
-import type { cms } from '#integral/config'
+import type cms from '#integral/config'
 import { createClient } from 'integral-cms/client'
 
-type Collections = NonNullable<(typeof cms)['config']['collections']>
-type Globals = NonNullable<(typeof cms)['config']['globals']>
+type Collections = NonNullable<(typeof cms)['schema']['collections']>
+type Globals = NonNullable<(typeof cms)['schema']['globals']>
 
 // The client's read methods for pages. During SSR the request stays in-process; on client-side
 // navigation it hits the public read API.

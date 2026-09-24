@@ -2,31 +2,32 @@ import { consola } from 'consola'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { createApp } from './app.ts'
 import { createAuth } from './auth.ts'
-import { createDb, migrate, schema } from './db/index.ts'
-import type { Config, Data, Doc } from './schema.ts'
+import { createDb, migrate, schema as tables } from './db/index.ts'
+import type { Collection, Data, Doc, Global, Schema } from './schema.ts'
 
-export { defineCollection, defineConfig, defineGlobal } from './schema.ts'
-export type { Collection, Config, Data, Doc, Field, Fields, Global } from './schema.ts'
+export { defineCollection, defineGlobal } from './schema.ts'
+export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './schema.ts'
 
-export type CmsOptions<T extends Config> = {
-  config: T
+export type CmsOptions<C extends Record<string, Collection>, G extends Record<string, Global>> = {
+  collections?: C
+  globals?: G
   database: { url: string; authToken?: string }
   /** Secret for signing sessions. MUST be at least 32 random characters in production. */
   secret: string
 }
 
-type Collections<T extends Config> = NonNullable<T['collections']>
-type Globals<T extends Config> = NonNullable<T['globals']>
-type CollectionDoc<T extends Config, K extends keyof Collections<T>> = Doc<Collections<T>[K]['fields']>
-type GlobalData<T extends Config, K extends keyof Globals<T>> = Data<Globals<T>[K]['fields']>
-type FindOptions<T extends Config, K extends keyof Collections<T>> = {
+type Collections<T extends Schema> = NonNullable<T['collections']>
+type Globals<T extends Schema> = NonNullable<T['globals']>
+type CollectionDoc<T extends Schema, K extends keyof Collections<T>> = Doc<Collections<T>[K]['fields']>
+type GlobalData<T extends Schema, K extends keyof Globals<T>> = Data<Globals<T>[K]['fields']>
+type FindOptions<T extends Schema, K extends keyof Collections<T>> = {
   /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
   where?: Partial<Record<keyof Collections<T>[K]['fields'], string | number | boolean | null>>
   /** Maximum number of documents. */
   limit?: number
 }
 
-type Row = typeof schema.documents.$inferSelect
+type Row = typeof tables.documents.$inferSelect
 
 function toDoc(row: Row) {
   return {
@@ -38,13 +39,18 @@ function toDoc(row: Row) {
 }
 
 /**
- * Creates a CMS instance. Export it as `cms` from `integral.config.ts`.
+ * Creates a CMS instance. Export it as the default export of `integral.config.ts`.
  *
  * The returned object is the local API for server code. Nothing connects until the first call.
  */
-export function createCms<const T extends Config>({ config, database, secret }: CmsOptions<T>) {
+export function defineCms<const C extends Record<string, Collection> = {}, const G extends Record<string, Global> = {}>({
+  database,
+  secret,
+  ...schema
+}: CmsOptions<C, G>) {
+  type T = typeof schema
   const count = (o?: object) => Object.keys(o ?? {}).length
-  consola.withTag('integral').info(`Initialized with ${count(config.collections)} collection(s), ${count(config.globals)} global(s)`)
+  consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
   let ready: Promise<ReturnType<typeof createDb>> | undefined
   const db = () =>
@@ -60,10 +66,10 @@ export function createCms<const T extends Config>({ config, database, secret }: 
     return (authInstance ??= createAuth(await db(), secret))
   }
 
-  const { documents, globals } = schema
+  const { documents, globals } = tables
 
   const cms = {
-    config,
+    schema,
     auth,
 
     /**
@@ -75,7 +81,7 @@ export function createCms<const T extends Config>({ config, database, secret }: 
       options: FindOptions<T, K> = {},
     ): Promise<CollectionDoc<T, K>[]> {
       const filters = Object.entries(options.where ?? {}).map(([key, value]) => {
-        if (!Object.hasOwn(config.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
+        if (!Object.hasOwn(schema.collections![collection].fields, key)) throw new Error(`Unknown field "${key}"`)
         if (value === undefined) return undefined
         const field = sql`json_extract(${documents.data}, ${`$.${key}`})`
         return value === null ? sql`${field} IS NULL` : sql`${field} = ${value}`
@@ -155,8 +161,8 @@ export function createCms<const T extends Config>({ config, database, secret }: 
     },
   }
 
-  const app = createApp(cms as unknown as Cms<Config>)
+  const app = createApp(cms as unknown as Cms<Schema>)
   return cms
 }
 
-export type Cms<T extends Config> = ReturnType<typeof createCms<T>>
+export type Cms<T extends Schema> = ReturnType<typeof defineCms<NonNullable<T['collections']>, NonNullable<T['globals']>>>

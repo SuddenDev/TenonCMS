@@ -21,7 +21,7 @@ export type Collection = {
 
 export type Global = { label?: string; fields: Fields }
 
-export type Config = {
+export type Schema = {
   collections?: Record<string, Collection>
   globals?: Record<string, Global>
 }
@@ -44,10 +44,6 @@ export type Doc<F extends Fields> = Data<F> & {
   id: string
   createdAt: string
   updatedAt: string
-}
-
-export function defineConfig<const T extends Config>(config: T): T {
-  return config
 }
 
 export function defineCollection<const T extends Collection>(collection: T): T {

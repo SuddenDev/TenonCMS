@@ -1,11 +1,11 @@
-import type { Config, Data, Doc } from './schema.ts'
+import type { Schema, Data, Doc } from './schema.ts'
 
 /** Path of the HTTP API. */
 export const API_BASE = '/api/cms'
 
-type Collections<C extends { config: Config }> = NonNullable<C['config']['collections']>
-type Globals<C extends { config: Config }> = NonNullable<C['config']['globals']>
-type Fields<C extends { config: Config }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
+type Collections<C extends { schema: Schema }> = NonNullable<C['schema']['collections']>
+type Globals<C extends { schema: Schema }> = NonNullable<C['schema']['globals']>
+type Fields<C extends { schema: Schema }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
 
 /**
  * Holds the host's `cms` type, so `createClient()` is typed without a type argument.
@@ -17,8 +17,8 @@ type Fields<C extends { config: Config }, K extends keyof Collections<C>> = Coll
  */
 export interface Register {}
 
-/** The registered `cms` type, or an untyped config without a registration. */
-export type RegisteredCms = Register extends { cms: infer C extends { config: Config } } ? C : { config: Config }
+/** The registered `cms` type, or an untyped schema without a registration. */
+export type RegisteredCms = Register extends { cms: infer C extends { schema: Schema } } ? C : { schema: Schema }
 
 export type ClientOptions = {
   /** Origin of the host app, e.g. `https://example.com`. Defaults to the current origin. */
@@ -60,7 +60,7 @@ export class CmsError extends Error {
  * const client = createClient()
  * const posts = await client.find('posts', { where: { featured: true } })
  */
-export function createClient<C extends { config: Config } = RegisteredCms>({ baseUrl = '', fetch: fetchFn = fetch }: ClientOptions = {}) {
+export function createClient<C extends { schema: Schema } = RegisteredCms>({ baseUrl = '', fetch: fetchFn = fetch }: ClientOptions = {}) {
   async function request<T>(method: string, path: string, body?: unknown, query?: object): Promise<T> {
     const params = new URLSearchParams(
       Object.entries(query ?? {}).flatMap(([key, value]) => (value === undefined ? [] : [[key, String(value)]])),
@@ -159,7 +159,7 @@ export function createClient<C extends { config: Config } = RegisteredCms>({ bas
      * `GET /api/cms/schema`
      */
     getSchema() {
-      return request<C['config']>('GET', '/schema')
+      return request<C['schema']>('GET', '/schema')
     },
 
     /**
@@ -200,4 +200,4 @@ export function createClient<C extends { config: Config } = RegisteredCms>({ bas
   return client
 }
 
-export type Client<C extends { config: Config } = RegisteredCms> = ReturnType<typeof createClient<C>>
+export type Client<C extends { schema: Schema } = RegisteredCms> = ReturnType<typeof createClient<C>>

@@ -5,7 +5,8 @@
 
 // The host's config file. Framework adapters alias `#integral/config` to it.
 declare module '#integral/config' {
-  export const cms: import('./src/index.ts').Cms<import('./src/schema.ts').Config>
+  const cms: import('./src/index.ts').Cms<import('./src/schema.ts').Schema>
+  export default cms
 }
 
 // The host's optional admin customization. Adapters alias `#integral/admin` to it or to a stub.
@@ -20,6 +21,6 @@ declare module '#app' {
 
 declare namespace App {
   interface Locals {
-    integral: typeof import('#integral/config').cms
+    integral: typeof import('#integral/config').default
   }
 }

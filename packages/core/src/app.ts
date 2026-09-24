@@ -2,13 +2,13 @@ import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
 import { API_BASE } from './client.ts'
 import type { Cms } from './index.ts'
-import { dataSchema, type Config, type Fields } from './schema.ts'
+import { dataSchema, type Schema, type Fields } from './schema.ts'
 
-export function createApp(cms: Cms<Config>) {
-  const { config } = cms
+export function createApp(cms: Cms<Schema>) {
+  const { schema } = cms
   const validators = {
-    collections: mapValues(config.collections, (c) => dataSchema(c.fields)),
-    globals: mapValues(config.globals, (g) => dataSchema(g.fields)),
+    collections: mapValues(schema.collections, (c) => dataSchema(c.fields)),
+    globals: mapValues(schema.globals, (g) => dataSchema(g.fields)),
   }
 
   const api = new Hono().basePath(API_BASE)
@@ -21,7 +21,7 @@ export function createApp(cms: Cms<Config>) {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
     const { limit, ...query } = c.req.query()
-    const where = whereFromQuery(config.collections![name].fields, query)
+    const where = whereFromQuery(schema.collections![name].fields, query)
     if (!where) return c.json({ error: 'Invalid filter' }, 400)
     if (limit !== undefined && !/^[1-9]\d*$/.test(limit)) return c.json({ error: 'Invalid limit' }, 400)
     return c.json(await cms.find(name, { where, limit: limit ? Number(limit) : undefined }))
@@ -46,7 +46,7 @@ export function createApp(cms: Cms<Config>) {
     await next()
   })
 
-  api.get('/schema', (c) => c.json(config))
+  api.get('/schema', (c) => c.json(schema))
 
   api.post('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
@@ -83,10 +83,10 @@ export function createApp(cms: Cms<Config>) {
   return api
 
   function collectionName(name: string) {
-    return Object.hasOwn(config.collections ?? {}, name) ? name : undefined
+    return Object.hasOwn(schema.collections ?? {}, name) ? name : undefined
   }
   function globalName(name: string) {
-    return Object.hasOwn(config.globals ?? {}, name) ? name : undefined
+    return Object.hasOwn(schema.globals ?? {}, name) ? name : undefined
   }
 }
 

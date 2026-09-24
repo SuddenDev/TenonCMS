@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { cms } from '../../integral.config'
+import cms from '../../integral.config'
 
 const getHome = createServerFn().handler(async () => ({
   site: await cms.getGlobal('site'),
