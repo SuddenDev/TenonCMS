@@ -6,6 +6,7 @@ import { createDb, migrate, toDoc } from './db/index.ts'
 import { checkRefs, checkSchema, populate, remove, type Spec } from './relations.ts'
 import {
   type Checked,
+  type CheckRefs,
   type Collection,
   type Data,
   type Doc,
@@ -39,8 +40,8 @@ export type CmsOptions<
   A extends AuthOptions = {},
   P extends PopulateConfig = {},
 > = {
-  collections?: C
-  globals?: G
+  collections?: C & NoInfer<CheckRefs<C, C>>
+  globals?: G & NoInfer<CheckRefs<G, C>>
   /** Defaults for reads that resolve relations. */
   populate?: P
   database: { url: string; authToken?: string }

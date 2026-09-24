@@ -111,6 +111,52 @@ export type Doc<F extends Fields> = Data<F> & {
   updatedAt: string
 }
 
+/** Dot paths of relation fields in `F` that point to `Target`, through groups. */
+type RelationPaths<F, Target extends string, P extends string = ''> = {
+  [K in keyof F & string]: F[K] extends { type: 'group'; fields: infer G }
+    ? RelationPaths<G, Target, `${P}${K}.`>
+    : F[K] extends { type: 'relation'; collection: Target }
+      ? `${P}${K}`
+      : never
+}[keyof F & string]
+
+/** The paths a join may use, or a message when no relation in `N` points to `Self`. */
+type JoinPaths<F, N extends string, Self extends string> = [RelationPaths<F, Self>] extends [never]
+  ? `no relation in "${N}" points to "${Self}"`
+  : RelationPaths<F, Self>
+
+/** `F` with each invalid `collection` or `on` replaced by the values it accepts, so the error names them. */
+// Widened `string` values are not checked; only literals can be.
+type CheckFields<F, C, Self extends string> = {
+  [K in keyof F]: F[K] extends { type: 'group'; fields: infer G }
+    ? { [P in keyof F[K]]: P extends 'fields' ? CheckFields<G, C, Self> : F[K][P] }
+    : F[K] extends { type: 'relation' | 'join'; collection: infer N }
+      ? string extends N
+        ? F[K]
+        : N extends keyof C
+        ? F[K] extends { type: 'join'; on: infer O }
+          ? string extends O
+            ? F[K]
+            : O extends RelationPaths<FieldsOf<C, N>, Self>
+            ? F[K]
+            : { [P in keyof F[K]]: P extends 'on' ? JoinPaths<FieldsOf<C, N>, N & string, Self> : F[K][P] }
+          : F[K]
+        : { [P in keyof F[K]]: P extends 'collection' ? keyof C & string : F[K][P] }
+      : F[K]
+}
+
+/**
+ * Checks every relation and join in `S` against the collections in `C`.
+ * Resolves to `S` when all are valid. Use it as `S & NoInfer<CheckRefs<S, C>>`, so `S` is inferred from the argument alone.
+ */
+export type CheckRefs<S, C> = S extends { [K in keyof S]: { fields: unknown } }
+  ? { [K in keyof S]: { [P in keyof S[K]]: P extends 'fields' ? CheckFields<S[K][P], C, K & string> : S[K][P] } } extends infer R
+    ? S extends R
+      ? S
+      : R
+    : never
+  : S
+
 export function defineCollection<const T extends Collection>(collection: T): T {
   return collection
 }

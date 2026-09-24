@@ -173,6 +173,7 @@ posts: { type: 'join', collection: 'posts', on: 'author' }             // 1-m, o
 | `join` | `collection` (source), `on` (path to a relation there, e.g. `author` or `seo.image`), `label` | top level of collections only; not stored |
 
 - Ids live in the document JSON: a string, or a string array with `many`. Writes check that every id exists in the target collection and that a document does not reference itself (400). `many` arrays keep their order and reject duplicates. A required `many` relation needs at least one id.
+- `defineCms` also checks `collection` and `join.on` at the type level: a typo shows as an error in `integral.config.ts`, naming the field path and the allowed values.
 - `defineCms` throws at startup for an unknown target, a `join` whose `on` is not a relation to its own collection, `required` with `onDelete: 'set-null'`, a `join` in a global or group, `cascade` in a global, and `populate.depth` above `populate.maxDepth`.
 - Filters accept single top-level relations (`where: { author: id }`), not `many` relations, relations in groups or joins.
 - `create` and `update` return ids.

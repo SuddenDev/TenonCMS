@@ -6,7 +6,7 @@ import { createAuthMiddleware } from 'better-auth/api'
 import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
-import { ConflictError, defineCms, type PopulateConfig, type Schema } from './index.ts'
+import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema } from './index.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -472,6 +472,40 @@ describe('relation schema', () => {
 
   it('accepts relations, joins through groups and self-references', () => {
     expect(() => relational()).not.toThrow()
+  })
+
+  it('checks relation targets and join paths at the type level', () => {
+    const db = { database: { url: ':memory:' }, secret: '' }
+    const authors = defineCollection({ fields: { name: { type: 'text' }, posts: { type: 'join', collection: 'posts', on: 'author' } } })
+    const posts = defineCollection({
+      fields: {
+        author: { type: 'relation', collection: 'authors' },
+        seo: { type: 'group', fields: { image: { type: 'relation', collection: 'posts' } } },
+        parent: { type: 'relation', collection: 'posts', many: true },
+      },
+    })
+    const site = defineGlobal({ fields: { home: { type: 'relation', collection: 'posts' } } })
+    const unknown = defineCollection({ fields: { a: { type: 'relation', collection: '' } } })
+    const inGroup = defineCollection({ fields: { g: { type: 'group', fields: { a: { type: 'relation', collection: 'nope' } } } } })
+    const joinTarget = defineCollection({ fields: { p: { type: 'join', collection: 'nope', on: 'author' } } })
+    const joinOnText = defineCollection({ fields: { p: { type: 'join', collection: 'authors', on: 'name' } } })
+    const joinOnOther = defineCollection({ fields: { p: { type: 'join', collection: 'posts', on: 'author' } } })
+    const badGlobal = defineGlobal({ fields: { home: { type: 'relation', collection: 'nope' } } })
+    ;() => {
+      defineCms({ ...db, collections: { posts, authors }, globals: { site } })
+      // @ts-expect-error unknown collection
+      defineCms({ ...db, collections: { posts, authors, unknown } })
+      // @ts-expect-error unknown collection inside a group
+      defineCms({ ...db, collections: { posts, authors, inGroup } })
+      // @ts-expect-error join on an unknown collection
+      defineCms({ ...db, collections: { posts, authors, joinTarget } })
+      // @ts-expect-error join on a field that is not a relation
+      defineCms({ ...db, collections: { posts, authors, joinOnText } })
+      // @ts-expect-error join on a relation that points to another collection
+      defineCms({ ...db, collections: { posts, authors, joinOnOther } })
+      // @ts-expect-error relation in a global to an unknown collection
+      defineCms({ ...db, collections: { posts, authors }, globals: { badGlobal } })
+    }
   })
 })
 
