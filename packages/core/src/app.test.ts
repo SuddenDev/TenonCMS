@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createClient as createLibsql } from '@libsql/client'
-import { twoFactor } from 'better-auth/plugins'
+import { admin as adminPlugin, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { defineCms, type Schema } from './index.ts'
@@ -131,6 +131,19 @@ describe('auth', () => {
     await client.signUp(admin)
     expect(await status(client.signUp({ ...admin, email: 'c@d.co' }))).toBe(403)
     expect(calls).toEqual(['before', 'after:a@b.co'])
+  })
+
+  it('lets a signed-in admin create users', async () => {
+    // `defaultRole: 'admin'` makes the first user an admin.
+    const { client, fetch } = setup(defineCms({ ...base, auth: { plugins: [adminPlugin({ defaultRole: 'admin' })] } }))
+    await client.signUp(admin)
+    const res = await fetch(`${origin}/api/cms/auth/admin/create-user`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'c@d.co', password: 'password123', name: 'C' }),
+    })
+    expect(res.status).toBe(200)
+    expect(await status(client.signUp({ ...admin, email: 'e@f.co' }))).toBe(403)
   })
 
   it('signs out and in again', async () => {

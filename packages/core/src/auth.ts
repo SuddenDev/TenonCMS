@@ -4,6 +4,7 @@ import { API_BASE } from './client.ts'
 import type { Database } from './db/index.ts'
 
 type UserCreate = NonNullable<NonNullable<NonNullable<BetterAuthOptions['databaseHooks']>['user']>['create']>
+type BeforeCreate = Parameters<NonNullable<UserCreate['before']>>
 type Model = 'user' | 'session' | 'account' | 'verification'
 
 // Core reads the `user` table by name, so models MUST keep their default names.
@@ -28,9 +29,9 @@ export function authOptions<A extends AuthOptions>(db: Kysely<Database>, secret:
         create: {
           ...create,
           // Core MUST run first, so a host hook cannot reopen public sign-up.
-          async before(...args: Parameters<NonNullable<UserCreate['before']>>) {
-            await firstUserOnly(db)
-            return create?.before?.(...args)
+          async before(user: BeforeCreate[0], ctx: BeforeCreate[1]) {
+            await firstUserOnly(db, ctx)
+            return create?.before?.(user, ctx)
           },
         },
       },
@@ -38,8 +39,9 @@ export function authOptions<A extends AuthOptions>(db: Kysely<Database>, secret:
   } satisfies BetterAuthOptions
 }
 
-// Only the first user may sign up. Later users MUST be invited by an admin.
-async function firstUserOnly(db: Kysely<Database>) {
+// Only public sign-up is limited to the first user. A signed-in admin MAY create more users.
+async function firstUserOnly(db: Kysely<Database>, ctx: BeforeCreate[1]) {
+  if (ctx?.path !== '/sign-up/email') return
   const { rows } = await sql<{ n: number }>`SELECT count(*) AS n FROM "user"`.execute(db)
   if (rows[0].n > 0) throw new APIError('FORBIDDEN', { message: 'Sign-up is closed' })
 }
