@@ -454,3 +454,39 @@ describe('relation schema', () => {
     expect(() => relational()).not.toThrow()
   })
 })
+
+describe('relation writes', () => {
+  let r: ReturnType<typeof setup<ReturnType<typeof relational>>>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    r = setup(relational())
+    await r.client.signUp(admin)
+    ids = await seed(r.cms)
+  })
+
+  it('rejects an unknown id', async () => {
+    const { client } = r
+    expect(await status(client.create('posts', { title: 'x', author: 'nope' }))).toBe(400)
+    expect(await status(client.create('posts', { title: 'x', tags: ['nope'] }))).toBe(400)
+    expect(await status(client.create('posts', { title: 'x', seo: { image: 'nope' } }))).toBe(400)
+    expect(await status(client.setGlobal('site', { logo: 'nope' }))).toBe(400)
+  })
+
+  it('rejects an id from another collection', async () => {
+    expect(await status(r.client.create('posts', { title: 'x', author: ids.t1.id }))).toBe(400)
+  })
+
+  it('rejects a self-reference', async () => {
+    const page = await r.cms.create('pages', { title: 'p' })
+    expect(await status(r.client.update('pages', page.id, { title: 'x', parent: page.id }))).toBe(400)
+    expect(await r.cms.findById('pages', page.id)).not.toHaveProperty('parent')
+  })
+
+  it('returns ids', async () => {
+    expect(await r.client.create('posts', { title: 'x', author: ids.a.id })).toMatchObject({ author: ids.a.id })
+  })
+
+  it('rejects duplicates over HTTP', async () => {
+    expect(await status(r.client.create('posts', { title: 'x', tags: [ids.t1.id, ids.t1.id] }))).toBe(400)
+  })
+})

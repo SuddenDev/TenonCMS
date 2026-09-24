@@ -1,3 +1,5 @@
+import { type Kysely, sql } from 'kysely'
+import type { Database } from './db/index.ts'
 import type { Field, Fields, Schema } from './schema.ts'
 
 export type RelationField = Extract<Field, { type: 'relation' }>
@@ -38,5 +40,44 @@ export function checkSchema(schema: Schema) {
       const target = source && relationPaths(source).find((r) => r.path.join('.') === f.on)
       if (target?.field.collection !== name) fail(`join "${name}.${key}" needs "${f.on}" to be a relation to "${name}" in "${f.collection}"`)
     }
+  }
+}
+
+/** Thrown by the local API for invalid input. HTTP returns `status` with `body`. */
+export class HttpError extends Error {
+  constructor(
+    public status: 400,
+    public body: object,
+  ) {
+    super(JSON.stringify(body))
+  }
+}
+
+function at(data: any, path: string[]): any {
+  return path.reduce((o, k) => o?.[k], data)
+}
+
+/** Every id MUST exist in its target collection. One query per relation field. */
+export async function checkRefs(
+  q: Kysely<Database>,
+  fields: Fields,
+  data: Record<string, unknown>,
+  self?: { collection: string; id: string },
+) {
+  for (const { path, field } of relationPaths(fields)) {
+    const value = at(data, path)
+    const ids: string[] = value == null ? [] : field.many ? value : [value]
+    const fail = (message: string) => {
+      throw new HttpError(400, { error: [{ path, message }] })
+    }
+    if (self && field.collection === self.collection && ids.includes(self.id)) fail('A document cannot reference itself')
+    if (!ids.length) continue
+    const found = await q
+      .selectFrom('cms_documents')
+      .select('id')
+      .where('collection', '=', field.collection)
+      .where(sql<boolean>`id IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`)
+      .execute()
+    if (found.length !== new Set(ids).size) fail(`Unknown id in "${field.collection}"`)
   }
 }

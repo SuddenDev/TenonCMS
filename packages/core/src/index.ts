@@ -3,7 +3,7 @@ import { type Selectable, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate } from './db/index.ts'
-import { checkSchema } from './relations.ts'
+import { checkRefs, checkSchema } from './relations.ts'
 import { type Collection, type Data, type Doc, type FilterKey, filterable, type Global, type Schema } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
@@ -122,10 +122,12 @@ export function defineCms<
       return row && (toDoc(row) as CollectionDoc<T, K>)
     },
 
-    /** Creates a document. Does not validate `data`. */
+    /** Creates a document. Checks relation ids, but does not validate the rest of `data`. */
     async create<K extends keyof Collections<T> & string>(collection: K, data: Record<string, unknown>) {
+      const q = await db()
+      await checkRefs(q, schema.collections![collection].fields, data)
       const now = Date.now()
-      const row = await (await db())
+      const row = await q
         .insertInto('cms_documents')
         .values({ id: crypto.randomUUID(), collection, data: JSON.stringify(data), created_at: now, updated_at: now })
         .returningAll()
@@ -133,9 +135,11 @@ export function defineCms<
       return toDoc(row) as CollectionDoc<T, K>
     },
 
-    /** Replaces the data of a document. Returns `undefined` if it does not exist. Does not validate `data`. */
+    /** Replaces the data of a document. Returns `undefined` if it does not exist. Checks relation ids, but does not validate the rest of `data`. */
     async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
-      const row = await (await db())
+      const q = await db()
+      await checkRefs(q, schema.collections![collection]?.fields ?? {}, data, { collection, id })
+      const row = await q
         .updateTable('cms_documents')
         .set({ data: JSON.stringify(data), updated_at: Date.now() })
         .where('collection', '=', collection)
@@ -156,11 +160,13 @@ export function defineCms<
       return (row ? JSON.parse(row.data) : {}) as Partial<GlobalData<T, K>>
     },
 
-    /** Replaces the data of a global. Does not validate `data`. */
+    /** Replaces the data of a global. Checks relation ids, but does not validate the rest of `data`. */
     async setGlobal<K extends keyof Globals<T> & string>(name: K, data: Record<string, unknown>) {
+      const q = await db()
+      await checkRefs(q, schema.globals![name].fields, data)
       const now = Date.now()
       const json = JSON.stringify(data)
-      await (await db())
+      await q
         .insertInto('cms_globals')
         .values({ name, data: json, created_at: now, updated_at: now })
         .onConflict((oc) => oc.column('name').doUpdateSet({ data: json, updated_at: now }))

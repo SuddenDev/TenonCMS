@@ -1,7 +1,9 @@
 import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
+import { HTTPException } from 'hono/http-exception'
 import { API_BASE } from './client.ts'
 import type { Cms } from './index.ts'
+import { HttpError } from './relations.ts'
 import { dataSchema, filterable, type Schema, type Fields } from './schema.ts'
 
 export function createApp(cms: Cms<Schema>) {
@@ -12,6 +14,12 @@ export function createApp(cms: Cms<Schema>) {
   }
 
   const api = new Hono().basePath(API_BASE)
+  api.onError((err, c) => {
+    if (err instanceof HttpError) return c.json(err.body, err.status)
+    if (err instanceof HTTPException) return err.getResponse()
+    console.error(err)
+    return c.text('Internal Server Error', 500)
+  })
 
   api.on(['GET', 'POST'], '/auth/*', async (c) => (await cms.auth()).handler(c.req.raw))
 
