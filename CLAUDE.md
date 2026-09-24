@@ -8,8 +8,8 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 - `pnpm build`: packages and all examples
 - `pnpm typecheck`: runs `build:packages`, then typechecks all workspaces. Run it before calling work done. While a dev watcher runs, use `pnpm -r typecheck` instead (see Gotchas).
 - `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`. Core builds first, then the admin writes into `packages/core/dist/admin`
-- `pnpm --filter integral-cms db:generate`: after editing `packages/core/src/db/schema.ts`
-- `pnpm test`: Vitest in `packages/core` (`pnpm --filter integral-cms test:watch` to watch). No build needed, tests import `src/`.
+- Core migrations are code in `packages/core/src/db/index.ts`. Add a new key; never edit one that has shipped.
+- `pnpm test`: Vitest in `packages/core` (`pnpm --filter integral-cms test:watch` to watch). For one test, run `npx vitest run <file> -t '<name>'` in `packages/core`; `pnpm ... test -- -t` does not filter. No build needed, tests import `src/`.
 
 ## Testing
 
@@ -21,11 +21,11 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 
 - `packages/core` publishes as `integral-cms`, with exports `.`, `./client`, `./register` (types only), `./astro`, `./nuxt`, `./vite`, `./admin`, `./admin/vue`, `./admin/react`. It is built with tsdown to `dist/`. `vue`, `react` and `react-dom` are optional peers used only by the two helpers, `vite` only by `./vite`.
   - `src/schema.ts`: field and schema types, type inference (`Data`, `Doc`), `defineCollection()` / `defineGlobal()` identity helpers for `const` inference, `dataSchema()` builds the zod validator.
-  - `src/index.ts`: `defineCms({ collections, globals, database, secret })` returns the local API (`find`, `findOne`, `findById`, `create`, `update`, `delete`, `getGlobal`, `setGlobal`) plus `fetch(request)`.
+  - `src/index.ts`: `defineCms({ collections, globals, database, secret, auth })` returns the local API (`find`, `findOne`, `findById`, `create`, `update`, `delete`, `getGlobal`, `setGlobal`) plus `fetch(request)`.
   - `src/client.ts`: `createClient()`, a typed HTTP client for `/api/cms` with the local API's method names. It owns `API_BASE`; core imports it from here, because the file has no runtime dependencies. Imports types only, so it is safe in the browser. Its types come from the `Register` interface; a type argument overrides it. `src/register.d.ts` (copied to `dist`) augments it with the type of `#integral/config`'s default export. If that alias does not resolve, `cms` is silently `any`, so test typing with `@ts-expect-error`. Keep it in sync with the routes in `app.ts`. The admin uses it too (`packages/admin/src/api.ts`), so it is the only HTTP client.
   - `src/app.ts`: Hono app. `/api/cms/*` has `auth/*` (better-auth) and the public GET read routes (`collections/:name[/:id]`, `globals/:name`; query params are equality filters coerced to the field type, except `limit`), then CSRF and session middleware, then `schema` and the write routes.
-  - `src/auth.ts`: better-auth with the Drizzle adapter and email/password. A database hook allows only the first user to sign up.
-  - `src/db/`: Drizzle schema (`cms_documents`, `cms_globals`, better-auth tables), libsql client, migration runner. `migrations.gen.ts` is generated.
+  - `src/auth.ts`: `authOptions()` merges the host's `auth` options (better-auth's, without `modelName`) with core's. Core owns `database`, `basePath` and `secret`, forces `emailAndPassword.enabled`, and runs its `user.create.before` hook first: public sign-up (`/sign-up/email`) works only for the first user.
+  - `src/db/`: Kysely over `libsqlDialect(client)`, the hand-written `Database` interface (`cms_documents`, `cms_globals`), and `migrate()`: Kysely's `Migrator` with inline migrations (table `cms_kysely_migration`), then better-auth's `getMigrations()` for auth and plugin tables.
   - Adapters generate no code. They alias `#integral/config` to the host's `integral.config.ts` and point the framework at runtime files that ship as `.ts` source in `dist/` (tsdown `copy`). The host's Vite or Nitro compiles them. `env.d.ts` stubs `#integral/config`, `#app` and `App.Locals` so core can typecheck them; it is not published.
   - `src/admin/`: hand-written `index.d.ts` for `integral-cms/admin` and `default.ts`, the stub `#integral/admin` resolves to when the host has no `integral.admin.ts`. Both are copied to `dist/admin` (with `entry.ts` and `virtual.d.ts`), where the admin's Vite build writes `index.js`. `vue.ts` and `react.ts` are tsdown entries: `renderVue(Component)` / `renderReact(Component)` wrap a host component into a `Mount` with reactive props and `update`.
   - Standalone admin page: `src/admin/entry.ts` mounts the admin with `#integral/admin`, `src/admin/html.ts` builds the page from the entry's script and CSS URLs and holds the helpers all adapters share (`adminPath`, `adminAlias`, `adminInput`, `adminChunk`, `Options`), and `#integral/admin-html` exports that page as a string (`src/admin/virtual.d.ts`, referenced by `register.d.ts`). No host shell, CSS or JS loads on `/admin`.
@@ -42,7 +42,8 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 ## Design decisions
 
 - **One JSON documents table** for all collections. Schema changes need no migration. Filters use `json_extract`, and field names are checked against the schema before they reach SQL. SonicJS does the same.
-- **Core owns the fixed tables only.** Migrations come from drizzle-kit and are embedded as strings, so they run without a filesystem (Cloudflare later). They run lazily on the first DB access.
+- **Core owns the fixed tables only.** CMS migrations are hand-written Kysely code in the bundle, so they run without a filesystem (Cloudflare later). better-auth creates its own tables from the actual options, plugins included. All run lazily on the first DB access.
+- **Kysely, own libsql dialect.** better-auth's `getMigrations()` only works with its Kysely adapter. `@libsql/kysely-libsql` pulls an older `@libsql/client` and a second native binary that the Nuxt build does not trace, so core has a small dialect over its own client.
 - **No module-level state.** Everything lives in the `defineCms()` closure, so several instances can coexist.
 - **Lazy DB and auth.** Nothing connects at import time. The secret is checked when auth is first used, so public pages keep working with a bad config.
 - **The admin is a compiled library the host bundles.** Core never imports it, so headless is free. Extensions come from `integral.admin.ts`, compiled by the host's Vite with HMR.
@@ -71,6 +72,8 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 - Nuxt's `.nuxt/types/nitro-routes.d.ts` imports every server handler for `$fetch` route types, and that file belongs to the app tsconfig project. Server runtime files in a module MUST import from `h3`, not `#imports`, or the app project cannot resolve them.
 - tsdown `copy` with a directory `from` nests the directory under `to`. Use the parent as `to`.
 - A stale Astro daemon or leftover `cms.db` makes sign-up return 403 (first-user-only). Run `astro dev stop` and delete the DB before a smoke test.
+- `:memory:` libsql has one connection. Code inside a transaction MUST use `trx`, or it gets `TRANSACTION_ACTIVE`.
+- Kysely 0.29 exports `Migrator` from `kysely/migration`, not from `kysely`.
 - zsh: quote paths like `[slug].vue` in shell commands, or the glob silently matches nothing.
 - tsdown d.ts output needs explicit types on the Nuxt module (`NuxtModule<Options>`). `@nuxt/schema` must be a peer, or its types get inlined.
 - Nitro hook types (`nitro:config`) come from `import type {} from '@nuxt/nitro-server/augments'`.
@@ -98,7 +101,7 @@ Expect 200, 201, and the post in the page HTML. Delete the example's `cms.db` be
 - TypeScript strict. Keep the file count small and add no abstraction until a second use exists.
 - Validate all API input with `dataSchema()`. Every write route MUST stay behind the session middleware. Read routes are public and MUST only accept field names that exist in the schema.
 - Admin UI: plain Vue SFCs with `<script setup>`, Tailwind classes, and the shared `.input` / `.btn` / `.btn-ghost` classes in `style.css`. Host inputs render in the admin's light DOM, so they can use those classes too.
-- Versions in use: Astro 7, Nuxt 4.5 (nitropack 2, h3 v1), TanStack Start 1.168 (nitro 3 beta, React 19), Vite 8, TypeScript 6, better-auth 1.7, drizzle-orm 0.45, Hono 4, zod 4.
+- Versions in use: Astro 7, Nuxt 4.5 (nitropack 2, h3 v1), TanStack Start 1.168 (nitro 3 beta, React 19), Vite 8, TypeScript 6, better-auth 1.7, kysely 0.29, Hono 4, zod 4.
 
 ## Next up
 

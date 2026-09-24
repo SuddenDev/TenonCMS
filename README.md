@@ -64,6 +64,7 @@ export const posts = defineCollection({
 
 ```ts
 // integral.config.ts
+import { admin, twoFactor } from 'better-auth/plugins'
 import { defineCms } from 'integral-cms'
 import { posts } from './collections/posts'
 
@@ -72,6 +73,12 @@ export default defineCms({
   globals: { site: { fields: { title: { type: 'text', required: true } } } },
   database: { url: 'file:/absolute/path/cms.db' }, // or libsql://…, plus authToken
   secret: process.env.CMS_SECRET!, // at least 32 characters
+  // Optional, see Auth below.
+  auth: {
+    plugins: [admin(), twoFactor()],
+    databaseHooks: { user: { create: { after: sendWelcome } } },
+    session: { expiresIn: 60 * 60 * 24 * 30 },
+  },
 })
 ```
 
@@ -215,6 +222,42 @@ import { mountAdmin } from 'integral-cms/admin'
 mountAdmin('#admin')
 ```
 
+## Auth
+
+`auth` is [better-auth](https://better-auth.com)'s options object. It is better-auth's API and follows better-auth's versioning.
+
+- Core owns `database`, `basePath` and `secret`. It always turns `emailAndPassword` on, because the admin login needs it; your other email options stay.
+- `modelName` is not accepted: core reads the `user` table by name, so auth tables keep their default names.
+- Only the first user can sign up publicly (`/sign-up/email`). A signed-in admin can create more users, for example with the `admin()` plugin. Other public sign-up paths, like social sign-in or magic links, are not limited yet.
+- Tables of plugins are created at runtime on the first database access. There is no CLI step.
+- Core's first-user rule runs before your `databaseHooks.user.create.before`.
+- The admin login supports email and password only. Plugins that need UI (2FA, passkey, magic link) work on the server, but not in the admin yet.
+
+Coming from Payload, the auth hooks map to better-auth's request hooks:
+
+| Payload | better-auth |
+| --- | --- |
+| `beforeLogin` | `hooks.before` with `ctx.path === '/sign-in/email'` |
+| `afterLogin` | `hooks.after` with `ctx.path === '/sign-in/email'` |
+| `afterLogout` | `hooks.after` with `ctx.path === '/sign-out'` |
+| `afterForgotPassword` | `hooks.after` with `ctx.path === '/request-password-reset'` |
+
+```ts
+import { createAuthMiddleware } from 'better-auth/api'
+
+auth: {
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === '/sign-in/email') console.log('signed in')
+    }),
+  },
+}
+```
+
+### Upgrading from the Drizzle version
+
+There is no upgrade path. The auth tables changed their column names and date formats. Delete `cms.db` before you upgrade; content and users are lost.
+
 ## Customize the admin
 
 Create `integral.admin.ts` next to `integral.config.ts`. Astro, Nuxt and `integralAdmin()` pick it up at startup; delete it to go back to the default. Restart the dev server after adding or removing it.
@@ -295,7 +338,6 @@ examples/tanstack-start  TanStack Start (React) app on Nitro v3
 | `pnpm --filter @integral-cms/admin watch` | Rebuild the admin into the example on change |
 | `pnpm build` | Build packages and all examples |
 | `pnpm typecheck` | Build packages, then type-check everything |
-| `pnpm --filter integral-cms db:generate` | New migration after editing `packages/core/src/db/schema.ts` |
 
 ## Status
 
@@ -306,7 +348,8 @@ Working:
 - Public read API with equality filters and `limit`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Validation at the API (zod), CSRF protection, first-user-only sign-up
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
-- SQLite via libsql (local file or Turso)
+- SQLite via libsql (local file or Turso), Kysely
+- better-auth options pass through (`auth`): plugins, hooks, sessions
 
 Roadmap, roughly in order:
 
