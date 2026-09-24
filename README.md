@@ -54,6 +54,7 @@ export const posts = defineCollection({
   fields: {
     title: { type: 'text', required: true },
     slug: { type: 'text', required: true },
+    author: { type: 'relation', collection: 'authors' },
     publishedAt: { type: 'date' },
     category: { type: 'select', options: ['news', 'guide'] },
     featured: { type: 'boolean' },
@@ -63,13 +64,25 @@ export const posts = defineCollection({
 ```
 
 ```ts
+// collections/authors.ts
+export const authors = defineCollection({
+  titleField: 'name',
+  fields: {
+    name: { type: 'text', required: true },
+    posts: { type: 'join', collection: 'posts', on: 'author' },
+  },
+})
+```
+
+```ts
 // integral.config.ts
 import { admin, twoFactor } from 'better-auth/plugins'
 import { defineCms } from 'integral-cms'
+import { authors } from './collections/authors'
 import { posts } from './collections/posts'
 
 export default defineCms({
-  collections: { posts },
+  collections: { posts, authors },
   globals: { site: { fields: { title: { type: 'text', required: true } } } },
   database: { url: 'file:/absolute/path/cms.db' }, // or libsql://…, plus authToken
   secret: process.env.CMS_SECRET!, // at least 32 characters
@@ -82,7 +95,7 @@ export default defineCms({
 })
 ```
 
-Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `group`. `defineGlobal()` does the same for globals.
+Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `group`, `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
 
 A `group` nests fields under one key and renders as one section in the admin:
 
@@ -118,7 +131,7 @@ Everything is typed from the schema. Unknown collections or fields are type erro
 
 Reads are also available over HTTP without a session, because the site renders that content anyway.
 Query params are equality filters, and `limit` caps the result: `GET /api/cms/collections/posts?slug=hello&limit=1`, `GET /api/cms/globals/site`.
-Because of that, a field named `limit` cannot be filtered over HTTP.
+`populate` and `depth` control [relations](#relations). Because of that, fields named `limit`, `populate` or `depth` cannot be filtered over HTTP.
 Writes and the schema endpoint need an admin session.
 
 In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your schema:
@@ -142,6 +155,60 @@ The Astro and Nuxt adapters register your `cms` type, so `createClient()` needs 
 ```
 
 `createClient<typeof otherCms>()` overrides the registered type.
+
+### Relations
+
+Documents reference other documents. A `relation` stores ids, a `join` reads the other side:
+
+```ts
+author: { type: 'relation', collection: 'authors' }                    // m-1
+tags: { type: 'relation', collection: 'tags', many: true }             // m-m
+parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } // self-reference
+posts: { type: 'join', collection: 'posts', on: 'author' }             // 1-m, on `authors`
+```
+
+| Field | Options | Where |
+|---|---|---|
+| `relation` | `collection` (target), `many`, `onDelete`, `label`, `required` | top level and in groups, in collections and globals; targets collections only |
+| `join` | `collection` (source), `on` (path to a relation there, e.g. `author` or `seo.image`), `label` | top level of collections only; not stored |
+
+- Ids live in the document JSON: a string, or a string array with `many`. Writes check that every id exists in the target collection and that a document does not reference itself (400). `many` arrays keep their order and reject duplicates. A required `many` relation needs at least one id.
+- `defineCms` throws at startup for an unknown target, a `join` whose `on` is not a relation to its own collection, `required` with `onDelete: 'set-null'`, a `join` in a global or group, `cascade` in a global, and `populate.depth` above `populate.maxDepth`.
+- Filters accept single top-level relations (`where: { author: id }`), not `many` relations, relations in groups or joins.
+- `create` and `update` return ids.
+
+Reads resolve relations into documents:
+
+```ts
+cms.find('posts')                                         // every relation, default depth
+cms.find('posts', { depth: 1 })
+cms.find('posts', { populate: false })                    // ids only
+cms.find('posts', { populate: { author: { avatar: true }, tags: true } })
+cms.find('pages', { populate: { seo: { image: true } } }) // through a group
+cms.find('authors', { populate: { posts: true } })        // join
+```
+
+- `populate: true` (default) resolves every relation up to `depth` hops. Group keys do not count as hops.
+- A `populate` object resolves only the listed paths: `true` is one hop, a nested object goes further. `depth` is ignored then. `true` on a group key resolves every relation in the group one hop.
+- A `join` resolves only when named in a `populate` object, else it is absent. It returns all matching documents, newest first, with their own relations as ids unless nested paths say otherwise.
+- A missing target resolves to `null`, and is dropped from a `many` array. Cycles end at the depth limit.
+- Result types follow the options, and invalid `populate` keys are type errors.
+- One query per relation or join field per hop.
+
+`defineCms({ populate: { depth: 2, maxDepth: 5 } })` sets the defaults: `depth` for `populate: true` (default 2), `maxDepth` for HTTP requests (default 5; the local API has no limit).
+
+Over HTTP: `?populate=false`, `?populate=author.avatar,tags`, `?depth=3`. The client turns a `populate` object into these paths. Unknown paths, fields that cannot populate and more hops than `maxDepth` return 400.
+
+When a document is deleted, every relation that points to it applies its `onDelete` rule, all in one transaction:
+
+- `set-null` (default): a single relation becomes `null`, a `many` array drops the id.
+- `restrict` (default for `required`): the delete throws `ConflictError` (exported from `integral-cms`) and changes nothing. HTTP returns 409 with `references`, each `{ collection, id }` or `{ global }`.
+- `cascade`: the referencing documents are deleted too, recursively, with their own rules.
+
+Known limits:
+
+- Restrict is checked per document as the cascade reaches it. A `restrict` reference from a document that a later cascade step would delete still blocks the whole delete.
+- Joins and delete checks scan the source collection with `json_extract` / `json_each`. That is fine up to roughly 10k–50k documents per collection. Indexes can come later without API changes.
 
 ### Astro
 
@@ -359,6 +426,7 @@ examples/tanstack-start  TanStack Start (React) app on Nitro v3
 Working:
 
 - Schema-in-code collections and globals with inferred types
+- Relations between collections: `relation` and `join` fields, typed `populate`, `onDelete` rules
 - Admin: list, create, edit, delete; globals; email/password login; custom fields and pages via `integral.admin.ts` (`mount(el, ctx)` from any framework)
 - Public read API with equality filters and `limit`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Validation at the API (zod), CSRF protection, first-user-only sign-up
@@ -372,13 +440,12 @@ Roadmap, roughly in order:
 2. Drafts and published versions
 3. Media uploads with a storage adapter (local disk, S3/R2)
 4. Rich text (format still open: Tiptap JSON or Markdown)
-5. Relations between collections
-6. Invites, roles and access control
-7. Plugin hooks (`beforeChange`, `afterChange`)
-8. Cloudflare Workers: D1 driver, per-request bindings
-9. Postgres
-10. SvelteKit adapter
-11. Publish to npm
+5. Invites, roles and access control
+6. Plugin hooks (`beforeChange`, `afterChange`)
+7. Cloudflare Workers: D1 driver, per-request bindings
+8. Postgres
+9. SvelteKit adapter
+10. Publish to npm
 
 ## Prior art
 
