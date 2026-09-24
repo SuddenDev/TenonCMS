@@ -583,6 +583,23 @@ describe('populate', () => {
     expect((await cms.find('posts'))[0].author).toMatchObject({ avatar: m.id })
   })
 
+  it('resolves only listed paths', async () => {
+    const { m, t1, t2 } = ids
+    const post = (await cms.find('posts', { populate: { author: { avatar: true } } }))[0]
+    expect(post.author?.avatar?.url).toBe('/a.png')
+    expect(post.tags).toEqual([t1.id, t2.id])
+    expect(post.seo?.image).toBe(m.id)
+  })
+
+  it('resolves through groups', async () => {
+    expect((await cms.find('posts', { populate: { seo: { image: true } } }))[0].seo?.image?.url).toBe('/a.png')
+    expect((await cms.find('posts', { populate: { seo: true } }))[0].seo?.image?.url).toBe('/a.png')
+  })
+
+  it('ignores depth with an object', async () => {
+    expect((await cms.find('posts', { populate: { author: true }, depth: 5 }))[0].author?.avatar).toBe(ids.m.id)
+  })
+
   it('findById and findOne populate too', async () => {
     const { a, p } = ids
     expect(await cms.findById('posts', p.id)).toMatchObject({ author: { id: a.id, name: 'Ann' } })
