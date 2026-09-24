@@ -1,26 +1,28 @@
-import { APIError, betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { count } from 'drizzle-orm'
+import { APIError, betterAuth, type BetterAuthOptions } from 'better-auth'
+import { type Kysely, sql } from 'kysely'
 import { API_BASE } from './client.ts'
-import { type Drizzle, schema } from './db/index.ts'
+import type { Database } from './db/index.ts'
 
-export function createAuth(db: Drizzle, secret: string) {
-  return betterAuth({
+export function authOptions(db: Kysely<Database>, secret: string) {
+  return {
     basePath: `${API_BASE}/auth`,
     secret,
-    database: drizzleAdapter(db, { provider: 'sqlite', schema }),
+    database: { db, type: 'sqlite' as const },
     emailAndPassword: { enabled: true },
     databaseHooks: {
       user: {
         create: {
           // Only the first user may sign up. Later users MUST be invited by an admin.
           async before() {
-            const [{ n }] = await db.select({ n: count() }).from(schema.user)
-            if (n > 0) throw new APIError('FORBIDDEN', { message: 'Sign-up is closed' })
+            const { rows } = await sql<{ n: number }>`SELECT count(*) AS n FROM "user"`.execute(db)
+            if (rows[0].n > 0) throw new APIError('FORBIDDEN', { message: 'Sign-up is closed' })
           },
         },
       },
     },
-  })
+  } satisfies BetterAuthOptions
 }
 
+export function createAuth<O extends BetterAuthOptions>(options: O) {
+  return betterAuth(options)
+}

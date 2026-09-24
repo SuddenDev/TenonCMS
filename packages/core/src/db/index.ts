@@ -1,6 +1,6 @@
 import { type Client, createClient, type Transaction } from '@libsql/client'
-import { sql as drizzleSql } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/libsql'
+import type { BetterAuthOptions } from 'better-auth'
+import { getMigrations } from 'better-auth/db/migration'
 import {
   type DatabaseConnection,
   type Dialect,
@@ -11,26 +11,6 @@ import {
   sql,
 } from 'kysely'
 import { type Migration, Migrator } from 'kysely/migration'
-import migrations from './migrations.gen.ts'
-import * as schema from './schema.ts'
-
-export { schema }
-
-export function createDrizzle(url: string, authToken?: string) {
-  return drizzle(createClient({ url, authToken }), { schema })
-}
-
-export type Drizzle = ReturnType<typeof createDrizzle>
-
-export async function migrateDrizzle(db: Drizzle) {
-  await db.run(drizzleSql`CREATE TABLE IF NOT EXISTS cms_migrations (name TEXT PRIMARY KEY)`)
-  const done = new Set((await db.all<{ name: string }>(drizzleSql`SELECT name FROM cms_migrations`)).map((r) => r.name))
-  for (const m of migrations) {
-    if (done.has(m.name)) continue
-    const statements = m.sql.split('--> statement-breakpoint').map((s) => drizzleSql.raw(s))
-    await db.batch([...statements.map((s) => db.run(s)), db.run(drizzleSql`INSERT INTO cms_migrations (name) VALUES (${m.name})`)] as any)
-  }
-}
 
 export interface Database {
   cms_documents: { id: string; collection: string; data: string; created_at: number; updated_at: number }
@@ -64,7 +44,8 @@ const cmsMigrations: Record<string, Migration> = {
 }
 
 // ponytail: no locking between processes; Kysely's migration lock is a no-op on SQLite. Run one instance per database until D1/Postgres.
-export async function migrate(db: Kysely<Database>) {
+// Auth tables come from better-auth after the CMS tables, plugin tables included.
+export async function migrate(db: Kysely<Database>, authOptions: BetterAuthOptions) {
   const { error } = await new Migrator({
     db,
     provider: { getMigrations: async () => cmsMigrations },
@@ -72,6 +53,7 @@ export async function migrate(db: Kysely<Database>) {
     migrationLockTableName: 'cms_kysely_migration_lock',
   }).migrateToLatest()
   if (error) throw error
+  await (await getMigrations(authOptions)).runMigrations()
 }
 
 type Connection = DatabaseConnection & { tx?: Transaction }

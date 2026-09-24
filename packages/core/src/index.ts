@@ -1,8 +1,8 @@
 import { consola } from 'consola'
 import { type Selectable, sql } from 'kysely'
 import { createApp } from './app.ts'
-import { createAuth } from './auth.ts'
-import { createDb, createDrizzle, type Database, migrate, migrateDrizzle } from './db/index.ts'
+import { authOptions, createAuth } from './auth.ts'
+import { createDb, type Database, migrate } from './db/index.ts'
 import type { Collection, Data, Doc, Global, Schema } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
@@ -52,21 +52,20 @@ export function defineCms<const C extends Record<string, Collection> = {}, const
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
-  let ready: Promise<{ db: ReturnType<typeof createDb>; drizzle: ReturnType<typeof createDrizzle> }> | undefined
+  let ready: Promise<{ db: ReturnType<typeof createDb>; options: ReturnType<typeof authOptions> }> | undefined
   const connect = () =>
     (ready ??= (async () => {
-      const drizzle = createDrizzle(database.url, database.authToken)
-      await migrateDrizzle(drizzle)
       const db = createDb(database.url, database.authToken)
-      await migrate(db)
-      return { db, drizzle }
+      const options = authOptions(db, secret)
+      await migrate(db, options)
+      return { db, options }
     })())
   const db = async () => (await connect()).db
 
-  let authInstance: ReturnType<typeof createAuth> | undefined
+  let authInstance: ReturnType<typeof createAuth<ReturnType<typeof authOptions>>> | undefined
   const auth = async () => {
     if (!secret || secret.length < 32) throw new Error('integral-cms: `secret` MUST be at least 32 characters')
-    return (authInstance ??= createAuth((await connect()).drizzle, secret))
+    return (authInstance ??= createAuth((await connect()).options))
   }
 
   const cms = {

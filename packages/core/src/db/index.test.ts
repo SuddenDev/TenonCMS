@@ -17,8 +17,9 @@ it('rolls back an interactive transaction', async () => {
 
 it('runs CMS migrations once', async () => {
   const db = createDb(':memory:')
-  await migrate(db)
-  await migrate(db)
+  const auth = { database: { db, type: 'sqlite' as const } }
+  await migrate(db, auth)
+  await migrate(db, auth)
   const { rows } = await sql<{ name: string }>`SELECT name FROM sqlite_master`.execute(db)
   expect(rows.map((r) => r.name)).toEqual(
     expect.arrayContaining(['cms_documents', 'cms_globals', 'cms_documents_collection_idx', 'cms_kysely_migration']),
