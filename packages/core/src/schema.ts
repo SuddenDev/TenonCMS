@@ -27,13 +27,15 @@ export type Schema = {
   globals?: Record<string, Global>
 }
 
-type FieldValue<F extends Field> = F extends { type: 'number' }
-  ? number
-  : F extends { type: 'boolean' }
-    ? boolean
-    : F extends { type: 'select'; options: readonly (infer O)[] }
-      ? O
-      : string
+type FieldValue<F extends Field> = F extends { type: 'group'; fields: infer G extends Fields }
+  ? Data<G>
+  : F extends { type: 'number' }
+    ? number
+    : F extends { type: 'boolean' }
+      ? boolean
+      : F extends { type: 'select'; options: readonly (infer O)[] }
+        ? O
+        : string
 
 export type Data<F extends Fields> = {
   [K in keyof F as F[K]['required'] extends true ? K : never]: FieldValue<F[K]>

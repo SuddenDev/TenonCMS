@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dataSchema } from './schema.ts'
+import { type Data, dataSchema, type Fields } from './schema.ts'
 
 describe('dataSchema', () => {
   const schema = dataSchema({
@@ -70,5 +70,24 @@ describe('group', () => {
   it('checks required and typed fields inside a present group', () => {
     expect(schema.safeParse({ seo: {}, address: {} }).success).toBe(false)
     expect(schema.safeParse({ seo: { title: 'T', meta: { robots: 1 } }, address: {} }).success).toBe(false)
+  })
+})
+
+describe('group types', () => {
+  const fields = {
+    seo: { type: 'group', fields: { title: { type: 'text' }, noindex: { type: 'boolean' } } },
+    address: { type: 'group', required: true, fields: { geo: { type: 'group', fields: { lat: { type: 'number' } } } } },
+  } as const satisfies Fields
+
+  it('infers nested group types', () => {
+    // Type-level only. The function never runs.
+    ;(d: Data<typeof fields>) => {
+      const title: string | null | undefined = d.seo?.title
+      const lat: number | null | undefined = d.address.geo?.lat
+      // @ts-expect-error an optional group can be null
+      d.seo.title
+      // @ts-expect-error `noindex` is a boolean
+      const n: string | null | undefined = d.seo?.noindex
+    }
   })
 })

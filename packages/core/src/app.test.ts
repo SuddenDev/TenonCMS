@@ -218,7 +218,7 @@ describe('writes', () => {
 
   it('store and read a group', async () => {
     await client.signUp(admin)
-    const post = await client.create('posts', { title: 'Hi', seo: { title: 'S', noindex: true, extra: 1 } } as never)
+    const post = await client.create('posts', { title: 'Hi', seo: { title: 'S', noindex: true, extra: 1 } as never })
     expect(post.seo).toEqual({ title: 'S', noindex: true })
     expect((await client.findById('posts', post.id)).seo).toEqual({ title: 'S', noindex: true })
   })
