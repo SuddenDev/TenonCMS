@@ -6,7 +6,7 @@ import { createAuthMiddleware } from 'better-auth/api'
 import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
-import { defineCms, type Schema } from './index.ts'
+import { defineCms, type PopulateConfig, type Schema } from './index.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -68,7 +68,7 @@ async function status(promise: Promise<unknown>) {
   return error instanceof CmsError ? error.status : error
 }
 
-const relational = (url = ':memory:') =>
+const relational = (url = ':memory:', populate: PopulateConfig = {}) =>
   defineCms({
     collections: {
       media: { fields: { url: { type: 'text', required: true }, usedIn: { type: 'join', collection: 'posts', on: 'seo.image' } } },
@@ -93,6 +93,7 @@ const relational = (url = ':memory:') =>
       pages: { fields: { title: { type: 'text', required: true }, parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } } },
     },
     globals: { site: { fields: { logo: { type: 'relation', collection: 'media' }, featured: { type: 'relation', collection: 'posts', many: true } } } },
+    populate,
     database: { url },
     secret: 'x'.repeat(32),
   })
@@ -557,6 +558,29 @@ describe('populate', () => {
     const post = (await cms.find('posts'))[0]
     expect(post.author).toBeNull()
     expect(post.tags).toMatchObject([{ name: 'one' }])
+  })
+
+  it('limits hops with depth', async () => {
+    const { a, m } = ids
+    expect((await cms.find('posts', { depth: 1 }))[0].author?.avatar).toBe(m.id)
+    expect((await cms.find('posts', { depth: 0 }))[0].author).toBe(a.id)
+  })
+
+  it('ends cycles at the depth limit', async () => {
+    const x = await cms.create('pages', { title: 'x' })
+    const y = await cms.create('pages', { title: 'y', parent: x.id })
+    await cms.update('pages', x.id, { title: 'x', parent: y.id })
+    const doc = await cms.findById('pages', x.id, { depth: 3 })
+    expect(doc?.parent?.id).toBe(y.id)
+    expect(doc?.parent?.parent?.id).toBe(x.id)
+    expect(doc?.parent?.parent?.parent?.id).toBe(y.id)
+    expect(doc?.parent?.parent?.parent?.parent).toBe(x.id)
+  })
+
+  it('uses the config depth', async () => {
+    const cms = relational(':memory:', { depth: 1 })
+    const { m } = await seed(cms)
+    expect((await cms.find('posts'))[0].author).toMatchObject({ avatar: m.id })
   })
 
   it('findById and findOne populate too', async () => {
