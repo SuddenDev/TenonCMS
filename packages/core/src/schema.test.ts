@@ -191,6 +191,22 @@ async function readTypes() {
   // @ts-expect-error depth 3 ends at the fourth hop
   pg.parent?.parent?.parent?.parent?.id
 
+  const o = (await cms.find('posts', { populate: { author: { avatar: true }, tags: true } }))[0]
+  const u: string | null | undefined = o.author?.avatar?.url
+  const oimg: string | null | undefined = o.seo?.image
+  const g = (await cms.find('posts', { populate: { seo: { image: true } } }))[0]
+  const gu: string | undefined = g.seo?.image?.url
+  const g1 = (await cms.find('posts', { populate: { seo: true } }))[0]
+  const gu1: string | undefined = g1.seo?.image?.url
+  // @ts-expect-error unknown key
+  cms.find('posts', { populate: { autor: true } })
+  // @ts-expect-error unknown nested key
+  cms.find('posts', { populate: { author: { avatr: true } } })
+  // @ts-expect-error scalars cannot be populated
+  cms.find('posts', { populate: { title: true } })
+  // @ts-expect-error an extra key next to a valid one
+  cms.find('posts', { populate: { author: true, nope: true } })
+
   const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: '' })
   const w = (await wide.find('x'))[0]
   w.anything

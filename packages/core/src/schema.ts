@@ -172,3 +172,23 @@ export type PopulateOf<O, D extends number> = O extends { populate: false }
     : O extends { depth: infer N extends number }
       ? N
       : D
+
+type FieldsOf<Cs, C> = C extends keyof Cs ? (Cs[C] extends { fields: infer F extends Fields } ? F : never) : never
+
+/** Paths a `populate` object may name: groups, relations and joins, nested along their targets. */
+export type Populate<Cs, F extends Fields> = {
+  [K in keyof F as F[K] extends { type: 'group' | 'relation' | 'join' } ? K : never]?: F[K] extends {
+    type: 'group'
+    fields: infer G extends Fields
+  }
+    ? true | Populate<Cs, G>
+    : F[K] extends { collection: infer C }
+      ? true | Populate<Cs, FieldsOf<Cs, C>>
+      : never
+}
+export type PopulateArg<Cs, F extends Fields> = Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>
+
+// Generic inference skips excess property checks, so extra keys map to `never` at every level.
+export type Exact<P, A> = P extends object
+  ? { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
+  : P

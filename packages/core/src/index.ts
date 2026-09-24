@@ -8,13 +8,15 @@ import {
   type Collection,
   type Data,
   type Doc,
+  type Exact,
   type FilterKey,
   filterable,
+  type Fields,
   type Global,
+  type PopulateArg,
   type PopulateOf,
   type Read,
   type ReadDoc,
-  type ReadOptions,
   type Schema,
 } from './schema.ts'
 
@@ -53,7 +55,17 @@ type Collections<T extends Schema> = NonNullable<T['collections']>
 type Globals<T extends Schema> = NonNullable<T['globals']>
 type CollectionDoc<T extends Schema, K extends keyof Collections<T>> = Doc<Collections<T>[K]['fields']>
 type GlobalData<T extends Schema, K extends keyof Globals<T>> = Data<Globals<T>[K]['fields']>
-type FindOptions<T extends Schema, K extends keyof Collections<T>> = ReadOptions & {
+type PopulateOption<T extends Schema, F extends Fields> = {
+  /** `false` returns ids. An object resolves only the listed paths, `true` one hop. Default: every relation up to `depth`. */
+  populate?: boolean | PopulateArg<Collections<T>, F>
+  /** Hops resolved when `populate` is not an object. */
+  depth?: number
+}
+// Checks a `populate` object literal against the fields at every level.
+type Checked<O extends PopulateOption<T, F>, T extends Schema, F extends Fields> = O & {
+  populate?: Exact<O['populate'], PopulateArg<Collections<T>, F>>
+}
+type FindOptions<T extends Schema, K extends keyof Collections<T>> = PopulateOption<T, Collections<T>[K]['fields']> & {
   /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
   where?: Partial<Record<FilterKey<Collections<T>[K]['fields']>, string | number | boolean | null>>
   /** Maximum number of documents. */
@@ -125,7 +137,7 @@ export function defineCms<
      */
     async find<K extends keyof Collections<T> & string, const O extends FindOptions<T, K> = {}>(
       collection: K,
-      options: O = {} as O,
+      options: Checked<O, T, Collections<T>[K]['fields']> = {} as never,
     ): Promise<ReadCollection<T, K, O, D>[]> {
       let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
       for (const [key, value] of Object.entries(options.where ?? {})) {
@@ -148,16 +160,16 @@ export function defineCms<
      */
     async findOne<K extends keyof Collections<T> & string, const O extends FindOptions<T, K>>(
       collection: K,
-      options: O,
+      options: Checked<O, T, Collections<T>[K]['fields']>,
     ): Promise<ReadCollection<T, K, O, D> | undefined> {
-      return (await cms.find(collection, { ...options, limit: 1 }))[0] as ReadCollection<T, K, O, D> | undefined
+      return (await cms.find(collection, { ...options, limit: 1 } as never))[0] as ReadCollection<T, K, O, D> | undefined
     },
 
     /** Returns one document, or `undefined`. */
-    async findById<K extends keyof Collections<T> & string, const O extends ReadOptions = {}>(
+    async findById<K extends keyof Collections<T> & string, const O extends PopulateOption<T, Collections<T>[K]['fields']> = {}>(
       collection: K,
       id: string,
-      options: O = {} as O,
+      options: Checked<O, T, Collections<T>[K]['fields']> = {} as never,
     ): Promise<ReadCollection<T, K, O, D> | undefined> {
       const row = await (await db())
         .selectFrom('cms_documents')
@@ -201,9 +213,9 @@ export function defineCms<
     },
 
     /** Returns a global. Fields that were never saved are missing. */
-    async getGlobal<K extends keyof Globals<T> & string, const O extends ReadOptions = {}>(
+    async getGlobal<K extends keyof Globals<T> & string, const O extends PopulateOption<T, Globals<T>[K]['fields']> = {}>(
       name: K,
-      options: O = {} as O,
+      options: Checked<O, T, Globals<T>[K]['fields']> = {} as never,
     ): Promise<ReadGlobal<T, K, O, D>> {
       const row = await (await db()).selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
       return (row ? JSON.parse(row.data) : {}) as ReadGlobal<T, K, O, D>
