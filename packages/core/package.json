@@ -47,7 +47,6 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
-    "db:generate": "drizzle-kit generate && node scripts/embed-migrations.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -56,7 +55,6 @@
     "@libsql/client": "^0.18.0",
     "better-auth": "^1.7.5",
     "consola": "^3.4.2",
-    "drizzle-orm": "^0.45.3",
     "hono": "^4.13.8",
     "kysely": "^0.29.0",
     "zod": "^4.6.5"
@@ -104,7 +102,6 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "astro": "^7.3.4",
-    "drizzle-kit": "^0.31.11",
     "h3": "^1.15.11",
     "nuxt": "^4.5.2",
     "react": "^19.3.0",
