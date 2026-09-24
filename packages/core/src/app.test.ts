@@ -1,3 +1,7 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { createClient as createLibsql } from '@libsql/client'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { defineCms } from './index.ts'
@@ -46,10 +50,31 @@ beforeEach(() => {
 
 const admin = { name: 'Admin', email: 'a@b.co', password: 'password123' }
 
+const tmpDb = () => `file:${mkdtempSync(join(tmpdir(), 'integral-'))}/cms.db`
+
+async function tables(url: string) {
+  const db = createLibsql({ url })
+  try {
+    return (await db.execute(`SELECT name FROM sqlite_master WHERE type = 'table'`)).rows.map((r) => r.name)
+  } finally {
+    db.close()
+  }
+}
+
 async function status(promise: Promise<unknown>) {
   const error = await promise.then(() => undefined, (e: unknown) => e)
   return error instanceof CmsError ? error.status : error
 }
+
+describe('database', () => {
+  it('creates CMS and auth tables on first access', async () => {
+    const url = tmpDb()
+    const cms = defineCms({ collections: { posts: { fields: {} } }, database: { url }, secret: 'x'.repeat(32) })
+    await cms.find('posts')
+    await cms.auth()
+    expect(await tables(url)).toEqual(expect.arrayContaining(['cms_documents', 'cms_globals', 'user', 'session', 'account', 'verification']))
+  })
+})
 
 describe('auth', () => {
   it('lets only the first user sign up', async () => {
