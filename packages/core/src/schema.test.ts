@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { type Data, dataSchema, defineCollection, type Fields } from './schema.ts'
+import { defineCms } from './index.ts'
+import { type Collection, type Data, dataSchema, defineCollection, type Fields } from './schema.ts'
 
 describe('dataSchema', () => {
   const schema = dataSchema({
@@ -129,4 +130,53 @@ function writeTypes() {
   const bad: Data<typeof fields> = { author: { id: 'a' } }
   // @ts-expect-error `required` does not apply to joins
   defineCollection({ fields: { p: { type: 'join', collection: 'posts', on: 'author', required: true } } })
+}
+
+const database = { url: ':memory:' }
+const cms = defineCms({
+  collections: {
+    media: { fields: { url: { type: 'text', required: true }, usedIn: { type: 'join', collection: 'posts', on: 'seo.image' } } },
+    authors: {
+      fields: {
+        name: { type: 'text', required: true },
+        avatar: { type: 'relation', collection: 'media' },
+        posts: { type: 'join', collection: 'posts', on: 'author' },
+      },
+    },
+    tags: { fields: { name: { type: 'text', required: true }, posts: { type: 'join', collection: 'posts', on: 'tags' } } },
+    posts: {
+      fields: {
+        title: { type: 'text', required: true },
+        author: { type: 'relation', collection: 'authors' },
+        tags: { type: 'relation', collection: 'tags', many: true },
+        seo: { type: 'group', fields: { image: { type: 'relation', collection: 'media' } } },
+      },
+    },
+    pages: { fields: { title: { type: 'text', required: true }, parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } } },
+  },
+  globals: { site: { fields: { logo: { type: 'relation', collection: 'media' }, featured: { type: 'relation', collection: 'posts', many: true } } } },
+  database,
+  secret: '',
+})
+
+// Checked by `pnpm typecheck` only.
+async function readTypes() {
+  const p = (await cms.find('posts'))[0]
+  const name: string = p.author!.name
+  const url: string | null | undefined = p.author?.avatar?.url
+  const t: string = p.tags![0].name
+  const img: string | null | undefined = p.seo?.image?.url
+  const ids = (await cms.find('posts', { populate: false }))[0]
+  const aid: string | null | undefined = ids.author
+  const one = await cms.findById('posts', 'x', { populate: false })
+  const aid2: string | null | undefined = one?.author
+  const a = (await cms.find('authors'))[0]
+  // @ts-expect-error joins are absent unless named
+  a.posts
+  // @ts-expect-error `populate: false` returns ids
+  ids.author?.name
+
+  const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: '' })
+  const w = (await wide.find('x'))[0]
+  w.anything
 }

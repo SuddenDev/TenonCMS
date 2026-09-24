@@ -112,3 +112,63 @@ export function dataSchema(fields: Fields) {
     ),
   )
 }
+
+// Read types. `Cs` is the collections record. `P` is `false` (ids), a number (hops left) or a populate object.
+type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+type Meta = { id: string; createdAt: string; updatedAt: string }
+type Simplify<T> = { [K in keyof T]: T[K] } & {}
+
+type Sub<P, K> = P extends number ? P : P extends object ? (K extends keyof P ? P[K] : false) : false
+type Next<S> = S extends true ? false : S extends number ? Prev[S] : S
+type Target<Cs, C, P> = C extends keyof Cs
+  ? Cs[C] extends { fields: infer F extends Fields }
+    ? Simplify<Resolve<Cs, F, P> & Meta>
+    : never
+  : never
+
+type Value<Cs, F, S> = F extends { type: 'group'; fields: infer G extends Fields }
+  ? Resolve<Cs, G, S extends true ? 1 : S>
+  : F extends { type: 'relation'; collection: infer C }
+    ? S extends false | 0 | undefined
+      ? F extends { many: true }
+        ? string[]
+        : string
+      : F extends { many: true }
+        ? Target<Cs, C, Next<S>>[]
+        : Target<Cs, C, Next<S>>
+    : F extends { type: 'join'; collection: infer C }
+      ? Target<Cs, C, Next<S>>[]
+      : F extends Field
+        ? FieldValue<F>
+        : never
+
+// Joins are absent unless named in a populate object.
+type Joins<F, P> = {
+  [K in keyof F]: F[K] extends { type: 'join' } ? (P extends object ? (K extends keyof P ? never : K) : K) : never
+}[keyof F]
+type Req<F> = { [K in keyof F]: F[K] extends { required: true } | { type: 'join' } ? K : never }[keyof F]
+
+/** Data of `fields` as a read returns it, with relations resolved as `P` says. */
+export type Resolve<Cs, F extends Fields, P> = Simplify<
+  { [K in Exclude<keyof F, Req<F> | Joins<F, P>>]?: Value<Cs, F[K], Sub<P, K>> | null } & {
+    [K in Exclude<Req<F>, Joins<F, P>>]: Value<Cs, F[K], Sub<P, K>>
+  }
+>
+
+// An untyped schema (the admin's) reads plain records. The recursive types would not terminate.
+type Wide<Cs> = string extends keyof Cs ? true : false
+export type Read<Cs, F extends Fields, P> = Wide<Cs> extends true ? Record<string, any> : Resolve<Cs, F, P>
+export type ReadDoc<Cs, F extends Fields, P> = Simplify<Read<Cs, F, P> & Meta>
+export type ReadOptions = {
+  /** `false` returns ids. An object resolves only the listed paths. Default: every relation up to `depth`. */
+  populate?: boolean | object
+  /** Hops resolved by `populate: true`. */
+  depth?: number
+}
+export type PopulateOf<O, D extends number> = O extends { populate: false }
+  ? false
+  : O extends { populate: infer P extends object }
+    ? P
+    : O extends { depth: infer N extends number }
+      ? N
+      : D
