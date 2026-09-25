@@ -1,8 +1,9 @@
 import { ref } from 'vue'
 import { createClient } from '../../core/src/client'
+import { matchCondition } from '../../core/src/condition'
 
 export { CmsError } from '../../core/src/client'
-import type { Collection, Schema } from '../../core/src/schema'
+import type { Collection, Field, Schema } from '../../core/src/schema'
 
 export type { Data, Field, Fields } from '../../core/src/schema'
 
@@ -19,4 +20,9 @@ export function titleField(collection: Collection) {
 export function isEmpty(value: unknown): boolean {
   if (value === null || value === undefined || value === '' || value === false) return true
   return typeof value === 'object' && Object.values(value).every(isEmpty)
+}
+
+/** Whether a field applies, by its `condition`. `root` is the whole form data, `sibling` the object that holds the field. */
+export function active(field: Field, root: unknown, sibling: unknown) {
+  return !field.condition || matchCondition(field.condition, root, sibling)
 }

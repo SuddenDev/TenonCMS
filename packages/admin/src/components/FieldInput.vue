@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import { client, type Field, isEmpty, schema, titleField } from '../api'
+import { active, client, type Field, isEmpty, schema, titleField } from '../api'
 import { optionsKey } from '../options'
 import Mount from './Mount.vue'
 
 // `loose`: the field sits in an optional group that is empty, so `required` does not apply yet.
 // `path`: dot path of the field, the key of its message in `errors`. Defaults to `name`.
-const props = defineProps<{ name: string; field: Field; loose?: boolean; path?: string; errors?: Record<string, string> }>()
+// `root`: the whole form data, for conditions of group children.
+const props = defineProps<{ name: string; field: Field; root: Record<string, unknown>; loose?: boolean; path?: string; errors?: Record<string, string> }>()
 const model = defineModel<any>()
 const path = computed(() => props.path ?? props.name)
 const message = computed(() => props.errors?.[path.value])
@@ -39,16 +40,18 @@ if (props.field.type === 'relation') {
       <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
     </legend>
     <small v-if="field.description" class="-mt-2 text-xs text-zinc-500">{{ field.description }}</small>
-    <FieldInput
-      v-for="(child, key) in field.fields"
-      :key="key"
-      v-model="model[key]"
-      :name="String(key)"
-      :field="child"
-      :loose="loose || (!field.required && isEmpty(model))"
-      :path="`${path}.${key}`"
-      :errors="errors"
-    />
+    <template v-for="(child, key) in field.fields" :key="key">
+      <FieldInput
+        v-if="active(child, root, model)"
+        v-model="model[key]"
+        :name="String(key)"
+        :field="child"
+        :root="root"
+        :loose="loose || (!field.required && isEmpty(model))"
+        :path="`${path}.${key}`"
+        :errors="errors"
+      />
+    </template>
     <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
   </fieldset>
   <label v-else-if="field.type === 'boolean'" class="flex flex-wrap items-center gap-2 text-sm">

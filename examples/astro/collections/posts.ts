@@ -36,6 +36,12 @@ export const posts = defineCollection({
     publishedAt: { type: "date", label: "Published at" },
     category: { type: "select", options: ["news", "guide"], default: "news" },
     featured: { type: "boolean" },
+    featuredNote: {
+      type: "text",
+      label: "Featured note",
+      required: true,
+      condition: { featured: true },
+    },
     color: { type: "custom:color", label: "Accent color" },
     body: { type: "textarea" },
   },

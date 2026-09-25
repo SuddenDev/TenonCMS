@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { CmsError, type Data, type Fields, isEmpty } from '../api'
+import { active, CmsError, type Data, type Fields, isEmpty } from '../api'
 import FieldInput from './FieldInput.vue'
 
 // `isNew`: plain `default` values pre-fill the form. Function defaults are not in the schema; the server fills them.
@@ -11,13 +11,21 @@ const props = defineProps<{ fields: Fields; initial: Record<string, unknown>; sa
 // Empty strings become null, so cleared optional fields pass validation.
 // Joins are not stored, so they stay out of the form data.
 // `fill`: use defaults for missing values. Like on the server, children of an optional group get them only when the group has a value.
-function normalize(fields: Fields, value: Record<string, any> | null | undefined, save = false, fill = false): Record<string, unknown> {
+// On save, a field whose condition is false becomes null. Conditions read the form data as it is, so '' and null count the same.
+function normalize(
+  fields: Fields,
+  value: Record<string, any> | null | undefined,
+  save = false,
+  fill = false,
+  root: unknown = value,
+): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(fields).flatMap(([k, f]) => {
       if (f.type === 'join') return []
+      if (save && !active(f, root, value)) return [[k, null]]
       const v = value?.[k] === undefined && fill ? structuredClone(f.default) : value?.[k]
       if (f.type === 'group') {
-        const g = normalize(f.fields, v, save, fill && (f.required || v != null))
+        const g = normalize(f.fields, v, save, fill && (f.required || v != null), root)
         return [[k, save && !f.required && isEmpty(g) ? null : g]]
       }
       if (f.type === 'boolean') return [[k, v ?? false]]
@@ -57,7 +65,9 @@ async function submit() {
 
 <template>
   <form class="flex max-w-2xl flex-col gap-4" @submit.prevent="submit">
-    <FieldInput v-for="(field, name) in fields" :key="name" v-model="data[name]" :name="String(name)" :field="field" :errors="errors" />
+    <template v-for="(field, name) in fields" :key="name">
+      <FieldInput v-if="active(field, data, data)" v-model="data[name]" :name="String(name)" :field="field" :root="data" :errors="errors" />
+    </template>
     <div class="flex items-center gap-3">
       <button class="btn" :disabled="busy">Save</button>
       <slot />
