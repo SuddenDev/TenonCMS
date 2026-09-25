@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsdown'
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/client.ts', 'src/astro/index.ts', 'src/nuxt/index.ts', 'src/admin/vue.ts', 'src/admin/react.ts', 'src/vite/index.ts'],
+  entry: ['src/index.ts', 'src/client.ts', 'src/astro/index.ts', 'src/nuxt/index.ts', 'src/admin/vue.ts', 'src/admin/react.ts', 'src/vite/index.ts', 'src/presets.ts'],
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.
   copy: [

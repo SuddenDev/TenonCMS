@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createClient } from './client.ts'
 import { matchCondition } from './condition.ts'
 import { defineCms } from './index.ts'
-import { type Collection, type Data, dataSchema, defineCollection, defineGlobal, type Fields } from './schema.ts'
+import { page } from './presets.ts'
+import { type Collection, type Data, dataSchema, defineCollection, defineGlobal, type Doc, type Fields } from './schema.ts'
 
 describe('matchCondition', () => {
   const d = { type: 'video', price: 5, tag: '', date: '2026-09-24' }
@@ -258,6 +259,12 @@ function slugTypes() {
     const doc = await defineCms({ collections: { c: { fields: f } }, database, secret: '' }).findById('c', 'x')
     doc?.slug satisfies string | undefined
   }
+}
+
+// Checked by `pnpm typecheck` only.
+function pageTypes() {
+  const pages = defineCollection({ fields: { ...page.fields, body: { type: 'textarea' } } })
+  ;(d: Doc<typeof pages.fields>) => [d.title, d.slug, d.path] satisfies [string, string, string | null | undefined]
 }
 
 // Checked by `pnpm typecheck` only.
