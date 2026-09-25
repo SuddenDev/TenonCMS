@@ -102,10 +102,6 @@ export function defineCms<
   checkSchema(schema, defaults)
   const collections: Record<string, Collection> = schema.collections ?? {}
   const globals: Record<string, Global> = schema.globals ?? {}
-  const validators = {
-    collections: mapValues(collections, (c) => dataSchema(c.fields)),
-    globals: mapValues(globals, (g) => dataSchema(g.fields)),
-  }
   const spec = (options: { populate?: boolean | object; depth?: number }): Spec =>
     options.populate === false ? false : typeof options.populate === 'object' ? (options.populate as Spec) : (options.depth ?? defaults.depth)
   const count = (o?: object) => Object.keys(o ?? {}).length
@@ -171,21 +167,19 @@ export function defineCms<
   const setGlobal = (scope: Scope, name: string, data: unknown, effect = false) =>
     run(scope, 'setGlobal', { global: name }, { global: name, data }, (s, args) => write(s, { global: name }, 'setGlobal', args.data, undefined, effect))
 
-  // The fields, hooks and validator of a collection or global.
-  const target = ({ collection, global }: Name) =>
-    collection
-      ? { ...collections[collection], validator: validators.collections[collection] }
-      : { ...globals[global!], validator: validators.globals[global!] }
+  // The fields and hooks of a collection or global.
+  const target = ({ collection, global }: Name) => (collection ? collections[collection] : globals[global!])
 
   // Shared by `create`, `update` and `setGlobal`. Returns `undefined` for a missing document.
   async function write(s: Inner, name: Name, operation: 'create' | 'update' | 'setGlobal', input: unknown, id?: string, effect = false) {
-    const { fields, hooks: h, validator } = target(name)
+    const { fields, hooks: h } = target(name)
     const db = await q(s)
     const originalDoc = name.global ? await loadGlobal(s, name.global) : id ? await load(s, name.collection!, id) : undefined
     if (id && !originalDoc) return undefined
     const base = { ...common(s, name), operation, id, originalDoc }
     const fieldArgs = (data: object) => ({ ...common(s, name), operation, data, originalDoc })
-    const validate = (data: unknown) => parseData(validator, data)
+    // Built per write, because conditions depend on the data.
+    const validate = (data: unknown) => parseData(dataSchema(fields, data), data)
     const copy = structuredClone(input)
     if (typeof copy === 'object' && copy !== null) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
     const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
@@ -419,10 +413,6 @@ async function fieldHooks(stage: keyof FieldHooks<unknown>, fields: Fields, sibl
     const group = siblingData[key]
     if (field.type === 'group' && typeof group === 'object' && group !== null) await fieldHooks(stage, field.fields, group, args, `${path}.`)
   }
-}
-
-function mapValues<T, R>(record: Record<string, T>, fn: (value: T) => R) {
-  return Object.fromEntries(Object.entries(record).map(([key, value]) => [key, fn(value)]))
 }
 
 export type Cms<T extends Schema> = ReturnType<typeof defineCms<NonNullable<T['collections']>, NonNullable<T['globals']>>>

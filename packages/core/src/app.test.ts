@@ -1467,3 +1467,40 @@ describe('onDelete hooks', () => {
     expect(await other.findById('links', link.id, { populate: false })).toMatchObject({ a: null, b: null })
   })
 })
+
+describe('condition', () => {
+  const make = (hooks = {}) =>
+    defineCms({
+      collections: {
+        media: {
+          fields: {
+            mediaType: { type: 'select', options: ['image', 'youtube'] },
+            url: { type: 'text', required: true, condition: { mediaType: 'youtube' } },
+          },
+          hooks,
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+
+  it('lets a required field be missing while its condition is false', async () => {
+    await expect(make().create('media', { mediaType: 'image' })).resolves.toMatchObject({ mediaType: 'image' })
+    await expect(make().create('media', { mediaType: 'youtube' })).rejects.toMatchObject({ errors: { url: expect.any(String) } })
+  })
+
+  it('keeps values of fields whose condition is false', async () => {
+    const cms = make()
+    const doc = await cms.create('media', { mediaType: 'image', url: 'x' })
+    expect(await cms.findById('media', doc.id)).toMatchObject({ url: 'x' })
+  })
+
+  it('checks the field again after beforeChange', async () => {
+    const cms = make({ beforeChange: [({ data }: { data: Record<string, unknown> }) => ({ mediaType: 'youtube', url: data.url })] })
+    await expect(cms.create('media', { mediaType: 'image' })).rejects.toMatchObject({ errors: { url: expect.any(String) } })
+  })
+
+  it('keeps the type check while the condition is false', async () => {
+    await expect(make().create('media', { mediaType: 'image', url: 5 })).rejects.toMatchObject({ errors: { url: expect.any(String) } })
+  })
+})
