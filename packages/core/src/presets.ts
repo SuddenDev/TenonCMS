@@ -62,7 +62,7 @@ export type TreeOptions = {
 }
 
 // Presets fit any collection, so data is untyped. Collection hooks always get `collection`.
-type Args = { data: Record<string, any>; id?: string; collection?: string; cms: LocalApi }
+type Args = { data: any; id?: string; collection?: string; cms: LocalApi }
 
 /**
  * Hooks for a tree of documents with paths, as named records, so a host can leave one out by name:
