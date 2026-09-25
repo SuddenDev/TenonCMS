@@ -1212,6 +1212,26 @@ describe('hooks', () => {
     expect(schema.collections?.posts.fields.hooks).toEqual({ type: 'text' })
     expect(JSON.stringify(schema).replace('"hooks":{"type":"text"}', '')).not.toContain('hooks')
   })
+
+  it('are not sent in /schema, and neither are validate and function defaults', async () => {
+    const cms = defineCms({
+      ...db,
+      collections: {
+        posts: {
+          fields: {
+            status: { type: 'select', options: ['draft', 'live'], default: 'draft', condition: { owner: { exists: true } } },
+            owner: { type: 'text', default: () => 'x', validate: () => true, hooks: { beforeChange: [log('f')] } },
+          },
+        },
+      },
+    })
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    const schema = await client.getSchema()
+    expect(JSON.stringify(schema)).not.toMatch(/validate|hooks/)
+    expect(schema.collections?.posts.fields.owner).not.toHaveProperty('default')
+    expect(schema.collections?.posts.fields.status).toMatchObject({ default: 'draft', condition: { owner: { exists: true } } })
+  })
 })
 
 describe('transactions', () => {
