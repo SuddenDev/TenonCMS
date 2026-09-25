@@ -1966,4 +1966,21 @@ describe('treeHooks', () => {
     await cms.update('categories', shoes.id, { name: 'Shoes', handle: 'footwear' })
     expect((await cms.findById('categories', boots.id))?.url).toBe('/footwear/boots')
   })
+
+  it('does not store values changed by read hooks when paths move', async () => {
+    const cms = defineCms({
+      collections: {
+        pages: {
+          fields: { ...page.fields, title: { type: 'text', required: true, hooks: { afterRead: [({ value }) => `${value} *`] } } },
+          hooks: page.hooks,
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+    const about = await cms.create('pages', { title: 'About', slug: 'about' })
+    const team = await cms.create('pages', { title: 'Team', slug: 'team', parent: about.id })
+    await cms.update('pages', about.id, { slug: 'company' })
+    expect(await cms.findById('pages', team.id)).toMatchObject({ title: 'Team *', path: '/company/team' })
+  })
 })

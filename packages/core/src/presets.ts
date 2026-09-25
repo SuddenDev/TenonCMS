@@ -98,11 +98,10 @@ export function treeHooks({ title = 'title', slug = 'slug', parent = 'parent', p
       },
     },
     afterChange: {
-      /** When the path changes, saves each direct child again. Its own `path` hook then updates it, down the tree. */
+      /** When the path changes, saves each direct child again with no changes. Its own `path` hook then updates it, down the tree. */
       async descendantPaths({ doc, previousDoc, collection, cms }: Omit<Args, 'data'> & { doc: Record<string, any>; previousDoc?: Record<string, any> }) {
         if (doc[path] === previousDoc?.[path]) return
-        for (const { id, createdAt, updatedAt, ...data } of await cms.find(collection!, { where: { [parent]: doc.id }, populate: false }))
-          await cms.update(collection!, id, data)
+        for (const { id } of await cms.find(collection!, { where: { [parent]: doc.id }, populate: false })) await cms.update(collection!, id, {})
       },
     },
   }
