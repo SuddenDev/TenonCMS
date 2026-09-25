@@ -1007,6 +1007,24 @@ describe('hooks', () => {
     expect(counts).toEqual([3])
   })
 
+  it('run in order on delete', async () => {
+    const seen: unknown[] = []
+    const record = ({ id, doc }: { id: string; doc: { title: string } }) => void seen.push([id, doc.title])
+    const hooks = { ...logAll(['beforeOperation', 'afterOperation']), beforeDelete: [log('beforeDelete'), record], afterDelete: [log('afterDelete'), record] }
+    const cms = defineCms({ ...db, collections: { posts: { fields: title, hooks } } })
+    const post = await cms.create('posts', { title: 'a' })
+    calls = []
+    await cms.delete('posts', post.id)
+    expect(calls).toEqual(['beforeOperation', 'beforeDelete', 'afterDelete', 'afterOperation'])
+    expect(seen).toEqual([
+      [post.id, 'a'],
+      [post.id, 'a'],
+    ])
+    calls = []
+    await cms.delete('posts', 'missing')
+    expect(calls).toEqual(['beforeOperation', 'afterOperation'])
+  })
+
   it('are not sent in /schema', async () => {
     const cms = defineCms({
       ...db,

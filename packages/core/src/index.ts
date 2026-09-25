@@ -256,7 +256,16 @@ export function defineCms<
 
       /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
       async delete(collection: keyof Collections<T> & string, id: string) {
-        await (await db()).transaction().execute((trx) => remove(trx, schema, collection, id, new Set()))
+        if (!Object.hasOwn(collections, collection)) return
+        await run(scope, 'delete', { collection }, { collection, id }, async (s, args) => {
+          const h = collections[collection].hooks
+          const doc = await load(s, collection, args.id)
+          if (!doc) return
+          const base = { ...common(s, { collection }), id: args.id, doc }
+          await hooks(h?.beforeDelete, 'doc', doc, base)
+          await remove(s.trx!, schema, collection, args.id, new Set())
+          await hooks(h?.afterDelete, 'doc', doc, base)
+        })
       },
 
       /** Returns a global. Fields that were never saved are missing. */
