@@ -122,7 +122,7 @@ if (slug?.parent && relation?.type === 'relation') {
     </select>
     <span v-else-if="field.type === 'slug'" class="flex items-center gap-1">
       <span class="text-zinc-500">{{ prefix }}</span>
-      <input v-model="model" class="input" v-bind="attrs" required :pattern="SLUG_PATTERN" :aria-invalid="invalid" @input="edited = true" />
+      <input v-model="model" class="input" v-bind="attrs" :pattern="SLUG_PATTERN" :aria-invalid="invalid" @input="edited = true" />
     </span>
     <input v-else-if="field.type === 'number'" v-model.number="model" type="number" class="input" v-bind="attrs" :aria-invalid="invalid" />
     <input v-else v-model="model" :type="field.type === 'date' ? 'date' : 'text'" class="input" v-bind="attrs" :aria-invalid="invalid" />

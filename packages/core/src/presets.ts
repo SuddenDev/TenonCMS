@@ -10,7 +10,7 @@ import { slugify } from './slugify.ts'
 export const page = {
   fields: {
     title: { type: 'text', required: true },
-    slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' },
+    slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path', required: true },
     // `restrict`: a page with children cannot be deleted, so no subtree is lost.
     parent: { type: 'relation', collection: 'pages', onDelete: 'restrict' },
     path: { type: 'text', readOnly: true },

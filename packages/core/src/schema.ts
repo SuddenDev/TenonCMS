@@ -97,9 +97,9 @@ export type Field =
       /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
       type: `custom:${string}`
     })
-  | (Omit<Base, 'required'> & {
+  | (Base & {
       /**
-       * A URL part, stored as a string. Always required. It MUST match `SLUG_PATTERN` (`about-us`); the server and the admin check it.
+       * A URL part, stored as a string. A value MUST match `SLUG_PATTERN` (`about-us`); the server and the admin check it.
        * The server fills nothing on its own; a `beforeValidate` hook such as the page preset's `slugFromTitle` can.
        */
       type: 'slug'
@@ -109,7 +109,6 @@ export type Field =
       parent?: string
       /** The field of the parent document that the admin shows as the prefix. Default `'path'`. */
       path?: string
-      required?: never
     })
   | (Base<Record<string, unknown>> & {
       /** Nests fields under one key, stored as an object. The admin shows it as its own section. Not filterable. */
@@ -316,8 +315,7 @@ type FieldValue<F extends Field> = F extends { type: 'group'; fields: infer G ex
             : string
           : string
 
-// Slugs are always required.
-type RequiredField = { required: true } | { type: 'slug' }
+type RequiredField = { required: true }
 
 export type Data<F extends Fields> = {
   [K in keyof F as F[K] extends { type: 'join' } ? never : F[K] extends RequiredField ? K : never]: FieldValue<F[K]>
@@ -468,8 +466,11 @@ function fieldSchema(field: Exclude<Field, { type: 'join' | 'group' }>, on: bool
       if (pattern) s = s.regex(pattern)
       return required ? s : z.literal('').or(s)
     }
-    case 'slug':
-      return on ? z.string().regex(new RegExp(`^(?:${SLUG_PATTERN})$`, 'v')) : z.string()
+    case 'slug': {
+      if (!on) return z.string()
+      const s = z.string().regex(new RegExp(`^(?:${SLUG_PATTERN})$`, 'v'))
+      return required ? s : z.literal('').or(s)
+    }
     case 'boolean':
       return z.boolean()
     case 'date':
@@ -506,7 +507,7 @@ export function dataSchema(fields: Fields, data: unknown = {}, root = data, acti
         if (field.type === 'join') return []
         const on = active && (!field.condition || matchCondition(field.condition, root, siblings))
         const s = field.type === 'group' ? dataSchema(field.fields, siblings[name], root, on) : fieldSchema(field, on)
-        return [[name, on && (field.required || field.type === 'slug') ? s : s.optional().nullable()]]
+        return [[name, on && field.required ? s : s.optional().nullable()]]
       }),
     ),
   )

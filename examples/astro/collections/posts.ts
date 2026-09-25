@@ -15,6 +15,7 @@ export const posts = defineCollection({
     slug: {
       type: "slug",
       from: "title",
+      required: true,
       unique: true,
       description: "Lowercase letters, digits and dashes. Filled from the title when empty.",
     },

@@ -103,7 +103,7 @@ A `slug` is a URL part such as `about-us`:
 slug: { type: 'slug', from: 'title', unique: true }
 ```
 
-- It is always required and MUST match `[a-z0-9]+(-[a-z0-9]+)*`. The server and the admin check it. There is no `required` option.
+- A value MUST match `[a-z0-9]+(-[a-z0-9]+)*`. The server and the admin check it. Like other fields, it is optional unless `required: true`.
 - `from` names a sibling field. On a new document, the admin fills the slug from it while you type, until you edit the slug. Saved slugs never change on their own, so URLs stay stable.
 - `parent` names a sibling `relation`. The admin then shows the parent's path before the input, e.g. `/about/` [team]. `path` names the parent's field to show (default `'path'`). See [Pages and SEO](#pages-and-seo).
 - The server fills nothing on its own. To fill an empty slug on API writes, use the preset hook `slugFromTitle` (see [Pages and SEO](#pages-and-seo)).
@@ -135,7 +135,7 @@ seo: {
 | `label` | all | Label in the admin |
 | `description` | all | Help text below the field in the admin |
 | `placeholder` | `text`, `textarea`, `number`, `date` | Shown in the empty input |
-| `required` | all but `join` and `slug` | The value MUST be present |
+| `required` | all but `join` | The value MUST be present |
 | `default` | all but `join` | Value on `create` when the field is `undefined` |
 | `minLength`, `maxLength`, `pattern` | `text`, `textarea` | String length, and a regular expression for the whole value |
 | `min`, `max` | `number` | Number range |
@@ -402,7 +402,7 @@ export const pages = defineCollection({
 | Field | Definition |
 |---|---|
 | `title` | `{ type: 'text', required: true }` |
-| `slug` | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path' }` |
+| `slug` | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path', required: true }` |
 | `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }` |
 | `path` | `{ type: 'text', readOnly: true }` |
 

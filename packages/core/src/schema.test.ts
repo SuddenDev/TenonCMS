@@ -238,23 +238,29 @@ function optionTypes() {
 }
 
 describe('slug', () => {
-  const s = dataSchema({ slug: { type: 'slug', from: 'title' } })
+  const required = dataSchema({ slug: { type: 'slug', from: 'title', required: true } })
+  const optional = dataSchema({ slug: { type: 'slug', from: 'title' } })
 
-  it('requires a slug that matches the pattern', () => {
-    for (const ok of ['a', 'about-us', 'v2']) expect(s.safeParse({ slug: ok }).success, ok).toBe(true)
-    for (const bad of [{}, { slug: null }, { slug: '' }, { slug: 'Not Valid' }, { slug: 'a--b' }, { slug: '-a' }, { slug: 'a-' }])
-      expect(s.safeParse(bad).success, JSON.stringify(bad)).toBe(false)
+  it('matches the pattern', () => {
+    for (const s of [required, optional]) {
+      for (const ok of ['a', 'about-us', 'v2']) expect(s.safeParse({ slug: ok }).success, ok).toBe(true)
+      for (const bad of ['Not Valid', 'a--b', '-a', 'a-']) expect(s.safeParse({ slug: bad }).success, bad).toBe(false)
+    }
+  })
+
+  it('follows required like other fields', () => {
+    for (const bad of [{}, { slug: null }, { slug: '' }]) expect(required.safeParse(bad).success, JSON.stringify(bad)).toBe(false)
+    for (const ok of [{}, { slug: null }, { slug: '' }]) expect(optional.safeParse(ok).success, JSON.stringify(ok)).toBe(true)
   })
 })
 
 // Checked by `pnpm typecheck` only.
 function slugTypes() {
-  const f = { slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' } } as const satisfies Fields
+  const f = { slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path', required: true }, alt: { type: 'slug' } } as const satisfies Fields
   ;(d: Data<typeof f>) => d.slug satisfies string
-  // @ts-expect-error a slug is always required
+  ;(d: Data<typeof f>) => d.alt satisfies string | null | undefined
+  // @ts-expect-error a required slug is required
   const missing: Data<typeof f> = {}
-  // @ts-expect-error `required` does not apply to slugs
-  defineCollection({ fields: { s: { type: 'slug', required: false } } })
   const read = async () => {
     const doc = await defineCms({ collections: { c: { fields: f } }, database, secret: '' }).findById('c', 'x')
     doc?.slug satisfies string | undefined
@@ -395,6 +401,8 @@ async function httpTypes() {
       people: {
         fields: {
           name: { type: 'text', required: true, private: true },
+          handle: { type: 'slug', from: 'name', required: true, private: true },
+          slug: { type: 'slug', from: 'name', required: true },
           profile: { type: 'group', fields: { bio: { type: 'text' }, note: { type: 'text', required: true, private: true } } },
         },
       },
@@ -410,12 +418,16 @@ async function httpTypes() {
   const name: string = person.name
   // @ts-expect-error also inside groups
   const note: string = person.profile!.note
+  // @ts-expect-error a private slug is missing on public reads too
+  const handle: string = person.handle
+  person.slug satisfies string
   const local = await cms.findById('people', 'x')
+  local?.handle satisfies string | undefined
   local?.name satisfies string | undefined
   const post = await client.findById('posts', 'x')
   // @ts-expect-error also in populated documents
   const author: string = post.author!.name
-  client.create('people', {})
+  client.create('people', { slug: 'x' })
 }
 
 describe('hook types', () => {
