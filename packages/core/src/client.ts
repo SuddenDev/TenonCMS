@@ -16,7 +16,6 @@ type ReadCollection<C extends { schema: Schema }, K extends keyof Collections<C>
 >
 /** Options of `find` and `findOne` for collection `K`. */
 export type FindOptions<C extends { schema: Schema }, K extends keyof Collections<C>> = ReadOptions<Collections<C>, Fields<C, K>> & {
-  /** Equality filters on field values. An `undefined` value adds no filter. */
   /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
   where?: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean | null>>
   /** Maximum number of documents. */
