@@ -293,16 +293,19 @@ export type CheckRefs<S, C> = S extends { [K in keyof S]: { fields: unknown } }
     : never
   : S
 
-export function defineCollection<const F extends Fields, const T extends Omit<Collection<F>, 'fields' | 'hooks'>>(
-  collection: T & { fields: F; hooks?: CollectionHooks<NoInfer<F>> },
-): T & { fields: F; hooks?: CollectionHooks<F> } {
-  return collection
+// `H` keeps the literal hooks, so a host can leave one hook of a record out by name.
+export function defineCollection<
+  const F extends Fields,
+  const T extends Omit<Collection<F>, 'fields' | 'hooks'>,
+  const H extends CollectionHooks<NoInfer<F>>,
+>(collection: T & { fields: F; hooks?: H }): T & { fields: F; hooks: H } {
+  return { ...collection, hooks: collection.hooks ?? ({} as H) }
 }
 
-export function defineGlobal<const F extends Fields, const T extends Omit<Global<F>, 'fields' | 'hooks'>>(
-  global: T & { fields: F; hooks?: GlobalHooks<NoInfer<F>> },
-): T & { fields: F; hooks?: GlobalHooks<F> } {
-  return global
+export function defineGlobal<const F extends Fields, const T extends Omit<Global<F>, 'fields' | 'hooks'>, const H extends GlobalHooks<NoInfer<F>>>(
+  global: T & { fields: F; hooks?: H },
+): T & { fields: F; hooks: H } {
+  return { ...global, hooks: global.hooks ?? ({} as H) }
 }
 
 /** Whether `where` accepts `key`. Groups, joins and `many` relations are not filterable. */

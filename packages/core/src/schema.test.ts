@@ -243,6 +243,11 @@ describe('hook types', () => {
       },
     })
     defineCms({ collections: { posts }, database: { url: ':memory:' }, secret: '' })
+    // A record keeps its keys, so a host can leave one hook out by name.
+    const { count, ...rest } = posts.hooks.afterRead
+    defineCollection({ fields: posts.fields, hooks: { afterRead: rest } })
+    expect(defineCollection({ fields: {} }).hooks).toEqual({})
+    expect(defineGlobal({ fields: {} }).hooks).toEqual({})
     // @ts-expect-error field hook value is a number
     defineCollection({ fields: { n: { type: 'number', hooks: { beforeChange: [({ value }) => value?.toUpperCase()] } } } })
     const site = defineGlobal({
