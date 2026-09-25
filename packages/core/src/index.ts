@@ -142,48 +142,67 @@ export function defineCms<
     return (await db()).transaction().execute((trx) => body(trx))
   }
 
-  // Shared by `create` and `update`. Returns `undefined` for a missing document.
-  async function write(s: Inner, collection: string, operation: 'create' | 'update', input: unknown, id?: string) {
-    const { fields, hooks: h } = collections[collection]
-    const originalDoc = id ? await load(s, collection, id) : undefined
+  // The fields, hooks and validator of a collection or global.
+  const target = ({ collection, global }: Name) =>
+    collection
+      ? { ...collections[collection], validator: validators.collections[collection] }
+      : { ...globals[global!], validator: validators.globals[global!] }
+
+  // Shared by `create`, `update` and `setGlobal`. Returns `undefined` for a missing document.
+  async function write(s: Inner, name: Name, operation: 'create' | 'update' | 'setGlobal', input: unknown, id?: string) {
+    const { fields, hooks: h, validator } = target(name)
+    const db = await q(s)
+    const originalDoc = name.global ? await loadGlobal(s, name.global) : id ? await load(s, name.collection!, id) : undefined
     if (id && !originalDoc) return undefined
-    const base = { ...common(s, { collection }), operation, id, originalDoc }
-    const fieldArgs = (data: object) => ({ ...common(s, { collection }), operation, data, originalDoc })
-    const validate = (data: unknown) => parseData(validators.collections[collection], data)
+    const base = { ...common(s, name), operation, id, originalDoc }
+    const fieldArgs = (data: object) => ({ ...common(s, name), operation, data, originalDoc })
+    const validate = (data: unknown) => parseData(validator, data)
     const copy = structuredClone(input)
     if (typeof copy === 'object' && copy !== null) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
     const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
     await fieldHooks('beforeChange', fields, valid, fieldArgs(valid))
     // Validated again, so a hook cannot store invalid data.
     const data = validate(await hooks(h?.beforeChange, 'data', valid, base))
-    const db = await q(s)
-    await checkRefs(db, fields, data, id ? { collection, id } : undefined)
+    await checkRefs(db, fields, data, id ? { collection: name.collection!, id } : undefined)
     const now = Date.now()
     const json = JSON.stringify(data)
-    const row = id
-      ? await db
+    let stored: Record<string, any>
+    if (name.global) {
+      await db
+        .insertInto('cms_globals')
+        .values({ name: name.global, data: json, created_at: now, updated_at: now })
+        .onConflict((oc) => oc.column('name').doUpdateSet({ data: json, updated_at: now }))
+        .execute()
+      stored = data
+    } else if (id) {
+      stored = toDoc(
+        await db
           .updateTable('cms_documents')
           .set({ data: json, updated_at: now })
-          .where('collection', '=', collection)
+          .where('collection', '=', name.collection!)
           .where('id', '=', id)
           .returningAll()
-          .executeTakeFirstOrThrow()
-      : await db
+          .executeTakeFirstOrThrow(),
+      )
+    } else {
+      stored = toDoc(
+        await db
           .insertInto('cms_documents')
-          .values({ id: crypto.randomUUID(), collection, data: json, created_at: now, updated_at: now })
+          .values({ id: crypto.randomUUID(), collection: name.collection!, data: json, created_at: now, updated_at: now })
           .returningAll()
-          .executeTakeFirstOrThrow()
-    const stored = toDoc(row)
+          .executeTakeFirstOrThrow(),
+      )
+    }
     await fieldHooks('afterChange', fields, stored, fieldArgs(stored))
-    const doc = await hooks(h?.afterChange, 'doc', stored, { ...common(s, { collection }), operation, previousDoc: originalDoc })
-    return (await afterRead(s, collection, [doc], operation))[0]
+    const doc = await hooks(h?.afterChange, 'doc', stored, { ...common(s, name), operation, previousDoc: originalDoc })
+    return (await afterRead(s, name, [doc], operation))[0]
   }
 
-  // Field `afterRead` per document, then the collection's once for the batch.
-  async function afterRead(s: Inner, collection: string, docs: Record<string, any>[], operation: Operation) {
-    const { fields, hooks: h } = collections[collection]
-    for (const doc of docs) await fieldHooks('afterRead', fields, doc, { ...common(s, { collection }), operation, data: doc })
-    return hooks(h?.afterRead, 'docs', docs, { ...common(s, { collection }), operation })
+  // Field `afterRead` per document, then the collection's or global's once for the batch.
+  async function afterRead(s: Inner, name: Name, docs: Record<string, any>[], operation: Operation) {
+    const { fields, hooks: h } = target(name)
+    for (const doc of docs) await fieldHooks('afterRead', fields, doc, { ...common(s, name), operation, data: doc })
+    return hooks(h?.afterRead, 'docs', docs, { ...common(s, name), operation })
   }
 
   // `find`, `findOne` and `findById`: `beforeRead`, then relations, then `afterRead`.
@@ -204,7 +223,13 @@ export function defineCms<
     const base = { ...common(s, { collection }), operation: 'read' as const }
     const docs = await hooks(h?.beforeRead, 'docs', (await query.execute()).map(toDoc), base)
     await populate(await q(s), collections, fields, docs, spec(options))
-    return afterRead(s, collection, docs, 'read')
+    return afterRead(s, { collection }, docs, 'read')
+  }
+
+  // The stored data of a global, or `undefined` if it was never saved.
+  async function loadGlobal(s: Scope, name: string) {
+    const row = await (await q(s)).selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
+    return row && (JSON.parse(row.data) as Record<string, any>)
   }
 
   // One stored document without relations resolved, or `undefined`.
@@ -253,7 +278,7 @@ export function defineCms<
       async create<K extends keyof Collections<T> & string>(collection: K, data: Record<string, unknown>) {
         if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
         return (await run(scope, 'create', { collection }, { collection, data }, (s, args) =>
-          write(s, collection, 'create', args.data),
+          write(s, { collection }, 'create', args.data),
         )) as CollectionDoc<T, K>
       },
 
@@ -261,7 +286,7 @@ export function defineCms<
       async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
         if (!Object.hasOwn(collections, collection)) return undefined
         return (await run(scope, 'update', { collection }, { collection, id, data }, (s, args) =>
-          write(s, collection, 'update', args.data, args.id),
+          write(s, { collection }, 'update', args.data, args.id),
         )) as CollectionDoc<T, K> | undefined
       },
 
@@ -284,29 +309,23 @@ export function defineCms<
         name: K,
         options: Checked<O, Collections<T>, Globals<T>[K]['fields']> = {} as never,
       ): Promise<ReadGlobal<T, K, O, D>> {
-        const db = await q(scope)
-        const row = await db.selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
-        const data = row ? JSON.parse(row.data) : {}
-        await populate(db, collections, schema.globals![name].fields, [data], spec(options))
-        return data as ReadGlobal<T, K, O, D>
+        if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
+        const { fields, hooks: h } = globals[name]
+        return run(scope, 'getGlobal', { global: name }, { global: name, options }, async (s, args) => {
+          const base = { ...common(s, { global: name }), operation: 'getGlobal' as const }
+          const docs = await hooks(h?.beforeRead, 'docs', [(await loadGlobal(s, name)) ?? {}], base)
+          await populate(await q(s), collections, fields, docs, spec(args.options))
+          return (await afterRead(s, { global: name }, docs, 'getGlobal'))[0]
+        }) as Promise<ReadGlobal<T, K, O, D>>
       },
 
       /** Replaces the data of a global. Throws a `ValidationError` for invalid `data`. */
-      async setGlobal<K extends keyof Globals<T> & string>(name: K, input: Record<string, unknown>) {
+      async setGlobal<K extends keyof Globals<T> & string>(name: K, data: Record<string, unknown>) {
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
-        const data = parseData(validators.globals[name], input)
-        const db = await q(scope)
-        await checkRefs(db, schema.globals![name].fields, data)
-        const now = Date.now()
-        const json = JSON.stringify(data)
-        await db
-          .insertInto('cms_globals')
-          .values({ name, data: json, created_at: now, updated_at: now })
-          .onConflict((oc) => oc.column('name').doUpdateSet({ data: json, updated_at: now }))
-          .execute()
-        return data as GlobalData<T, K>
+        return (await run(scope, 'setGlobal', { global: name }, { global: name, data }, (s, args) =>
+          write(s, { global: name }, 'setGlobal', args.data),
+        )) as GlobalData<T, K>
       },
-
     }
     return api
   }

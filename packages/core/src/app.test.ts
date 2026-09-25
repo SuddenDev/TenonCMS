@@ -1090,6 +1090,38 @@ describe('hooks', () => {
     expect(count).toBe(3)
   })
 
+  it('run on globals', async () => {
+    const seen: unknown[] = []
+    const stages = ['beforeValidate', 'beforeChange', 'afterChange', 'beforeRead', 'afterRead']
+    const site = defineGlobal({
+      fields: { name: { type: 'text', hooks: { beforeChange: [({ path }) => void calls.push(path)] } } },
+      hooks: {
+        ...logAll(stages),
+        afterRead: [log('afterRead'), ({ docs, global, operation }) => void seen.push([docs.length, global, operation])],
+      },
+    })
+    const cms = defineCms({ ...db, collections: {}, globals: { site } })
+    expect(await cms.setGlobal('site', { name: 'a' })).toEqual({ name: 'a' })
+    expect(calls).toEqual(['beforeValidate', 'name', 'beforeChange', 'afterChange', 'afterRead'])
+    calls = []
+    expect(await cms.getGlobal('site')).toEqual({ name: 'a' })
+    expect(calls).toEqual(['beforeRead', 'afterRead'])
+    expect(seen).toEqual([
+      [1, 'site', 'setGlobal'],
+      [1, 'site', 'getGlobal'],
+    ])
+    const renamed = defineCms({ ...db, collections: {}, globals: { site: { fields: { name: { type: 'text' } }, hooks: { afterRead: [({ docs }) => [{ ...docs[0], name: 'X' }]] } } } })
+    expect(await renamed.getGlobal('site')).toEqual({ name: 'X' })
+  })
+
+  it('validate the beforeChange result of a global', async () => {
+    const cms = defineCms({ ...db, collections: {}, globals: { site: { fields: title, hooks: { beforeChange: [() => ({ title: '' })] } } } })
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    expect(await status(client.setGlobal('site', { title: 'a' }))).toBe(400)
+    expect(await cms.getGlobal('site')).toEqual({})
+  })
+
   it('are not sent in /schema', async () => {
     const cms = defineCms({
       ...db,
