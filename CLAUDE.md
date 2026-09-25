@@ -112,6 +112,7 @@ Expect 200, 201, and the post in the page HTML. Delete the example's `cms.db` be
 - The local API validates every write with `parseData()`. Every write route MUST stay behind the session middleware. Read routes are public and MUST only accept field names that exist in the schema.
 - Admin UI: plain Vue SFCs with `<script setup>`, Tailwind classes, and the shared `.input` / `.btn` / `.btn-ghost` classes in `style.css`. Host inputs render in the admin's light DOM, so they can use those classes too.
 - Versions in use: Astro 7, Nuxt 4.5 (nitropack 2, h3 v1), TanStack Start 1.168 (nitro 3 beta, React 19), Vite 8, TypeScript 6, better-auth 1.7, kysely 0.29, Hono 4, zod 4.
+- never mention claude in commits
 
 ## Next up
 
