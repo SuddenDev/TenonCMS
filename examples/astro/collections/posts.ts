@@ -15,11 +15,15 @@ export const posts = defineCollection({
     title: {
       type: "text",
       required: true,
+      placeholder: "Title",
+      maxLength: 120,
       hooks: { beforeChange: [({ value }) => value?.trim()] },
     },
     slug: {
       type: "text",
       required: false,
+      pattern: "[a-z0-9]+(-[a-z0-9]+)*",
+      description: "Lowercase letters, digits and dashes. Filled from the title when empty.",
       // Runs before validation, so an empty slug is filled from the title instead of failing `required`.
       hooks: {
         beforeValidate: [
