@@ -1,12 +1,19 @@
-import type { Checked, Data, Doc, FilterKey, PopulateOf, Read, ReadDoc, ReadOptions, Schema } from './schema.ts'
+import type { Checked, Data, Doc, Fields as FieldsOf, FilterKey, PopulateOf, Read, ReadDoc, ReadOptions, Schema } from './schema.ts'
 
 export type { Checked, ReadOptions } from './schema.ts'
 
 /** Path of the HTTP API. */
 export const API_BASE = '/api/cms'
 
-type Collections<C extends { schema: Schema }> = NonNullable<C['schema']['collections']>
-type Globals<C extends { schema: Schema }> = NonNullable<C['schema']['globals']>
+// Fields as the HTTP API sends them: hidden fields left out, private fields optional.
+// Untyped fields (the admin's) stay as they are. The recursion would not terminate.
+type HttpFields<F> = string extends keyof F ? F : { [K in keyof F as F[K] extends { hidden: true } ? never : K]: HttpField<F[K]> }
+type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, 'required'> : HttpGroup<F>
+type HttpGroup<F> = F extends { type: 'group'; fields: infer G } ? Omit<F, 'fields'> & { fields: Extract<HttpFields<G>, FieldsOf> } : F
+// `Extract` keeps the result assignable to `Fields`.
+type Http<R> = string extends keyof R ? R : { [K in keyof R]: Omit<R[K], 'fields'> & { fields: R[K] extends { fields: infer F } ? Extract<HttpFields<F>, FieldsOf> : never } }
+type Collections<C extends { schema: Schema }> = Http<NonNullable<C['schema']['collections']>>
+type Globals<C extends { schema: Schema }> = Http<NonNullable<C['schema']['globals']>>
 type Fields<C extends { schema: Schema }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
 type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2
 type ReadCollection<C extends { schema: Schema }, K extends keyof Collections<C>, O> = ReadDoc<

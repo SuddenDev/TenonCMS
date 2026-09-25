@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createClient } from './client.ts'
 import { matchCondition } from './condition.ts'
 import { defineCms } from './index.ts'
 import { type Collection, type Data, dataSchema, defineCollection, defineGlobal, type Fields } from './schema.ts'
@@ -344,6 +345,48 @@ async function readTypes() {
   const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: '' })
   const w = (await wide.find('x'))[0]
   w.anything
+}
+
+// Checked by `pnpm typecheck` only.
+async function httpTypes() {
+  const cms = defineCms({
+    collections: {
+      people: {
+        fields: {
+          name: { type: 'text', required: true, private: true },
+          token: { type: 'text', hidden: true },
+          profile: { type: 'group', fields: { bio: { type: 'text' }, note: { type: 'text', hidden: true } } },
+        },
+      },
+      posts: { fields: { author: { type: 'relation', collection: 'people' } } },
+    },
+    globals: { site: { fields: { key: { type: 'text', hidden: true }, name: { type: 'text' } } } },
+    database,
+    secret: '',
+  })
+  const client = createClient<typeof cms>()
+  const person = await client.findById('people', 'x')
+  const bio: string | null | undefined = person.profile?.bio
+  // @ts-expect-error private fields are missing on public reads
+  const name: string = person.name
+  // @ts-expect-error hidden fields are never sent
+  person.token
+  // @ts-expect-error also inside groups
+  person.profile?.note
+  const local = await cms.findById('people', 'x')
+  local?.token satisfies string | null | undefined
+  local?.profile?.note satisfies string | null | undefined
+  const post = await client.findById('posts', 'x')
+  post.author?.profile
+  // @ts-expect-error also in populated documents
+  post.author?.token
+  const site = await client.getGlobal('site')
+  site.name
+  // @ts-expect-error also in globals
+  site.key
+  // @ts-expect-error hidden fields are not in the input either
+  client.create('people', { name: 'n', token: 'x' })
+  client.create('people', {})
 }
 
 describe('hook types', () => {
