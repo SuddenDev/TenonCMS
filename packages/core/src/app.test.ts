@@ -1186,3 +1186,96 @@ describe('transactions', () => {
     expect(await cms.find('logs')).toHaveLength(1)
   })
 })
+
+describe('afterError', () => {
+  let calls: unknown[]
+  beforeEach(() => {
+    calls = []
+  })
+  const make = (throwing: () => void, afterError = (a: { operation: string; collection?: string; global?: string }) => void calls.push(a)) =>
+    defineCms({
+      hooks: { afterError: [({ operation, collection, global }) => void calls.push(['root', operation, collection ?? global])] },
+      collections: {
+        posts: {
+          fields: { title: { type: 'text' } },
+          hooks: {
+            afterError: [({ operation, collection }) => void calls.push(['collection', operation, collection]), afterError],
+            beforeChange: [throwing],
+          },
+        },
+        notes: { fields: { post: { type: 'relation', collection: 'posts', required: true } }, hooks: { afterError: [() => void calls.push('notes')] } },
+        wrappers: {
+          fields: {},
+          hooks: {
+            afterError: [() => void calls.push('wrappers')],
+            beforeChange: [async ({ cms }) => void (await cms.create('posts', { title: 'x' }))],
+          },
+        },
+      },
+      globals: { site: { fields: {}, hooks: { beforeChange: [throwing] } } },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+
+  it('runs collection then root hooks and hides the message over HTTP', async () => {
+    const cms = make(() => {
+      throw new Error('secret')
+    }, () => undefined)
+    await expect(cms.create('posts', { title: 'a' })).rejects.toThrow('secret')
+    expect(calls).toEqual([
+      ['collection', 'create', 'posts'],
+      ['root', 'create', 'posts'],
+    ])
+    const { client, fetch } = setup(cms)
+    await client.signUp(admin)
+    const res = await fetch(`${origin}/api/cms/collections/posts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+    expect(res.status).toBe(500)
+    expect(await res.text()).not.toContain('secret')
+  })
+
+  it('does not run for ValidationError or ConflictError', async () => {
+    const cms = make(() => {
+      throw new ValidationError({ title: 'Taken' })
+    })
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    expect(await client.create('posts', { title: 'a' }).catch((e: unknown) => e)).toMatchObject({ status: 400, body: { errors: { title: 'Taken' } } })
+    const ok = make(() => undefined)
+    const post = await ok.create('posts', { title: 'a' })
+    await ok.create('notes', { post: post.id })
+    await expect(ok.delete('posts', post.id)).rejects.toBeInstanceOf(ConflictError)
+    expect(calls).toEqual([])
+  })
+
+  it('runs only the root hooks for a global', async () => {
+    const cms = make(() => {
+      throw new Error('boom')
+    })
+    await expect(cms.setGlobal('site', {})).rejects.toThrow('boom')
+    expect(calls).toEqual([['root', 'setGlobal', 'site']])
+  })
+
+  it('keeps the original error when a hook throws', async () => {
+    const cms = make(
+      () => {
+        throw new Error('first')
+      },
+      () => {
+        throw new Error('second')
+      },
+    )
+    await expect(cms.create('posts', { title: 'a' })).rejects.toThrow('first')
+    expect(calls).toEqual([
+      ['collection', 'create', 'posts'],
+      ['root', 'create', 'posts'],
+    ])
+  })
+
+  it('runs once, for the outer operation of a nested call', async () => {
+    const cms = make(() => {
+      throw new Error('boom')
+    }, () => undefined)
+    await expect(cms.create('wrappers', {})).rejects.toThrow('boom')
+    expect(calls).toEqual(['wrappers', ['root', 'create', 'wrappers']])
+  })
+})

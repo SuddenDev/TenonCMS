@@ -4,6 +4,7 @@ import { type Kysely, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
+import { ConflictError, ValidationError } from './errors.ts'
 import { checkRefs, checkSchema, populate, remove, type Spec } from './relations.ts'
 import {
   type Checked,
@@ -24,6 +25,7 @@ import {
   type Read,
   type ReadDoc,
   type ReadOptions,
+  type RootHooks,
   type Schema,
   type Slot,
 } from './schema.ts'
@@ -59,6 +61,8 @@ export type CmsOptions<
   // `& AuthOptions` types hook parameters. Inference alone leaves them `any`.
   /** better-auth options. Core owns `database`, `basePath` and `secret`. */
   auth?: A & AuthOptions
+  /** Hooks for every collection and global. */
+  hooks?: RootHooks
 }
 
 type Collections<T extends Schema> = NonNullable<T['collections']>
@@ -91,7 +95,7 @@ export function defineCms<
   const G extends Record<string, Global> = {},
   const A extends AuthOptions = {},
   const P extends PopulateConfig = {},
->({ database, secret, auth: host = {} as A, populate: config = {} as P, ...schema }: CmsOptions<C, G, A, P>) {
+>({ database, secret, auth: host = {} as A, populate: config = {} as P, hooks: rootHooks = {}, ...schema }: CmsOptions<C, G, A, P>) {
   type T = { collections?: C; globals?: G }
   type D = DefaultDepth<P>
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 }
@@ -138,8 +142,26 @@ export function defineCms<
       const input = await hooks(h?.beforeOperation, 'args', args, base)
       return (await hooks(h?.afterOperation, 'result', await fn(inner, input), { ...base, args: input })) as R
     }
-    if (operation === 'read' || operation === 'getGlobal' || scope.trx) return body()
-    return (await db()).transaction().execute((trx) => body(trx))
+    try {
+      if (operation === 'read' || operation === 'getGlobal' || scope.trx) return await body()
+      return await (await db()).transaction().execute((trx) => body(trx))
+    } catch (error) {
+      // Only the outermost call runs `afterError`, after the rollback. 400 and 409 are expected and run none.
+      if (!scope.nested && !(error instanceof ValidationError || error instanceof ConflictError)) {
+        const s: Scope = { ...scope, trx: undefined, context, nested: true }
+        const args = { ...common({ ...s, cms: bind(s) as unknown as LocalApi }, name), operation, error }
+        const slots = [name.collection ? collections[name.collection].hooks?.afterError : undefined, rootHooks.afterError]
+        for (const fn of slots.flatMap(list)) {
+          // An error here MUST NOT replace the original one.
+          try {
+            await fn(args)
+          } catch (e) {
+            consola.withTag('integral').error(e)
+          }
+        }
+      }
+      throw error
+    }
   }
 
   // The fields, hooks and validator of a collection or global.
