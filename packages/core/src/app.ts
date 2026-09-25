@@ -36,6 +36,17 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     return out
   }
 
+  // Reads are public. Only a request with a cookie MAY see private fields, so others cost no session lookup.
+  // A failed lookup, e.g. with a bad `secret`, counts as no session.
+  async function readLevel(request: Request): Promise<Level> {
+    if (!request.headers.get('cookie')) return 'public'
+    const session = await cms
+      .auth()
+      .then((auth) => auth.api.getSession({ headers: request.headers }))
+      .catch(() => null)
+    return session ? 'admin' : 'public'
+  }
+
   // Reads use `cms` (no user). Writes use `c.var.cms`, which carries the session user.
   const api = new Hono<{ Variables: { cms: Cms<Schema> } }>().basePath(API_BASE)
   // Every error body has `message`, like better-auth's. Only expected errors send their own; others MAY hold internals.
@@ -57,12 +68,13 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     if (!name) return c.notFound()
     const { limit, populate, depth, ...query } = c.req.query()
     const fields = schema.collections![name].fields
-    const where = whereFromQuery(fields, query, 'public')
+    const level = await readLevel(c.req.raw)
+    const where = whereFromQuery(fields, query, level)
     if (!where) return c.json({ message: 'Invalid filter' }, 400)
     if (limit !== undefined && !/^[1-9]\d*$/.test(limit)) return c.json({ message: 'Invalid limit' }, 400)
     const read = readOptions(fields, { populate, depth })
     if (!read) return c.json({ message: 'Invalid populate' }, 400)
-    return c.json(strip(fields, await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read }), 'public'))
+    return c.json(strip(fields, await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read }), level))
   })
 
   api.get('/collections/:name/:id', async (c) => {
@@ -72,7 +84,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     const read = readOptions(fields, c.req.query())
     if (!read) return c.json({ message: 'Invalid populate' }, 400)
     const doc = await cms.findById(name, c.req.param('id'), read)
-    return doc ? c.json(strip(fields, doc, 'public')) : c.notFound()
+    return doc ? c.json(strip(fields, doc, await readLevel(c.req.raw))) : c.notFound()
   })
 
   api.get('/globals/:name', async (c) => {
@@ -81,7 +93,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     const fields = schema.globals![name].fields
     const read = readOptions(fields, c.req.query())
     if (!read) return c.json({ message: 'Invalid populate' }, 400)
-    return c.json(strip(fields, await cms.getGlobal(name, read), 'public'))
+    return c.json(strip(fields, await cms.getGlobal(name, read), await readLevel(c.req.raw)))
   })
 
   api.use(csrf())

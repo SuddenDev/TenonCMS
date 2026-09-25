@@ -458,6 +458,8 @@ describe('errors', () => {
   it('keep reads working with a short secret, but fail auth', async () => {
     const bad = define('short')
     expect((await bad.fetch(new Request(`${origin}/api/cms/collections/posts`))).status).toBe(200)
+    const cookie = { headers: { cookie: 'better-auth.session_token=x' } }
+    expect((await bad.fetch(new Request(`${origin}/api/cms/collections/posts`, cookie))).status).toBe(200)
     await expect(bad.auth()).rejects.toThrow(/at least 32 characters/)
     expect((await bad.fetch(new Request(`${origin}/api/cms/schema`))).status).toBe(500)
   })
@@ -1766,5 +1768,58 @@ describe('hidden', () => {
     expect(read.author).toMatchObject(visible)
     expect(read.author).not.toHaveProperty('token')
     expect(read.fans![0]).not.toHaveProperty('token')
+  })
+})
+
+describe('private', () => {
+  const make = () =>
+    defineCms({
+      collections: {
+        people: {
+          fields: {
+            name: { type: 'text' },
+            email: { type: 'text', private: true },
+            contact: { type: 'group', private: true, fields: { phone: { type: 'text' } } },
+          },
+        },
+        posts: { fields: { author: { type: 'relation', collection: 'people' } } },
+      },
+      globals: { site: { fields: { name: { type: 'text' }, key: { type: 'text', private: true } } } },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+  const person = { name: 'A', email: 'e', contact: { phone: 'p' } }
+
+  it('is missing on public reads and sent with a session', async () => {
+    const cms = make()
+    const { client } = setup(cms)
+    const p = await cms.create('people', person)
+    await cms.setGlobal('site', { name: 'S', key: 'k' })
+    const reads = async () => [
+      await client.findById('people', p.id),
+      (await client.find('people'))[0],
+      await client.findOne('people', { where: { name: 'A' } }),
+    ]
+    for (const read of await reads()) expect(read).toEqual({ name: 'A', id: p.id, createdAt: expect.any(String), updatedAt: expect.any(String) })
+    expect(await client.getGlobal('site')).toEqual({ name: 'S' })
+    await client.signUp(admin)
+    for (const read of await reads()) expect(read).toMatchObject(person)
+    expect(await client.getGlobal('site')).toEqual({ name: 'S', key: 'k' })
+  })
+
+  it('cannot be filtered without a session', async () => {
+    const { client, fetch } = setup(make())
+    const get = (query: string) => fetch(`${origin}/api/cms/collections/people?${query}`)
+    expect((await get('email=e')).status).toBe(400)
+    await client.signUp(admin)
+    expect((await get('email=e')).status).toBe(200)
+  })
+
+  it('is missing in populated documents on public reads', async () => {
+    const cms = make()
+    const { client } = setup(cms)
+    const p = await cms.create('people', person)
+    const post = await cms.create('posts', { author: p.id })
+    expect((await client.findById('posts', post.id)).author).toEqual({ name: 'A', id: p.id, createdAt: expect.any(String), updatedAt: expect.any(String) })
   })
 })
