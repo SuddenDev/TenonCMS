@@ -1615,3 +1615,59 @@ describe('validate', () => {
     await expect(cms.update('things', thing.id, { code: 'c' })).rejects.toMatchObject({ errors: { code: 'Locked' } })
   })
 })
+
+describe('unique', () => {
+  const make = () =>
+    defineCms({
+      collections: {
+        tags: {
+          fields: {
+            name: { type: 'text' },
+            slug: { type: 'text', unique: true },
+            rank: { type: 'number', unique: true },
+          },
+          hooks: { beforeChange: [({ data }) => (data.name ? { ...data, slug: data.name } : undefined)] },
+        },
+        other: { fields: { slug: { type: 'text' } } },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+
+  it('rejects a used value', async () => {
+    const cms = make()
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    await client.create('tags', { slug: 'a', rank: 1 })
+    const error = await client.create('tags', { slug: 'a' }).catch((e: unknown) => e)
+    expect(error).toMatchObject({ status: 400, body: { errors: { slug: 'Already used' } } })
+    await expect(cms.create('tags', { rank: 1 })).rejects.toMatchObject({ errors: { rank: 'Already used' } })
+  })
+
+  it('is case-sensitive and per collection', async () => {
+    const cms = make()
+    await cms.create('other', { slug: 'a' })
+    await cms.create('tags', { slug: 'a' })
+    await expect(cms.create('tags', { slug: 'A' })).resolves.toBeDefined()
+  })
+
+  it('never matches null or missing', async () => {
+    const cms = make()
+    await cms.create('tags', {})
+    await cms.create('tags', {})
+    await cms.create('tags', { slug: null })
+    await expect(cms.create('tags', { slug: null })).resolves.toBeDefined()
+  })
+
+  it('lets a document keep its own value', async () => {
+    const cms = make()
+    const tag = await cms.create('tags', { slug: 'a', rank: 1 })
+    await expect(cms.update('tags', tag.id, { slug: 'a', rank: 1 })).resolves.toMatchObject({ slug: 'a' })
+  })
+
+  it('checks values set by beforeChange', async () => {
+    const cms = make()
+    await cms.create('tags', { slug: 'a' })
+    await expect(cms.create('tags', { name: 'a' })).rejects.toMatchObject({ errors: { slug: 'Already used' } })
+  })
+})

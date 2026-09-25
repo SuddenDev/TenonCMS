@@ -198,6 +198,7 @@ export function defineCms<
     await fieldHooks('beforeChange', fields, valid, fieldArgs(valid))
     // Validated again, so a hook cannot store invalid data.
     const data = validate(await hooks(h?.beforeChange, 'data', valid, base))
+    if (name.collection) await checkUnique(db, name.collection, fields, data, id)
     if (!effect) await checkRefs(db, fields, data, id ? { collection: name.collection!, id } : undefined)
     const now = Date.now()
     const json = JSON.stringify(data)
@@ -422,6 +423,22 @@ async function applyDefaults(fields: Fields, data: Record<string, unknown>, args
     const group = data[key]
     if (f.type === 'group' && isObject(group)) await applyDefaults(f.fields, group, args)
   }
+}
+
+// ponytail: one scan per unique field per write. Add SQLite expression indexes if collections grow large.
+async function checkUnique(db: Kysely<Database>, collection: string, fields: Fields, data: Record<string, unknown>, id?: string) {
+  const errors: Record<string, string> = {}
+  for (const [key, f] of Object.entries(fields)) {
+    if (!('unique' in f) || !f.unique || data[key] == null) continue
+    let query = db
+      .selectFrom('cms_documents')
+      .select('id')
+      .where('collection', '=', collection)
+      .where(sql<boolean>`json_extract(data, ${`$.${key}`}) = ${data[key]}`)
+    if (id) query = query.where('id', '!=', id)
+    if (await query.executeTakeFirst()) errors[key] = 'Already used'
+  }
+  if (Object.keys(errors).length) throw new ValidationError(errors)
 }
 
 // Collects the messages of field `validate` functions by path. Fields whose condition is false are skipped.
