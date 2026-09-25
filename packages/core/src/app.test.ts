@@ -977,6 +977,36 @@ describe('hooks', () => {
     expect(await cms.find('posts')).toEqual([])
   })
 
+  it('run in order on reads', async () => {
+    const stages = ['beforeOperation', 'beforeRead', 'afterRead', 'afterOperation']
+    const cms = defineCms({ ...db, collections: { posts: { fields: title, hooks: logAll(stages) } } })
+    const post = await cms.create('posts', { title: 'a' })
+    calls = []
+    await cms.find('posts')
+    await cms.findOne('posts', { where: { title: 'a' } })
+    await cms.findById('posts', post.id)
+    expect(calls).toEqual([...stages, ...stages, ...stages])
+  })
+
+  it('run afterRead once per find with all docs', async () => {
+    const counts: number[] = []
+    const posts = defineCollection({
+      fields: title,
+      hooks: {
+        afterRead: [
+          ({ docs, operation }) => {
+            if (operation === 'read') counts.push(docs.length)
+            return docs.map((d) => ({ ...d, title: d.title.toUpperCase() }))
+          },
+        ],
+      },
+    })
+    const cms = defineCms({ ...db, collections: { posts } })
+    for (const t of ['a', 'b', 'c']) await cms.create('posts', { title: t })
+    expect((await cms.find('posts')).map((p) => p.title)).toEqual(['C', 'B', 'A'])
+    expect(counts).toEqual([3])
+  })
+
   it('are not sent in /schema', async () => {
     const cms = defineCms({
       ...db,

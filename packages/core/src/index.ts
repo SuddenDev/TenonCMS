@@ -175,6 +175,27 @@ export function defineCms<
     return hooks(collections[collection].hooks?.afterRead, 'docs', docs, { ...common(s, { collection }), operation })
   }
 
+  // `find`, `findOne` and `findById`: `beforeRead`, then relations, then `afterRead`.
+  async function read(s: Inner, collection: string, options: ReadOpts) {
+    const { fields, hooks: h } = collections[collection]
+    let query = (await q(s)).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
+    if (options.id !== undefined) query = query.where('id', '=', options.id)
+    for (const [key, value] of Object.entries(options.where ?? {})) {
+      if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`)
+      if (!filterable(fields, key)) throw new Error(`Field "${key}" is not filterable`)
+      if (value === undefined) continue
+      const field = sql`json_extract(data, ${`$.${key}`})`
+      query = query.where(value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`)
+    }
+    // `rowid` orders documents created in the same millisecond.
+    query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
+    if (options.limit) query = query.limit(options.limit)
+    const base = { ...common(s, { collection }), operation: 'read' as const }
+    const docs = await hooks(h?.beforeRead, 'docs', (await query.execute()).map(toDoc), base)
+    await populate(await q(s), collections, fields, docs, spec(options))
+    return afterRead(s, collection, docs, 'read')
+  }
+
   // One stored document without relations resolved, or `undefined`.
   async function load(s: Scope, collection: string, id: string) {
     const row = await (await q(s)).selectFrom('cms_documents').selectAll().where('collection', '=', collection).where('id', '=', id).executeTakeFirst()
@@ -191,21 +212,8 @@ export function defineCms<
         collection: K,
         options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
       ): Promise<ReadCollection<T, K, O, D>[]> {
-        let query = (await q(scope)).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
-        for (const [key, value] of Object.entries(options.where ?? {})) {
-          const fields = schema.collections![collection].fields
-          if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`)
-          if (!filterable(fields, key)) throw new Error(`Field "${key}" is not filterable`)
-          if (value === undefined) continue
-          const field = sql`json_extract(data, ${`$.${key}`})`
-          query = query.where(value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`)
-        }
-        // `rowid` orders documents created in the same millisecond.
-        query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
-        if (options.limit) query = query.limit(options.limit)
-        const docs = (await query.execute()).map(toDoc)
-        await populate(await q(scope), collections, collections[collection].fields, docs, spec(options))
-        return docs as ReadCollection<T, K, O, D>[]
+        if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
+        return run(scope, 'read', { collection }, { collection, options }, (s, args) => read(s, collection, args.options)) as Promise<ReadCollection<T, K, O, D>[]>
       },
 
       /**
@@ -216,7 +224,8 @@ export function defineCms<
         collection: K,
         options: Checked<O, Collections<T>, Collections<T>[K]['fields']>,
       ): Promise<ReadCollection<T, K, O, D> | undefined> {
-        return (await api.find(collection, { ...options, limit: 1 } as never))[0] as ReadCollection<T, K, O, D> | undefined
+        if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
+        return run(scope, 'read', { collection }, { collection, options }, async (s, args) => (await read(s, collection, { ...args.options, limit: 1 }))[0]) as Promise<ReadCollection<T, K, O, D> | undefined>
       },
 
       /** Returns one document, or `undefined`. */
@@ -225,16 +234,8 @@ export function defineCms<
         id: string,
         options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
       ): Promise<ReadCollection<T, K, O, D> | undefined> {
-        const row = await (await q(scope))
-          .selectFrom('cms_documents')
-          .selectAll()
-          .where('collection', '=', collection)
-          .where('id', '=', id)
-          .executeTakeFirst()
-        if (!row) return undefined
-        const doc = toDoc(row)
-        await populate(await q(scope), collections, collections[collection].fields, [doc], spec(options))
-        return doc as ReadCollection<T, K, O, D>
+        if (!Object.hasOwn(collections, collection)) return undefined
+        return run(scope, 'read', { collection }, { collection, id, options }, async (s, args) => (await read(s, collection, { ...args.options, id: args.id }))[0]) as Promise<ReadCollection<T, K, O, D> | undefined>
       },
 
       /** Creates a document. Throws a `ValidationError` for invalid `data`. */
@@ -308,6 +309,7 @@ export function defineCms<
 }
 
 type Name = { collection?: string; global?: string }
+type ReadOpts = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number; id?: string }
 
 /** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */
 type Scope = {
