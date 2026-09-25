@@ -5,7 +5,7 @@ import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
-import { checkRefs, checkSchema, populate, type ReadHooks, remove, type Spec } from './relations.ts'
+import { checkRefs, checkSchema, onDelete, populate, type ReadHooks, type Spec } from './relations.ts'
 import {
   type Checked,
   type CheckRefs,
@@ -164,6 +164,13 @@ export function defineCms<
     }
   }
 
+  // `effect`: an `onDelete` effect. It skips id checks, because other relations of the document MAY point to
+  // documents that the same delete removes.
+  const update = (scope: Scope, collection: string, id: string, data: unknown, effect = false) =>
+    run(scope, 'update', { collection }, { collection, id, data }, (s, args) => write(s, { collection }, 'update', args.data, args.id, effect))
+  const setGlobal = (scope: Scope, name: string, data: unknown, effect = false) =>
+    run(scope, 'setGlobal', { global: name }, { global: name, data }, (s, args) => write(s, { global: name }, 'setGlobal', args.data, undefined, effect))
+
   // The fields, hooks and validator of a collection or global.
   const target = ({ collection, global }: Name) =>
     collection
@@ -171,7 +178,7 @@ export function defineCms<
       : { ...globals[global!], validator: validators.globals[global!] }
 
   // Shared by `create`, `update` and `setGlobal`. Returns `undefined` for a missing document.
-  async function write(s: Inner, name: Name, operation: 'create' | 'update' | 'setGlobal', input: unknown, id?: string) {
+  async function write(s: Inner, name: Name, operation: 'create' | 'update' | 'setGlobal', input: unknown, id?: string, effect = false) {
     const { fields, hooks: h, validator } = target(name)
     const db = await q(s)
     const originalDoc = name.global ? await loadGlobal(s, name.global) : id ? await load(s, name.collection!, id) : undefined
@@ -185,7 +192,7 @@ export function defineCms<
     await fieldHooks('beforeChange', fields, valid, fieldArgs(valid))
     // Validated again, so a hook cannot store invalid data.
     const data = validate(await hooks(h?.beforeChange, 'data', valid, base))
-    await checkRefs(db, fields, data, id ? { collection: name.collection!, id } : undefined)
+    if (!effect) await checkRefs(db, fields, data, id ? { collection: name.collection!, id } : undefined)
     const now = Date.now()
     const json = JSON.stringify(data)
     let stored: Record<string, any>
@@ -313,9 +320,7 @@ export function defineCms<
       /** Replaces the data of a document. Returns `undefined` if it does not exist. Throws a `ValidationError` for invalid `data`. */
       async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
         if (!Object.hasOwn(collections, collection)) return undefined
-        return (await run(scope, 'update', { collection }, { collection, id, data }, (s, args) =>
-          write(s, { collection }, 'update', args.data, args.id),
-        )) as CollectionDoc<T, K> | undefined
+        return (await update(scope, collection, id, data)) as CollectionDoc<T, K> | undefined
       },
 
       /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
@@ -327,7 +332,13 @@ export function defineCms<
           if (!doc) return
           const base = { ...common(s, { collection }), id: args.id, doc }
           await hooks(h?.beforeDelete, 'doc', doc, base)
-          await remove(s.trx!, schema, collection, args.id, new Set())
+          const db = await q(s)
+          await db.deleteFrom('cms_documents').where('collection', '=', collection).where('id', '=', args.id).execute()
+          await onDelete(db, schema, collection, args.id, {
+            update: (collection, id, data) => update(s, collection, id, data, true),
+            setGlobal: (name, data) => setGlobal(s, name, data, true),
+            delete: (collection, id) => s.cms.delete(collection, id),
+          })
           await hooks(h?.afterDelete, 'doc', doc, base)
         })
       },
@@ -350,9 +361,7 @@ export function defineCms<
       /** Replaces the data of a global. Throws a `ValidationError` for invalid `data`. */
       async setGlobal<K extends keyof Globals<T> & string>(name: K, data: Record<string, unknown>) {
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
-        return (await run(scope, 'setGlobal', { global: name }, { global: name, data }, (s, args) =>
-          write(s, { global: name }, 'setGlobal', args.data),
-        )) as GlobalData<T, K>
+        return (await setGlobal(scope, name, data)) as GlobalData<T, K>
       },
     }
     return api

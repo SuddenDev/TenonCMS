@@ -213,31 +213,36 @@ async function references(q: Kysely<Database>, schema: Schema, collection: strin
   return refs
 }
 
-async function writeData(trx: Kysely<Database>, ref: Ref) {
-  const values = { data: JSON.stringify(ref.data), updated_at: Date.now() }
-  if (ref.global) await trx.updateTable('cms_globals').set(values).where('name', '=', ref.global).execute()
-  else await trx.updateTable('cms_documents').set(values).where('collection', '=', ref.collection!).where('id', '=', ref.id!).execute()
+/** Local API calls of the current operation, with all their hooks. */
+export type Effects = {
+  update(collection: string, id: string, data: Record<string, unknown>): Promise<unknown>
+  setGlobal(name: string, data: Record<string, unknown>): Promise<unknown>
+  delete(collection: string, id: string): Promise<unknown>
 }
 
-/** Deletes one document and applies `onDelete` to every reference to it. MUST run inside a transaction. */
-export async function remove(trx: Kysely<Database>, schema: Schema, collection: string, id: string, visited: Set<string>) {
-  if (visited.has(`${collection}:${id}`)) return
-  visited.add(`${collection}:${id}`)
-  const refs = (await references(trx, schema, collection, id)).filter((r) => r.global || !visited.has(owner(r)))
+/**
+ * Applies `onDelete` to every reference to a deleted document. MUST run in the delete's transaction, after the row is gone,
+ * so a cascade that comes back to it finds nothing and cycles end.
+ */
+export async function onDelete(q: Kysely<Database>, schema: Schema, collection: string, id: string, effects: Effects) {
+  const refs = await references(q, schema, collection, id)
   const rule = (r: Ref) => r.field.onDelete ?? (r.field.required ? 'restrict' : 'set-null')
   const blocking = refs.filter((r) => rule(r) === 'restrict')
   if (blocking.length) {
     const owners = new Map(blocking.map((r) => [owner(r), r])).values()
     throw new ConflictError([...owners].map((r) => (r.global ? { global: r.global } : { collection: r.collection!, id: r.id! })))
   }
-  // Globals cannot cascade (checked at startup), so `collection` and `id` are set.
-  for (const r of refs.filter((r) => rule(r) === 'cascade')) await remove(trx, schema, r.collection!, r.id!, visited)
+  // `set-null` runs before `cascade`: the scanned data is still current then.
   const cleared = refs.filter((r) => rule(r) === 'set-null')
   for (const r of cleared) {
     const parent = at(r.data, r.path.slice(0, -1))
     const key = r.path.at(-1)!
     parent[key] = r.field.many ? parent[key].filter((x: string) => x !== id) : null
   }
-  for (const r of new Map(cleared.map((r) => [owner(r), r])).values()) await writeData(trx, r)
-  await trx.deleteFrom('cms_documents').where('collection', '=', collection).where('id', '=', id).execute()
+  for (const r of new Map(cleared.map((r) => [owner(r), r])).values()) {
+    if (r.global) await effects.setGlobal(r.global, r.data)
+    else await effects.update(r.collection!, r.id!, r.data)
+  }
+  // Globals cannot cascade (checked at startup), so `collection` and `id` are set.
+  for (const r of refs.filter((r) => rule(r) === 'cascade')) await effects.delete(r.collection!, r.id!)
 }

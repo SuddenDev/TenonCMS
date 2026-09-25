@@ -1378,3 +1378,79 @@ describe('populated hooks', () => {
     expect(calls.sort()).toEqual(['authors:1', 'posts:2'])
   })
 })
+
+describe('onDelete hooks', () => {
+  let calls: unknown[] = []
+  const make = (fail = false) =>
+    defineCms({
+      collections: {
+        authors: { fields: { name: { type: 'text' } } },
+        posts: {
+          fields: { title: { type: 'text' }, author: { type: 'relation', collection: 'authors', onDelete: 'set-null' } },
+          hooks: {
+            beforeChange: [
+              ({ operation, data }) => {
+                calls.push(['beforeChange', operation, data.author])
+                if (fail && operation === 'update') throw new Error('boom')
+              },
+            ],
+            afterChange: [({ operation, doc }) => void calls.push(['afterChange', operation, doc.author])],
+          },
+        },
+        comments: {
+          fields: { post: { type: 'relation', collection: 'posts', onDelete: 'cascade' } },
+          hooks: { beforeDelete: [({ id }) => void calls.push(['beforeDelete', id])], afterDelete: [({ id }) => void calls.push(['afterDelete', id])] },
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+  const seed = async (cms: ReturnType<typeof make>) => {
+    const author = await cms.create('authors', { name: 'a' })
+    const post = await cms.create('posts', { title: 'p', author: author.id })
+    const comment = await cms.create('comments', { post: post.id })
+    calls = []
+    return { author, post, comment }
+  }
+
+  it("run the referencing collection's update and delete hooks", async () => {
+    const cms = make()
+    const { author, post, comment } = await seed(cms)
+    await cms.delete('authors', author.id)
+    expect(calls).toEqual([
+      ['beforeChange', 'update', null],
+      ['afterChange', 'update', null],
+    ])
+    calls = []
+    await cms.delete('posts', post.id)
+    expect(calls).toEqual([
+      ['beforeDelete', comment.id],
+      ['afterDelete', comment.id],
+    ])
+  })
+
+  it('roll back the delete when an effect hook throws', async () => {
+    const cms = make(true)
+    const { author } = await seed(cms)
+    await expect(cms.delete('authors', author.id)).rejects.toThrow('boom')
+    expect(await cms.findById('authors', author.id)).toBeDefined()
+  })
+
+  it('clear a reference whose other relation points to a document deleted in the same cascade', async () => {
+    const other = defineCms({
+      collections: {
+        pages: { fields: { parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } } },
+        links: { fields: { a: { type: 'relation', collection: 'pages' }, b: { type: 'relation', collection: 'pages' } } },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+    const x = await other.create('pages', {})
+    const y = await other.create('pages', { parent: x.id })
+    const z = await other.create('pages', { parent: y.id })
+    const link = await other.create('links', { a: z.id, b: y.id })
+    await other.delete('pages', x.id)
+    expect(await other.find('pages')).toEqual([])
+    expect(await other.findById('links', link.id, { populate: false })).toMatchObject({ a: null, b: null })
+  })
+})
