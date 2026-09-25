@@ -200,7 +200,7 @@ export type HookArgs = {
 }
 
 /** Arguments of field hooks and `validate`. */
-type FieldArgs = HookArgs & {
+export type FieldArgs = HookArgs & {
   /** The whole document. Untyped. */
   data: Record<string, unknown>
   /** The object that holds this field: `data` at the top level, the group's value inside a group. Untyped. */

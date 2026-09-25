@@ -3,8 +3,8 @@ import { consola } from 'consola'
 import { type Kysely, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
+import { isObject, matchCondition } from './condition.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
-import { isObject } from './condition.ts'
 import { ConflictError, ValidationError } from './errors.ts'
 import { checkRefs, checkSchema, onDelete, populate, type ReadHooks, type Spec } from './relations.ts'
 import {
@@ -15,6 +15,7 @@ import {
   type Data,
   dataSchema,
   type Doc,
+  type FieldArgs,
   type FieldHooks,
   type Fields,
   type FilterKey,
@@ -181,13 +182,19 @@ export function defineCms<
     const originalDoc = name.global ? await loadGlobal(s, name.global) : id ? await load(s, name.collection!, id) : undefined
     if (id && !originalDoc) return undefined
     const base = { ...common(s, name), operation, id, originalDoc }
-    const fieldArgs = (data: object) => ({ ...common(s, name), operation, data, originalDoc })
+    const fieldArgs = (data: Record<string, unknown>) => ({ ...common(s, name), operation, data, originalDoc })
     // Built per write, because conditions depend on the data.
     const validate = (data: unknown) => parseData(dataSchema(fields, data), data)
     const copy = structuredClone(input)
     if (operation === 'create' && isObject(copy)) await applyDefaults(fields, copy, common(s, name))
     if (isObject(copy)) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
     const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
+    // `onDelete` effects only clear references, so the document's own rules do not apply.
+    if (!effect) {
+      const errors: Record<string, string> = {}
+      await runValidate(fields, valid, fieldArgs(valid), errors)
+      if (Object.keys(errors).length) throw new ValidationError(errors)
+    }
     await fieldHooks('beforeChange', fields, valid, fieldArgs(valid))
     // Validated again, so a hook cannot store invalid data.
     const data = validate(await hooks(h?.beforeChange, 'data', valid, base))
@@ -414,6 +421,18 @@ async function applyDefaults(fields: Fields, data: Record<string, unknown>, args
     if (data[key] === undefined && f.default !== undefined) data[key] = typeof f.default === 'function' ? await f.default(args) : structuredClone(f.default)
     const group = data[key]
     if (f.type === 'group' && isObject(group)) await applyDefaults(f.fields, group, args)
+  }
+}
+
+// Collects the messages of field `validate` functions by path. Fields whose condition is false are skipped.
+async function runValidate(fields: Fields, siblingData: Record<string, any>, args: Omit<FieldArgs, 'siblingData' | 'path'>, errors: Record<string, string>, prefix = '') {
+  for (const [key, f] of Object.entries(fields)) {
+    if (f.type === 'join' || (f.condition && !matchCondition(f.condition, args.data, siblingData))) continue
+    const path = prefix + key
+    const result = await f.validate?.(siblingData[key], { ...args, siblingData, path })
+    if (typeof result === 'string') errors[path] = result
+    const group = siblingData[key]
+    if (f.type === 'group' && isObject(group)) await runValidate(f.fields, group, args, errors, `${path}.`)
   }
 }
 
