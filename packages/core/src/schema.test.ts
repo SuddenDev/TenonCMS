@@ -152,6 +152,42 @@ describe('relation values', () => {
 })
 
 // Checked by `pnpm typecheck` only.
+// `satisfies` checks excess keys, which generic inference in `defineCollection` skips.
+function optionTypes() {
+  ;({
+    a: {
+      type: 'text',
+      minLength: 1,
+      maxLength: 9,
+      pattern: '[a-z]+',
+      placeholder: 'x',
+      description: 'Help',
+      default: 'x',
+      condition: { b: { gt: 0 } },
+      unique: true,
+      private: true,
+      validate: (v) => v !== 'no' || 'Not allowed',
+    },
+    b: { type: 'number', min: 0, max: 9, default: ({ user }) => (user ? 1 : 0) },
+    r: { type: 'relation', collection: 'authors', default: ({ user }) => user?.id, validate: (v, { siblingData }) => !!v || String(siblingData.a) },
+    h: { type: 'text', hidden: true, description: 'Secret', condition: { $some: [{ a: 'x' }, { '/b': { exists: true } }] } },
+    j: { type: 'join', collection: 'posts', on: 'author', description: 'Posts', private: true },
+    // @ts-expect-error `min` is for numbers
+    c: { type: 'text', min: 1 },
+    // @ts-expect-error `pattern` is for text
+    d: { type: 'number', pattern: '1' },
+    // @ts-expect-error a RegExp cannot reach the admin
+    e: { type: 'text', pattern: /x/ },
+    // @ts-expect-error `placeholder` is not for booleans
+    f: { type: 'boolean', placeholder: 'x' },
+    // @ts-expect-error a default has the field's type
+    g: { type: 'number', default: 'x' },
+    // @ts-expect-error joins are not stored, so they have no default
+    k: { type: 'join', collection: 'posts', on: 'author', default: [] },
+  }) satisfies Fields
+}
+
+// Checked by `pnpm typecheck` only.
 function writeTypes() {
   const fields = defineCollection({
     fields: {

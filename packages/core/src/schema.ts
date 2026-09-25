@@ -1,23 +1,92 @@
 import type { User } from 'better-auth'
 import { z } from 'zod'
+import type { Condition } from './condition.ts'
 import { ValidationError } from './errors.ts'
 
-type Base<V = string> = {
+// Options of every field, joins included.
+type Common = {
   /** Label in the admin. Defaults to the field key. */
   label?: string
+  /** Help text below the input in the admin. */
+  description?: string
+  /**
+   * The field applies only when this matches the document. Otherwise the admin hides it and saves it as `null`,
+   * and the server skips `required`, the built-in checks and `validate`. The type check still runs. See {@link Condition}.
+   * It MUST NOT name a `hidden` field, because the admin never gets its value.
+   */
+  condition?: Condition
+  /** Sent over HTTP only with a session, so the admin sees it and public reads do not. Not filterable without a session. On a group, it applies to the whole group. */
+  private?: boolean
+  /**
+   * Never sent over HTTP, not even to the admin, and not in `/schema`. HTTP input ignores it, and an HTTP update keeps
+   * the stored value. Only the local API and hooks read and write it. On a group, it applies to the whole group.
+   */
+  hidden?: boolean
+}
+
+// `V` is the value hooks see. `S` is the stored value, which `default` and `validate` get.
+type Base<V = string, S = V> = Common & {
   /** The value MUST be present on create and update. Optional fields read as `null` or missing. */
   required?: boolean
   /** Functions that run for this field on every write and read. Field hooks run before the collection's or global's hooks. */
   hooks?: FieldHooks<V>
+  /**
+   * The value on `create` when the input leaves the field `undefined` (not `null`). Applied before `beforeValidate` hooks.
+   * Not applied on `update`. Inside a group, only when the group is sent.
+   * A plain value also pre-fills new documents in the admin. A function runs on the server only.
+   */
+  default?: S | Fn<HookArgs, S | null | undefined>
+  /**
+   * Server only. Returns `true`, or an error message for this field. Runs after the type checks and before `beforeChange` hooks.
+   * All messages of a write come back together in one `ValidationError`. Skipped when `condition` is false.
+   */
+  validate?: Validate<S>
+  /**
+   * No other document of the collection MAY have the same value. Checked after `beforeChange` hooks; a collision is a
+   * `ValidationError` with `Already used`. `null` and missing values never collide. Case-sensitive.
+   * Only on top-level `text`, `textarea`, `number`, `date`, `select` and single `relation` fields of a collection.
+   */
+  unique?: boolean
+}
+
+// Options of `text` and `textarea`.
+type TextOptions = {
+  /** Shown in the empty input. */
+  placeholder?: string
+  /** Minimum number of characters. An empty optional value is not checked. */
+  minLength?: number
+  /** Maximum number of characters. */
+  maxLength?: number
+  /**
+   * A regular expression source, e.g. `'[a-z0-9-]+'`. It MUST match the whole value; `^` and `$` are implied.
+   * A string, not a `RegExp`, because the admin checks it too. It compiles with the `v` flag, like the HTML `pattern`
+   * attribute. An empty optional value is not checked. `<textarea>` has no `pattern` attribute, so there only the server checks it.
+   */
+  pattern?: string
 }
 
 /** One field of a collection, a global or a group. `type` picks the kind of value. */
 export type Field =
+  | (Base &
+      TextOptions & {
+        /** `text`: one line. `textarea`: several lines. */
+        type: 'text' | 'textarea'
+      })
   | (Base & {
-      /** `text`: one line. `textarea`: several lines. `date`: an ISO date string (`2026-09-24`). */
-      type: 'text' | 'textarea' | 'date'
+      /** An ISO date string (`2026-09-24`). */
+      type: 'date'
+      /** Shown in the empty input. */
+      placeholder?: string
     })
-  | (Base<number> & { type: 'number' })
+  | (Base<number> & {
+      type: 'number'
+      /** Shown in the empty input. */
+      placeholder?: string
+      /** Smallest allowed value. */
+      min?: number
+      /** Largest allowed value. */
+      max?: number
+    })
   | (Base<boolean> & { type: 'boolean' })
   | (Base & {
       type: 'select'
@@ -34,7 +103,7 @@ export type Field =
       /** The nested fields. Groups MAY contain groups. */
       fields: Fields
     })
-  | (Base<unknown> & {
+  | (Base<unknown, string | string[]> & {
       /** Stores the id of a document in `collection`. Reads resolve it to the document, see `populate`. */
       type: 'relation'
       /** Name of the collection the ids point to. It MAY be the collection that holds this field. */
@@ -51,17 +120,15 @@ export type Field =
        */
       onDelete?: 'set-null' | 'restrict' | 'cascade'
     })
-  | {
+  | (Common & {
       /** Not stored. Lists the documents of `collection` whose relation at `on` points here. Only in collections, at the top level. */
       type: 'join'
-      /** Label in the admin. Defaults to the field key. */
-      label?: string
       /** Name of the collection whose documents point here. */
       collection: string
       /** Path of the relation field in `collection` that points here, e.g. `author` or `seo.image`. */
       on: string
       required?: never
-    }
+    })
 
 export type Fields = Record<string, Field>
 
@@ -132,22 +199,29 @@ export type HookArgs = {
   global?: string
 }
 
+/** Arguments of field hooks and `validate`. */
+type FieldArgs = HookArgs & {
+  /** The whole document. Untyped. */
+  data: Record<string, unknown>
+  /** The object that holds this field: `data` at the top level, the group's value inside a group. Untyped. */
+  siblingData: Record<string, unknown>
+  /** The stored document before this write. Missing on create and on reads. Untyped. */
+  originalDoc?: Record<string, unknown>
+  /** Dot path of the field, e.g. `seo.title`. */
+  path: string
+  operation: Operation
+}
+
 type FieldHook<V> = Fn<
-  HookArgs & {
+  FieldArgs & {
     /** The field's value. Return a new value to replace it. */
     value: V | null | undefined
-    /** The whole document. Untyped. */
-    data: Record<string, unknown>
-    /** The object that holds this field: `data` at the top level, the group's value inside a group. Untyped. */
-    siblingData: Record<string, unknown>
-    /** The stored document before this write. Missing on create and on reads. Untyped. */
-    originalDoc?: Record<string, unknown>
-    /** Dot path of the field, e.g. `seo.title`. */
-    path: string
-    operation: Operation
   },
   V | null | undefined
 >
+
+// Method syntax makes the parameters bivariant, like `Fn`.
+type Validate<V> = { validate(value: V | null | undefined, args: FieldArgs): Awaitable<true | string> }['validate']
 
 /** Hooks of one field. A hook MAY return a new value; `undefined` keeps the old one. */
 export type FieldHooks<V> = {
