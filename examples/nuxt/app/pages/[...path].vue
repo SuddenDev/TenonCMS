@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { seoMeta } from 'integral-cms/presets'
+import { seoMeta } from 'integral-cms/client'
 
 // `index.vue` and `posts/[slug].vue` win over this route, so a CMS page at `/` never shows.
 const route = useRoute()

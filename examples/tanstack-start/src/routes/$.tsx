@@ -1,6 +1,6 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { seoMeta } from 'integral-cms/presets'
+import { seoMeta } from 'integral-cms/client'
 import cms from '../../integral.config'
 
 const getPage = createServerFn()

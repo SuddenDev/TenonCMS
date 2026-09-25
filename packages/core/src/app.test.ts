@@ -7,7 +7,7 @@ import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema, ValidationError } from './index.ts'
-import { page, seo, treeHooks } from './presets.ts'
+import { page, seo, treeHooks } from './presets/index.ts'
 
 const origin = 'http://localhost'
 const base = {

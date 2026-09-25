@@ -44,8 +44,8 @@
       "default": "./dist/vite/index.mjs"
     },
     "./presets": {
-      "types": "./dist/presets.d.mts",
-      "default": "./dist/presets.mjs"
+      "types": "./dist/presets/index.d.mts",
+      "default": "./dist/presets/index.mjs"
     }
   },
   "scripts": {

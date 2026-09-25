@@ -377,7 +377,7 @@ Coming from Payload: the hook names are the same. `req.user` is `user`, `req.con
 
 ### Pages and SEO
 
-`integral-cms/presets` gives pages with nested URLs and SEO fields. It is plain field objects, named hook records and one helper. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
+`integral-cms/presets` gives pages with nested URLs and SEO fields. It is plain field objects and named hook records. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
 
 ```ts
 // collections/pages.ts
@@ -456,7 +456,7 @@ A tree without URLs keeps only `noCycle`.
 Read a page by its path like any other field, and build `<head>` with `seoMeta()`:
 
 ```ts
-import { seoMeta } from 'integral-cms/presets'
+import { seoMeta } from 'integral-cms'
 
 const doc = await cms.findOne('pages', { where: { path: '/about/team' } })
 const { title, description, noindex } = seoMeta(doc)
@@ -465,7 +465,7 @@ const { title, description, noindex } = seoMeta(doc)
 
 - `title` is `seo.title`, or the page's `title` when it is empty. Nothing is stored, so the fallback follows title changes.
 - `description` is `seo.description` or `undefined`. `noindex` is `true` only when `seo.noindex` is.
-- `seoMeta()` imports no server code, so it also runs in the browser.
+- `seoMeta()`, `slugify()` and `SLUG_PATTERN` come from `integral-cms`. In browser code, import them from `integral-cms/client`, which pulls no server code.
 
 Each example has a catch-all route that reads by `path`. Static routes win over it, so a CMS page at `/` (or `/about` in Astro) never shows:
 
@@ -695,7 +695,7 @@ Working:
 - Collection, global and field hooks, run by the local API in one transaction per write
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
 - Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
-- `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, `seoMeta()`
+- `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `slugify()`
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions

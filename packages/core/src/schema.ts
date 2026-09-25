@@ -2,7 +2,7 @@ import type { User } from 'better-auth'
 import { z } from 'zod'
 import { type Condition, isObject, matchCondition } from './condition.ts'
 import { ValidationError } from './errors.ts'
-import { SLUG_PATTERN } from './slugify.ts'
+import { SLUG_PATTERN } from './helpers/slugify.ts'
 
 // Options of every field, joins included.
 type Common = {

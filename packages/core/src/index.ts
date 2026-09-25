@@ -6,7 +6,7 @@ import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { isObject, matchCondition } from './condition.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
-import { slugify } from './slugify.ts'
+import { slugify } from './helpers/slugify.ts'
 import { checkRefs, checkSchema, onDelete, populate, type ReadHooks, type Spec } from './relations.ts'
 import {
   type Checked,
@@ -40,6 +40,7 @@ export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './sch
 
 export type { AuthOptions } from './auth.ts'
 export { ConflictError, type Reference, ValidationError } from './errors.ts'
+export { SLUG_PATTERN, seoMeta, slugify } from './helpers/index.ts'
 
 export type PopulateConfig = {
   /** Hops resolved by `populate: true`. Default 2. */

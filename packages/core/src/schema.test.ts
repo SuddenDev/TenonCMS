@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createClient } from './client.ts'
 import { matchCondition } from './condition.ts'
 import { defineCms } from './index.ts'
-import { page } from './presets.ts'
+import { page } from './presets/index.ts'
 import { type Collection, type Data, dataSchema, defineCollection, defineGlobal, type Doc, type Fields } from './schema.ts'
 
 describe('matchCondition', () => {

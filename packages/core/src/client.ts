@@ -1,6 +1,8 @@
 import type { Checked, Data, Doc, Fields as FieldsOf, FilterKey, PopulateOf, Read, ReadDoc, ReadOptions, Schema } from './schema.ts'
 
 export type { Checked, ReadOptions } from './schema.ts'
+// Helpers have no imports, so this file stays safe in the browser.
+export { SLUG_PATTERN, seoMeta, slugify } from './helpers/index.ts'
 
 /** Path of the HTTP API. */
 export const API_BASE = '/api/cms'
