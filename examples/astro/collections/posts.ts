@@ -23,6 +23,7 @@ export const posts = defineCollection({
       type: "text",
       required: false,
       pattern: "[a-z0-9]+(-[a-z0-9]+)*",
+      unique: true,
       description: "Lowercase letters, digits and dashes. Filled from the title when empty.",
       // Runs before validation, so an empty slug is filled from the title instead of failing `required`.
       hooks: {
@@ -47,12 +48,9 @@ export const posts = defineCollection({
   },
   hooks: {
     beforeChange: {
-      uniqueSlug: async ({ data, id, cms }) => {
-        const other = await cms.findOne("posts", {
-          where: { slug: data.slug },
-        });
-        if (other && other.id !== id)
-          throw new ValidationError({ slug: "Already used" });
+      featuredNeedsAuthor: ({ data }) => {
+        if (data.featured && !data.author)
+          throw new ValidationError({ author: "Featured posts need an author" });
       },
     },
   },
