@@ -1,6 +1,6 @@
 import type { User } from 'better-auth'
 import { z } from 'zod'
-import type { Condition } from './condition.ts'
+import { type Condition, isObject, matchCondition } from './condition.ts'
 import { ValidationError } from './errors.ts'
 
 // Options of every field, joins included.
@@ -389,21 +389,26 @@ export function filterable(fields: Fields, key: string) {
   return field.type !== 'group' && field.type !== 'join' && !(field.type === 'relation' && field.many)
 }
 
-function fieldSchema(field: Field): z.ZodType {
+// `on`: the field's condition matches. Otherwise only the type is checked.
+function fieldSchema(field: Exclude<Field, { type: 'join' | 'group' }>, on: boolean): z.ZodType {
+  const required = on && field.required
   switch (field.type) {
     case 'number': {
       let s = z.number()
-      if (field.min !== undefined) s = s.min(field.min)
-      if (field.max !== undefined) s = s.max(field.max)
+      if (on && field.min !== undefined) s = s.min(field.min)
+      if (on && field.max !== undefined) s = s.max(field.max)
       return s
     }
     case 'text':
     case 'textarea': {
-      let s = z.string().min(Math.max(field.minLength ?? 0, field.required ? 1 : 0))
-      if (field.maxLength !== undefined) s = s.max(field.maxLength)
       // Browsers compile the HTML `pattern` attribute with the `v` flag. The server MUST match them.
-      if (field.pattern !== undefined) s = s.regex(new RegExp(`^(?:${field.pattern})$`, 'v'))
-      return field.required ? s : z.literal('').or(s)
+      // Compiled even when unused, so an invalid pattern always throws.
+      const pattern = field.pattern === undefined ? undefined : new RegExp(`^(?:${field.pattern})$`, 'v')
+      if (!on) return z.string()
+      let s = z.string().min(Math.max(field.minLength ?? 0, required ? 1 : 0))
+      if (field.maxLength !== undefined) s = s.max(field.maxLength)
+      if (pattern) s = s.regex(pattern)
+      return required ? s : z.literal('').or(s)
     }
     case 'boolean':
       return z.boolean()
@@ -411,16 +416,14 @@ function fieldSchema(field: Field): z.ZodType {
       return z.iso.date()
     case 'select':
       return z.enum(field.options as [string, ...string[]])
-    case 'group':
-      return dataSchema(field.fields)
     case 'relation': {
       const id = z.string().min(1)
       if (!field.many) return id
       const ids = z.array(id).refine((a) => new Set(a).size === a.length, 'Duplicate id')
-      return field.required ? ids.min(1) : ids
+      return required ? ids.min(1) : ids
     }
     default:
-      return field.required ? z.string().min(1) : z.string()
+      return required ? z.string().min(1) : z.string()
   }
 }
 
@@ -431,14 +434,19 @@ export function parseData(schema: z.ZodType, data: unknown) {
   return result.data as Record<string, unknown>
 }
 
-/** Builds the validator for written data. Unknown keys are stripped. */
-export function dataSchema(fields: Fields) {
+/**
+ * Builds the validator for `data`. Unknown keys are stripped.
+ * A field whose `condition` is false keeps its type check, but `required` and the built-in checks are skipped.
+ */
+export function dataSchema(fields: Fields, data: unknown = {}, root = data, active = true): z.ZodObject {
+  const siblings = isObject(data) ? data : {}
   return z.object(
     Object.fromEntries(
       Object.entries(fields).flatMap(([name, field]) => {
         if (field.type === 'join') return []
-        const s = fieldSchema(field)
-        return [[name, field.required ? s : s.optional().nullable()]]
+        const on = active && (!field.condition || matchCondition(field.condition, root, siblings))
+        const s = field.type === 'group' ? dataSchema(field.fields, siblings[name], root, on) : fieldSchema(field, on)
+        return [[name, on && field.required ? s : s.optional().nullable()]]
       }),
     ),
   )

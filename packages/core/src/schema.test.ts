@@ -91,6 +91,32 @@ describe('dataSchema', () => {
     expect(() => dataSchema({ x: { type: 'text', pattern: '(' } })).toThrow()
   })
 
+  it('skips required and checks for fields whose condition is false, but keeps type checks', () => {
+    const fields = {
+      mediaType: { type: 'select', options: ['image', 'youtube'] },
+      url: { type: 'text', required: true, pattern: 'https://.+', condition: { mediaType: 'youtube' } },
+      settings: {
+        type: 'group',
+        fields: {
+          mode: { type: 'text' },
+          extra: { type: 'text', required: true, condition: { '/mediaType': 'youtube' } },
+          local: { type: 'text', required: true, condition: { mode: 'x' } },
+        },
+      },
+      off: { type: 'group', required: true, condition: { mediaType: 'youtube' }, fields: { a: { type: 'number', required: true } } },
+    } as const satisfies Fields
+    const parse = (d: object) => dataSchema(fields, d).safeParse(d)
+    expect(parse({ mediaType: 'image', settings: {} }).success).toBe(true)
+    expect(parse({ mediaType: 'image', url: 'nope', settings: {} })).toMatchObject({ success: true, data: { url: 'nope' } })
+    expect(parse({ mediaType: 'image', url: 5 }).success).toBe(false)
+    expect(parse({ mediaType: 'image', off: { a: 'x' } }).success).toBe(false)
+    expect(parse({ mediaType: 'image', off: {} }).success).toBe(true)
+    expect(parse({ mediaType: 'image', settings: { mode: 'x' } }).success).toBe(false)
+    expect(parse({ mediaType: 'youtube', url: 'nope', settings: { extra: 'x' }, off: { a: 1 } }).success).toBe(false)
+    expect(parse({ mediaType: 'youtube', url: 'https://y.t', settings: {}, off: { a: 1 } }).success).toBe(false)
+    expect(parse({ mediaType: 'youtube', url: 'https://y.t', settings: { extra: 'x' }, off: { a: 1 } }).success).toBe(true)
+  })
+
   it('rejects values of the wrong type', () => {
     expect(schema.safeParse({ title: 'Hi', views: '3' }).success).toBe(false)
     expect(schema.safeParse({ title: 'Hi', featured: 'true' }).success).toBe(false)
