@@ -1122,6 +1122,29 @@ describe('hooks', () => {
     expect(await cms.getGlobal('site')).toEqual({})
   })
 
+  it('get the session user on HTTP writes', async () => {
+    const seen: unknown[] = []
+    const record = ({ user }: { user: { email: string } | null }) => void seen.push(user?.email ?? null)
+    const cms = defineCms({
+      ...db,
+      collections: {
+        logs: { fields: {}, hooks: { beforeChange: [record] } },
+        posts: {
+          fields: title,
+          hooks: { beforeChange: [record], afterChange: [async ({ cms }) => void (await cms.create('logs', {}))], afterRead: [record] },
+        },
+      },
+    })
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    await client.create('posts', { title: 'a' })
+    expect(seen).toEqual(['a@b.co', 'a@b.co', 'a@b.co'])
+    seen.length = 0
+    await client.find('posts')
+    await cms.create('posts', { title: 'b' })
+    expect(seen).toEqual([null, null, null, null])
+  })
+
   it('are not sent in /schema', async () => {
     const cms = defineCms({
       ...db,

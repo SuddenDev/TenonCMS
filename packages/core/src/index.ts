@@ -365,7 +365,7 @@ export function defineCms<
     },
   }
 
-  const app = createApp(cms as unknown as Cms<Schema>)
+  const app = createApp(cms as unknown as Cms<Schema>, (user) => ({ ...cms, ...bind({ user, context: {}, nested: false }) }) as unknown as Cms<Schema>)
   return cms
 }
 

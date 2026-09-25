@@ -1,3 +1,4 @@
+import type { User } from 'better-auth'
 import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
 import { HTTPException } from 'hono/http-exception'
@@ -7,13 +8,15 @@ import { ConflictError, ValidationError } from './errors.ts'
 import { parsePopulate } from './relations.ts'
 import { filterable, type Schema, type Fields } from './schema.ts'
 
-export function createApp(cms: Cms<Schema>) {
+/** `asUser(user)` returns the local API with the session user set for hooks. */
+export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>) {
   const { schema } = cms
   // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
   // A field MAY be named `hooks`; it has a `type`.
   const publicSchema = JSON.parse(JSON.stringify(schema, (key, value) => (key === 'hooks' && typeof value?.type !== 'string' ? undefined : value)))
 
-  const api = new Hono().basePath(API_BASE)
+  // Reads use `cms` (no user). Writes use `c.var.cms`, which carries the session user.
+  const api = new Hono<{ Variables: { cms: Cms<Schema> } }>().basePath(API_BASE)
   // Only expected errors send their message. Others MAY hold internals.
   api.onError((err, c) => {
     if (err instanceof ValidationError) return c.json({ errors: err.errors }, 400)
@@ -61,6 +64,7 @@ export function createApp(cms: Cms<Schema>) {
   api.use(async (c, next) => {
     const session = await (await cms.auth()).api.getSession({ headers: c.req.raw.headers })
     if (!session) return c.json({ error: 'Unauthorized' }, 401)
+    c.set('cms', asUser(session.user))
     await next()
   })
 
@@ -69,27 +73,27 @@ export function createApp(cms: Cms<Schema>) {
   api.post('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    return c.json(await cms.create(name, await body(c.req)), 201)
+    return c.json(await c.var.cms.create(name, await body(c.req)), 201)
   })
 
   api.put('/collections/:name/:id', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const doc = await cms.update(name, c.req.param('id'), await body(c.req))
+    const doc = await c.var.cms.update(name, c.req.param('id'), await body(c.req))
     return doc ? c.json(doc) : c.notFound()
   })
 
   api.delete('/collections/:name/:id', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    await cms.delete(name, c.req.param('id'))
+    await c.var.cms.delete(name, c.req.param('id'))
     return c.body(null, 204)
   })
 
   api.put('/globals/:name', async (c) => {
     const name = globalName(c.req.param('name'))
     if (!name) return c.notFound()
-    return c.json(await cms.setGlobal(name, await body(c.req)))
+    return c.json(await c.var.cms.setGlobal(name, await body(c.req)))
   })
 
   return api
