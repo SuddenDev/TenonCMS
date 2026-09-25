@@ -1,10 +1,13 @@
+import type { User } from 'better-auth'
 import { z } from 'zod'
 
-type Base = {
+type Base<V = string> = {
   /** Label in the admin. Defaults to the field key. */
   label?: string
   /** The value MUST be present on create and update. Optional fields read as `null` or missing. */
   required?: boolean
+  /** Functions that run for this field on every write and read. Field hooks run before the collection's or global's hooks. */
+  hooks?: FieldHooks<V>
 }
 
 /** One field of a collection, a global or a group. `type` picks the kind of value. */
@@ -13,8 +16,8 @@ export type Field =
       /** `text`: one line. `textarea`: several lines. `date`: an ISO date string (`2026-09-24`). */
       type: 'text' | 'textarea' | 'date'
     })
-  | (Base & { type: 'number' })
-  | (Base & { type: 'boolean' })
+  | (Base<number> & { type: 'number' })
+  | (Base<boolean> & { type: 'boolean' })
   | (Base & {
       type: 'select'
       /** The allowed values. The stored value is one of them. */
@@ -24,13 +27,13 @@ export type Field =
       /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
       type: `custom:${string}`
     })
-  | (Base & {
+  | (Base<Record<string, unknown>> & {
       /** Nests fields under one key, stored as an object. The admin shows it as its own section. Not filterable. */
       type: 'group'
       /** The nested fields. Groups MAY contain groups. */
       fields: Fields
     })
-  | (Base & {
+  | (Base<unknown> & {
       /** Stores the id of a document in `collection`. Reads resolve it to the document, see `populate`. */
       type: 'relation'
       /** Name of the collection the ids point to. It MAY be the collection that holds this field. */
@@ -61,23 +64,152 @@ export type Field =
 
 export type Fields = Record<string, Field>
 
-export type Collection = {
+export type Collection<F extends Fields = Fields> = {
   /** Name in the admin. Defaults to the collection key. */
   label?: string
-  fields: Fields
+  fields: F
   /** Field shown in the admin list view. Defaults to the first field. */
   titleField?: string
+  /** Functions that run on every read, write and delete of this collection. Typed only through `defineCollection()`. */
+  hooks?: CollectionHooks<F>
 }
 
-export type Global = {
+export type Global<F extends Fields = Fields> = {
   /** Name in the admin. Defaults to the global key. */
   label?: string
-  fields: Fields
+  fields: F
+  /** Functions that run on every read and write of this global. Typed only through `defineGlobal()`. */
+  hooks?: GlobalHooks<F>
 }
 
 export type Schema = {
   collections?: Record<string, Collection>
   globals?: Record<string, Global>
+}
+
+type Awaitable<T> = T | Promise<T>
+// Method syntax makes the parameter bivariant, so a typed collection is still a `Collection`.
+type Fn<A, R> = { hook(args: A): Awaitable<R | void> }['hook']
+
+/** Hooks of one stage. An array, or a record whose keys name the hooks, so a host can leave one out by name. They run in order. */
+export type Slot<F> = F[] | Record<string, F>
+
+/**
+ * The operation a hook runs in:
+ * - `'create'`, `'update'`, `'delete'`: a collection write.
+ * - `'read'`: `find`, `findOne` and `findById`, and documents loaded by `populate`.
+ * - `'getGlobal'`, `'setGlobal'`: a global read or write.
+ */
+export type Operation = 'create' | 'update' | 'delete' | 'read' | 'getGlobal' | 'setGlobal'
+
+type Options = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number }
+type Row = Record<string, any>
+
+/** The local API with untyped names and data, as hooks get it. */
+export type LocalApi = {
+  find(collection: string, options?: Options): Promise<Row[]>
+  findOne(collection: string, options: Options): Promise<Row | undefined>
+  findById(collection: string, id: string, options?: Options): Promise<Row | undefined>
+  create(collection: string, data: Record<string, unknown>): Promise<Row>
+  update(collection: string, id: string, data: Record<string, unknown>): Promise<Row | undefined>
+  delete(collection: string, id: string): Promise<void>
+  getGlobal(name: string, options?: Options): Promise<Row>
+  setGlobal(name: string, data: Record<string, unknown>): Promise<Row>
+}
+
+/** Arguments every hook gets. */
+export type HookArgs = {
+  /** The local API, bound to the current transaction. Nested calls run their own hooks. Untyped. */
+  cms: LocalApi
+  /** The session user of an HTTP write. `null` for public reads and for server calls of the local API. */
+  user: User | null
+  /** One object shared by all hooks of an operation and every nested call inside it. Use it to pass values along or to stop loops. */
+  context: Record<string, unknown>
+  /** Name of the collection. Missing for globals. */
+  collection?: string
+  /** Name of the global. Missing for collections. */
+  global?: string
+}
+
+type FieldHook<V> = Fn<
+  HookArgs & {
+    /** The field's value. Return a new value to replace it. */
+    value: V | null | undefined
+    /** The whole document. Untyped. */
+    data: Record<string, unknown>
+    /** The object that holds this field: `data` at the top level, the group's value inside a group. Untyped. */
+    siblingData: Record<string, unknown>
+    /** The stored document before this write. Missing on create and on reads. Untyped. */
+    originalDoc?: Record<string, unknown>
+    /** Dot path of the field, e.g. `seo.title`. */
+    path: string
+    operation: Operation
+  },
+  V | null | undefined
+>
+
+/** Hooks of one field. A hook MAY return a new value; `undefined` keeps the old one. */
+export type FieldHooks<V> = {
+  /** Runs on unvalidated input, before schema validation. */
+  beforeValidate?: Slot<FieldHook<V>>
+  /** Runs on validated data, before the write. Its result is validated again. */
+  beforeChange?: Slot<FieldHook<V>>
+  /** Runs after the write, on the stored document. */
+  afterChange?: Slot<FieldHook<V>>
+  /** Runs once per document on every read and after writes. */
+  afterRead?: Slot<FieldHook<V>>
+}
+
+// A collection written inline in `defineCms` has the wide `Fields`, so its hooks get `any`.
+type D<F extends Fields> = Fields extends F ? any : Data<F>
+type DocOf<F extends Fields> = Fields extends F ? any : Doc<F>
+
+type ChangeArgs = HookArgs & {
+  operation: Operation
+  /** Id of the document. Missing on create and for globals. */
+  id?: string
+}
+
+/**
+ * Hooks of a collection. Each hook gets one object and MAY be async. A hook MAY return a replacement for its main value
+ * (`args`, `data`, `doc`, `docs`, `result`); `undefined` keeps it.
+ *
+ * Order of a write: `beforeOperation` → `beforeValidate` → validation → `beforeChange` → validation → write → `afterChange` → `afterRead` → `afterOperation`.
+ * Field hooks of a stage run before the collection's.
+ */
+export type CollectionHooks<F extends Fields> = {
+  /** Runs first in every operation. `args` is the operation's input, e.g. `{ collection, id, data }`. */
+  beforeOperation?: Slot<Fn<HookArgs & { operation: Operation; args: Record<string, unknown> }, Record<string, unknown>>>
+  /** Runs on unvalidated input of `create` and `update`. The result is validated. */
+  beforeValidate?: Slot<Fn<ChangeArgs & { data: Partial<D<F>>; originalDoc?: DocOf<F> }, Partial<D<F>>>>
+  /** Runs on validated data, before the write. The result MUST pass validation again. */
+  beforeChange?: Slot<Fn<ChangeArgs & { data: D<F>; originalDoc?: DocOf<F> }, D<F>>>
+  /** Runs after the write, in the same transaction. `previousDoc` is missing on create. */
+  afterChange?: Slot<Fn<HookArgs & { operation: Operation; doc: DocOf<F>; previousDoc?: DocOf<F> }, DocOf<F>>>
+  /** Runs once per read on the loaded documents, before relations are resolved. */
+  beforeRead?: Slot<Fn<HookArgs & { operation: Operation; docs: DocOf<F>[] }, DocOf<F>[]>>
+  /** Runs once per read on all returned documents, and after writes on the written one. */
+  afterRead?: Slot<Fn<HookArgs & { operation: Operation; docs: DocOf<F>[] }, DocOf<F>[]>>
+  /** Runs before a document is deleted. Does not run for a missing document. */
+  beforeDelete?: Slot<Fn<HookArgs & { id: string; doc: DocOf<F> }, void>>
+  /** Runs after the document and its `onDelete` effects are deleted, in the same transaction. */
+  afterDelete?: Slot<Fn<HookArgs & { id: string; doc: DocOf<F> }, void>>
+  /** Runs last in every operation. `result` is what the operation returns. */
+  afterOperation?: Slot<Fn<HookArgs & { operation: Operation; args: Record<string, unknown>; result: unknown }, unknown>>
+  /**
+   * Runs after an unexpected error, once the transaction is rolled back, then the root `afterError`.
+   * Does not run for `ValidationError` (400) or `ConflictError` (409). The error is rethrown.
+   */
+  afterError?: Slot<Fn<HookArgs & { operation: Operation; error: unknown }, void>>
+}
+
+/** Hooks of a global. Same as {@link CollectionHooks}; `docs` holds the one global. */
+export type GlobalHooks<F extends Fields> = Pick<CollectionHooks<F>, 'beforeValidate' | 'beforeChange' | 'afterChange' | 'beforeRead' | 'afterRead'>
+
+/** Hooks of `defineCms`. */
+export type RootHooks = {
+  /** Runs after an unexpected error in any operation, after the collection's `afterError`. Not for 400 or 409. */
+  afterError?: Slot<Fn<HookArgs & { operation: Operation; error: unknown }, void>>
 }
 
 type FieldValue<F extends Field> = F extends { type: 'group'; fields: infer G extends Fields }
@@ -160,11 +292,15 @@ export type CheckRefs<S, C> = S extends { [K in keyof S]: { fields: unknown } }
     : never
   : S
 
-export function defineCollection<const T extends Collection>(collection: T): T {
+export function defineCollection<const F extends Fields, const T extends Omit<Collection<F>, 'fields' | 'hooks'>>(
+  collection: T & { fields: F; hooks?: CollectionHooks<NoInfer<F>> },
+): T & { fields: F; hooks?: CollectionHooks<F> } {
   return collection
 }
 
-export function defineGlobal<const T extends Global>(global: T): T {
+export function defineGlobal<const F extends Fields, const T extends Omit<Global<F>, 'fields' | 'hooks'>>(
+  global: T & { fields: F; hooks?: GlobalHooks<NoInfer<F>> },
+): T & { fields: F; hooks?: GlobalHooks<F> } {
   return global
 }
 

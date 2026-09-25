@@ -40,8 +40,9 @@ export type CmsOptions<
   A extends AuthOptions = {},
   P extends PopulateConfig = {},
 > = {
-  collections?: C & NoInfer<CheckRefs<C, C>>
-  globals?: G & NoInfer<CheckRefs<G, C>>
+  // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
+  collections?: C & NoInfer<CheckRefs<C, C> & Record<string, Collection>>
+  globals?: G & NoInfer<CheckRefs<G, C> & Record<string, Global>>
   /** Defaults for reads that resolve relations. */
   populate?: P
   database: { url: string; authToken?: string }
@@ -83,7 +84,7 @@ export function defineCms<
   const A extends AuthOptions = {},
   const P extends PopulateConfig = {},
 >({ database, secret, auth: host = {} as A, populate: config = {} as P, ...schema }: CmsOptions<C, G, A, P>) {
-  type T = typeof schema
+  type T = { collections?: C; globals?: G }
   type D = DefaultDepth<P>
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 }
   checkSchema(schema, defaults)
@@ -110,7 +111,7 @@ export function defineCms<
   }
 
   const cms = {
-    schema,
+    schema: schema as T,
     auth,
     /** The `populate` config with defaults. */
     populate: defaults as { depth: D; maxDepth: number },

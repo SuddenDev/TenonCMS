@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { defineCms } from './index.ts'
-import { type Collection, type Data, dataSchema, defineCollection, type Fields } from './schema.ts'
+import { type Collection, type Data, dataSchema, defineCollection, defineGlobal, type Fields } from './schema.ts'
 
 describe('dataSchema', () => {
   const schema = dataSchema({
@@ -223,3 +223,38 @@ async function readTypes() {
   const w = (await wide.find('x'))[0]
   w.anything
 }
+
+describe('hook types', () => {
+  it('infers arguments from the fields of the same defineCollection call', () => {
+    const posts = defineCollection({
+      fields: {
+        title: { type: 'text', required: true, hooks: { beforeChange: [({ value }) => value?.toUpperCase()] } },
+        views: { type: 'number' },
+      },
+      hooks: {
+        beforeChange: [
+          ({ data }) => {
+            data.title satisfies string
+            // @ts-expect-error unknown field
+            data.nope
+          },
+        ],
+        afterRead: { count: ({ docs }) => docs.map((d) => ({ ...d, views: (d.views ?? 0) + 1 })) },
+      },
+    })
+    defineCms({ collections: { posts }, database: { url: ':memory:' }, secret: '' })
+    // @ts-expect-error field hook value is a number
+    defineCollection({ fields: { n: { type: 'number', hooks: { beforeChange: [({ value }) => value?.toUpperCase()] } } } })
+    const site = defineGlobal({
+      fields: { name: { type: 'text' } },
+      hooks: { afterRead: [({ docs }) => docs.map((d) => ({ ...d, name: d.name ?? 'x' }))] },
+    })
+    defineCms({ collections: {}, globals: { site }, database: { url: ':memory:' }, secret: '' })
+    // Inline collections get untyped arguments.
+    defineCms({
+      collections: { a: { fields: { t: { type: 'text' } }, hooks: { beforeChange: [({ data }) => ({ ...data, t: data.anything })] } } },
+      database: { url: ':memory:' },
+      secret: '',
+    })
+  })
+})
