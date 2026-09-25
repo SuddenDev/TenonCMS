@@ -8,6 +8,7 @@ import { ConflictError, ValidationError } from './errors.ts'
 import { checkRefs, checkSchema, onDelete, populate, type ReadHooks, type Spec } from './relations.ts'
 import {
   type Checked,
+  checkFields,
   type CheckRefs,
   type Collection,
   type Data,
@@ -100,6 +101,7 @@ export function defineCms<
   type D = DefaultDepth<P>
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 }
   checkSchema(schema, defaults)
+  checkFields(schema)
   const collections: Record<string, Collection> = schema.collections ?? {}
   const globals: Record<string, Global> = schema.globals ?? {}
   const spec = (options: { populate?: boolean | object; depth?: number }): Spec =>

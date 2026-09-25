@@ -382,6 +382,47 @@ export function defineGlobal<const F extends Fields, const T extends Omit<Global
   return { ...global, hooks: global.hooks ?? ({} as H) }
 }
 
+const uniqueTypes = ['text', 'textarea', 'number', 'date', 'select', 'relation']
+
+/** Throws for a condition on an unknown or hidden field, `unique` where it cannot apply, or an invalid `pattern`. */
+export function checkFields(schema: Schema) {
+  const owners = [
+    ...Object.entries(schema.collections ?? {}).map(([name, c]) => ({ name, fields: c.fields, global: false })),
+    ...Object.entries(schema.globals ?? {}).map(([name, g]) => ({ name, fields: g.fields, global: true })),
+  ]
+  for (const { name, fields, global } of owners) {
+    walk(fields, fields, name, !global)
+    dataSchema(fields)
+  }
+}
+
+// `top`: fields at the top level of a collection, the only place `unique` works.
+function walk(fields: Fields, root: Fields, where: string, top: boolean) {
+  for (const [key, f] of Object.entries(fields)) {
+    const at = `${where}.${key}`
+    if ('unique' in f && f.unique && (!top || !uniqueTypes.includes(f.type) || (f.type === 'relation' && f.many)))
+      throw new Error(`integral-cms: "${at}" cannot be unique`)
+    for (const path of conditionPaths(f.condition ?? {})) {
+      const target = path.startsWith('/') ? fieldAt(root, path.slice(1)) : fieldAt(fields, path)
+      if (!target) throw new Error(`integral-cms: condition on "${at}" names unknown field "${path}"`)
+      if (target.hidden) throw new Error(`integral-cms: condition on "${at}" names hidden field "${path}"`)
+    }
+    if (f.type === 'group') walk(f.fields, root, at, false)
+  }
+}
+
+function conditionPaths(condition: Condition): string[] {
+  return Object.entries(condition).flatMap(([key, c]) => (key === '$every' || key === '$some' ? (c as Condition[]).flatMap(conditionPaths) : [key]))
+}
+
+// The field at a dot path. A hidden group on the way is returned, since its fields are hidden too.
+function fieldAt(fields: Fields, path: string): Field | undefined {
+  const [key, ...rest] = path.split('.')
+  const f = Object.hasOwn(fields, key) ? fields[key] : undefined
+  if (!f || f.hidden || !rest.length) return f
+  return f.type === 'group' ? fieldAt(f.fields, rest.join('.')) : undefined
+}
+
 /** Whether `where` accepts `key`. Groups, joins and `many` relations are not filterable. */
 export function filterable(fields: Fields, key: string) {
   if (!Object.hasOwn(fields, key)) return false
