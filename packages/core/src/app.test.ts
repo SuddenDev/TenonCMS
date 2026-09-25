@@ -1145,6 +1145,46 @@ describe('hooks', () => {
     expect(seen).toEqual([null, null, null, null])
   })
 
+  it('share context with nested calls', async () => {
+    const cms = defineCms({
+      ...db,
+      collections: {
+        logs: { fields: { message: { type: 'text' } }, hooks: { beforeChange: [({ data, context }) => ({ ...data, message: String(context.source) })] } },
+        posts: {
+          fields: title,
+          hooks: {
+            beforeChange: [({ context }) => void (context.source = 'posts')],
+            afterChange: [async ({ cms }) => void (await cms.create('logs', { message: 'x' }))],
+          },
+        },
+      },
+    })
+    await cms.create('posts', { title: 'a' })
+    expect((await cms.find('logs')).map((l) => l.message)).toEqual(['posts'])
+    await cms.create('logs', { message: 'x' })
+    expect((await cms.find('logs')).map((l) => l.message)).toEqual(['undefined', 'posts'])
+  })
+
+  it('stop a loop with context', async () => {
+    const posts = defineCollection({
+      fields: { ...title, views: { type: 'number' } },
+      hooks: {
+        afterChange: [
+          async ({ doc, cms, context }) => {
+            calls.push('afterChange')
+            if (context.counted) return
+            context.counted = true
+            await cms.update('posts', doc.id, { title: doc.title, views: (doc.views ?? 0) + 1 })
+          },
+        ],
+      },
+    })
+    const cms = defineCms({ ...db, collections: { posts } })
+    const post = await cms.create('posts', { title: 'a' })
+    expect(calls).toHaveLength(2)
+    expect((await cms.findById('posts', post.id))?.views).toBe(1)
+  })
+
   it('are not sent in /schema', async () => {
     const cms = defineCms({
       ...db,
