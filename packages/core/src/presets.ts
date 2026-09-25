@@ -1,4 +1,5 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
+import { ValidationError } from './errors.ts'
 import type { Fields } from './schema.ts'
 import { slugify } from './slugify.ts'
 
@@ -18,6 +19,11 @@ export function treeHooks() {
         const parentPath = data.parent ? (await cms.findById(collection, data.parent, { populate: false }))?.path : undefined
         if (parentPath) return { ...data, path: `${parentPath === '/' ? '' : parentPath}/${data.slug}` }
         return { ...data, path: data.slug === 'index' ? '/' : `/${data.slug}` }
+      },
+      /** Rejects the slug if another document of the collection has the same path. MUST run after `path`. */
+      async uniquePath({ data, id, collection, cms }: any) {
+        const other = await cms.findOne(collection, { where: { path: data.path }, populate: false })
+        if (other && other.id !== id) throw new ValidationError({ slug: 'Already used on this level' })
       },
     },
   }

@@ -1831,6 +1831,15 @@ describe('page preset', () => {
     expect(await stored(a.id)).toBe('/a')
   })
 
+  it('rejects a duplicate path', async () => {
+    const { about } = await tree()
+    expect(await fieldErrors(client.create('pages', { title: 'About', slug: 'about' }))).toEqual([400, ['slug']])
+    const contact = await client.create('pages', { title: 'Contact', slug: 'contact' })
+    await expect(client.create('pages', { title: 'Team', slug: 'team', parent: contact.id })).resolves.toBeDefined()
+    expect(await fieldErrors(client.update('pages', contact.id, { title: 'Contact', slug: 'about' }))).toEqual([400, ['slug']])
+    await expect(client.update('pages', about.id, { title: 'About', slug: 'about' })).resolves.toBeDefined()
+  })
+
   it('reads a page by path over HTTP', async () => {
     const { team } = await tree()
     const res = await fetch(`${origin}/api/cms/collections/pages?path=/about/team`)
