@@ -104,9 +104,8 @@ slug: { type: 'slug', from: 'title', unique: true }
 ```
 
 - A value MUST match `[a-z0-9]+(-[a-z0-9]+)*`. The server and the admin check it. Like other fields, it is optional unless `required: true`.
-- `from` names a sibling field. On a new document, the admin fills the slug from it while you type, until you edit the slug. Saved slugs never change on their own, so URLs stay stable.
+- `from` names a sibling field. The server fills an empty slug from it on every write, before `beforeValidate`. On a new document, the admin fills the slug from it while you type, until you edit the slug. A saved slug never changes on its own, so URLs stay stable.
 - `parent` names a sibling `relation`. The admin then shows the parent's path before the input, e.g. `/about/` [team]. `path` names the parent's field to show (default `'path'`). See [Pages and SEO](#pages-and-seo).
-- The server fills nothing on its own. To fill an empty slug on API writes, use the preset hook `slugFromTitle` (see [Pages and SEO](#pages-and-seo)).
 - `unique: true` fits flat collections such as blog posts. Page trees use the `uniquePath` hook instead, because the same slug may repeat under different parents.
 
 A `group` nests fields under one key and renders as one section in the admin:

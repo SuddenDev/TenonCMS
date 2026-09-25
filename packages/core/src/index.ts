@@ -6,6 +6,7 @@ import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { isObject, matchCondition } from './condition.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
+import { slugify } from './slugify.ts'
 import { checkRefs, checkSchema, onDelete, populate, type ReadHooks, type Spec } from './relations.ts'
 import {
   type Checked,
@@ -188,6 +189,7 @@ export function defineCms<
     // `update` and `setGlobal` change only the top-level keys they get. The others keep their stored values.
     const copy = originalDoc && isObject(input) ? { ...stripMeta(originalDoc), ...structuredClone(input) } : structuredClone(input)
     if (operation === 'create' && isObject(copy)) await applyDefaults(fields, copy, common(s, name))
+    if (isObject(copy)) fillSlugs(fields, copy)
     if (isObject(copy)) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
     const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
     // `onDelete` effects only clear references, so the document's own rules do not apply.
@@ -421,6 +423,14 @@ async function hooks<V>(slot: Slot<any> | undefined, key: string, value: V, args
     if (result !== undefined) value = result
   }
   return value
+}
+
+// Fills each empty slug from its `from` field, in place, also inside groups. Runs before `beforeValidate`, like the admin's fill.
+function fillSlugs(fields: Fields, data: Record<string, unknown>) {
+  for (const [key, f] of Object.entries(fields)) {
+    if (f.type === 'slug' && f.from && !data[key] && data[f.from]) data[key] = slugify(String(data[f.from]))
+    if (f.type === 'group' && isObject(data[key])) fillSlugs(f.fields, data[key])
+  }
 }
 
 // Fills `undefined` fields in place. Children of a group get defaults only when the group is present.

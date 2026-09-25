@@ -296,6 +296,38 @@ describe('writes', () => {
   })
 })
 
+describe('slug from', () => {
+  const make = () =>
+    defineCms({
+      collections: {
+        posts: {
+          fields: {
+            title: { type: 'text', required: true },
+            slug: { type: 'slug', from: 'title', required: true },
+            meta: { type: 'group', fields: { name: { type: 'text' }, handle: { type: 'slug', from: 'name' } } },
+          },
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+
+  it('fills an empty slug from its source field', async () => {
+    const cms = make()
+    expect((await cms.create('posts', { title: 'Über uns' })).slug).toBe('uber-uns')
+    expect((await cms.create('posts', { title: 'Hi', slug: '' })).slug).toBe('hi')
+    expect((await cms.create('posts', { title: 'Hi', meta: { name: 'A B' } })).meta).toEqual({ name: 'A B', handle: 'a-b' })
+  })
+
+  it('keeps a given or stored slug', async () => {
+    const cms = make()
+    const post = await cms.create('posts', { title: 'Hi', slug: 'custom' })
+    expect(post.slug).toBe('custom')
+    expect((await cms.update('posts', post.id, { title: 'New' }))?.slug).toBe('custom')
+    expect((await cms.update('posts', post.id, { slug: null }))?.slug).toBe('new')
+  })
+})
+
 describe('validation', () => {
   it('local API rejects invalid data with ValidationError', async () => {
     const error = await cms.create('posts', { title: '' }).catch((e: unknown) => e)

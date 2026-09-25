@@ -100,10 +100,13 @@ export type Field =
   | (Base & {
       /**
        * A URL part, stored as a string. A value MUST match `SLUG_PATTERN` (`about-us`); the server and the admin check it.
-       * The server fills nothing on its own; a `beforeValidate` hook such as the page preset's `slugFromTitle` can.
+       * An empty slug is filled from `from`, by the server before `beforeValidate` and by the admin while the editor types.
        */
       type: 'slug'
-      /** A sibling field. On a new document, the admin fills the slug from it while the editor types, until the slug is edited. */
+      /**
+       * A sibling field. The server fills an empty slug from it on every write. On a new document, the admin fills the slug
+       * from it while the editor types, until the slug is edited. A saved slug never changes on its own, so URLs stay stable.
+       */
       from?: string
       /** A sibling `relation` field. The admin shows the selected parent's `path` value before the input, e.g. `/about/`. Without a parent, `/`. */
       parent?: string
