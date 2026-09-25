@@ -967,4 +967,17 @@ describe('hooks', () => {
       { operation: 'update', previous: 'a', doc: 'b' },
     ])
   })
+
+  it('are not sent in /schema', async () => {
+    const cms = defineCms({
+      ...db,
+      collections: { posts: { fields: { title: { type: 'text', hooks: { afterRead: [log('f')] } }, hooks: { type: 'text' } }, hooks: { beforeChange: [log('a')], afterRead: { b: log('b') } } } },
+      globals: { site: { fields: {}, hooks: { afterRead: [log('g')] } } },
+    })
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    const schema = await client.getSchema()
+    expect(schema.collections?.posts.fields.hooks).toEqual({ type: 'text' })
+    expect(JSON.stringify(schema).replace('"hooks":{"type":"text"}', '')).not.toContain('hooks')
+  })
 })

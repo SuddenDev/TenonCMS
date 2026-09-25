@@ -9,6 +9,9 @@ import { filterable, type Schema, type Fields } from './schema.ts'
 
 export function createApp(cms: Cms<Schema>) {
   const { schema } = cms
+  // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
+  // A field MAY be named `hooks`; it has a `type`.
+  const publicSchema = JSON.parse(JSON.stringify(schema, (key, value) => (key === 'hooks' && typeof value?.type !== 'string' ? undefined : value)))
 
   const api = new Hono().basePath(API_BASE)
   // Only expected errors send their message. Others MAY hold internals.
@@ -61,7 +64,7 @@ export function createApp(cms: Cms<Schema>) {
     await next()
   })
 
-  api.get('/schema', (c) => c.json(schema))
+  api.get('/schema', (c) => c.json(publicSchema))
 
   api.post('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
