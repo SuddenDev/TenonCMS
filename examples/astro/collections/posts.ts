@@ -1,12 +1,5 @@
 import { defineCollection, ValidationError } from "integral-cms";
-
-const slugify = (text: string) =>
-  text
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+import { page } from "integral-cms/presets";
 
 export const posts = defineCollection({
   label: "Posts",
@@ -20,18 +13,10 @@ export const posts = defineCollection({
       hooks: { beforeChange: [({ value }) => value?.trim()] },
     },
     slug: {
-      type: "text",
-      required: false,
-      pattern: "[a-z0-9]+(-[a-z0-9]+)*",
+      type: "slug",
+      from: "title",
       unique: true,
       description: "Lowercase letters, digits and dashes. Filled from the title when empty.",
-      // Runs before validation, so an empty slug is filled from the title instead of failing `required`.
-      hooks: {
-        beforeValidate: [
-          ({ value, siblingData }) =>
-            value || slugify(String(siblingData.title ?? "")),
-        ],
-      },
     },
     author: { type: "relation", collection: "authors", label: "Author" },
     publishedAt: { type: "date", label: "Published at" },
@@ -47,6 +32,10 @@ export const posts = defineCollection({
     body: { type: "textarea" },
   },
   hooks: {
+    // Runs before validation, so API writes MAY leave the slug empty.
+    beforeValidate: {
+      slugFromTitle: page.hooks.beforeValidate.slugFromTitle,
+    },
     beforeChange: {
       featuredNeedsAuthor: ({ data }) => {
         if (data.featured && !data.author)
