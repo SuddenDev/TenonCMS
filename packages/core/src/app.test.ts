@@ -1342,3 +1342,39 @@ describe('afterError', () => {
     expect(calls).toEqual(['wrappers', ['root', 'create', 'wrappers']])
   })
 })
+
+describe('populated hooks', () => {
+  it('run read hooks on populated documents once per collection per hop', async () => {
+    const calls: string[] = []
+    let seen: unknown
+    const count = ({ docs, collection }: { docs: unknown[]; collection?: string }) => void calls.push(`${collection}:${docs.length}`)
+    const cms = defineCms({
+      collections: {
+        authors: {
+          fields: { name: { type: 'text', hooks: { afterRead: [({ value }) => value?.toUpperCase()] } }, posts: { type: 'join', collection: 'posts', on: 'author' } },
+          hooks: { beforeRead: [({ context }) => void (context.seen = true)], afterRead: [count] },
+        },
+        tags: { fields: { name: { type: 'text' } }, hooks: { afterRead: [count] } },
+        posts: {
+          fields: { title: { type: 'text' }, author: { type: 'relation', collection: 'authors' }, tags: { type: 'relation', collection: 'tags', many: true } },
+          hooks: { afterRead: [({ context }) => void (seen = context.seen), count] },
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+    const [a1, a2] = [await cms.create('authors', { name: 'ann' }), await cms.create('authors', { name: 'bo' })]
+    const [t1, t2] = [await cms.create('tags', { name: 'x' }), await cms.create('tags', { name: 'y' })]
+    await cms.create('posts', { title: '1', author: a1.id, tags: [t1.id] })
+    await cms.create('posts', { title: '2', author: a2.id, tags: [t1.id, t2.id] })
+    await cms.create('posts', { title: '3', author: a1.id })
+    calls.length = 0
+    const posts = await cms.find('posts')
+    expect(calls.sort()).toEqual(['authors:2', 'posts:3', 'tags:2'])
+    expect(seen).toBe(true)
+    expect(posts.map((p) => p.author?.name)).toEqual(['ANN', 'BO', 'ANN'])
+    calls.length = 0
+    expect((await cms.findById('authors', a1.id, { populate: { posts: true } }))?.posts).toHaveLength(2)
+    expect(calls.sort()).toEqual(['authors:1', 'posts:2'])
+  })
+})

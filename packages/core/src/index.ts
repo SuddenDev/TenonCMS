@@ -5,7 +5,7 @@ import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
-import { checkRefs, checkSchema, populate, remove, type Spec } from './relations.ts'
+import { checkRefs, checkSchema, populate, type ReadHooks, remove, type Spec } from './relations.ts'
 import {
   type Checked,
   type CheckRefs,
@@ -244,9 +244,15 @@ export function defineCms<
     if (options.limit) query = query.limit(options.limit)
     const base = { ...common(s, { collection }), operation: 'read' as const }
     const docs = await hooks(h?.beforeRead, 'docs', (await query.execute()).map(toDoc), base)
-    await populate(await q(s), collections, fields, docs, spec(options))
+    await populate(await q(s), collections, fields, docs, spec(options), readHooks(s))
     return afterRead(s, { collection }, docs, 'read')
   }
+
+  // Populated documents run their own collection's read hooks, in the scope of the outer read.
+  const readHooks = (s: Inner): ReadHooks => ({
+    before: (collection, docs) => hooks(collections[collection].hooks?.beforeRead, 'docs', docs, { ...common(s, { collection }), operation: 'read' }),
+    after: (collection, docs) => afterRead(s, { collection }, docs, 'read'),
+  })
 
   // The stored data of a global, or `undefined` if it was never saved.
   async function loadGlobal(s: Scope, name: string) {
@@ -336,7 +342,7 @@ export function defineCms<
         return run(scope, 'getGlobal', { global: name }, { global: name, options }, async (s, args) => {
           const base = { ...common(s, { global: name }), operation: 'getGlobal' as const }
           const docs = await hooks(h?.beforeRead, 'docs', [(await loadGlobal(s, name)) ?? {}], base)
-          await populate(await q(s), collections, fields, docs, spec(args.options))
+          await populate(await q(s), collections, fields, docs, spec(args.options), readHooks(s))
           return (await afterRead(s, { global: name }, docs, 'getGlobal'))[0]
         }) as Promise<ReadGlobal<T, K, O, D>>
       },

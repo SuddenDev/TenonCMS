@@ -77,20 +77,26 @@ export async function checkRefs(
 /** `false`: ids. Number: hops left. Object: listed paths only; `true` inside means one hop. */
 export type Spec = false | number | { [key: string]: true | Spec }
 
+type Docs = Record<string, any>[]
+
+/** Read hooks of the target collection. They get the loaded documents per field per hop, and MAY replace them. */
+export type ReadHooks = { before(collection: string, docs: Docs): Promise<Docs>; after(collection: string, docs: Docs): Promise<Docs> }
+
 /** Resolves relation ids in `docs` in place. One query per relation or join field per hop. */
 export async function populate(
   q: Kysely<Database>,
   collections: Record<string, Collection>,
   fields: Fields,
-  docs: Record<string, any>[],
+  docs: Docs,
   spec: Spec | true,
+  read: ReadHooks,
 ) {
   if (!spec || !docs.length) return
   for (const [key, field] of Object.entries(fields)) {
     const sub = typeof spec === 'object' ? spec[key] : spec
     if (!sub) continue
     if (field.type === 'group') {
-      await populate(q, collections, field.fields, docs.map((d) => d[key]).filter(Boolean), sub === true ? 1 : sub)
+      await populate(q, collections, field.fields, docs.map((d) => d[key]).filter(Boolean), sub === true ? 1 : sub, read)
       continue
     }
     if (field.type !== 'relation' && field.type !== 'join') continue
@@ -98,6 +104,12 @@ export async function populate(
     if (field.type === 'join' && typeof spec !== 'object') continue
     const next = sub === true ? false : typeof sub === 'number' ? sub - 1 : sub
     const target = collections[field.collection].fields
+    // Same order as a top-level read: `beforeRead`, the next hop, `afterRead`.
+    const load = async (loaded: Docs) => {
+      const before = await read.before(field.collection, loaded)
+      await populate(q, collections, target, before, next, read)
+      return new Map((await read.after(field.collection, before)).map((d) => [d.id, d]))
+    }
     if (field.type === 'join') {
       const source = relationPaths(target).find((r) => r.path.join('.') === field.on)!.field
       const path = `$.${field.on}`
@@ -110,13 +122,11 @@ export async function populate(
             WHERE d.collection = ${field.collection} AND json_extract(d.data, ${path}) IN (SELECT value FROM json_each(${ids}))
             ORDER BY d.created_at DESC, d.rowid DESC`
       const rows = (await query.execute(q)).rows
-      const byId = new Map(rows.map((r) => [r.id, toDoc(r)]))
-      await populate(q, collections, target, [...byId.values()], next)
-      for (const d of docs) d[key] = rows.filter((r) => r.ref === d.id).map((r) => byId.get(r.id))
+      const byId = await load([...new Map(rows.map((r) => [r.id, toDoc(r)])).values()])
+      for (const d of docs) d[key] = rows.filter((r) => r.ref === d.id && byId.has(r.id)).map((r) => byId.get(r.id))
       continue
     }
-    const found = new Map((await byIds(q, field.collection, [...new Set(docs.flatMap((d) => d[key] ?? []))])).map((d) => [d.id, d]))
-    await populate(q, collections, target, [...found.values()], next)
+    const found = await load(await byIds(q, field.collection, [...new Set(docs.flatMap((d) => d[key] ?? []))]))
     for (const d of docs) {
       if (d[key] == null) continue
       d[key] = field.many ? d[key].map((id: string) => found.get(id)).filter(Boolean) : (found.get(d[key]) ?? null)
