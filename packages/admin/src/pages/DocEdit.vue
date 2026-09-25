@@ -58,7 +58,7 @@ async function remove() {
   <template v-if="collection && doc">
     <RouterLink :to="`/collections/${name}`" class="text-sm text-zinc-500">← {{ collection.label ?? name }}</RouterLink>
     <h1 class="mb-6 mt-1 text-2xl font-semibold">{{ isNew ? 'New entry' : 'Edit entry' }}</h1>
-    <DocForm :fields="collection.fields" :initial="doc" :save="save">
+    <DocForm :fields="collection.fields" :initial="doc" :save="save" :is-new="isNew">
       <button v-if="!isNew" type="button" class="btn-ghost text-red-600" @click="remove">Delete</button>
       <span v-if="error" class="text-sm text-red-600" role="alert">{{ error }}</span>
     </DocForm>

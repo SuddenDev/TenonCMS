@@ -34,7 +34,7 @@ export const posts = defineCollection({
     },
     author: { type: "relation", collection: "authors", label: "Author" },
     publishedAt: { type: "date", label: "Published at" },
-    category: { type: "select", options: ["news", "guide"] },
+    category: { type: "select", options: ["news", "guide"], default: "news" },
     featured: { type: "boolean" },
     color: { type: "custom:color", label: "Accent color" },
     body: { type: "textarea" },
