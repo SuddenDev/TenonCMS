@@ -7,6 +7,7 @@ import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema, ValidationError } from './index.ts'
+import { page } from './presets.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -1757,5 +1758,82 @@ describe('private', () => {
     const p = await cms.create('people', person)
     const post = await cms.create('posts', { author: p.id })
     expect((await client.findById('posts', post.id)).author).toEqual({ name: 'A', id: p.id, createdAt: expect.any(String), updatedAt: expect.any(String) })
+  })
+})
+
+describe('page preset', () => {
+  // A test sets it to fail the update of the page with that slug.
+  let failSlug: string | undefined
+  const make = () =>
+    defineCms({
+      collections: {
+        pages: {
+          titleField: 'title',
+          fields: { ...page.fields, body: { type: 'textarea' } },
+          hooks: {
+            beforeValidate: page.hooks.beforeValidate,
+            beforeChange: {
+              ...page.hooks.beforeChange,
+              fail: ({ originalDoc }) => {
+                if (originalDoc && originalDoc.slug === failSlug) throw new Error('boom')
+              },
+            },
+          },
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+  let cms: ReturnType<typeof make>
+  let client: ReturnType<typeof setup<ReturnType<typeof make>>>['client']
+  let fetch: ReturnType<typeof setup>['fetch']
+  beforeEach(async () => {
+    failSlug = undefined
+    ;({ cms, client, fetch } = setup(make()))
+    await client.signUp(admin)
+  })
+  const stored = async (id: string) => (await cms.findById('pages', id, { populate: false }))?.path
+  // Status and field keys of a 400 body.
+  const fieldErrors = async (promise: Promise<unknown>) => {
+    const e = await promise.then(() => undefined, (e: unknown) => e)
+    return e instanceof CmsError ? [e.status, Object.keys(e.body?.errors ?? {})] : e
+  }
+  const tree = async () => {
+    const about = await client.create('pages', { title: 'About', slug: 'about' })
+    const team = await client.create('pages', { title: 'Team', slug: 'team', parent: about.id })
+    const berlin = await client.create('pages', { title: 'Berlin', slug: 'berlin', parent: team.id })
+    return { about, team, berlin }
+  }
+
+  it('stores nested paths', async () => {
+    const { about, team, berlin } = await tree()
+    expect([await stored(about.id), await stored(team.id), await stored(berlin.id)]).toEqual(['/about', '/about/team', '/about/team/berlin'])
+  })
+
+  it('stores / for index at root', async () => {
+    const home = await client.create('pages', { title: 'Home', slug: 'index' })
+    expect(await stored(home.id)).toBe('/')
+  })
+
+  it('fills an empty slug from the title', async () => {
+    const p = await client.create('pages', { title: 'Über uns', slug: '' })
+    expect(p).toMatchObject({ slug: 'uber-uns', path: '/uber-uns' })
+  })
+
+  it('rejects an invalid slug', async () => {
+    expect(await fieldErrors(client.create('pages', { title: 'A', slug: 'Not Valid' }))).toEqual([400, ['slug']])
+  })
+
+  it('overwrites path in input', async () => {
+    const a = await client.create('pages', { title: 'A', slug: 'a', path: '/x' })
+    expect(await stored(a.id)).toBe('/a')
+    await cms.update('pages', a.id, { title: 'A', slug: 'a', path: '/y' })
+    expect(await stored(a.id)).toBe('/a')
+  })
+
+  it('reads a page by path over HTTP', async () => {
+    const { team } = await tree()
+    const res = await fetch(`${origin}/api/cms/collections/pages?path=/about/team`)
+    expect((await res.json()).map((p: { id: string }) => p.id)).toEqual([team.id])
   })
 })

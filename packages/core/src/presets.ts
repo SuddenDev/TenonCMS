@@ -12,6 +12,14 @@ export function treeHooks() {
       /** Fills an empty slug from the title, so API and script writes MAY omit it. */
       slugFromTitle: ({ data }: any) => (data.slug ? undefined : { ...data, slug: slugify(String(data.title ?? '')) }),
     },
+    beforeChange: {
+      /** Sets `path` from the parent's stored path and the slug. It overwrites any `path` in the input. A root `index` is `/`. */
+      async path({ data, collection, cms }: any) {
+        const parentPath = data.parent ? (await cms.findById(collection, data.parent, { populate: false }))?.path : undefined
+        if (parentPath) return { ...data, path: `${parentPath === '/' ? '' : parentPath}/${data.slug}` }
+        return { ...data, path: data.slug === 'index' ? '/' : `/${data.slug}` }
+      },
+    },
   }
 }
 
