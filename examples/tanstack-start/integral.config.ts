@@ -1,8 +1,9 @@
 import { defineCms } from 'integral-cms'
+import { pages } from './collections/pages'
 import { posts } from './collections/posts'
 
 export default defineCms({
-  collections: { posts },
+  collections: { posts, pages },
   globals: {
     site: {
       label: 'Site settings',

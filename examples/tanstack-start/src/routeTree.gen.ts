@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as AdminSplatRouteImport } from './routes/admin.$'
 import { Route as PostsSlugRouteImport } from './routes/posts/$slug'
 import { Route as ApiCmsSplatRouteImport } from './routes/api/cms/$'
@@ -17,6 +18,11 @@ import { Route as ApiCmsSplatRouteImport } from './routes/api/cms/$'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminSplatRoute = AdminSplatRouteImport.update({
@@ -37,12 +43,14 @@ const ApiCmsSplatRoute = ApiCmsSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/admin/$': typeof AdminSplatRoute
   '/posts/$slug': typeof PostsSlugRoute
   '/api/cms/$': typeof ApiCmsSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/admin/$': typeof AdminSplatRoute
   '/posts/$slug': typeof PostsSlugRoute
   '/api/cms/$': typeof ApiCmsSplatRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/admin/$': typeof AdminSplatRoute
   '/posts/$slug': typeof PostsSlugRoute
   '/api/cms/$': typeof ApiCmsSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
+  fullPaths: '/' | '/$' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
-  id: '__root__' | '/' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
+  to: '/' | '/$' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
+  id: '__root__' | '/' | '/$' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   AdminSplatRoute: typeof AdminSplatRoute
   PostsSlugRoute: typeof PostsSlugRoute
   ApiCmsSplatRoute: typeof ApiCmsSplatRoute
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/$': {
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   AdminSplatRoute: AdminSplatRoute,
   PostsSlugRoute: PostsSlugRoute,
   ApiCmsSplatRoute: ApiCmsSplatRoute,
