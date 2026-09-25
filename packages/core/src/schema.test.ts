@@ -236,6 +236,30 @@ function optionTypes() {
   }) satisfies Fields
 }
 
+describe('slug', () => {
+  const s = dataSchema({ slug: { type: 'slug', from: 'title' } })
+
+  it('requires a slug that matches the pattern', () => {
+    for (const ok of ['a', 'about-us', 'v2']) expect(s.safeParse({ slug: ok }).success, ok).toBe(true)
+    for (const bad of [{}, { slug: null }, { slug: '' }, { slug: 'Not Valid' }, { slug: 'a--b' }, { slug: '-a' }, { slug: 'a-' }])
+      expect(s.safeParse(bad).success, JSON.stringify(bad)).toBe(false)
+  })
+})
+
+// Checked by `pnpm typecheck` only.
+function slugTypes() {
+  const f = { slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' } } as const satisfies Fields
+  ;(d: Data<typeof f>) => d.slug satisfies string
+  // @ts-expect-error a slug is always required
+  const missing: Data<typeof f> = {}
+  // @ts-expect-error `required` does not apply to slugs
+  defineCollection({ fields: { s: { type: 'slug', required: false } } })
+  const read = async () => {
+    const doc = await defineCms({ collections: { c: { fields: f } }, database, secret: '' }).findById('c', 'x')
+    doc?.slug satisfies string | undefined
+  }
+}
+
 // Checked by `pnpm typecheck` only.
 function readOnlyTypes() {
   const fields = {
@@ -454,6 +478,7 @@ describe('defineCms checks', () => {
   it('throws for unique inside a group, in a global, on boolean, custom, group, join and many relations', () => {
     const bad = [
       { g: { type: 'group', fields: { t: { type: 'text', unique: true } } } },
+      { g: { type: 'group', fields: { s: { type: 'slug', unique: true } } } },
       { b: { type: 'boolean', unique: true } },
       { c: { type: 'custom:color', unique: true } },
       { g: { type: 'group', unique: true, fields: {} } },
@@ -464,7 +489,7 @@ describe('defineCms checks', () => {
     expect(define({}, { s: { fields: { t: { type: 'text', unique: true } } } })).toThrow(/"s.t" cannot be unique/)
   })
 
-  it('accepts unique on top-level text, textarea, number, date, select and single relation fields', () => {
+  it('accepts unique on top-level text, textarea, number, date, select, slug and single relation fields', () => {
     const fields: Fields = {
       a: { type: 'text', unique: true },
       b: { type: 'textarea', unique: true },
@@ -472,6 +497,7 @@ describe('defineCms checks', () => {
       d: { type: 'date', unique: true },
       e: { type: 'select', options: ['x'], unique: true },
       f: { type: 'relation', collection: 'c', unique: true },
+      g: { type: 'slug', from: 'a', unique: true },
     }
     expect(define({ c: { fields } })).not.toThrow()
   })

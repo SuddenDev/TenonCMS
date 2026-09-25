@@ -1687,6 +1687,19 @@ describe('unique', () => {
     await expect(cms.update('tags', tag.id, { slug: 'a', rank: 1 })).resolves.toMatchObject({ slug: 'a' })
   })
 
+  it('rejects a used slug', async () => {
+    const cms = defineCms({
+      collections: { posts: { fields: { title: { type: 'text' }, slug: { type: 'slug', from: 'title', unique: true } } } },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    await client.create('posts', { title: 'A', slug: 'a' })
+    const error = await client.create('posts', { title: 'B', slug: 'a' }).catch((e: unknown) => e)
+    expect(error).toMatchObject({ status: 400, body: { errors: { slug: 'Already used' } } })
+  })
+
   it('checks values set by beforeChange', async () => {
     const cms = make()
     await cms.create('tags', { slug: 'a' })

@@ -2,6 +2,7 @@ import type { User } from 'better-auth'
 import { z } from 'zod'
 import { type Condition, isObject, matchCondition } from './condition.ts'
 import { ValidationError } from './errors.ts'
+import { SLUG_PATTERN } from './slugify.ts'
 
 // Options of every field, joins included.
 type Common = {
@@ -38,7 +39,7 @@ type Base<V = string, S = V> = Common & {
   /**
    * No other document of the collection MAY have the same value. Checked after `beforeChange` hooks; a collision is a
    * `ValidationError` with `Already used`. `null` and missing values never collide. Case-sensitive.
-   * Only on top-level `text`, `textarea`, `number`, `date`, `select` and single `relation` fields of a collection.
+   * Only on top-level `text`, `textarea`, `number`, `date`, `select`, `slug` and single `relation` fields of a collection.
    */
   unique?: boolean
   /**
@@ -95,6 +96,20 @@ export type Field =
   | (Base & {
       /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
       type: `custom:${string}`
+    })
+  | (Omit<Base, 'required'> & {
+      /**
+       * A URL part, stored as a string. Always required. It MUST match `SLUG_PATTERN` (`about-us`); the server and the admin check it.
+       * The server fills nothing on its own; a `beforeValidate` hook such as the page preset's `slugFromTitle` can.
+       */
+      type: 'slug'
+      /** A sibling field. On a new document, the admin fills the slug from it while the editor types, until the slug is edited. */
+      from?: string
+      /** A sibling `relation` field. The admin shows the selected parent's `path` value before the input, e.g. `/about/`. Without a parent, `/`. */
+      parent?: string
+      /** The field of the parent document that the admin shows as the prefix. Default `'path'`. */
+      path?: string
+      required?: never
     })
   | (Base<Record<string, unknown>> & {
       /** Nests fields under one key, stored as an object. The admin shows it as its own section. Not filterable. */
@@ -301,10 +316,13 @@ type FieldValue<F extends Field> = F extends { type: 'group'; fields: infer G ex
             : string
           : string
 
+// Slugs are always required.
+type RequiredField = { required: true } | { type: 'slug' }
+
 export type Data<F extends Fields> = {
-  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K]['required'] extends true ? K : never]: FieldValue<F[K]>
+  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K] extends RequiredField ? K : never]: FieldValue<F[K]>
 } & {
-  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K]['required'] extends true ? never : K]?: FieldValue<F[K]> | null
+  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K] extends RequiredField ? never : K]?: FieldValue<F[K]> | null
 }
 
 /** Field keys that `where` accepts. Groups, joins and `many` relations are not filterable. */
@@ -382,7 +400,7 @@ export function defineGlobal<const F extends Fields, const T extends Omit<Global
   return { ...global, hooks: global.hooks ?? ({} as H) }
 }
 
-const uniqueTypes = ['text', 'textarea', 'number', 'date', 'select', 'relation']
+const uniqueTypes = ['text', 'textarea', 'number', 'date', 'select', 'slug', 'relation']
 
 /** Throws for a condition on an unknown field, `unique` where it cannot apply, or an invalid `pattern`. */
 export function checkFields(schema: Schema) {
@@ -450,6 +468,8 @@ function fieldSchema(field: Exclude<Field, { type: 'join' | 'group' }>, on: bool
       if (pattern) s = s.regex(pattern)
       return required ? s : z.literal('').or(s)
     }
+    case 'slug':
+      return on ? z.string().regex(new RegExp(`^(?:${SLUG_PATTERN})$`, 'v')) : z.string()
     case 'boolean':
       return z.boolean()
     case 'date':
@@ -486,7 +506,7 @@ export function dataSchema(fields: Fields, data: unknown = {}, root = data, acti
         if (field.type === 'join') return []
         const on = active && (!field.condition || matchCondition(field.condition, root, siblings))
         const s = field.type === 'group' ? dataSchema(field.fields, siblings[name], root, on) : fieldSchema(field, on)
-        return [[name, on && field.required ? s : s.optional().nullable()]]
+        return [[name, on && (field.required || field.type === 'slug') ? s : s.optional().nullable()]]
       }),
     ),
   )
@@ -525,7 +545,7 @@ type Value<Cs, F, S> = F extends { type: 'group'; fields: infer G extends Fields
 type Joins<F, P> = {
   [K in keyof F]: F[K] extends { type: 'join' } ? (P extends object ? (K extends keyof P ? never : K) : K) : never
 }[keyof F]
-type Req<F> = { [K in keyof F]: F[K] extends { required: true } | { type: 'join' } ? K : never }[keyof F]
+type Req<F> = { [K in keyof F]: F[K] extends RequiredField | { type: 'join' } ? K : never }[keyof F]
 
 /** Data of `fields` as a read returns it, with relations resolved as `P` says. */
 export type Resolve<Cs, F extends Fields, P> = Simplify<
