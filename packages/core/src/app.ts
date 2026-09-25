@@ -3,17 +3,38 @@ import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
 import { HTTPException } from 'hono/http-exception'
 import { API_BASE } from './client.ts'
+import { isObject } from './condition.ts'
 import type { Cms } from './index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
 import { parsePopulate } from './relations.ts'
-import { filterable, type Schema, type Fields } from './schema.ts'
+import { type Field, type Fields, filterable, type Schema } from './schema.ts'
 
 /** `asUser(user)` returns the local API with the session user set for hooks. */
 export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>) {
   const { schema } = cms
+  const collections = schema.collections ?? {}
+  const withoutHidden = <T extends { fields: Fields }>(record: Record<string, T> = {}) =>
+    Object.fromEntries(Object.entries(record).map(([key, c]) => [key, { ...c, fields: visibleFields(c.fields) }]))
   // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
-  // A field MAY be named `hooks`; it has a `type`.
-  const publicSchema = JSON.parse(JSON.stringify(schema, (key, value) => (key === 'hooks' && typeof value?.type !== 'string' ? undefined : value)))
+  // A field MAY be named `hooks`; it has a `type`. `JSON.stringify` drops other functions, like `validate`, itself.
+  const publicSchema = JSON.parse(
+    JSON.stringify({ collections: withoutHidden(schema.collections), globals: withoutHidden(schema.globals) }, (key, value) =>
+      key === 'hooks' && typeof value?.type !== 'string' ? undefined : value,
+    ),
+  )
+
+  // Removes fields the caller cannot see, also in groups, populated relations and joins.
+  function strip(fields: Fields, doc: unknown, level: Level): unknown {
+    if (Array.isArray(doc)) return doc.map((d) => strip(fields, d, level))
+    if (!isObject(doc)) return doc
+    const out = { ...doc }
+    for (const [key, f] of Object.entries(fields)) {
+      if (!visible(f, level)) delete out[key]
+      else if (f.type === 'group') out[key] = strip(f.fields, out[key], level)
+      else if (f.type === 'relation' || f.type === 'join') out[key] = strip(collections[f.collection].fields, out[key], level)
+    }
+    return out
+  }
 
   // Reads use `cms` (no user). Writes use `c.var.cms`, which carries the session user.
   const api = new Hono<{ Variables: { cms: Cms<Schema> } }>().basePath(API_BASE)
@@ -36,29 +57,31 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     if (!name) return c.notFound()
     const { limit, populate, depth, ...query } = c.req.query()
     const fields = schema.collections![name].fields
-    const where = whereFromQuery(fields, query)
+    const where = whereFromQuery(fields, query, 'public')
     if (!where) return c.json({ message: 'Invalid filter' }, 400)
     if (limit !== undefined && !/^[1-9]\d*$/.test(limit)) return c.json({ message: 'Invalid limit' }, 400)
     const read = readOptions(fields, { populate, depth })
     if (!read) return c.json({ message: 'Invalid populate' }, 400)
-    return c.json(await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read }))
+    return c.json(strip(fields, await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read }), 'public'))
   })
 
   api.get('/collections/:name/:id', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const read = readOptions(schema.collections![name].fields, c.req.query())
+    const fields = schema.collections![name].fields
+    const read = readOptions(fields, c.req.query())
     if (!read) return c.json({ message: 'Invalid populate' }, 400)
     const doc = await cms.findById(name, c.req.param('id'), read)
-    return doc ? c.json(doc) : c.notFound()
+    return doc ? c.json(strip(fields, doc, 'public')) : c.notFound()
   })
 
   api.get('/globals/:name', async (c) => {
     const name = globalName(c.req.param('name'))
     if (!name) return c.notFound()
-    const read = readOptions(schema.globals![name].fields, c.req.query())
+    const fields = schema.globals![name].fields
+    const read = readOptions(fields, c.req.query())
     if (!read) return c.json({ message: 'Invalid populate' }, 400)
-    return c.json(await cms.getGlobal(name, read))
+    return c.json(strip(fields, await cms.getGlobal(name, read), 'public'))
   })
 
   api.use(csrf())
@@ -74,14 +97,16 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   api.post('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    return c.json(await c.var.cms.create(name, await body(c.req)), 201)
+    const fields = schema.collections![name].fields
+    return c.json(strip(fields, await c.var.cms.create(name, strip(fields, await body(c.req), 'admin') as never), 'admin'), 201)
   })
 
   api.put('/collections/:name/:id', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const doc = await c.var.cms.update(name, c.req.param('id'), await body(c.req))
-    return doc ? c.json(doc) : c.notFound()
+    const fields = schema.collections![name].fields
+    const doc = await c.var.cms.update(name, c.req.param('id'), strip(fields, await body(c.req), 'admin') as never)
+    return doc ? c.json(strip(fields, doc, 'admin')) : c.notFound()
   })
 
   api.delete('/collections/:name/:id', async (c) => {
@@ -94,7 +119,8 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   api.put('/globals/:name', async (c) => {
     const name = globalName(c.req.param('name'))
     if (!name) return c.notFound()
-    return c.json(await c.var.cms.setGlobal(name, await body(c.req)))
+    const fields = schema.globals![name].fields
+    return c.json(strip(fields, await c.var.cms.setGlobal(name, strip(fields, await body(c.req), 'admin') as never), 'admin'))
   })
 
   return api
@@ -112,16 +138,27 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   }
 }
 
+/** `public`: a read without a session. `admin`: a request with a session. */
+type Level = 'public' | 'admin'
+const visible = (f: Field, level: Level) => !f.hidden && (level === 'admin' || !f.private)
+
+// Keeps only fields that are not hidden, also in groups.
+function visibleFields(fields: Fields): Fields {
+  return Object.fromEntries(
+    Object.entries(fields).flatMap(([key, f]) => (f.hidden ? [] : [[key, f.type === 'group' ? { ...f, fields: visibleFields(f.fields) } : f]])),
+  )
+}
+
 // A malformed body reads as `undefined`, which fails validation with 400.
 const body = (req: { json(): Promise<any> }) => req.json().catch(() => undefined)
 
 // Coerces query strings to the field's type, so `?featured=true` matches a boolean column.
 // `null` matches an empty or missing field, like `null` in the local API. An empty value adds no filter.
-// Returns `undefined` for an unknown field or a value that does not fit its type.
-function whereFromQuery(fields: Fields, query: Record<string, string>) {
+// Returns `undefined` for an unknown field, a field the caller cannot see or a value that does not fit its type.
+function whereFromQuery(fields: Fields, query: Record<string, string>, level: Level) {
   const where: Record<string, string | number | boolean | null> = {}
   for (const [key, value] of Object.entries(query)) {
-    if (!filterable(fields, key)) return undefined
+    if (!filterable(fields, key) || !visible(fields[key], level)) return undefined
     if (value === '') continue
     if (value === 'null') {
       where[key] = null
