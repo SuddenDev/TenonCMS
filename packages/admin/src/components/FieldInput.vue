@@ -13,10 +13,10 @@ const path = computed(() => props.path ?? props.name)
 const message = computed(() => props.errors?.[path.value])
 const invalid = computed(() => (message.value ? true : undefined))
 const required = computed(() => props.field.required && !props.loose)
-// Built-in checks as HTML attributes. Vue drops `undefined` ones, and browsers ignore those an input does not support.
+// Built-in checks and `readOnly` as HTML attributes. Vue drops `undefined` ones, and browsers ignore those an input does not support.
 const attrs = computed(() => {
   const f = props.field as Record<string, any>
-  return { required: required.value, placeholder: f.placeholder, minlength: f.minLength, maxlength: f.maxLength, pattern: f.pattern, min: f.min, max: f.max }
+  return { required: required.value, disabled: f.readOnly, placeholder: f.placeholder, minlength: f.minLength, maxlength: f.maxLength, pattern: f.pattern, min: f.min, max: f.max }
 })
 const custom = props.field.type.startsWith('custom:') ? inject(optionsKey, {}).fields?.[props.field.type.slice(7)] : undefined
 
@@ -34,7 +34,7 @@ if (props.field.type === 'relation') {
 
 <template>
   <template v-if="field.type === 'join'" />
-  <fieldset v-else-if="field.type === 'group'" class="flex flex-col gap-4 rounded border border-gray-200 p-4">
+  <fieldset v-else-if="field.type === 'group'" :disabled="field.readOnly" class="flex flex-col gap-4 rounded border border-gray-200 p-4">
     <legend class="px-1 text-sm font-medium">
       {{ field.label ?? name }}
       <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
@@ -55,7 +55,7 @@ if (props.field.type === 'relation') {
     <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
   </fieldset>
   <label v-else-if="field.type === 'boolean'" class="flex flex-wrap items-center gap-2 text-sm">
-    <input v-model="model" type="checkbox" :aria-invalid="invalid" />
+    <input v-model="model" type="checkbox" :disabled="field.readOnly" :aria-invalid="invalid" />
     {{ field.label ?? name }}
     <small v-if="field.description" class="basis-full text-xs text-zinc-500">{{ field.description }}</small>
     <span v-if="message" class="basis-full text-xs text-red-600" role="alert">{{ message }}</span>
@@ -67,14 +67,14 @@ if (props.field.type === 'relation') {
     </span>
     <Mount v-if="custom" :mount="custom" :ctx="{ name, field, value: model, onChange: (v: any) => (model = v) }" />
     <textarea v-else-if="field.type === 'textarea'" v-model="model" class="input min-h-40" v-bind="attrs" :aria-invalid="invalid" />
-    <select v-else-if="field.type === 'relation' && field.many" v-model="model" multiple class="input" :required="required" :aria-invalid="invalid">
+    <select v-else-if="field.type === 'relation' && field.many" v-model="model" multiple class="input" :required="required" :disabled="field.readOnly" :aria-invalid="invalid">
       <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
     </select>
-    <select v-else-if="field.type === 'relation'" v-model="model" class="input" :required="required" :aria-invalid="invalid">
+    <select v-else-if="field.type === 'relation'" v-model="model" class="input" :required="required" :disabled="field.readOnly" :aria-invalid="invalid">
       <option :value="null" />
       <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
     </select>
-    <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="required" :aria-invalid="invalid">
+    <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="required" :disabled="field.readOnly" :aria-invalid="invalid">
       <option :value="null" />
       <option v-for="o in field.options" :key="o" :value="o">{{ o }}</option>
     </select>

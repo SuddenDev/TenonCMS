@@ -53,6 +53,8 @@ export type FieldContext = {
     label?: string
     /** The document cannot be saved while the field is empty. */
     required?: boolean
+    /** The input SHOULD be shown disabled. The admin still saves the value. */
+    readOnly?: boolean
   }
   /** Current value. Custom fields store strings. `null` or `undefined` when empty. */
   value: any
