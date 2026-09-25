@@ -6,7 +6,7 @@ import { createAuthMiddleware } from 'better-auth/api'
 import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
-import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema } from './index.ts'
+import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema, ValidationError } from './index.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -277,6 +277,26 @@ describe('writes', () => {
     expect(await client.getGlobal('site')).toEqual({})
     await client.setGlobal('site', { name: 'Site' })
     expect(await client.getGlobal('site')).toEqual({ name: 'Site' })
+  })
+})
+
+describe('validation', () => {
+  it('local API rejects invalid data with ValidationError', async () => {
+    const error = await cms.create('posts', { title: '' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(error).toMatchObject({ errors: { title: expect.any(String) } })
+    await expect(cms.setGlobal('site', { name: 1 } as never)).rejects.toBeInstanceOf(ValidationError)
+    expect(await cms.find('posts')).toEqual([])
+  })
+
+  it('HTTP returns field errors', async () => {
+    await client.signUp(admin)
+    const json = { method: 'POST', headers: { 'content-type': 'application/json' } }
+    const res = await fetchWithSession('/collections/posts', { ...json, body: JSON.stringify({ title: '', seo: { noindex: 'x' } }) })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ errors: { title: expect.any(String), 'seo.noindex': expect.any(String) } })
+    const error = await client.create('posts', { title: '' }).catch((e: unknown) => e)
+    expect(error).toMatchObject({ status: 400, message: expect.stringMatching(/./) })
   })
 })
 
@@ -815,7 +835,8 @@ describe('onDelete restrict', () => {
   it('blocks the delete and changes nothing', async () => {
     const { cms, client } = r
     const { p } = ids
-    const note = await cms.create('notes', { post: p.id })
+    const pin = await cms.create('pages', { title: 'p' })
+    const note = await cms.create('notes', { post: p.id, pin: pin.id })
     await cms.setGlobal('site', { featured: [p.id] })
     await client.signUp(admin)
     const error = await client.delete('posts', p.id).catch((e: unknown) => e)
@@ -826,7 +847,8 @@ describe('onDelete restrict', () => {
   })
 
   it('throws ConflictError locally', async () => {
-    const note = await r.cms.create('notes', { post: ids.p.id })
+    const pin = await r.cms.create('pages', { title: 'p' })
+    const note = await r.cms.create('notes', { post: ids.p.id, pin: pin.id })
     const error = await r.cms.delete('posts', ids.p.id).catch((e: unknown) => e)
     expect(error).toBeInstanceOf(ConflictError)
     expect(error).toMatchObject({ references: [{ collection: 'notes', id: note.id }] })

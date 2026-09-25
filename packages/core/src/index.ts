@@ -9,10 +9,12 @@ import {
   type CheckRefs,
   type Collection,
   type Data,
+  dataSchema,
   type Doc,
   type FilterKey,
   filterable,
   type Global,
+  parseData,
   type PopulateOf,
   type Read,
   type ReadDoc,
@@ -24,7 +26,7 @@ export { defineCollection, defineGlobal } from './schema.ts'
 export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './schema.ts'
 
 export type { AuthOptions } from './auth.ts'
-export { ConflictError, type Reference } from './errors.ts'
+export { ConflictError, type Reference, ValidationError } from './errors.ts'
 
 export type PopulateConfig = {
   /** Hops resolved by `populate: true`. Default 2. */
@@ -89,6 +91,11 @@ export function defineCms<
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 }
   checkSchema(schema, defaults)
   const collections: Record<string, Collection> = schema.collections ?? {}
+  const globals: Record<string, Global> = schema.globals ?? {}
+  const validators = {
+    collections: mapValues(collections, (c) => dataSchema(c.fields)),
+    globals: mapValues(globals, (g) => dataSchema(g.fields)),
+  }
   const spec = (options: { populate?: boolean | object; depth?: number }): Spec =>
     options.populate === false ? false : typeof options.populate === 'object' ? (options.populate as Spec) : (options.depth ?? defaults.depth)
   const count = (o?: object) => Object.keys(o ?? {}).length
@@ -170,8 +177,10 @@ export function defineCms<
       return doc as ReadCollection<T, K, O, D>
     },
 
-    /** Creates a document. Checks relation ids, but does not validate the rest of `data`. */
-    async create<K extends keyof Collections<T> & string>(collection: K, data: Record<string, unknown>) {
+    /** Creates a document. Throws a `ValidationError` for invalid `data`. */
+    async create<K extends keyof Collections<T> & string>(collection: K, input: Record<string, unknown>) {
+      if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
+      const data = parseData(validators.collections[collection], input)
       const q = await db()
       await checkRefs(q, schema.collections![collection].fields, data)
       const now = Date.now()
@@ -183,10 +192,12 @@ export function defineCms<
       return toDoc(row) as CollectionDoc<T, K>
     },
 
-    /** Replaces the data of a document. Returns `undefined` if it does not exist. Checks relation ids, but does not validate the rest of `data`. */
-    async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
+    /** Replaces the data of a document. Returns `undefined` if it does not exist. Throws a `ValidationError` for invalid `data`. */
+    async update<K extends keyof Collections<T> & string>(collection: K, id: string, input: Record<string, unknown>) {
+      if (!Object.hasOwn(collections, collection)) return undefined
+      const data = parseData(validators.collections[collection], input)
       const q = await db()
-      await checkRefs(q, schema.collections![collection]?.fields ?? {}, data, { collection, id })
+      await checkRefs(q, collections[collection].fields, data, { collection, id })
       const row = await q
         .updateTable('cms_documents')
         .set({ data: JSON.stringify(data), updated_at: Date.now() })
@@ -214,8 +225,10 @@ export function defineCms<
       return data as ReadGlobal<T, K, O, D>
     },
 
-    /** Replaces the data of a global. Checks relation ids, but does not validate the rest of `data`. */
-    async setGlobal<K extends keyof Globals<T> & string>(name: K, data: Record<string, unknown>) {
+    /** Replaces the data of a global. Throws a `ValidationError` for invalid `data`. */
+    async setGlobal<K extends keyof Globals<T> & string>(name: K, input: Record<string, unknown>) {
+      if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
+      const data = parseData(validators.globals[name], input)
       const q = await db()
       await checkRefs(q, schema.globals![name].fields, data)
       const now = Date.now()
@@ -236,6 +249,10 @@ export function defineCms<
 
   const app = createApp(cms as unknown as Cms<Schema>)
   return cms
+}
+
+function mapValues<T, R>(record: Record<string, T>, fn: (value: T) => R) {
+  return Object.fromEntries(Object.entries(record).map(([key, value]) => [key, fn(value)]))
 }
 
 export type Cms<T extends Schema> = ReturnType<typeof defineCms<NonNullable<T['collections']>, NonNullable<T['globals']>>>

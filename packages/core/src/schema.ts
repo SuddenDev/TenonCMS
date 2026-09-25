@@ -1,5 +1,6 @@
 import type { User } from 'better-auth'
 import { z } from 'zod'
+import { ValidationError } from './errors.ts'
 
 type Base<V = string> = {
   /** Label in the admin. Defaults to the field key. */
@@ -334,7 +335,14 @@ function fieldSchema(field: Field): z.ZodType {
   }
 }
 
-/** Builds the validator for data coming from the admin API. Unknown keys are stripped. */
+/** Validates `data`. Throws a `ValidationError` keyed by field path. */
+export function parseData(schema: z.ZodType, data: unknown) {
+  const result = schema.safeParse(data)
+  if (!result.success) throw new ValidationError(Object.fromEntries(result.error.issues.map((i) => [i.path.join('.'), i.message])))
+  return result.data as Record<string, unknown>
+}
+
+/** Builds the validator for written data. Unknown keys are stripped. */
 export function dataSchema(fields: Fields) {
   return z.object(
     Object.fromEntries(

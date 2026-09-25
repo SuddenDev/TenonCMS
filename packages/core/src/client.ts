@@ -69,10 +69,10 @@ export class CmsError extends Error {
   constructor(
     /** HTTP status, e.g. `401` without a session or `400` for invalid data. */
     public status: number,
-    /** Parsed response body, if any. */
+    /** Parsed response body, if any. A `400` for invalid data has `errors`: messages by field path. */
     public body: any,
   ) {
-    super(body?.message ?? body?.error?.[0]?.message ?? `Request failed (${status})`)
+    super(body?.message ?? Object.values(body?.errors ?? {})[0] ?? body?.error?.[0]?.message ?? `Request failed (${status})`)
   }
 }
 

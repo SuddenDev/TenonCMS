@@ -3,24 +3,21 @@ import { csrf } from 'hono/csrf'
 import { HTTPException } from 'hono/http-exception'
 import { API_BASE } from './client.ts'
 import type { Cms } from './index.ts'
-import { ConflictError } from './errors.ts'
-import { HttpError, parsePopulate } from './relations.ts'
-import { dataSchema, filterable, type Schema, type Fields } from './schema.ts'
+import { ConflictError, ValidationError } from './errors.ts'
+import { parsePopulate } from './relations.ts'
+import { filterable, type Schema, type Fields } from './schema.ts'
 
 export function createApp(cms: Cms<Schema>) {
   const { schema } = cms
-  const validators = {
-    collections: mapValues(schema.collections, (c) => dataSchema(c.fields)),
-    globals: mapValues(schema.globals, (g) => dataSchema(g.fields)),
-  }
 
   const api = new Hono().basePath(API_BASE)
+  // Only expected errors send their message. Others MAY hold internals.
   api.onError((err, c) => {
-    if (err instanceof HttpError) return c.json(err.body, err.status)
+    if (err instanceof ValidationError) return c.json({ errors: err.errors }, 400)
     if (err instanceof ConflictError) return c.json({ error: [{ path: [], message: err.message }], references: err.references }, 409)
     if (err instanceof HTTPException) return err.getResponse()
     console.error(err)
-    return c.text('Internal Server Error', 500)
+    return c.json({ error: 'Internal Server Error' }, 500)
   })
 
   api.on(['GET', 'POST'], '/auth/*', async (c) => (await cms.auth()).handler(c.req.raw))
@@ -69,17 +66,13 @@ export function createApp(cms: Cms<Schema>) {
   api.post('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const parsed = validators.collections[name].safeParse(await c.req.json().catch(() => undefined))
-    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400)
-    return c.json(await cms.create(name, parsed.data), 201)
+    return c.json(await cms.create(name, await body(c.req)), 201)
   })
 
   api.put('/collections/:name/:id', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const parsed = validators.collections[name].safeParse(await c.req.json().catch(() => undefined))
-    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400)
-    const doc = await cms.update(name, c.req.param('id'), parsed.data)
+    const doc = await cms.update(name, c.req.param('id'), await body(c.req))
     return doc ? c.json(doc) : c.notFound()
   })
 
@@ -93,9 +86,7 @@ export function createApp(cms: Cms<Schema>) {
   api.put('/globals/:name', async (c) => {
     const name = globalName(c.req.param('name'))
     if (!name) return c.notFound()
-    const parsed = validators.globals[name].safeParse(await c.req.json().catch(() => undefined))
-    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400)
-    return c.json(await cms.setGlobal(name, parsed.data))
+    return c.json(await cms.setGlobal(name, await body(c.req)))
   })
 
   return api
@@ -113,9 +104,8 @@ export function createApp(cms: Cms<Schema>) {
   }
 }
 
-function mapValues<T, R>(record: Record<string, T> | undefined, fn: (value: T) => R) {
-  return Object.fromEntries(Object.entries(record ?? {}).map(([key, value]) => [key, fn(value)]))
-}
+// A malformed body reads as `undefined`, which fails validation with 400.
+const body = (req: { json(): Promise<any> }) => req.json().catch(() => undefined)
 
 // Coerces query strings to the field's type, so `?featured=true` matches a boolean column.
 // `null` matches an empty or missing field, like `null` in the local API. An empty value adds no filter.

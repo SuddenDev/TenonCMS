@@ -1,6 +1,6 @@
 import { type Kysely, sql } from 'kysely'
 import { type Database, type Row, toDoc } from './db/index.ts'
-import { ConflictError } from './errors.ts'
+import { ConflictError, ValidationError } from './errors.ts'
 import type { Collection, Field, Fields, Schema } from './schema.ts'
 
 export type RelationField = Extract<Field, { type: 'relation' }>
@@ -45,16 +45,6 @@ export function checkSchema(schema: Schema, populate: { depth: number; maxDepth:
   }
 }
 
-/** Thrown by the local API for invalid input. HTTP returns `status` with `body`. */
-export class HttpError extends Error {
-  constructor(
-    public status: 400,
-    public body: object,
-  ) {
-    super(JSON.stringify(body))
-  }
-}
-
 function at(data: any, path: string[]): any {
   return path.reduce((o, k) => o?.[k], data)
 }
@@ -70,7 +60,7 @@ export async function checkRefs(
     const value = at(data, path)
     const ids: string[] = value == null ? [] : field.many ? value : [value]
     const fail = (message: string) => {
-      throw new HttpError(400, { error: [{ path, message }] })
+      throw new ValidationError({ [path.join('.')]: message })
     }
     if (self && field.collection === self.collection && ids.includes(self.id)) fail('A document cannot reference itself')
     if (!ids.length) continue

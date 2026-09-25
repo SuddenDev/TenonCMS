@@ -9,3 +9,16 @@ export class ConflictError extends Error {
     super('Referenced by other documents')
   }
 }
+
+/**
+ * Thrown for invalid data, by validation or by a hook: `throw new ValidationError({ slug: 'Already used' })`.
+ * HTTP returns 400 with `{ errors }`, and the admin shows each message next to its field.
+ */
+export class ValidationError extends Error {
+  constructor(
+    /** Messages by field path, e.g. `{ 'seo.title': 'Too long' }`. The key `''` holds a message for the whole document. */
+    public errors: Record<string, string>,
+  ) {
+    super(Object.values(errors)[0] ?? 'Invalid data')
+  }
+}
