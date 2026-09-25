@@ -22,6 +22,22 @@ describe('matchCondition', () => {
     [{ missing: null }, true],
     [{ type: 'video', price: 6 }, false],
   ])('supports every operator: %j → %s', (c, expected) => expect(matchCondition(c, d)).toBe(expected))
+
+  it('nests $every and $some', () => {
+    const c = { $some: [{ type: 'video' }, { $every: [{ type: 'image' }, { price: { gt: 0 } }] }] }
+    expect(matchCondition(c, { type: 'video' })).toBe(true)
+    expect(matchCondition(c, { type: 'image', price: 1 })).toBe(true)
+    expect(matchCondition(c, { type: 'image', price: 0 })).toBe(false)
+    expect(matchCondition({ $every: [] }, {})).toBe(true)
+    expect(matchCondition({ $some: [] }, {})).toBe(false)
+  })
+
+  it('reads siblings inside a group and root paths with /', () => {
+    const data = { mode: 'advanced', settings: { mode: 'simple', color: 'red' } }
+    expect(matchCondition({ mode: 'simple' }, data, data.settings)).toBe(true)
+    expect(matchCondition({ '/mode': 'advanced' }, data, data.settings)).toBe(true)
+    expect(matchCondition({ '/settings.color': 'red' }, data, data.settings)).toBe(true)
+  })
 })
 
 describe('dataSchema', () => {
