@@ -116,6 +116,75 @@ seo: {
 - The admin saves an optional group with only empty values as `null`.
 - Filters (`where`, query strings) accept top-level fields only, not groups or their inner fields.
 
+#### Field options
+
+| Option | Types | What it does |
+|---|---|---|
+| `label` | all | Label in the admin |
+| `description` | all | Help text below the field in the admin |
+| `placeholder` | `text`, `textarea`, `number`, `date` | Shown in the empty input |
+| `required` | all but `join` | The value MUST be present |
+| `default` | all but `join` | Value on `create` when the field is `undefined` |
+| `minLength`, `maxLength`, `pattern` | `text`, `textarea` | String length, and a regular expression for the whole value |
+| `min`, `max` | `number` | Number range |
+| `validate` | all but `join` | Your check, on the server |
+| `condition` | all | The field applies only when this matches |
+| `unique` | top-level `text`, `textarea`, `number`, `date`, `select`, single `relation` | No two documents MAY have the same value |
+| `private`, `hidden` | all | Keep values out of the HTTP API |
+| `hooks` | all but `join` | See [Hooks](#hooks) |
+
+The admin gets the schema as JSON, so functions never reach the browser:
+
+- `required`, `condition`, the built-in checks and a plain `default` work in the admin and on the server.
+- `validate`, a function `default` and hooks run on the server only. Their messages reach the admin as field errors.
+- `pattern` is a string, not a `RegExp`. It MUST match the whole value (`^…$` is implied) and compiles with the `v` flag, like the HTML `pattern` attribute. `<textarea>` has no `pattern` attribute, so there only the server checks it.
+- Empty optional values skip the built-in checks.
+
+`default` is a value or a function. It applies on `create` only, to fields that are `undefined` (not `null`), before `beforeValidate` hooks. Children of a group get their defaults only when the group is sent.
+
+```ts
+status: { type: 'select', options: ['draft', 'live'], default: 'draft' },
+author: { type: 'relation', collection: 'authors', default: ({ user }) => user?.id },
+```
+
+`validate` returns `true` or an error message. It runs after the type checks and before `beforeChange` hooks, not on the second validation after them, and not on `onDelete` updates. All messages of a write come back in one 400.
+
+```ts
+end: { type: 'date', validate: (value, { siblingData }) => !value || value >= siblingData.start || 'Ends before start' },
+```
+
+It gets `data`, `siblingData`, `originalDoc`, `operation`, `path`, `cms` and `user`, like field hooks.
+
+`condition` shows a field only when other values match:
+
+```ts
+url: { type: 'text', required: true, condition: { mediaType: 'youtube' } },
+price: { type: 'number', condition: { forSale: true } },
+note: { type: 'text', condition: { price: { gt: 0 } } },
+embed: { type: 'text', condition: { $some: [{ mediaType: 'video' }, { mediaType: 'youtube' }] } },
+color: { type: 'text', condition: { '/settings.mode': 'advanced' } },
+```
+
+- A plain value means `eq`. Operators: `eq`, `ne`, `in`, `notIn`, `gt`, `gte`, `lt`, `lte`, `exists`. Several keys MUST all match. `$every` and `$some` take lists of conditions and nest.
+- A key without `/` is a sibling field: a field of the document at the top level, a field of the same group inside a group. A leading `/` starts at the document root; dots walk into groups.
+- The admin hides fields whose condition is false and saves them as `null`. Values survive toggling until you save.
+- The server skips `required`, the built-in checks and `validate` for them, but still checks the type. It never changes or clears values. Reads ignore conditions.
+- `defineCms` throws for a condition on an unknown or `hidden` field.
+
+`unique` rejects a value that another document of the collection has, with `Already used` on the field (400). It runs after `beforeChange` hooks, so values set by hooks count. `null` and missing values never collide; comparison is exact and case-sensitive. `defineCms` throws for `unique` in a group, in a global or on other types. Each write scans the collection once per unique field; indexes can come later without API changes.
+
+`private` and `hidden` keep values out of the HTTP API:
+
+| | Local API and hooks | HTTP with a session (admin) | HTTP without a session |
+|---|---|---|---|
+| `private` | read and write | read and write | not sent, not filterable |
+| `hidden` | read and write | not sent, not filterable, not writable, not in `/schema` | not sent, not filterable |
+
+- A filter on a field the caller cannot see returns 400, like an unknown field.
+- Hidden fields in HTTP input are ignored, and an HTTP update keeps their stored values, so admin saves never erase them.
+- The rules also apply to populated and joined documents, by the rules of their own collection. On a group, the option covers the whole group.
+- Client types follow them: `private` fields are optional, `hidden` fields are left out.
+
 ### 2. Read content
 
 ```ts
@@ -254,7 +323,7 @@ Field hooks get `value`, plus `data`, `siblingData` (the group that holds the fi
 Order:
 
 ```
-create, update, setGlobal: beforeOperation → beforeValidate → validation → beforeChange → validation → write → afterChange → afterRead → afterOperation
+create, update, setGlobal: beforeOperation → defaults (create) → beforeValidate → validation → validate → beforeChange → validation → unique → write → afterChange → afterRead → afterOperation
 find, findOne, findById, getGlobal: beforeOperation → beforeRead → populate → afterRead → afterOperation
 delete: beforeOperation → beforeDelete → delete + onDelete effects → afterDelete → afterOperation
 ```
@@ -263,7 +332,7 @@ delete: beforeOperation → beforeDelete → delete + onDelete effects → after
 - Globals have no `beforeOperation` and `afterOperation`.
 - `beforeChange` gets validated data, and its result is validated again, so a hook cannot store invalid data.
 - `afterRead` runs once per read with all documents (field `afterRead` once per value). Documents loaded by `populate` run their own collection's `beforeRead` and `afterRead`, once per relation field per hop.
-- `onDelete` effects run through `update` and `delete`, with all their hooks. A `set-null` update skips the id checks, because other relations of that document MAY point to documents the same delete removes.
+- `onDelete` effects run through `update` and `delete`, with all their hooks. A `set-null` update skips `validate`, since it only clears a reference, and the id checks, because other relations of that document MAY point to documents the same delete removes.
 
 Errors:
 
@@ -513,6 +582,7 @@ Working:
 - Public read API with equality filters and `limit`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Collection, global and field hooks, run by the local API in one transaction per write
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
+- Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `hidden`
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions

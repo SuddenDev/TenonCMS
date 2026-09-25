@@ -249,7 +249,8 @@ type ChangeArgs = HookArgs & {
  * Hooks of a collection. Each hook gets one object and MAY be async. A hook MAY return a replacement for its main value
  * (`args`, `data`, `doc`, `docs`, `result`); `undefined` keeps it.
  *
- * Order of a write: `beforeOperation` → `beforeValidate` → validation → `beforeChange` → validation → write → `afterChange` → `afterRead` → `afterOperation`.
+ * Order of a write: `beforeOperation` → defaults (create) → `beforeValidate` → validation → field `validate` → `beforeChange` → validation →
+ * `unique` → write → `afterChange` → `afterRead` → `afterOperation`.
  * Field hooks of a stage run before the collection's.
  */
 export type CollectionHooks<F extends Fields> = {
