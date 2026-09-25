@@ -1840,6 +1840,13 @@ describe('page preset', () => {
     await expect(client.update('pages', about.id, { title: 'About', slug: 'about' })).resolves.toBeDefined()
   })
 
+  it('rejects moving a page under its own descendant', async () => {
+    const { about, berlin } = await tree()
+    expect(await fieldErrors(client.update('pages', about.id, { title: 'About', slug: 'about', parent: berlin.id }))).toEqual([400, ['parent']])
+    expect(await fieldErrors(client.update('pages', about.id, { title: 'About', slug: 'about', parent: about.id }))).toEqual([400, ['parent']])
+    expect((await cms.findById('pages', about.id, { populate: false }))?.parent).toBeUndefined()
+  })
+
   it('reads a page by path over HTTP', async () => {
     const { team } = await tree()
     const res = await fetch(`${origin}/api/cms/collections/pages?path=/about/team`)

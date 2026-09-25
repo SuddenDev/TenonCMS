@@ -14,6 +14,15 @@ export function treeHooks() {
       slugFromTitle: ({ data }: any) => (data.slug ? undefined : { ...data, slug: slugify(String(data.title ?? '')) }),
     },
     beforeChange: {
+      /** Rejects a parent that is the document itself or one of its descendants. */
+      async noCycle({ data, id, collection, cms }: any) {
+        // `seen` ends the walk on a cycle that is already stored.
+        const seen = new Set<string>()
+        for (let cur = data.parent; cur && !seen.has(cur); cur = (await cms.findById(collection, cur, { populate: false }))?.parent) {
+          if (cur === id) throw new ValidationError({ parent: 'A page cannot be inside itself' })
+          seen.add(cur)
+        }
+      },
       /** Sets `path` from the parent's stored path and the slug. It overwrites any `path` in the input. A root `index` is `/`. */
       async path({ data, collection, cms }: any) {
         const parentPath = data.parent ? (await cms.findById(collection, data.parent, { populate: false }))?.path : undefined
