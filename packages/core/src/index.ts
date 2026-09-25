@@ -185,7 +185,8 @@ export function defineCms<
     const fieldArgs = (data: Record<string, unknown>) => ({ ...common(s, name), operation, data, originalDoc })
     // Built per write, because conditions depend on the data.
     const validate = (data: unknown) => parseData(dataSchema(fields, data), data)
-    const copy = structuredClone(input)
+    // `update` and `setGlobal` change only the top-level keys they get. The others keep their stored values.
+    const copy = originalDoc && isObject(input) ? { ...stripMeta(originalDoc), ...structuredClone(input) } : structuredClone(input)
     if (operation === 'create' && isObject(copy)) await applyDefaults(fields, copy, common(s, name))
     if (isObject(copy)) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
     const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
@@ -324,7 +325,10 @@ export function defineCms<
         )) as CollectionDoc<T, K>
       },
 
-      /** Replaces the data of a document. Returns `undefined` if it does not exist. Throws a `ValidationError` for invalid `data`. */
+      /**
+       * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one.
+       * Returns `undefined` if the document does not exist. Throws a `ValidationError` for invalid data.
+       */
       async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
         if (!Object.hasOwn(collections, collection)) return undefined
         return (await update(scope, collection, id, data)) as CollectionDoc<T, K> | undefined
@@ -365,7 +369,7 @@ export function defineCms<
         }) as Promise<ReadGlobal<T, K, O, D>>
       },
 
-      /** Replaces the data of a global. Throws a `ValidationError` for invalid `data`. */
+      /** Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Throws a `ValidationError` for invalid data. */
       async setGlobal<K extends keyof Globals<T> & string>(name: K, data: Record<string, unknown>) {
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
         return (await setGlobal(scope, name, data)) as GlobalData<T, K>
@@ -393,6 +397,9 @@ export function defineCms<
 
 type Name = { collection?: string; global?: string }
 type WriteOptions = { id?: string; effect?: boolean }
+
+// The stored data of a document, without `id`, `createdAt` and `updatedAt`.
+const stripMeta = ({ id, createdAt, updatedAt, ...data }: Record<string, unknown>) => data
 type ReadOpts = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number; id?: string }
 
 /** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */

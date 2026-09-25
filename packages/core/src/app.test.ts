@@ -255,8 +255,9 @@ describe('writes', () => {
     const post = await client.create('posts', { title: 'Hi', views: 1, extra: 'x' } as never)
     expect(post).toMatchObject({ title: 'Hi', views: 1 })
     expect(post).not.toHaveProperty('extra')
-    expect(await client.update('posts', post.id, { title: 'Hello' })).toMatchObject({ id: post.id, title: 'Hello' })
-    expect(await client.findById('posts', post.id)).not.toHaveProperty('views')
+    expect(await client.update('posts', post.id, { title: 'Hello' })).toMatchObject({ id: post.id, title: 'Hello', views: 1 })
+    await client.update('posts', post.id, { views: null })
+    expect(await client.findById('posts', post.id)).toMatchObject({ title: 'Hello', views: null })
     await client.delete('posts', post.id)
     expect(await status(client.findById('posts', post.id))).toBe(404)
   })
@@ -278,6 +279,20 @@ describe('writes', () => {
     expect(await client.getGlobal('site')).toEqual({})
     await client.setGlobal('site', { name: 'Site' })
     expect(await client.getGlobal('site')).toEqual({ name: 'Site' })
+  })
+
+  it('update only the top-level keys that are sent', async () => {
+    const post = await cms.create('posts', { title: 'Hi', views: 1, seo: { title: 'S', noindex: true } })
+    const updated = await cms.update('posts', post.id, { views: 2, seo: { title: 'T' } })
+    expect(updated).toMatchObject({ title: 'Hi', views: 2, seo: { title: 'T' } })
+    expect(updated?.seo).not.toHaveProperty('noindex')
+  })
+
+  it('set only the global keys that are sent', async () => {
+    const cms = defineCms({ ...base, globals: { site: { fields: { name: { type: 'text' }, tagline: { type: 'text' } } } } })
+    await cms.setGlobal('site', { name: 'Site', tagline: 'T' })
+    await cms.setGlobal('site', { tagline: 'U' })
+    expect(await cms.getGlobal('site')).toEqual({ name: 'Site', tagline: 'U' })
   })
 })
 
@@ -1567,8 +1582,8 @@ describe('default', () => {
 
   it('does not apply on update', async () => {
     const cms = make()
-    const item = await cms.create('items', {})
-    expect(await cms.update('items', item.id, {})).not.toHaveProperty('status')
+    const item = await cms.create('items', { status: null })
+    expect(await cms.update('items', item.id, {})).toMatchObject({ status: null })
   })
 
   it('runs before beforeValidate', async () => {

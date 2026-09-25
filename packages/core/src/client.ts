@@ -159,10 +159,10 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
     },
 
     /**
-     * Replaces the data of a document. Fields left out are cleared. Needs a session.
+     * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
      * `PUT /api/cms/collections/:collection/:id`
      */
-    update<K extends keyof Collections<C> & string>(collection: K, id: string, data: Data<Fields<C, K>>) {
+    update<K extends keyof Collections<C> & string>(collection: K, id: string, data: Partial<Data<Fields<C, K>>>) {
       return request<Doc<Fields<C, K>>>('PUT', doc(collection, id), data)
     },
 
@@ -191,10 +191,10 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
     },
 
     /**
-     * Replaces the data of a global. Needs a session.
+     * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
      * `PUT /api/cms/globals/:name`
      */
-    setGlobal<K extends keyof Globals<C> & string>(name: K, data: Data<Globals<C>[K]['fields']>) {
+    setGlobal<K extends keyof Globals<C> & string>(name: K, data: Partial<Data<Globals<C>[K]['fields']>>) {
       return request<Data<Globals<C>[K]['fields']>>('PUT', `/globals/${encodeURIComponent(name)}`, data)
     },
 

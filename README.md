@@ -212,6 +212,12 @@ Query params are equality filters, and `limit` caps the result: `GET /api/cms/co
 `populate` and `depth` control [relations](#relations). Because of that, fields named `limit`, `populate` or `depth` cannot be filtered over HTTP.
 Writes and the schema endpoint need an admin session.
 
+`update` and `setGlobal` change only the top-level fields they get; the others keep their stored values. `null` clears a field. A group you send replaces the stored group. This holds for the local API, HTTP `PUT` and the client:
+
+```ts
+await cms.update('posts', id, { views: 5 }) // title, body and the rest stay
+```
+
 In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your schema:
 
 ```ts
@@ -358,7 +364,7 @@ Transactions: every write runs in one transaction with its hooks, its `onDelete`
 afterChange: [async ({ doc, cms, context }) => {
   if (context.counted) return
   context.counted = true
-  await cms.update('posts', doc.id, { ...doc, views: (doc.views ?? 0) + 1 })
+  await cms.update('posts', doc.id, { views: (doc.views ?? 0) + 1 })
 }]
 ```
 
