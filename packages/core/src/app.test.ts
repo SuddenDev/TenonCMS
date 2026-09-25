@@ -968,6 +968,15 @@ describe('hooks', () => {
     ])
   })
 
+  it('validate the beforeChange result', async () => {
+    const cms = defineCms({ ...db, collections: { posts: { fields: title, hooks: { beforeChange: [({ data }) => ({ ...data, title: '' })] } } } })
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    const error = await client.create('posts', { title: 'a' }).catch((e: unknown) => e)
+    expect(error).toMatchObject({ status: 400, body: { errors: { title: expect.any(String) } } })
+    expect(await cms.find('posts')).toEqual([])
+  })
+
   it('are not sent in /schema', async () => {
     const cms = defineCms({
       ...db,

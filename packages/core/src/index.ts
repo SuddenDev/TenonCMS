@@ -146,8 +146,10 @@ export function defineCms<
     const originalDoc = id ? await load(s, collection, id) : undefined
     if (id && !originalDoc) return undefined
     const base = { ...common(s, { collection }), operation, id, originalDoc }
+    const validate = (data: unknown) => parseData(validators.collections[collection], data)
     const raw = await hooks(h?.beforeValidate, 'data', structuredClone(input), base)
-    const data = await hooks(h?.beforeChange, 'data', parseData(validators.collections[collection], raw), base)
+    // Validated again, so a hook cannot store invalid data.
+    const data = validate(await hooks(h?.beforeChange, 'data', validate(raw), base))
     const db = await q(s)
     await checkRefs(db, fields, data, id ? { collection, id } : undefined)
     const now = Date.now()
