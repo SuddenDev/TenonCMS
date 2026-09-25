@@ -69,6 +69,28 @@ describe('dataSchema', () => {
     expect(schema.safeParse({ title: '' }).success).toBe(false)
   })
 
+  it('checks length, pattern and range, but not empty optional values', () => {
+    const s = dataSchema({
+      slug: { type: 'text', minLength: 2, maxLength: 4, pattern: '[a-z]+' },
+      n: { type: 'number', min: 1, max: 3 },
+      body: { type: 'textarea', minLength: 5 },
+      title: { type: 'text', required: true, minLength: 3 },
+    })
+    expect(s.safeParse({ slug: 'abc', n: 2, title: 'abc' }).success).toBe(true)
+    expect(s.safeParse({ slug: '', n: null, body: '', title: 'abc' }).success).toBe(true)
+    for (const bad of [{ slug: 'a' }, { slug: 'abcde' }, { slug: 'ab1' }, { slug: 'xab!' }, { n: 0 }, { n: 4 }, { body: 'abc' }, { title: 'ab' }])
+      expect(s.safeParse({ title: 'abc', ...bad }).success, JSON.stringify(bad)).toBe(false)
+    expect(s.safeParse({ title: '' }).success).toBe(false)
+  })
+
+  it('matches the whole value', () => {
+    expect(dataSchema({ x: { type: 'text', pattern: 'a|b' } }).safeParse({ x: 'ab' }).success).toBe(false)
+  })
+
+  it('rejects an invalid pattern', () => {
+    expect(() => dataSchema({ x: { type: 'text', pattern: '(' } })).toThrow()
+  })
+
   it('rejects values of the wrong type', () => {
     expect(schema.safeParse({ title: 'Hi', views: '3' }).success).toBe(false)
     expect(schema.safeParse({ title: 'Hi', featured: 'true' }).success).toBe(false)

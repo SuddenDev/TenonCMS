@@ -391,8 +391,20 @@ export function filterable(fields: Fields, key: string) {
 
 function fieldSchema(field: Field): z.ZodType {
   switch (field.type) {
-    case 'number':
-      return z.number()
+    case 'number': {
+      let s = z.number()
+      if (field.min !== undefined) s = s.min(field.min)
+      if (field.max !== undefined) s = s.max(field.max)
+      return s
+    }
+    case 'text':
+    case 'textarea': {
+      let s = z.string().min(Math.max(field.minLength ?? 0, field.required ? 1 : 0))
+      if (field.maxLength !== undefined) s = s.max(field.maxLength)
+      // Browsers compile the HTML `pattern` attribute with the `v` flag. The server MUST match them.
+      if (field.pattern !== undefined) s = s.regex(new RegExp(`^(?:${field.pattern})$`, 'v'))
+      return field.required ? s : z.literal('').or(s)
+    }
     case 'boolean':
       return z.boolean()
     case 'date':
