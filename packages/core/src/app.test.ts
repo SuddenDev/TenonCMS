@@ -1861,6 +1861,25 @@ describe('page preset', () => {
     expect([await stored(about.id), await stored(team.id), await stored(berlin.id)]).toEqual(['/about', '/about/team', '/about/team/berlin'])
   })
 
+  it('refuses to delete a page with children', async () => {
+    const { about, team, berlin } = await tree()
+    const error = await client.delete('pages', about.id).catch((e: unknown) => e)
+    expect(error).toMatchObject({ status: 409, body: { references: [{ collection: 'pages', id: team.id }] } })
+    await client.delete('pages', berlin.id)
+    expect(await cms.findById('pages', berlin.id)).toBeUndefined()
+  })
+
+  it('disables a hook omitted by name', async () => {
+    const { uniquePath, ...beforeChange } = page.hooks.beforeChange
+    const cms = defineCms({
+      collections: { pages: { fields: page.fields, hooks: { beforeValidate: page.hooks.beforeValidate, beforeChange } } },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+    await cms.create('pages', { title: 'About', slug: 'about' })
+    await expect(cms.create('pages', { title: 'About', slug: 'about' })).resolves.toMatchObject({ path: '/about' })
+  })
+
   it('reads a page by path over HTTP', async () => {
     const { team } = await tree()
     const res = await fetch(`${origin}/api/cms/collections/pages?path=/about/team`)
