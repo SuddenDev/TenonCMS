@@ -1,5 +1,4 @@
 import { defineCollection, ValidationError } from "integral-cms";
-import { page } from "integral-cms/presets";
 
 export const posts = defineCollection({
   label: "Posts",
@@ -33,10 +32,6 @@ export const posts = defineCollection({
     body: { type: "textarea" },
   },
   hooks: {
-    // Runs before validation, so API writes MAY leave the slug empty.
-    beforeValidate: {
-      slugFromTitle: page.hooks.beforeValidate.slugFromTitle,
-    },
     beforeChange: {
       featuredNeedsAuthor: ({ data }) => {
         if (data.featured && !data.author)

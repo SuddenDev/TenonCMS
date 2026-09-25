@@ -388,11 +388,7 @@ export const pages = defineCollection({
   label: 'Pages',
   titleField: 'title',
   fields: { ...page.fields, ...seo.fields, body: { type: 'textarea' } },
-  hooks: {
-    beforeValidate: page.hooks.beforeValidate,
-    beforeChange: page.hooks.beforeChange,
-    afterChange: page.hooks.afterChange,
-  },
+  hooks: page.hooks,
 })
 ```
 
@@ -417,11 +413,12 @@ Paths are stored, so reads never compute them:
 
 | Stage | Name | Does |
 |---|---|---|
-| `beforeValidate` | `slugFromTitle` | Fills an empty slug from the title, so API writes MAY omit it |
-| `beforeChange` | `noCycle` | 400 on `parent` if the parent is the page itself or one of its descendants |
-| `beforeChange` | `path` | Sets `path` from the parent's path and the slug. It overwrites any `path` in the input |
+| `beforeChange` | `validParent` | 400 on `parent` if the parent is the page itself or one of its descendants |
+| `beforeChange` | `buildPath` | Sets `path` from the parent's path and the slug. It overwrites any `path` in the input |
 | `beforeChange` | `uniquePath` | 400 on `slug` if another page has the same path |
-| `afterChange` | `descendantPaths` | When `path` changes, saves each child again, so the whole subtree gets new paths |
+| `afterChange` | `updateChildPaths` | When `path` changes, saves each child again with no changes, so its `buildPath` runs and the whole subtree gets new paths |
+
+The slug itself needs no hook: `from: 'title'` fills an empty slug on the server too.
 
 All run in the write's transaction: a failing child update rolls back the rename, and two parallel saves cannot claim the same path.
 
@@ -436,10 +433,10 @@ fields: {
   parent: { ...page.fields.parent, collection: 'docs' }, // another collection name
   seo: { ...seo.fields.seo, fields: { ...seoRest, keywords: { type: 'text' } } },
 },
-hooks: { beforeValidate: page.hooks.beforeValidate, beforeChange, afterChange: page.hooks.afterChange },
+hooks: { beforeChange, afterChange: page.hooks.afterChange },
 ```
 
-`treeHooks()` returns the same hooks for other field names. Every option defaults to the name in `page.fields`, and `title` is the field `slugFromTitle` reads. The slug's `path` option MUST name the same path field, so the admin shows the right prefix:
+`nestedPaths()` returns the same hooks for other field names. Every option defaults to the name in `page.fields`. The slug's `path` option MUST name the same path field, so the admin shows the right prefix:
 
 ```ts
 fields: {
@@ -448,10 +445,10 @@ fields: {
   parentCategory: { type: 'relation', collection: 'categories', onDelete: 'restrict' },
   url: { type: 'text', readOnly: true },
 },
-hooks: treeHooks({ title: 'name', slug: 'handle', parent: 'parentCategory', path: 'url' }),
+hooks: nestedPaths({ slug: 'handle', parent: 'parentCategory', path: 'url' }),
 ```
 
-A tree without URLs keeps only `noCycle`.
+Nesting without URLs keeps only `validParent`.
 
 Read a page by its path like any other field, and build `<head>` with `seoMeta()`:
 

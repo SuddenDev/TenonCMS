@@ -1,6 +1,6 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
 import type { Fields } from '../schema.ts'
-import { treeHooks } from './tree.ts'
+import { nestedPaths } from './nested-paths.ts'
 
 /**
  * Pages with nested URLs. Spread `page.fields` into a collection's fields and use `page.hooks` stage by stage.
@@ -14,5 +14,5 @@ export const page = {
     parent: { type: 'relation', collection: 'pages', onDelete: 'restrict' },
     path: { type: 'text', readOnly: true },
   },
-  hooks: treeHooks(),
+  hooks: nestedPaths(),
 } as const satisfies { fields: Fields; hooks: object }

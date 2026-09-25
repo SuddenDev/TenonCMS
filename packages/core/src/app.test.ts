@@ -7,7 +7,7 @@ import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema, ValidationError } from './index.ts'
-import { page, seo, treeHooks } from './presets/index.ts'
+import { nestedPaths, page, seo } from './presets/index.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -1818,7 +1818,6 @@ describe('page preset', () => {
           titleField: 'title',
           fields: { ...page.fields, ...seo.fields, body: { type: 'textarea' } },
           hooks: {
-            beforeValidate: page.hooks.beforeValidate,
             afterChange: page.hooks.afterChange,
             beforeChange: {
               ...page.hooks.beforeChange,
@@ -1919,7 +1918,7 @@ describe('page preset', () => {
   it('disables a hook omitted by name', async () => {
     const { uniquePath, ...beforeChange } = page.hooks.beforeChange
     const cms = defineCms({
-      collections: { pages: { fields: page.fields, hooks: { beforeValidate: page.hooks.beforeValidate, beforeChange } } },
+      collections: { pages: { fields: page.fields, hooks: { beforeChange } } },
       database: { url: ':memory:' },
       secret: 'x'.repeat(32),
     })
@@ -1939,7 +1938,7 @@ describe('page preset', () => {
   })
 })
 
-describe('treeHooks', () => {
+describe('nestedPaths', () => {
   it('works with other field names', async () => {
     const cms = defineCms({
       collections: {
@@ -1950,7 +1949,7 @@ describe('treeHooks', () => {
             parentCategory: { type: 'relation', collection: 'categories', onDelete: 'restrict' },
             url: { type: 'text', readOnly: true },
           },
-          hooks: treeHooks({ title: 'name', slug: 'handle', parent: 'parentCategory', path: 'url' }),
+          hooks: nestedPaths({ slug: 'handle', parent: 'parentCategory', path: 'url' }),
         },
       },
       database: { url: ':memory:' },
