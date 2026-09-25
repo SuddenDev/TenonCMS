@@ -5,9 +5,9 @@ export type { Checked, ReadOptions } from './schema.ts'
 /** Path of the HTTP API. */
 export const API_BASE = '/api/cms'
 
-// Fields as the HTTP API sends them: hidden fields left out, private fields optional.
+// Fields as the HTTP API sends them: private fields optional.
 // Untyped fields (the admin's) stay as they are. The recursion would not terminate.
-type HttpFields<F> = string extends keyof F ? F : { [K in keyof F as F[K] extends { hidden: true } ? never : K]: HttpField<F[K]> }
+type HttpFields<F> = string extends keyof F ? F : { [K in keyof F]: HttpField<F[K]> }
 type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, 'required'> : HttpGroup<F>
 type HttpGroup<F> = F extends { type: 'group'; fields: infer G } ? Omit<F, 'fields'> & { fields: Extract<HttpFields<G>, FieldsOf> } : F
 // `Extract` keeps the result assignable to `Fields`.
@@ -203,7 +203,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * `GET /api/cms/schema`
      */
     getSchema() {
-      return request<C['schema']>('GET', '/schema')
+      return request<{ collections?: Collections<C>; globals?: Globals<C> }>('GET', '/schema')
     },
 
     /**

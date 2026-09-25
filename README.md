@@ -130,7 +130,7 @@ seo: {
 | `validate` | all but `join` | Your check, on the server |
 | `condition` | all | The field applies only when this matches |
 | `unique` | top-level `text`, `textarea`, `number`, `date`, `select`, single `relation` | No two documents MAY have the same value |
-| `private`, `hidden` | all | Keep values out of the HTTP API |
+| `private` | all | Keep values out of public HTTP reads |
 | `hooks` | all but `join` | See [Hooks](#hooks) |
 
 The admin gets the schema as JSON, so functions never reach the browser:
@@ -169,21 +169,15 @@ color: { type: 'text', condition: { '/settings.mode': 'advanced' } },
 - A key without `/` is a sibling field: a field of the document at the top level, a field of the same group inside a group. A leading `/` starts at the document root; dots walk into groups.
 - The admin hides fields whose condition is false and saves them as `null`. Values survive toggling until you save.
 - The server skips `required`, the built-in checks and `validate` for them, but still checks the type. It never changes or clears values. Reads ignore conditions.
-- `defineCms` throws for a condition on an unknown or `hidden` field.
+- `defineCms` throws for a condition on an unknown field.
 
 `unique` rejects a value that another document of the collection has, with `Already used` on the field (400). It runs after `beforeChange` hooks, so values set by hooks count. `null` and missing values never collide; comparison is exact and case-sensitive. `defineCms` throws for `unique` in a group, in a global or on other types. Each write scans the collection once per unique field; indexes can come later without API changes.
 
-`private` and `hidden` keep values out of the HTTP API:
+`private` keeps a value out of public reads. The local API, hooks and the admin (HTTP with a session) read and write it; HTTP without a session neither sends it nor filters by it.
 
-| | Local API and hooks | HTTP with a session (admin) | HTTP without a session |
-|---|---|---|---|
-| `private` | read and write | read and write | not sent, not filterable |
-| `hidden` | read and write | not sent, not filterable, not writable, not in `/schema` | not sent, not filterable |
-
-- A filter on a field the caller cannot see returns 400, like an unknown field.
-- Hidden fields in HTTP input are ignored, and an HTTP update keeps their stored values, so admin saves never erase them.
-- The rules also apply to populated and joined documents, by the rules of their own collection. On a group, the option covers the whole group.
-- Client types follow them: `private` fields are optional, `hidden` fields are left out.
+- A filter on a private field without a session returns 400, like an unknown field.
+- The rule also applies to populated and joined documents, by the rules of their own collection. On a group, it covers the whole group.
+- Client types make `private` fields optional.
 
 ### 2. Read content
 
@@ -582,7 +576,7 @@ Working:
 - Public read API with equality filters and `limit`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Collection, global and field hooks, run by the local API in one transaction per write
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
-- Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `hidden`
+- Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique` and `private`
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions

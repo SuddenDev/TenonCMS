@@ -136,7 +136,7 @@ export function defineCms<
   async function run<R>(scope: Scope, operation: Operation, name: Name, args: Record<string, any>, fn: (s: Inner, args: Record<string, any>) => Promise<R>) {
     const context = scope.nested ? scope.context : {}
     const body = async (trx = scope.trx) => {
-      const s: Scope = { ...scope, trx, context, nested: true, http: false }
+      const s: Scope = { ...scope, trx, context, nested: true }
       const inner: Inner = { ...s, cms: bind(s) as unknown as LocalApi }
       const h = name.collection ? collections[name.collection].hooks : undefined
       const base = { ...common(inner, name), operation }
@@ -168,15 +168,15 @@ export function defineCms<
   // `effect`: an `onDelete` effect. It skips id checks, because other relations of the document MAY point to
   // documents that the same delete removes.
   const update = (scope: Scope, collection: string, id: string, data: unknown, effect = false) =>
-    run(scope, 'update', { collection }, { collection, id, data }, (s, args) => write(s, { collection }, 'update', args.data, { id: args.id, effect, http: scope.http }))
+    run(scope, 'update', { collection }, { collection, id, data }, (s, args) => write(s, { collection }, 'update', args.data, { id: args.id, effect }))
   const setGlobal = (scope: Scope, name: string, data: unknown, effect = false) =>
-    run(scope, 'setGlobal', { global: name }, { global: name, data }, (s, args) => write(s, { global: name }, 'setGlobal', args.data, { effect, http: scope.http }))
+    run(scope, 'setGlobal', { global: name }, { global: name, data }, (s, args) => write(s, { global: name }, 'setGlobal', args.data, { effect }))
 
   // The fields and hooks of a collection or global.
   const target = ({ collection, global }: Name) => (collection ? collections[collection] : globals[global!])
 
   // Shared by `create`, `update` and `setGlobal`. Returns `undefined` for a missing document.
-  async function write(s: Inner, name: Name, operation: 'create' | 'update' | 'setGlobal', input: unknown, { id, effect, http }: WriteOptions = {}) {
+  async function write(s: Inner, name: Name, operation: 'create' | 'update' | 'setGlobal', input: unknown, { id, effect }: WriteOptions = {}) {
     const { fields, hooks: h } = target(name)
     const db = await q(s)
     const originalDoc = name.global ? await loadGlobal(s, name.global) : id ? await load(s, name.collection!, id) : undefined
@@ -186,8 +186,6 @@ export function defineCms<
     // Built per write, because conditions depend on the data.
     const validate = (data: unknown) => parseData(dataSchema(fields, data), data)
     const copy = structuredClone(input)
-    // The admin never sees hidden fields, so an HTTP write MUST keep their stored values.
-    if (http && originalDoc && isObject(copy)) keepHidden(fields, copy, originalDoc)
     if (operation === 'create' && isObject(copy)) await applyDefaults(fields, copy, common(s, name))
     if (isObject(copy)) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
     const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
@@ -389,13 +387,12 @@ export function defineCms<
     },
   }
 
-  const app = createApp(cms as unknown as Cms<Schema>, (user) => ({ ...cms, ...bind({ user, context: {}, nested: false, http: true }) }) as unknown as Cms<Schema>)
+  const app = createApp(cms as unknown as Cms<Schema>, (user) => ({ ...cms, ...bind({ user, context: {}, nested: false }) }) as unknown as Cms<Schema>)
   return cms
 }
 
 type Name = { collection?: string; global?: string }
-// `http`: a write through the HTTP API.
-type WriteOptions = { id?: string; effect?: boolean; http?: boolean }
+type WriteOptions = { id?: string; effect?: boolean }
 type ReadOpts = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number; id?: string }
 
 /** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */
@@ -405,8 +402,6 @@ type Scope = {
   context: Record<string, unknown>
   // True inside a hook: the call keeps `context` and runs no `afterError` of its own.
   nested: boolean
-  // True for calls from the HTTP API. Nested calls inside it are server code again.
-  http?: boolean
 }
 type Inner = Scope & { cms: LocalApi }
 
@@ -419,15 +414,6 @@ async function hooks<V>(slot: Slot<any> | undefined, key: string, value: V, args
     if (result !== undefined) value = result
   }
   return value
-}
-
-// Copies stored hidden values into `undefined` fields, in place, also inside groups.
-function keepHidden(fields: Fields, data: Record<string, unknown>, stored: Record<string, unknown>) {
-  for (const [key, f] of Object.entries(fields)) {
-    const [value, old] = [data[key], stored[key]]
-    if (f.hidden && value === undefined) data[key] = old
-    else if (f.type === 'group' && isObject(value) && isObject(old)) keepHidden(f.fields, value, old)
-  }
 }
 
 // Fills `undefined` fields in place. Children of a group get defaults only when the group is present.

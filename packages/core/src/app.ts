@@ -13,15 +13,9 @@ import { type Field, type Fields, filterable, type Schema } from './schema.ts'
 export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>) {
   const { schema } = cms
   const collections = schema.collections ?? {}
-  const withoutHidden = <T extends { fields: Fields }>(record: Record<string, T> = {}) =>
-    Object.fromEntries(Object.entries(record).map(([key, c]) => [key, { ...c, fields: visibleFields(c.fields) }]))
   // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
   // A field MAY be named `hooks`; it has a `type`. `JSON.stringify` drops other functions, like `validate`, itself.
-  const publicSchema = JSON.parse(
-    JSON.stringify({ collections: withoutHidden(schema.collections), globals: withoutHidden(schema.globals) }, (key, value) =>
-      key === 'hooks' && typeof value?.type !== 'string' ? undefined : value,
-    ),
-  )
+  const publicSchema = JSON.parse(JSON.stringify(schema, (key, value) => (key === 'hooks' && typeof value?.type !== 'string' ? undefined : value)))
 
   // Removes fields the caller cannot see, also in groups, populated relations and joins.
   function strip(fields: Fields, doc: unknown, level: Level): unknown {
@@ -109,16 +103,14 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   api.post('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const fields = schema.collections![name].fields
-    return c.json(strip(fields, await c.var.cms.create(name, strip(fields, await body(c.req), 'admin') as never), 'admin'), 201)
+    return c.json(await c.var.cms.create(name, await body(c.req)), 201)
   })
 
   api.put('/collections/:name/:id', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const fields = schema.collections![name].fields
-    const doc = await c.var.cms.update(name, c.req.param('id'), strip(fields, await body(c.req), 'admin') as never)
-    return doc ? c.json(strip(fields, doc, 'admin')) : c.notFound()
+    const doc = await c.var.cms.update(name, c.req.param('id'), await body(c.req))
+    return doc ? c.json(doc) : c.notFound()
   })
 
   api.delete('/collections/:name/:id', async (c) => {
@@ -131,8 +123,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   api.put('/globals/:name', async (c) => {
     const name = globalName(c.req.param('name'))
     if (!name) return c.notFound()
-    const fields = schema.globals![name].fields
-    return c.json(strip(fields, await c.var.cms.setGlobal(name, strip(fields, await body(c.req), 'admin') as never), 'admin'))
+    return c.json(await c.var.cms.setGlobal(name, await body(c.req)))
   })
 
   return api
@@ -152,14 +143,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
 
 /** `public`: a read without a session. `admin`: a request with a session. */
 type Level = 'public' | 'admin'
-const visible = (f: Field, level: Level) => !f.hidden && (level === 'admin' || !f.private)
-
-// Keeps only fields that are not hidden, also in groups.
-function visibleFields(fields: Fields): Fields {
-  return Object.fromEntries(
-    Object.entries(fields).flatMap(([key, f]) => (f.hidden ? [] : [[key, f.type === 'group' ? { ...f, fields: visibleFields(f.fields) } : f]])),
-  )
-}
+const visible = (f: Field, level: Level) => level === 'admin' || !f.private
 
 // A malformed body reads as `undefined`, which fails validation with 400.
 const body = (req: { json(): Promise<any> }) => req.json().catch(() => undefined)

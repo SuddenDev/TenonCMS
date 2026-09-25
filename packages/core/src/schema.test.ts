@@ -219,7 +219,7 @@ function optionTypes() {
     },
     b: { type: 'number', min: 0, max: 9, default: ({ user }) => (user ? 1 : 0) },
     r: { type: 'relation', collection: 'authors', default: ({ user }) => user?.id, validate: (v, { siblingData }) => !!v || String(siblingData.a) },
-    h: { type: 'text', hidden: true, description: 'Secret', condition: { $some: [{ a: 'x' }, { '/b': { exists: true } }] } },
+    h: { type: 'text', description: 'Secret', condition: { $some: [{ a: 'x' }, { '/b': { exists: true } }] } },
     j: { type: 'join', collection: 'posts', on: 'author', description: 'Posts', private: true },
     // @ts-expect-error `min` is for numbers
     c: { type: 'text', min: 1 },
@@ -354,13 +354,11 @@ async function httpTypes() {
       people: {
         fields: {
           name: { type: 'text', required: true, private: true },
-          token: { type: 'text', hidden: true },
-          profile: { type: 'group', fields: { bio: { type: 'text' }, note: { type: 'text', hidden: true } } },
+          profile: { type: 'group', fields: { bio: { type: 'text' }, note: { type: 'text', required: true, private: true } } },
         },
       },
       posts: { fields: { author: { type: 'relation', collection: 'people' } } },
     },
-    globals: { site: { fields: { key: { type: 'text', hidden: true }, name: { type: 'text' } } } },
     database,
     secret: '',
   })
@@ -369,23 +367,13 @@ async function httpTypes() {
   const bio: string | null | undefined = person.profile?.bio
   // @ts-expect-error private fields are missing on public reads
   const name: string = person.name
-  // @ts-expect-error hidden fields are never sent
-  person.token
   // @ts-expect-error also inside groups
-  person.profile?.note
+  const note: string = person.profile!.note
   const local = await cms.findById('people', 'x')
-  local?.token satisfies string | null | undefined
-  local?.profile?.note satisfies string | null | undefined
+  local?.name satisfies string | undefined
   const post = await client.findById('posts', 'x')
-  post.author?.profile
   // @ts-expect-error also in populated documents
-  post.author?.token
-  const site = await client.getGlobal('site')
-  site.name
-  // @ts-expect-error also in globals
-  site.key
-  // @ts-expect-error hidden fields are not in the input either
-  client.create('people', { name: 'n', token: 'x' })
+  const author: string = post.author!.name
   client.create('people', {})
 }
 
@@ -451,14 +439,6 @@ describe('defineCms checks', () => {
       h: { type: 'group', fields: { t: { type: 'text' }, b: { type: 'text', condition: { t: 1, '/x': 2 } } } },
     } as const
     expect(define({ c: { fields } })).not.toThrow()
-  })
-
-  it('throws for a condition on a hidden field', () => {
-    expect(define({ c: { fields: { t: { type: 'text', hidden: true }, a: { type: 'text', condition: { t: 'x' } } } } })).toThrow(/hidden field "t"/)
-    const hidden = { type: 'group', fields: { t: { type: 'text', hidden: true } } } as const
-    expect(define({ c: { fields: { g: hidden, a: { type: 'text', condition: { '/g.t': 'x' } } } } })).toThrow(/hidden field "\/g.t"/)
-    const group = { type: 'group', hidden: true, fields: { t: { type: 'text' } } } as const
-    expect(define({ c: { fields: { g: group, a: { type: 'text', condition: { 'g.t': 'x' } } } } })).toThrow(/hidden field "g.t"/)
   })
 
   it('throws for unique inside a group, in a global, on boolean, custom, group, join and many relations', () => {

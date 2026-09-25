@@ -12,16 +12,10 @@ type Common = {
   /**
    * The field applies only when this matches the document. Otherwise the admin hides it and saves it as `null`,
    * and the server skips `required`, the built-in checks and `validate`. The type check still runs. See {@link Condition}.
-   * It MUST NOT name a `hidden` field, because the admin never gets its value.
    */
   condition?: Condition
   /** Sent over HTTP only with a session, so the admin sees it and public reads do not. Not filterable without a session. On a group, it applies to the whole group. */
   private?: boolean
-  /**
-   * Never sent over HTTP, not even to the admin, and not in `/schema`. HTTP input ignores it, and an HTTP update keeps
-   * the stored value. Only the local API and hooks read and write it. On a group, it applies to the whole group.
-   */
-  hidden?: boolean
 }
 
 // `V` is the value hooks see. `S` is the stored value, which `default` and `validate` get.
@@ -385,7 +379,7 @@ export function defineGlobal<const F extends Fields, const T extends Omit<Global
 
 const uniqueTypes = ['text', 'textarea', 'number', 'date', 'select', 'relation']
 
-/** Throws for a condition on an unknown or hidden field, `unique` where it cannot apply, or an invalid `pattern`. */
+/** Throws for a condition on an unknown field, `unique` where it cannot apply, or an invalid `pattern`. */
 export function checkFields(schema: Schema) {
   const owners = [
     ...Object.entries(schema.collections ?? {}).map(([name, c]) => ({ name, fields: c.fields, global: false })),
@@ -406,7 +400,6 @@ function walk(fields: Fields, root: Fields, where: string, top: boolean) {
     for (const path of conditionPaths(f.condition ?? {})) {
       const target = path.startsWith('/') ? fieldAt(root, path.slice(1)) : fieldAt(fields, path)
       if (!target) throw new Error(`integral-cms: condition on "${at}" names unknown field "${path}"`)
-      if (target.hidden) throw new Error(`integral-cms: condition on "${at}" names hidden field "${path}"`)
     }
     if (f.type === 'group') walk(f.fields, root, at, false)
   }
@@ -416,11 +409,11 @@ function conditionPaths(condition: Condition): string[] {
   return Object.entries(condition).flatMap(([key, c]) => (key === '$every' || key === '$some' ? (c as Condition[]).flatMap(conditionPaths) : [key]))
 }
 
-// The field at a dot path. A hidden group on the way is returned, since its fields are hidden too.
+// The field at a dot path.
 function fieldAt(fields: Fields, path: string): Field | undefined {
   const [key, ...rest] = path.split('.')
   const f = Object.hasOwn(fields, key) ? fields[key] : undefined
-  if (!f || f.hidden || !rest.length) return f
+  if (!f || !rest.length) return f
   return f.type === 'group' ? fieldAt(f.fields, rest.join('.')) : undefined
 }
 
