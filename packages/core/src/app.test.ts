@@ -1025,6 +1025,71 @@ describe('hooks', () => {
     expect(calls).toEqual(['beforeOperation', 'afterOperation'])
   })
 
+  it('run field hooks before collection hooks, depth-first into groups', async () => {
+    const fieldStages = ['beforeValidate', 'beforeChange', 'afterChange', 'afterRead'] as const
+    const fieldLog = Object.fromEntries(fieldStages.map((stage) => [stage, [({ path }: { path: string }) => void calls.push(`${path}:${stage}`)]]))
+    const cms = defineCms({
+      ...db,
+      collections: {
+        posts: {
+          fields: { title: { type: 'text', hooks: fieldLog }, seo: { type: 'group', hooks: fieldLog, fields: { title: { type: 'text', hooks: fieldLog } } } },
+          hooks: logAll(writeStages),
+        },
+      },
+    })
+    await cms.create('posts', { title: 'a', seo: { title: 'b' } })
+    expect(calls).toEqual([
+      'beforeOperation',
+      ...fieldStages.flatMap((stage) => ['title', 'seo', 'seo.title'].map((path) => `${path}:${stage}`).concat(stage)),
+      'afterOperation',
+    ])
+  })
+
+  it('give field hooks value, siblingData and path', async () => {
+    const seen: unknown[] = []
+    const cms = defineCms({
+      ...db,
+      collections: {
+        posts: {
+          fields: {
+            title: { type: 'text' },
+            seo: {
+              type: 'group',
+              fields: {
+                title: {
+                  type: 'text',
+                  hooks: {
+                    beforeChange: [
+                      ({ value, siblingData, data, path }) => {
+                        seen.push(path, { ...siblingData })
+                        return value ?? (data.title as string)
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    const post = await cms.create('posts', { title: 'A', seo: {} })
+    expect(post.seo?.title).toBe('A')
+    expect(seen).toEqual(['seo.title', {}])
+  })
+
+  it('run field afterRead once per value', async () => {
+    let count = 0
+    const cms = defineCms({
+      ...db,
+      collections: { posts: { fields: { title: { type: 'text', hooks: { afterRead: [() => void count++, ({ value }) => value?.toUpperCase()] } } } } },
+    })
+    for (const t of ['a', 'b', 'c']) await cms.create('posts', { title: t })
+    count = 0
+    expect((await cms.find('posts')).map((p) => p.title)).toEqual(['C', 'B', 'A'])
+    expect(count).toBe(3)
+  })
+
   it('are not sent in /schema', async () => {
     const cms = defineCms({
       ...db,

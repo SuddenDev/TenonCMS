@@ -12,6 +12,8 @@ import {
   type Data,
   dataSchema,
   type Doc,
+  type FieldHooks,
+  type Fields,
   type FilterKey,
   filterable,
   type Global,
@@ -146,10 +148,14 @@ export function defineCms<
     const originalDoc = id ? await load(s, collection, id) : undefined
     if (id && !originalDoc) return undefined
     const base = { ...common(s, { collection }), operation, id, originalDoc }
+    const fieldArgs = (data: object) => ({ ...common(s, { collection }), operation, data, originalDoc })
     const validate = (data: unknown) => parseData(validators.collections[collection], data)
-    const raw = await hooks(h?.beforeValidate, 'data', structuredClone(input), base)
+    const copy = structuredClone(input)
+    if (typeof copy === 'object' && copy !== null) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
+    const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
+    await fieldHooks('beforeChange', fields, valid, fieldArgs(valid))
     // Validated again, so a hook cannot store invalid data.
-    const data = validate(await hooks(h?.beforeChange, 'data', validate(raw), base))
+    const data = validate(await hooks(h?.beforeChange, 'data', valid, base))
     const db = await q(s)
     await checkRefs(db, fields, data, id ? { collection, id } : undefined)
     const now = Date.now()
@@ -167,12 +173,17 @@ export function defineCms<
           .values({ id: crypto.randomUUID(), collection, data: json, created_at: now, updated_at: now })
           .returningAll()
           .executeTakeFirstOrThrow()
-    const doc = await hooks(h?.afterChange, 'doc', toDoc(row), { ...common(s, { collection }), operation, previousDoc: originalDoc })
+    const stored = toDoc(row)
+    await fieldHooks('afterChange', fields, stored, fieldArgs(stored))
+    const doc = await hooks(h?.afterChange, 'doc', stored, { ...common(s, { collection }), operation, previousDoc: originalDoc })
     return (await afterRead(s, collection, [doc], operation))[0]
   }
 
+  // Field `afterRead` per document, then the collection's once for the batch.
   async function afterRead(s: Inner, collection: string, docs: Record<string, any>[], operation: Operation) {
-    return hooks(collections[collection].hooks?.afterRead, 'docs', docs, { ...common(s, { collection }), operation })
+    const { fields, hooks: h } = collections[collection]
+    for (const doc of docs) await fieldHooks('afterRead', fields, doc, { ...common(s, { collection }), operation, data: doc })
+    return hooks(h?.afterRead, 'docs', docs, { ...common(s, { collection }), operation })
   }
 
   // `find`, `findOne` and `findById`: `beforeRead`, then relations, then `afterRead`.
@@ -339,6 +350,19 @@ async function hooks<V>(slot: Slot<any> | undefined, key: string, value: V, args
     if (result !== undefined) value = result
   }
   return value
+}
+
+// In field order and depth-first into groups. A group's own hooks run before its fields'.
+async function fieldHooks(stage: keyof FieldHooks<unknown>, fields: Fields, siblingData: Record<string, any>, args: object, prefix = '') {
+  for (const [key, field] of Object.entries(fields)) {
+    const path = prefix + key
+    if (field.type !== 'join' && field.hooks?.[stage]) {
+      const value = await hooks(field.hooks[stage], 'value', siblingData[key], { ...args, siblingData, path })
+      if (value !== undefined) siblingData[key] = value
+    }
+    const group = siblingData[key]
+    if (field.type === 'group' && typeof group === 'object' && group !== null) await fieldHooks(stage, field.fields, group, args, `${path}.`)
+  }
 }
 
 function mapValues<T, R>(record: Record<string, T>, fn: (value: T) => R) {
