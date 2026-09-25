@@ -1772,6 +1772,7 @@ describe('page preset', () => {
           fields: { ...page.fields, body: { type: 'textarea' } },
           hooks: {
             beforeValidate: page.hooks.beforeValidate,
+            afterChange: page.hooks.afterChange,
             beforeChange: {
               ...page.hooks.beforeChange,
               fail: ({ originalDoc }) => {
@@ -1845,6 +1846,19 @@ describe('page preset', () => {
     expect(await fieldErrors(client.update('pages', about.id, { title: 'About', slug: 'about', parent: berlin.id }))).toEqual([400, ['parent']])
     expect(await fieldErrors(client.update('pages', about.id, { title: 'About', slug: 'about', parent: about.id }))).toEqual([400, ['parent']])
     expect((await cms.findById('pages', about.id, { populate: false }))?.parent).toBeUndefined()
+  })
+
+  it('rewrites descendant paths on rename', async () => {
+    const { about, team, berlin } = await tree()
+    await client.update('pages', about.id, { title: 'About', slug: 'company' })
+    expect([await stored(about.id), await stored(team.id), await stored(berlin.id)]).toEqual(['/company', '/company/team', '/company/team/berlin'])
+  })
+
+  it('rolls back a rename when a descendant update fails', async () => {
+    const { about, team, berlin } = await tree()
+    failSlug = 'berlin'
+    expect(await status(client.update('pages', about.id, { title: 'About', slug: 'company' }))).toBe(500)
+    expect([await stored(about.id), await stored(team.id), await stored(berlin.id)]).toEqual(['/about', '/about/team', '/about/team/berlin'])
   })
 
   it('reads a page by path over HTTP', async () => {

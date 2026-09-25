@@ -35,6 +35,14 @@ export function treeHooks() {
         if (other && other.id !== id) throw new ValidationError({ slug: 'Already used on this level' })
       },
     },
+    afterChange: {
+      /** When `path` changes, saves each direct child again. Its own `path` hook then updates it, down the tree, in the same transaction. */
+      async descendantPaths({ doc, previousDoc, collection, cms }: any) {
+        if (doc.path === previousDoc?.path) return
+        for (const { id, createdAt, updatedAt, ...data } of await cms.find(collection, { where: { parent: doc.id }, populate: false }))
+          await cms.update(collection, id, data)
+      },
+    },
   }
 }
 
