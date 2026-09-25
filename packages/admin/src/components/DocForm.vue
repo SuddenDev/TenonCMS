@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { CmsError, type Data, type Fields, isEmpty } from '../api'
 import FieldInput from './FieldInput.vue'
 
@@ -26,6 +26,8 @@ function normalize(fields: Fields, value: Record<string, any> | null | undefined
 }
 
 const data = ref(normalize(props.fields, props.initial))
+// The saved document MAY differ from the input, e.g. when hooks change it, so the form shows what was stored.
+watch(() => props.initial, (initial) => (data.value = normalize(props.fields, initial)))
 const error = ref('')
 // Messages by field path from a 400 response.
 const errors = ref<Record<string, string>>({})
