@@ -1,0 +1,25 @@
+---
+import { seoMeta } from 'integral-cms/presets'
+
+export const prerender = false
+
+// Static routes like `/` and `/about` win over this one, so CMS pages at those paths never show.
+const path = `/${Astro.params.path ?? ''}`
+const page = await Astro.locals.integral.findOne('pages', { where: { path }, populate: false })
+if (!page) return new Response('Not found', { status: 404 })
+const meta = seoMeta(page)
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{meta.title}</title>
+    {meta.description && <meta name="description" content={meta.description} />}
+    {meta.noindex && <meta name="robots" content="noindex" />}
+  </head>
+  <body>
+    <a href="/">← Home</a>
+    <h1>{page.title}</h1>
+    <p style="white-space: pre-wrap">{page.body}</p>
+  </body>
+</html>
