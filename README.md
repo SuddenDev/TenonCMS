@@ -53,7 +53,7 @@ export const posts = defineCollection({
   titleField: 'title',
   fields: {
     title: { type: 'text', required: true },
-    slug: { type: 'text', required: true },
+    slug: { type: 'slug', from: 'title', unique: true },
     author: { type: 'relation', collection: 'authors' },
     publishedAt: { type: 'date' },
     category: { type: 'select', options: ['news', 'guide'] },
@@ -95,7 +95,19 @@ export default defineCms({
 })
 ```
 
-Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `group`, `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
+Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `slug`, `group`, `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
+
+A `slug` is a URL part such as `about-us`:
+
+```ts
+slug: { type: 'slug', from: 'title', unique: true }
+```
+
+- It is always required and MUST match `[a-z0-9]+(-[a-z0-9]+)*`. The server and the admin check it. There is no `required` option.
+- `from` names a sibling field. On a new document, the admin fills the slug from it while you type, until you edit the slug. Saved slugs never change on their own, so URLs stay stable.
+- `parent` names a sibling `relation`. The admin then shows the parent's path before the input, e.g. `/about/` [team]. `path` names the parent's field to show (default `'path'`). See [Pages and SEO](#pages-and-seo).
+- The server fills nothing on its own. To fill an empty slug on API writes, use the preset hook `slugFromTitle` (see [Pages and SEO](#pages-and-seo)).
+- `unique: true` fits flat collections such as blog posts. Page trees use the `uniquePath` hook instead, because the same slug may repeat under different parents.
 
 A `group` nests fields under one key and renders as one section in the admin:
 
@@ -123,14 +135,15 @@ seo: {
 | `label` | all | Label in the admin |
 | `description` | all | Help text below the field in the admin |
 | `placeholder` | `text`, `textarea`, `number`, `date` | Shown in the empty input |
-| `required` | all but `join` | The value MUST be present |
+| `required` | all but `join` and `slug` | The value MUST be present |
 | `default` | all but `join` | Value on `create` when the field is `undefined` |
 | `minLength`, `maxLength`, `pattern` | `text`, `textarea` | String length, and a regular expression for the whole value |
 | `min`, `max` | `number` | Number range |
 | `validate` | all but `join` | Your check, on the server |
 | `condition` | all | The field applies only when this matches |
-| `unique` | top-level `text`, `textarea`, `number`, `date`, `select`, single `relation` | No two documents MAY have the same value |
+| `unique` | top-level `text`, `textarea`, `number`, `date`, `select`, `slug`, single `relation` | No two documents MAY have the same value |
 | `private` | all | Keep values out of public HTTP reads |
+| `readOnly` | all but `join` | The admin shows the input disabled |
 | `hooks` | all but `join` | See [Hooks](#hooks) |
 
 The admin gets the schema as JSON, so functions never reach the browser:
@@ -178,6 +191,8 @@ color: { type: 'text', condition: { '/settings.mode': 'advanced' } },
 - A filter on a private field without a session returns 400, like an unknown field.
 - The rule also applies to populated and joined documents, by the rules of their own collection. On a group, it covers the whole group.
 - Client types make `private` fields optional.
+
+`readOnly` only changes the admin: the input is disabled, and on a group every input inside. The local API, HTTP and hooks can still write the value. A hook that owns the value MUST overwrite it, like the page preset's `path` hook.
 
 ### 2. Read content
 
@@ -354,6 +369,104 @@ Types:
 - Field hooks type only `value`.
 
 Coming from Payload: the hook names are the same. `req.user` is `user`, `req.context` is `context`, `req.payload` is `cms`.
+
+### Pages and SEO
+
+`integral-cms/presets` gives pages with nested URLs and SEO fields. It is plain field objects, named hook records and one helper. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
+
+```ts
+// collections/pages.ts
+import { defineCollection } from 'integral-cms'
+import { page, seo } from 'integral-cms/presets'
+
+export const pages = defineCollection({
+  label: 'Pages',
+  titleField: 'title',
+  fields: { ...page.fields, ...seo.fields, body: { type: 'textarea' } },
+  hooks: {
+    beforeValidate: page.hooks.beforeValidate,
+    beforeChange: page.hooks.beforeChange,
+    afterChange: page.hooks.afterChange,
+  },
+})
+```
+
+`page.fields`:
+
+| Field | Definition |
+|---|---|
+| `title` | `{ type: 'text', required: true }` |
+| `slug` | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path' }` |
+| `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }` |
+| `path` | `{ type: 'text', readOnly: true }` |
+
+`seo.fields` is one optional group `seo` with `title`, `description` and `noindex`.
+
+Paths are stored, so reads never compute them:
+
+- A root page with slug `index` has path `/`. Any other root page has `/<slug>`.
+- A child has `<parent path>/<slug>`, e.g. `/about/team`. A child of `/` has `/<slug>`.
+- A page with children cannot be deleted (409, `restrict`), so no subtree is lost.
+
+`page.hooks`:
+
+| Stage | Name | Does |
+|---|---|---|
+| `beforeValidate` | `slugFromTitle` | Fills an empty slug from the title, so API writes MAY omit it |
+| `beforeChange` | `noCycle` | 400 on `parent` if the parent is the page itself or one of its descendants |
+| `beforeChange` | `path` | Sets `path` from the parent's path and the slug. It overwrites any `path` in the input |
+| `beforeChange` | `uniquePath` | 400 on `slug` if another page has the same path |
+| `afterChange` | `descendantPaths` | When `path` changes, saves each child again, so the whole subtree gets new paths |
+
+All run in the write's transaction: a failing child update rolls back the rename, and two parallel saves cannot claim the same path.
+
+Customize with plain JavaScript:
+
+```ts
+const { noindex, ...seoRest } = seo.fields.seo.fields
+const { uniquePath, ...beforeChange } = page.hooks.beforeChange
+
+fields: {
+  ...page.fields,
+  parent: { ...page.fields.parent, collection: 'docs' }, // another collection name
+  seo: { ...seo.fields.seo, fields: { ...seoRest, keywords: { type: 'text' } } },
+},
+hooks: { beforeValidate: page.hooks.beforeValidate, beforeChange, afterChange: page.hooks.afterChange },
+```
+
+`treeHooks()` returns the same hooks for other field names. Every option defaults to the name in `page.fields`, and `title` is the field `slugFromTitle` reads. The slug's `path` option MUST name the same path field, so the admin shows the right prefix:
+
+```ts
+fields: {
+  name: { type: 'text', required: true },
+  handle: { type: 'slug', from: 'name', parent: 'parentCategory', path: 'url' },
+  parentCategory: { type: 'relation', collection: 'categories', onDelete: 'restrict' },
+  url: { type: 'text', readOnly: true },
+},
+hooks: treeHooks({ title: 'name', slug: 'handle', parent: 'parentCategory', path: 'url' }),
+```
+
+A tree without URLs keeps only `noCycle`.
+
+Read a page by its path like any other field, and build `<head>` with `seoMeta()`:
+
+```ts
+import { seoMeta } from 'integral-cms/presets'
+
+const doc = await cms.findOne('pages', { where: { path: '/about/team' } })
+const { title, description, noindex } = seoMeta(doc)
+// HTTP: GET /api/cms/collections/pages?path=/about/team
+```
+
+- `title` is `seo.title`, or the page's `title` when it is empty. Nothing is stored, so the fallback follows title changes.
+- `description` is `seo.description` or `undefined`. `noindex` is `true` only when `seo.noindex` is.
+- `seoMeta()` imports no server code, so it also runs in the browser.
+
+Each example has a catch-all route that reads by `path`. Static routes win over it, so a CMS page at `/` (or `/about` in Astro) never shows:
+
+- Astro: `src/pages/[...path].astro` with `Astro.locals.integral.findOne`
+- Nuxt: `app/pages/[...path].vue` with `useIntegral().findOne` and `useSeoMeta`
+- TanStack Start: `src/routes/$.tsx` with a server function and `head`
 
 ### Astro
 
@@ -550,7 +663,7 @@ To serve the admin elsewhere, pass a path: `admin: '/cms'` to the Astro integrat
 ## Project layout
 
 ```
-packages/core    integral-cms: schema, Hono app, local API, HTTP client, auth, Astro integration, Nuxt module, Vite plugin
+packages/core    integral-cms: schema, Hono app, local API, HTTP client, auth, presets, Astro integration, Nuxt module, Vite plugin
 packages/admin   Vue 3 + Tailwind admin, built as a library into core's dist/admin (private)
 examples/astro   Astro 7 app, mixing prerendered pages and SSR pages, on @astrojs/node
 examples/nuxt    Nuxt 4 app
@@ -576,7 +689,8 @@ Working:
 - Public read API with equality filters and `limit`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Collection, global and field hooks, run by the local API in one transaction per write
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
-- Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique` and `private`
+- Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
+- `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, `seoMeta()`
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions
