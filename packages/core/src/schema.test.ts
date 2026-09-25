@@ -1,6 +1,28 @@
 import { describe, expect, it } from 'vitest'
+import { matchCondition } from './condition.ts'
 import { defineCms } from './index.ts'
 import { type Collection, type Data, dataSchema, defineCollection, defineGlobal, type Fields } from './schema.ts'
+
+describe('matchCondition', () => {
+  const d = { type: 'video', price: 5, tag: '', date: '2026-09-24' }
+  it.each([
+    [{ type: 'video' }, true],
+    [{ type: { eq: 'image' } }, false],
+    [{ type: { ne: 'image' } }, true],
+    [{ type: { in: ['video', 'youtube'] } }, true],
+    [{ type: { notIn: ['video'] } }, false],
+    [{ price: { gt: 5 } }, false],
+    [{ price: { gte: 5 } }, true],
+    [{ price: { lt: 10, gt: 0 } }, true],
+    [{ date: { lte: '2026-12-31' } }, true],
+    [{ price: { gt: '1' } }, false],
+    [{ missing: { gt: 0 } }, false],
+    [{ tag: { exists: false } }, true],
+    [{ type: { exists: true } }, true],
+    [{ missing: null }, true],
+    [{ type: 'video', price: 6 }, false],
+  ])('supports every operator: %j → %s', (c, expected) => expect(matchCondition(c, d)).toBe(expected))
+})
 
 describe('dataSchema', () => {
   const schema = dataSchema({
