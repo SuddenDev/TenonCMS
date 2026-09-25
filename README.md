@@ -203,7 +203,7 @@ Over HTTP: `?populate=false`, `?populate=author.avatar,tags`, `?depth=3`. The cl
 When a document is deleted, every relation that points to it applies its `onDelete` rule, all in one transaction and with the hooks of the referencing documents:
 
 - `set-null` (default): a single relation becomes `null`, a `many` array drops the id.
-- `restrict` (default for `required`): the delete throws `ConflictError` (exported from `integral-cms`) and changes nothing. HTTP returns 409 with `references`, each `{ collection, id }` or `{ global }`.
+- `restrict` (default for `required`): the delete throws `ConflictError` (exported from `integral-cms`) and changes nothing. HTTP returns 409 with `{ message, references }`, each reference `{ collection, id }` or `{ global }`.
 - `cascade`: the referencing documents are deleted too, recursively, with their own rules.
 
 Known limits:
@@ -267,8 +267,9 @@ delete: beforeOperation → beforeDelete → delete + onDelete effects → after
 
 Errors:
 
-- `throw new ValidationError({ slug: 'Already used' })` (from `integral-cms`). Keys are field paths. HTTP returns 400 with `{ errors: { [path]: message } }`, and the admin shows each message next to its field. The local API validates every write the same way.
+- `throw new ValidationError({ slug: 'Already used' })` (from `integral-cms`). Keys are field paths. HTTP returns 400 with `{ message, errors: { [path]: message } }`, and the admin shows each message next to its field. The local API validates every write the same way.
 - Any other error rolls back the operation and runs the collection's `afterError`, then the root one: `defineCms({ hooks: { afterError: [...] } })`. HTTP returns 500 without the message. Global operations run only the root `afterError`, with `global` set.
+- Every HTTP error body has `message`, like better-auth's. The client's `CmsError` uses it as its message and keeps the body in `body`.
 - `ValidationError` (400) and `ConflictError` (409) are expected and run no `afterError`. An error inside `afterError` is logged and does not replace the original.
 
 Transactions: every write runs in one transaction with its hooks, its `onDelete` effects and every `cms` call made in them. An error rolls all of it back. Reads open none; a read inside a write uses the write's transaction. Hooks MUST use the `cms` they get, not the imported instance. On drivers without interactive transactions (Cloudflare D1, later), hooks run in the same order without isolation.

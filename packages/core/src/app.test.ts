@@ -294,7 +294,7 @@ describe('validation', () => {
     const json = { method: 'POST', headers: { 'content-type': 'application/json' } }
     const res = await fetchWithSession('/collections/posts', { ...json, body: JSON.stringify({ title: '', seo: { noindex: 'x' } }) })
     expect(res.status).toBe(400)
-    expect(await res.json()).toEqual({ errors: { title: expect.any(String), 'seo.noindex': expect.any(String) } })
+    expect(await res.json()).toEqual({ message: expect.any(String), errors: { title: expect.any(String), 'seo.noindex': expect.any(String) } })
     const error = await client.create('posts', { title: '' }).catch((e: unknown) => e)
     expect(error).toMatchObject({ status: 400, message: expect.stringMatching(/./) })
   })
@@ -387,6 +387,18 @@ describe('local API', () => {
 describe('errors', () => {
   const post = (path: string, body: string) =>
     cms.fetch(new Request(`${origin}/api/cms${path}`, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body }))
+
+  it('answer every error with a message', async () => {
+    const res = await cms.fetch(new Request(`${origin}/api/cms/schema`))
+    expect([res.status, await res.json()]).toEqual([401, { message: 'Unauthorized' }])
+    const filter = await cms.fetch(new Request(`${origin}/api/cms/collections/posts?nope=1`))
+    expect([filter.status, await filter.json()]).toEqual([400, { message: 'Invalid filter' }])
+    const missing = await cms.fetch(new Request(`${origin}/api/cms/collections/nope`))
+    expect([missing.status, await missing.json()]).toEqual([404, { message: 'Not Found' }])
+    await client.signUp(admin)
+    const malformed = await fetchWithSession('/collections/posts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"title":' })
+    expect([malformed.status, await malformed.json()]).toEqual([400, { message: expect.any(String), errors: { '': expect.any(String) } }])
+  })
 
   it('reject a malformed JSON body with 400', async () => {
     await client.signUp(admin)
@@ -841,7 +853,8 @@ describe('onDelete restrict', () => {
     await client.signUp(admin)
     const error = await client.delete('posts', p.id).catch((e: unknown) => e)
     expect(error).toBeInstanceOf(CmsError)
-    expect(error).toMatchObject({ status: 409, body: { references: [{ collection: 'notes', id: note.id }] } })
+    expect(error).toMatchObject({ status: 409, message: 'Referenced by other documents' })
+    expect((error as CmsError).body).toEqual({ message: 'Referenced by other documents', references: [{ collection: 'notes', id: note.id }] })
     expect(await cms.findById('posts', p.id)).toBeDefined()
     expect((await cms.getGlobal('site', { populate: false })).featured).toEqual([p.id])
   })
