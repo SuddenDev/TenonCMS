@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import { createClient } from '../../core/src/client'
 import { matchCondition } from '../../core/src/condition'
 
+export { SLUG_PATTERN, slugify } from '../../core/src/slugify'
+
 export { CmsError } from '../../core/src/client'
 import type { Collection, Field, Schema } from '../../core/src/schema'
 

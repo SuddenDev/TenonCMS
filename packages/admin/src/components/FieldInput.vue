@@ -1,13 +1,24 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue'
-import { active, client, type Field, isEmpty, schema, titleField } from '../api'
+import { computed, inject, ref, watch } from 'vue'
+import { active, client, type Field, type Fields, isEmpty, SLUG_PATTERN, schema, slugify, titleField } from '../api'
 import { optionsKey } from '../options'
 import Mount from './Mount.vue'
 
 // `loose`: the field sits in an optional group that is empty, so `required` does not apply yet.
 // `path`: dot path of the field, the key of its message in `errors`. Defaults to `name`.
 // `root`: the whole form data, for conditions of group children.
-const props = defineProps<{ name: string; field: Field; root: Record<string, unknown>; loose?: boolean; path?: string; errors?: Record<string, string> }>()
+// `siblings`: the fields and data of the object that holds this field. A slug reads `from` and `parent` there.
+// `isNew`: the document is not saved yet.
+const props = defineProps<{
+  name: string
+  field: Field
+  root: Record<string, unknown>
+  siblings: { fields: Fields; data: Record<string, unknown> }
+  isNew?: boolean
+  loose?: boolean
+  path?: string
+  errors?: Record<string, string>
+}>()
 const model = defineModel<any>()
 const path = computed(() => props.path ?? props.name)
 const message = computed(() => props.errors?.[path.value])
@@ -30,6 +41,35 @@ if (props.field.type === 'relation') {
     options.value = docs.map((d) => ({ id: d.id, label: String(d[key] || d.id) }))
   })
 }
+
+// A new document's slug follows its `from` field until the editor edits the slug. Saved slugs never change, so URLs stay stable.
+const edited = ref(false)
+const prefix = ref('/')
+const slug = props.field.type === 'slug' ? props.field : undefined
+if (slug?.from) {
+  const from = slug.from
+  watch(
+    () => props.siblings.data[from],
+    (text) => {
+      if (props.isNew && !edited.value) model.value = slugify(String(text ?? ''))
+    },
+  )
+}
+// The prefix is the selected parent's path, e.g. `/about/`.
+const relation = slug?.parent ? props.siblings.fields[slug.parent] : undefined
+if (slug?.parent && relation?.type === 'relation') {
+  const parent = slug.parent
+  watch(
+    () => props.siblings.data[parent],
+    async (id) => {
+      const doc = typeof id === 'string' && id ? await client.findById(relation.collection, id, { populate: false }) : undefined
+      if (id !== props.siblings.data[parent]) return
+      const value = doc?.[slug.path ?? 'path']
+      prefix.value = `${typeof value === 'string' ? value.replace(/\/$/, '') : ''}/`
+    },
+    { immediate: true },
+  )
+}
 </script>
 
 <template>
@@ -47,6 +87,8 @@ if (props.field.type === 'relation') {
         :name="String(key)"
         :field="child"
         :root="root"
+        :siblings="{ fields: field.fields, data: model }"
+        :is-new="isNew"
         :loose="loose || (!field.required && isEmpty(model))"
         :path="`${path}.${key}`"
         :errors="errors"
@@ -78,6 +120,10 @@ if (props.field.type === 'relation') {
       <option :value="null" />
       <option v-for="o in field.options" :key="o" :value="o">{{ o }}</option>
     </select>
+    <span v-else-if="field.type === 'slug'" class="flex items-center gap-1">
+      <span class="text-zinc-500">{{ prefix }}</span>
+      <input v-model="model" class="input" v-bind="attrs" required :pattern="SLUG_PATTERN" :aria-invalid="invalid" @input="edited = true" />
+    </span>
     <input v-else-if="field.type === 'number'" v-model.number="model" type="number" class="input" v-bind="attrs" :aria-invalid="invalid" />
     <input v-else v-model="model" :type="field.type === 'date' ? 'date' : 'text'" class="input" v-bind="attrs" :aria-invalid="invalid" />
     <small v-if="field.description" class="text-xs text-zinc-500">{{ field.description }}</small>

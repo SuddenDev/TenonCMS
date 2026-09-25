@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { active, CmsError, type Data, type Fields, isEmpty } from '../api'
 import FieldInput from './FieldInput.vue'
 
-// `isNew`: plain `default` values pre-fill the form. Function defaults are not in the schema; the server fills them.
+// `isNew`: plain `default` values pre-fill the form, and slugs follow their `from` field. Function defaults are not in the schema; the server fills them.
 const props = defineProps<{ fields: Fields; initial: Record<string, unknown>; save: (data: Data<Fields>) => Promise<void>; isNew?: boolean }>()
 
 // Groups always render as objects, so their inputs have a model to bind to.
@@ -66,7 +66,16 @@ async function submit() {
 <template>
   <form class="flex max-w-2xl flex-col gap-4" @submit.prevent="submit">
     <template v-for="(field, name) in fields" :key="name">
-      <FieldInput v-if="active(field, data, data)" v-model="data[name]" :name="String(name)" :field="field" :root="data" :errors="errors" />
+      <FieldInput
+        v-if="active(field, data, data)"
+        v-model="data[name]"
+        :name="String(name)"
+        :field="field"
+        :root="data"
+        :siblings="{ fields, data }"
+        :is-new="isNew"
+        :errors="errors"
+      />
     </template>
     <div class="flex items-center gap-3">
       <button class="btn" :disabled="busy">Save</button>
