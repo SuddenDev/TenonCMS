@@ -1504,3 +1504,53 @@ describe('condition', () => {
     await expect(make().create('media', { mediaType: 'image', url: 5 })).rejects.toMatchObject({ errors: { url: expect.any(String) } })
   })
 })
+
+describe('default', () => {
+  let seen: unknown[] = []
+  const make = () =>
+    defineCms({
+      collections: {
+        items: {
+          fields: {
+            status: { type: 'select', options: ['draft', 'live'], default: 'draft' },
+            owner: { type: 'text', default: async ({ user }) => user?.email ?? 'system' },
+            tags: { type: 'relation', collection: 'items', many: true, default: [] },
+            meta: { type: 'group', fields: { lang: { type: 'text', default: 'en' }, title: { type: 'text', required: true, default: 'T' } } },
+          },
+          hooks: { beforeValidate: [({ data }) => void seen.push(data.status)] },
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+
+  it('fills undefined fields on create', async () => {
+    const cms = make()
+    const { client } = setup(cms)
+    await client.signUp(admin)
+    expect(await client.create('items', {})).toMatchObject({ status: 'draft', owner: 'a@b.co', tags: [] })
+    expect(await cms.create('items', {})).toMatchObject({ status: 'draft', owner: 'system' })
+  })
+
+  it('fills group children only when the group is sent', async () => {
+    const cms = make()
+    expect(await cms.create('items', { meta: {} })).toMatchObject({ meta: { lang: 'en', title: 'T' } })
+    expect(await cms.create('items', {})).not.toHaveProperty('meta')
+  })
+
+  it('does not replace null', async () => {
+    expect(await make().create('items', { status: null })).toMatchObject({ status: null })
+  })
+
+  it('does not apply on update', async () => {
+    const cms = make()
+    const item = await cms.create('items', {})
+    expect(await cms.update('items', item.id, {})).not.toHaveProperty('status')
+  })
+
+  it('runs before beforeValidate', async () => {
+    seen = []
+    await make().create('items', {})
+    expect(seen).toEqual(['draft'])
+  })
+})

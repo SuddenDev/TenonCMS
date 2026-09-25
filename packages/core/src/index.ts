@@ -4,6 +4,7 @@ import { type Kysely, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
+import { isObject } from './condition.ts'
 import { ConflictError, ValidationError } from './errors.ts'
 import { checkRefs, checkSchema, onDelete, populate, type ReadHooks, type Spec } from './relations.ts'
 import {
@@ -19,6 +20,7 @@ import {
   type FilterKey,
   filterable,
   type Global,
+  type HookArgs,
   type LocalApi,
   type Operation,
   parseData,
@@ -183,7 +185,8 @@ export function defineCms<
     // Built per write, because conditions depend on the data.
     const validate = (data: unknown) => parseData(dataSchema(fields, data), data)
     const copy = structuredClone(input)
-    if (typeof copy === 'object' && copy !== null) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
+    if (operation === 'create' && isObject(copy)) await applyDefaults(fields, copy, common(s, name))
+    if (isObject(copy)) await fieldHooks('beforeValidate', fields, copy, fieldArgs(copy))
     const valid = validate(await hooks(h?.beforeValidate, 'data', copy, base))
     await fieldHooks('beforeChange', fields, valid, fieldArgs(valid))
     // Validated again, so a hook cannot store invalid data.
@@ -402,6 +405,16 @@ async function hooks<V>(slot: Slot<any> | undefined, key: string, value: V, args
     if (result !== undefined) value = result
   }
   return value
+}
+
+// Fills `undefined` fields in place. Children of a group get defaults only when the group is present.
+async function applyDefaults(fields: Fields, data: Record<string, unknown>, args: HookArgs) {
+  for (const [key, f] of Object.entries(fields)) {
+    if (f.type === 'join') continue
+    if (data[key] === undefined && f.default !== undefined) data[key] = typeof f.default === 'function' ? await f.default(args) : structuredClone(f.default)
+    const group = data[key]
+    if (f.type === 'group' && isObject(group)) await applyDefaults(f.fields, group, args)
+  }
 }
 
 // In field order and depth-first into groups. A group's own hooks run before its fields'.
