@@ -125,14 +125,19 @@ export function defineCms<
   const common = (s: Inner, name: Name) => ({ cms: s.cms, user: s.user, context: s.context, ...name })
 
   // Every local API call goes through here. Collection calls run `beforeOperation` and `afterOperation`.
+  // Writes run in one transaction with their hooks and nested calls. Reads open none.
   async function run<R>(scope: Scope, operation: Operation, name: Name, args: Record<string, any>, fn: (s: Inner, args: Record<string, any>) => Promise<R>) {
     const context = scope.nested ? scope.context : {}
-    const s: Scope = { ...scope, context, nested: true }
-    const inner: Inner = { ...s, cms: bind(s) as unknown as LocalApi }
-    const h = name.collection ? collections[name.collection].hooks : undefined
-    const base = { ...common(inner, name), operation }
-    const input = await hooks(h?.beforeOperation, 'args', args, base)
-    return (await hooks(h?.afterOperation, 'result', await fn(inner, input), { ...base, args: input })) as R
+    const body = async (trx = scope.trx) => {
+      const s: Scope = { ...scope, trx, context, nested: true }
+      const inner: Inner = { ...s, cms: bind(s) as unknown as LocalApi }
+      const h = name.collection ? collections[name.collection].hooks : undefined
+      const base = { ...common(inner, name), operation }
+      const input = await hooks(h?.beforeOperation, 'args', args, base)
+      return (await hooks(h?.afterOperation, 'result', await fn(inner, input), { ...base, args: input })) as R
+    }
+    if (operation === 'read' || operation === 'getGlobal' || scope.trx) return body()
+    return (await db()).transaction().execute((trx) => body(trx))
   }
 
   // Shared by `create` and `update`. Returns `undefined` for a missing document.
@@ -184,7 +189,7 @@ export function defineCms<
         collection: K,
         options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
       ): Promise<ReadCollection<T, K, O, D>[]> {
-        let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
+        let query = (await q(scope)).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
         for (const [key, value] of Object.entries(options.where ?? {})) {
           const fields = schema.collections![collection].fields
           if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`)
@@ -197,7 +202,7 @@ export function defineCms<
         query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
         if (options.limit) query = query.limit(options.limit)
         const docs = (await query.execute()).map(toDoc)
-        await populate(await db(), collections, collections[collection].fields, docs, spec(options))
+        await populate(await q(scope), collections, collections[collection].fields, docs, spec(options))
         return docs as ReadCollection<T, K, O, D>[]
       },
 
@@ -218,7 +223,7 @@ export function defineCms<
         id: string,
         options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
       ): Promise<ReadCollection<T, K, O, D> | undefined> {
-        const row = await (await db())
+        const row = await (await q(scope))
           .selectFrom('cms_documents')
           .selectAll()
           .where('collection', '=', collection)
@@ -226,7 +231,7 @@ export function defineCms<
           .executeTakeFirst()
         if (!row) return undefined
         const doc = toDoc(row)
-        await populate(await db(), collections, collections[collection].fields, [doc], spec(options))
+        await populate(await q(scope), collections, collections[collection].fields, [doc], spec(options))
         return doc as ReadCollection<T, K, O, D>
       },
 
@@ -256,10 +261,10 @@ export function defineCms<
         name: K,
         options: Checked<O, Collections<T>, Globals<T>[K]['fields']> = {} as never,
       ): Promise<ReadGlobal<T, K, O, D>> {
-        const q = await db()
-        const row = await q.selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
+        const db = await q(scope)
+        const row = await db.selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
         const data = row ? JSON.parse(row.data) : {}
-        await populate(q, collections, schema.globals![name].fields, [data], spec(options))
+        await populate(db, collections, schema.globals![name].fields, [data], spec(options))
         return data as ReadGlobal<T, K, O, D>
       },
 
@@ -267,11 +272,11 @@ export function defineCms<
       async setGlobal<K extends keyof Globals<T> & string>(name: K, input: Record<string, unknown>) {
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
         const data = parseData(validators.globals[name], input)
-        const q = await db()
-        await checkRefs(q, schema.globals![name].fields, data)
+        const db = await q(scope)
+        await checkRefs(db, schema.globals![name].fields, data)
         const now = Date.now()
         const json = JSON.stringify(data)
-        await q
+        await db
           .insertInto('cms_globals')
           .values({ name, data: json, created_at: now, updated_at: now })
           .onConflict((oc) => oc.column('name').doUpdateSet({ data: json, updated_at: now }))

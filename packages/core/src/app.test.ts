@@ -981,3 +981,54 @@ describe('hooks', () => {
     expect(JSON.stringify(schema).replace('"hooks":{"type":"text"}', '')).not.toContain('hooks')
   })
 })
+
+describe('transactions', () => {
+  const db = { database: { url: ':memory:' }, secret: 'x'.repeat(32) }
+  const logs = { fields: { message: { type: 'text' } } } as const
+
+  it('roll back the write and nested writes', async () => {
+    const cms = defineCms({
+      ...db,
+      collections: {
+        logs,
+        posts: {
+          fields: { title: { type: 'text' } },
+          hooks: {
+            afterChange: [
+              async ({ cms }) => {
+                await cms.create('logs', { message: 'x' })
+                throw new Error('boom')
+              },
+            ],
+          },
+        },
+      },
+    })
+    await expect(cms.create('posts', { title: 'a' })).rejects.toThrow('boom')
+    expect(await cms.find('posts')).toEqual([])
+    expect(await cms.find('logs')).toEqual([])
+  })
+
+  it("nested calls run on the write's transaction", async () => {
+    const cms = defineCms({
+      ...db,
+      collections: {
+        logs,
+        posts: {
+          fields: { title: { type: 'text' }, log: { type: 'text' } },
+          hooks: {
+            beforeChange: [
+              async ({ cms, data }) => {
+                await cms.find('logs')
+                return { ...data, log: (await cms.create('logs', { message: 'x' })).id }
+              },
+            ],
+            afterChange: [async ({ cms, doc }) => void (await cms.findById('logs', doc.log))],
+          },
+        },
+      },
+    })
+    await cms.create('posts', { title: 'a' })
+    expect(await cms.find('logs')).toHaveLength(1)
+  })
+})
