@@ -7,7 +7,7 @@ import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema, ValidationError } from './index.ts'
-import { page } from './presets.ts'
+import { page, treeHooks } from './presets.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -1884,5 +1884,34 @@ describe('page preset', () => {
     const { team } = await tree()
     const res = await fetch(`${origin}/api/cms/collections/pages?path=/about/team`)
     expect((await res.json()).map((p: { id: string }) => p.id)).toEqual([team.id])
+  })
+})
+
+describe('treeHooks', () => {
+  it('works with other field names', async () => {
+    const cms = defineCms({
+      collections: {
+        categories: {
+          fields: {
+            name: { type: 'text', required: true },
+            handle: { type: 'slug', from: 'name', parent: 'parentCategory', path: 'url' },
+            parentCategory: { type: 'relation', collection: 'categories', onDelete: 'restrict' },
+            url: { type: 'text', readOnly: true },
+          },
+          hooks: treeHooks({ title: 'name', slug: 'handle', parent: 'parentCategory', path: 'url' }),
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+    const shoes = await cms.create('categories', { name: 'Shoes', handle: '' })
+    const boots = await cms.create('categories', { name: 'Boots', handle: '', parentCategory: shoes.id })
+    expect([shoes.url, boots.url]).toEqual(['/shoes', '/shoes/boots'])
+    await expect(cms.create('categories', { name: 'Shoes', handle: '' })).rejects.toMatchObject({ errors: { handle: expect.any(String) } })
+    await expect(cms.update('categories', shoes.id, { name: 'Shoes', handle: 'shoes', parentCategory: boots.id })).rejects.toMatchObject({
+      errors: { parentCategory: expect.any(String) },
+    })
+    await cms.update('categories', shoes.id, { name: 'Shoes', handle: 'footwear' })
+    expect((await cms.findById('categories', boots.id))?.url).toBe('/footwear/boots')
   })
 })
