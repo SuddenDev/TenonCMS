@@ -41,6 +41,11 @@ type Base<V = string, S = V> = Common & {
    * Only on top-level `text`, `textarea`, `number`, `date`, `select` and single `relation` fields of a collection.
    */
   unique?: boolean
+  /**
+   * Admin only: the input is shown disabled. The local API, HTTP and hooks can still write the value, and input is not stripped.
+   * A hook that owns the value MUST overwrite it. On a group, it disables all fields inside. Default `false`.
+   */
+  readOnly?: boolean
 }
 
 // Options of `text` and `textarea`.

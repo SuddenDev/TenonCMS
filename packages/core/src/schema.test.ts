@@ -237,6 +237,16 @@ function optionTypes() {
 }
 
 // Checked by `pnpm typecheck` only.
+function readOnlyTypes() {
+  const fields = {
+    title: { type: 'text', required: true },
+    path: { type: 'text', readOnly: true },
+    seo: { type: 'group', readOnly: true, fields: { title: { type: 'text', readOnly: true } } },
+  } as const satisfies Fields
+  const input: Data<typeof fields> = { title: 'A', path: '/a', seo: { title: 'S' } }
+}
+
+// Checked by `pnpm typecheck` only.
 function writeTypes() {
   const fields = defineCollection({
     fields: {
