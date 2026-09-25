@@ -5,8 +5,12 @@ import { optionsKey } from '../options'
 import Mount from './Mount.vue'
 
 // `loose`: the field sits in an optional group that is empty, so `required` does not apply yet.
-const props = defineProps<{ name: string; field: Field; loose?: boolean }>()
+// `path`: dot path of the field, the key of its message in `errors`. Defaults to `name`.
+const props = defineProps<{ name: string; field: Field; loose?: boolean; path?: string; errors?: Record<string, string> }>()
 const model = defineModel<any>()
+const path = computed(() => props.path ?? props.name)
+const message = computed(() => props.errors?.[path.value])
+const invalid = computed(() => (message.value ? true : undefined))
 const required = computed(() => props.field.required && !props.loose)
 const custom = props.field.type.startsWith('custom:') ? inject(optionsKey, {}).fields?.[props.field.type.slice(7)] : undefined
 
@@ -36,11 +40,15 @@ if (props.field.type === 'relation') {
       :name="String(key)"
       :field="child"
       :loose="loose || (!field.required && isEmpty(model))"
+      :path="`${path}.${key}`"
+      :errors="errors"
     />
+    <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
   </fieldset>
-  <label v-else-if="field.type === 'boolean'" class="flex items-center gap-2 text-sm">
-    <input v-model="model" type="checkbox" />
+  <label v-else-if="field.type === 'boolean'" class="flex flex-wrap items-center gap-2 text-sm">
+    <input v-model="model" type="checkbox" :aria-invalid="invalid" />
     {{ field.label ?? name }}
+    <span v-if="message" class="basis-full text-xs text-red-600" role="alert">{{ message }}</span>
   </label>
   <label v-else class="flex flex-col gap-1 text-sm">
     <span>
@@ -48,15 +56,15 @@ if (props.field.type === 'relation') {
       <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
     </span>
     <Mount v-if="custom" :mount="custom" :ctx="{ name, field, value: model, onChange: (v: any) => (model = v) }" />
-    <textarea v-else-if="field.type === 'textarea'" v-model="model" class="input min-h-40" :required="required" />
-    <select v-else-if="field.type === 'relation' && field.many" v-model="model" multiple class="input" :required="required">
+    <textarea v-else-if="field.type === 'textarea'" v-model="model" class="input min-h-40" :required="required" :aria-invalid="invalid" />
+    <select v-else-if="field.type === 'relation' && field.many" v-model="model" multiple class="input" :required="required" :aria-invalid="invalid">
       <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
     </select>
-    <select v-else-if="field.type === 'relation'" v-model="model" class="input" :required="required">
+    <select v-else-if="field.type === 'relation'" v-model="model" class="input" :required="required" :aria-invalid="invalid">
       <option :value="null" />
       <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
     </select>
-    <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="required">
+    <select v-else-if="field.type === 'select'" v-model="model" class="input" :required="required" :aria-invalid="invalid">
       <option :value="null" />
       <option v-for="o in field.options" :key="o" :value="o">{{ o }}</option>
     </select>
@@ -66,7 +74,9 @@ if (props.field.type === 'relation') {
       type="number"
       class="input"
       :required="required"
+      :aria-invalid="invalid"
     />
-    <input v-else v-model="model" :type="field.type === 'date' ? 'date' : 'text'" class="input" :required="required" />
+    <input v-else v-model="model" :type="field.type === 'date' ? 'date' : 'text'" class="input" :required="required" :aria-invalid="invalid" />
+    <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
   </label>
 </template>

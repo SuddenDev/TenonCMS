@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { type Data, type Fields, isEmpty } from '../api'
+import { CmsError, type Data, type Fields, isEmpty } from '../api'
 import FieldInput from './FieldInput.vue'
 
 const props = defineProps<{ fields: Fields; initial: Record<string, unknown>; save: (data: Data<Fields>) => Promise<void> }>()
@@ -27,19 +27,24 @@ function normalize(fields: Fields, value: Record<string, any> | null | undefined
 
 const data = ref(normalize(props.fields, props.initial))
 const error = ref('')
+// Messages by field path from a 400 response.
+const errors = ref<Record<string, string>>({})
 const saved = ref(false)
 const busy = ref(false)
 
 async function submit() {
   busy.value = true
   error.value = ''
+  errors.value = {}
   saved.value = false
   try {
     // Fields can change after mount, so the payload follows the current fields.
     await props.save(normalize(props.fields, data.value, true) as Data<Fields>)
     saved.value = true
   } catch (e) {
-    error.value = (e as Error).message
+    errors.value = (e instanceof CmsError && e.body?.errors) || {}
+    const fieldErrors = Object.keys(errors.value).some((key) => key !== '')
+    error.value = errors.value[''] ?? (fieldErrors ? 'Please fix the marked fields' : (e as Error).message)
   } finally {
     busy.value = false
   }
@@ -48,7 +53,7 @@ async function submit() {
 
 <template>
   <form class="flex max-w-2xl flex-col gap-4" @submit.prevent="submit">
-    <FieldInput v-for="(field, name) in fields" :key="name" v-model="data[name]" :name="String(name)" :field="field" />
+    <FieldInput v-for="(field, name) in fields" :key="name" v-model="data[name]" :name="String(name)" :field="field" :errors="errors" />
     <div class="flex items-center gap-3">
       <button class="btn" :disabled="busy">Save</button>
       <slot />

@@ -1,5 +1,7 @@
 import { ref } from 'vue'
 import { createClient } from '../../core/src/client'
+
+export { CmsError } from '../../core/src/client'
 import type { Collection, Schema } from '../../core/src/schema'
 
 export type { Data, Field, Fields } from '../../core/src/schema'
