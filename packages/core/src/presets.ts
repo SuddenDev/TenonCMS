@@ -3,6 +3,52 @@ import { ValidationError } from './errors.ts'
 import type { Fields, LocalApi } from './schema.ts'
 import { slugify } from './slugify.ts'
 
+/**
+ * Pages with nested URLs. Spread `page.fields` into a collection's fields and use `page.hooks` stage by stage.
+ * `parent` points to `pages`; for another collection name, override it: `parent: { ...page.fields.parent, collection: 'docs' }`.
+ */
+export const page = {
+  fields: {
+    title: { type: 'text', required: true },
+    slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' },
+    // `restrict`: a page with children cannot be deleted, so no subtree is lost.
+    parent: { type: 'relation', collection: 'pages', onDelete: 'restrict' },
+    path: { type: 'text', readOnly: true },
+  },
+  hooks: treeHooks(),
+} as const satisfies { fields: Fields; hooks: object }
+
+/** SEO fields in one optional group. Read them with `seoMeta()`. */
+export const seo = {
+  fields: {
+    seo: {
+      type: 'group',
+      label: 'SEO',
+      fields: {
+        title: { type: 'text' },
+        description: { type: 'textarea' },
+        noindex: { type: 'boolean', label: 'Hide from search engines' },
+      },
+    },
+  },
+} as const satisfies { fields: Fields }
+
+type SeoDoc = { title?: unknown; seo?: { title?: string | null; description?: string | null; noindex?: boolean | null } | null }
+
+/**
+ * The `<head>` values of a document with `seo.fields`. Stores nothing.
+ * - `title`: `seo.title`, or the document's `title` when it is empty. So the fallback follows title changes.
+ * - `description`: `seo.description`, or `undefined`. There is no fallback.
+ * - `noindex`: `true` only when `seo.noindex` is `true`.
+ */
+export function seoMeta(doc: SeoDoc) {
+  return {
+    title: doc.seo?.title || String(doc.title ?? ''),
+    description: doc.seo?.description || undefined,
+    noindex: doc.seo?.noindex === true,
+  }
+}
+
 /** Field names the tree hooks read and write. Each defaults to the name in `page.fields`. */
 export type TreeOptions = {
   /** The text field `slugFromTitle` fills an empty slug from. Default `'title'`. */
@@ -61,18 +107,3 @@ export function treeHooks({ title = 'title', slug = 'slug', parent = 'parent', p
     },
   }
 }
-
-/**
- * Pages with nested URLs. Spread `page.fields` into a collection's fields and use `page.hooks` stage by stage.
- * `parent` points to `pages`; for another collection name, override it: `parent: { ...page.fields.parent, collection: 'docs' }`.
- */
-export const page = {
-  fields: {
-    title: { type: 'text', required: true },
-    slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' },
-    // `restrict`: a page with children cannot be deleted, so no subtree is lost.
-    parent: { type: 'relation', collection: 'pages', onDelete: 'restrict' },
-    path: { type: 'text', readOnly: true },
-  },
-  hooks: treeHooks(),
-} as const satisfies { fields: Fields; hooks: object }

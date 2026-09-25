@@ -7,7 +7,7 @@ import { admin as adminPlugin, anonymous, twoFactor } from 'better-auth/plugins'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { CmsError, createClient } from './client.ts'
 import { ConflictError, defineCms, defineCollection, defineGlobal, type PopulateConfig, type Schema, ValidationError } from './index.ts'
-import { page, treeHooks } from './presets.ts'
+import { page, seo, treeHooks } from './presets.ts'
 
 const origin = 'http://localhost'
 const base = {
@@ -1769,7 +1769,7 @@ describe('page preset', () => {
       collections: {
         pages: {
           titleField: 'title',
-          fields: { ...page.fields, body: { type: 'textarea' } },
+          fields: { ...page.fields, ...seo.fields, body: { type: 'textarea' } },
           hooks: {
             beforeValidate: page.hooks.beforeValidate,
             afterChange: page.hooks.afterChange,
@@ -1878,6 +1878,11 @@ describe('page preset', () => {
     })
     await cms.create('pages', { title: 'About', slug: 'about' })
     await expect(cms.create('pages', { title: 'About', slug: 'about' })).resolves.toMatchObject({ path: '/about' })
+  })
+
+  it('stores seo as sent', async () => {
+    const p = await client.create('pages', { title: 'About', slug: 'about', seo: { description: 'D' } })
+    expect((await cms.findById('pages', p.id))?.seo).toEqual({ description: 'D' })
   })
 
   it('reads a page by path over HTTP', async () => {
