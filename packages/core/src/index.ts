@@ -1,8 +1,9 @@
+import type { User } from 'better-auth'
 import { consola } from 'consola'
-import { sql } from 'kysely'
+import { type Kysely, sql } from 'kysely'
 import { createApp } from './app.ts'
 import { type AuthOptions, authOptions, createAuth } from './auth.ts'
-import { createDb, migrate, toDoc } from './db/index.ts'
+import { createDb, type Database, migrate, toDoc } from './db/index.ts'
 import { checkRefs, checkSchema, populate, remove, type Spec } from './relations.ts'
 import {
   type Checked,
@@ -14,12 +15,15 @@ import {
   type FilterKey,
   filterable,
   type Global,
+  type LocalApi,
+  type Operation,
   parseData,
   type PopulateOf,
   type Read,
   type ReadDoc,
   type ReadOptions,
   type Schema,
+  type Slot,
 } from './schema.ts'
 
 export { defineCollection, defineGlobal } from './schema.ts'
@@ -117,129 +121,174 @@ export function defineCms<
     return (authInstance ??= createAuth((await connect()).options))
   }
 
+  const q = async (s: Scope) => s.trx ?? (await db())
+  const common = (s: Inner, name: Name) => ({ cms: s.cms, user: s.user, context: s.context, ...name })
+
+  // Every local API call goes through here. Collection calls run `beforeOperation` and `afterOperation`.
+  async function run<R>(scope: Scope, operation: Operation, name: Name, args: Record<string, any>, fn: (s: Inner, args: Record<string, any>) => Promise<R>) {
+    const context = scope.nested ? scope.context : {}
+    const s: Scope = { ...scope, context, nested: true }
+    const inner: Inner = { ...s, cms: bind(s) as unknown as LocalApi }
+    const h = name.collection ? collections[name.collection].hooks : undefined
+    const base = { ...common(inner, name), operation }
+    const input = await hooks(h?.beforeOperation, 'args', args, base)
+    return (await hooks(h?.afterOperation, 'result', await fn(inner, input), { ...base, args: input })) as R
+  }
+
+  // Shared by `create` and `update`. Returns `undefined` for a missing document.
+  async function write(s: Inner, collection: string, operation: 'create' | 'update', input: unknown, id?: string) {
+    const { fields, hooks: h } = collections[collection]
+    const originalDoc = id ? await load(s, collection, id) : undefined
+    if (id && !originalDoc) return undefined
+    const base = { ...common(s, { collection }), operation, id, originalDoc }
+    const raw = await hooks(h?.beforeValidate, 'data', structuredClone(input), base)
+    const data = await hooks(h?.beforeChange, 'data', parseData(validators.collections[collection], raw), base)
+    const db = await q(s)
+    await checkRefs(db, fields, data, id ? { collection, id } : undefined)
+    const now = Date.now()
+    const json = JSON.stringify(data)
+    const row = id
+      ? await db
+          .updateTable('cms_documents')
+          .set({ data: json, updated_at: now })
+          .where('collection', '=', collection)
+          .where('id', '=', id)
+          .returningAll()
+          .executeTakeFirstOrThrow()
+      : await db
+          .insertInto('cms_documents')
+          .values({ id: crypto.randomUUID(), collection, data: json, created_at: now, updated_at: now })
+          .returningAll()
+          .executeTakeFirstOrThrow()
+    const doc = await hooks(h?.afterChange, 'doc', toDoc(row), { ...common(s, { collection }), operation, previousDoc: originalDoc })
+    return (await afterRead(s, collection, [doc], operation))[0]
+  }
+
+  async function afterRead(s: Inner, collection: string, docs: Record<string, any>[], operation: Operation) {
+    return hooks(collections[collection].hooks?.afterRead, 'docs', docs, { ...common(s, { collection }), operation })
+  }
+
+  // One stored document without relations resolved, or `undefined`.
+  async function load(s: Scope, collection: string, id: string) {
+    const row = await (await q(s)).selectFrom('cms_documents').selectAll().where('collection', '=', collection).where('id', '=', id).executeTakeFirst()
+    return row && toDoc(row)
+  }
+
+  function bind(scope: Scope) {
+    const api = {
+      /**
+       * Lists documents of a collection, newest first.
+       * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
+       */
+      async find<K extends keyof Collections<T> & string, const O extends FindOptions<T, K> = {}>(
+        collection: K,
+        options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
+      ): Promise<ReadCollection<T, K, O, D>[]> {
+        let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
+        for (const [key, value] of Object.entries(options.where ?? {})) {
+          const fields = schema.collections![collection].fields
+          if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`)
+          if (!filterable(fields, key)) throw new Error(`Field "${key}" is not filterable`)
+          if (value === undefined) continue
+          const field = sql`json_extract(data, ${`$.${key}`})`
+          query = query.where(value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`)
+        }
+        // `rowid` orders documents created in the same millisecond.
+        query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
+        if (options.limit) query = query.limit(options.limit)
+        const docs = (await query.execute()).map(toDoc)
+        await populate(await db(), collections, collections[collection].fields, docs, spec(options))
+        return docs as ReadCollection<T, K, O, D>[]
+      },
+
+      /**
+       * Returns the newest document that matches `where`, or `undefined`.
+       * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
+       */
+      async findOne<K extends keyof Collections<T> & string, const O extends FindOptions<T, K>>(
+        collection: K,
+        options: Checked<O, Collections<T>, Collections<T>[K]['fields']>,
+      ): Promise<ReadCollection<T, K, O, D> | undefined> {
+        return (await api.find(collection, { ...options, limit: 1 } as never))[0] as ReadCollection<T, K, O, D> | undefined
+      },
+
+      /** Returns one document, or `undefined`. */
+      async findById<K extends keyof Collections<T> & string, const O extends ReadOptions<Collections<T>, Collections<T>[K]['fields']> = {}>(
+        collection: K,
+        id: string,
+        options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
+      ): Promise<ReadCollection<T, K, O, D> | undefined> {
+        const row = await (await db())
+          .selectFrom('cms_documents')
+          .selectAll()
+          .where('collection', '=', collection)
+          .where('id', '=', id)
+          .executeTakeFirst()
+        if (!row) return undefined
+        const doc = toDoc(row)
+        await populate(await db(), collections, collections[collection].fields, [doc], spec(options))
+        return doc as ReadCollection<T, K, O, D>
+      },
+
+      /** Creates a document. Throws a `ValidationError` for invalid `data`. */
+      async create<K extends keyof Collections<T> & string>(collection: K, data: Record<string, unknown>) {
+        if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
+        return (await run(scope, 'create', { collection }, { collection, data }, (s, args) =>
+          write(s, collection, 'create', args.data),
+        )) as CollectionDoc<T, K>
+      },
+
+      /** Replaces the data of a document. Returns `undefined` if it does not exist. Throws a `ValidationError` for invalid `data`. */
+      async update<K extends keyof Collections<T> & string>(collection: K, id: string, data: Record<string, unknown>) {
+        if (!Object.hasOwn(collections, collection)) return undefined
+        return (await run(scope, 'update', { collection }, { collection, id, data }, (s, args) =>
+          write(s, collection, 'update', args.data, args.id),
+        )) as CollectionDoc<T, K> | undefined
+      },
+
+      /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
+      async delete(collection: keyof Collections<T> & string, id: string) {
+        await (await db()).transaction().execute((trx) => remove(trx, schema, collection, id, new Set()))
+      },
+
+      /** Returns a global. Fields that were never saved are missing. */
+      async getGlobal<K extends keyof Globals<T> & string, const O extends ReadOptions<Collections<T>, Globals<T>[K]['fields']> = {}>(
+        name: K,
+        options: Checked<O, Collections<T>, Globals<T>[K]['fields']> = {} as never,
+      ): Promise<ReadGlobal<T, K, O, D>> {
+        const q = await db()
+        const row = await q.selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
+        const data = row ? JSON.parse(row.data) : {}
+        await populate(q, collections, schema.globals![name].fields, [data], spec(options))
+        return data as ReadGlobal<T, K, O, D>
+      },
+
+      /** Replaces the data of a global. Throws a `ValidationError` for invalid `data`. */
+      async setGlobal<K extends keyof Globals<T> & string>(name: K, input: Record<string, unknown>) {
+        if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
+        const data = parseData(validators.globals[name], input)
+        const q = await db()
+        await checkRefs(q, schema.globals![name].fields, data)
+        const now = Date.now()
+        const json = JSON.stringify(data)
+        await q
+          .insertInto('cms_globals')
+          .values({ name, data: json, created_at: now, updated_at: now })
+          .onConflict((oc) => oc.column('name').doUpdateSet({ data: json, updated_at: now }))
+          .execute()
+        return data as GlobalData<T, K>
+      },
+
+    }
+    return api
+  }
+
   const cms = {
     schema: schema as T,
     auth,
     /** The `populate` config with defaults. */
     populate: defaults as { depth: D; maxDepth: number },
-
-    /**
-     * Lists documents of a collection, newest first.
-     * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
-     */
-    async find<K extends keyof Collections<T> & string, const O extends FindOptions<T, K> = {}>(
-      collection: K,
-      options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
-    ): Promise<ReadCollection<T, K, O, D>[]> {
-      let query = (await db()).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
-      for (const [key, value] of Object.entries(options.where ?? {})) {
-        const fields = schema.collections![collection].fields
-        if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`)
-        if (!filterable(fields, key)) throw new Error(`Field "${key}" is not filterable`)
-        if (value === undefined) continue
-        const field = sql`json_extract(data, ${`$.${key}`})`
-        query = query.where(value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`)
-      }
-      // `rowid` orders documents created in the same millisecond.
-      query = query.orderBy('created_at', 'desc').orderBy(sql`rowid`, 'desc')
-      if (options.limit) query = query.limit(options.limit)
-      const docs = (await query.execute()).map(toDoc)
-      await populate(await db(), collections, collections[collection].fields, docs, spec(options))
-      return docs as ReadCollection<T, K, O, D>[]
-    },
-
-    /**
-     * Returns the newest document that matches `where`, or `undefined`.
-     * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
-     */
-    async findOne<K extends keyof Collections<T> & string, const O extends FindOptions<T, K>>(
-      collection: K,
-      options: Checked<O, Collections<T>, Collections<T>[K]['fields']>,
-    ): Promise<ReadCollection<T, K, O, D> | undefined> {
-      return (await cms.find(collection, { ...options, limit: 1 } as never))[0] as ReadCollection<T, K, O, D> | undefined
-    },
-
-    /** Returns one document, or `undefined`. */
-    async findById<K extends keyof Collections<T> & string, const O extends ReadOptions<Collections<T>, Collections<T>[K]['fields']> = {}>(
-      collection: K,
-      id: string,
-      options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
-    ): Promise<ReadCollection<T, K, O, D> | undefined> {
-      const row = await (await db())
-        .selectFrom('cms_documents')
-        .selectAll()
-        .where('collection', '=', collection)
-        .where('id', '=', id)
-        .executeTakeFirst()
-      if (!row) return undefined
-      const doc = toDoc(row)
-      await populate(await db(), collections, collections[collection].fields, [doc], spec(options))
-      return doc as ReadCollection<T, K, O, D>
-    },
-
-    /** Creates a document. Throws a `ValidationError` for invalid `data`. */
-    async create<K extends keyof Collections<T> & string>(collection: K, input: Record<string, unknown>) {
-      if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
-      const data = parseData(validators.collections[collection], input)
-      const q = await db()
-      await checkRefs(q, schema.collections![collection].fields, data)
-      const now = Date.now()
-      const row = await q
-        .insertInto('cms_documents')
-        .values({ id: crypto.randomUUID(), collection, data: JSON.stringify(data), created_at: now, updated_at: now })
-        .returningAll()
-        .executeTakeFirstOrThrow()
-      return toDoc(row) as CollectionDoc<T, K>
-    },
-
-    /** Replaces the data of a document. Returns `undefined` if it does not exist. Throws a `ValidationError` for invalid `data`. */
-    async update<K extends keyof Collections<T> & string>(collection: K, id: string, input: Record<string, unknown>) {
-      if (!Object.hasOwn(collections, collection)) return undefined
-      const data = parseData(validators.collections[collection], input)
-      const q = await db()
-      await checkRefs(q, collections[collection].fields, data, { collection, id })
-      const row = await q
-        .updateTable('cms_documents')
-        .set({ data: JSON.stringify(data), updated_at: Date.now() })
-        .where('collection', '=', collection)
-        .where('id', '=', id)
-        .returningAll()
-        .executeTakeFirst()
-      return row && (toDoc(row) as CollectionDoc<T, K>)
-    },
-
-    /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
-    async delete(collection: keyof Collections<T> & string, id: string) {
-      await (await db()).transaction().execute((trx) => remove(trx, schema, collection, id, new Set()))
-    },
-
-    /** Returns a global. Fields that were never saved are missing. */
-    async getGlobal<K extends keyof Globals<T> & string, const O extends ReadOptions<Collections<T>, Globals<T>[K]['fields']> = {}>(
-      name: K,
-      options: Checked<O, Collections<T>, Globals<T>[K]['fields']> = {} as never,
-    ): Promise<ReadGlobal<T, K, O, D>> {
-      const q = await db()
-      const row = await q.selectFrom('cms_globals').select('data').where('name', '=', name).executeTakeFirst()
-      const data = row ? JSON.parse(row.data) : {}
-      await populate(q, collections, schema.globals![name].fields, [data], spec(options))
-      return data as ReadGlobal<T, K, O, D>
-    },
-
-    /** Replaces the data of a global. Throws a `ValidationError` for invalid `data`. */
-    async setGlobal<K extends keyof Globals<T> & string>(name: K, input: Record<string, unknown>) {
-      if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
-      const data = parseData(validators.globals[name], input)
-      const q = await db()
-      await checkRefs(q, schema.globals![name].fields, data)
-      const now = Date.now()
-      const json = JSON.stringify(data)
-      await q
-        .insertInto('cms_globals')
-        .values({ name, data: json, created_at: now, updated_at: now })
-        .onConflict((oc) => oc.column('name').doUpdateSet({ data: json, updated_at: now }))
-        .execute()
-      return data as GlobalData<T, K>
-    },
+    ...bind({ user: null, context: {}, nested: false }),
 
     /** Handles `/api/cms` requests. Mount it in any framework that speaks Request/Response. */
     fetch(request: Request): Promise<Response> {
@@ -249,6 +298,29 @@ export function defineCms<
 
   const app = createApp(cms as unknown as Cms<Schema>)
   return cms
+}
+
+type Name = { collection?: string; global?: string }
+
+/** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */
+type Scope = {
+  trx?: Kysely<Database>
+  user: User | null
+  context: Record<string, unknown>
+  // True inside a hook: the call keeps `context` and runs no `afterError` of its own.
+  nested: boolean
+}
+type Inner = Scope & { cms: LocalApi }
+
+const list = <F>(slot?: F[] | Record<string, F>) => (Array.isArray(slot) ? slot : Object.values(slot ?? {}))
+
+// A hook MAY return a replacement for the main value. `undefined` keeps it.
+async function hooks<V>(slot: Slot<any> | undefined, key: string, value: V, args: object): Promise<V> {
+  for (const fn of list(slot)) {
+    const result = await fn({ ...args, [key]: value })
+    if (result !== undefined) value = result
+  }
+  return value
 }
 
 function mapValues<T, R>(record: Record<string, T>, fn: (value: T) => R) {

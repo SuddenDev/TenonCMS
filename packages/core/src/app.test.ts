@@ -905,3 +905,66 @@ describe('onDelete cascade', () => {
     expect(await cms.find('pages')).toHaveLength(3)
   })
 })
+
+describe('hooks', () => {
+  let calls: string[]
+  beforeEach(() => {
+    calls = []
+  })
+  const log = (name: string) => () => void calls.push(name)
+  const db = { database: { url: ':memory:' }, secret: 'x'.repeat(32) }
+  const title = { title: { type: 'text', required: true } } as const
+  const writeStages = ['beforeOperation', 'beforeValidate', 'beforeChange', 'afterChange', 'afterRead', 'afterOperation'] as const
+  const logAll = (stages: readonly string[]) => Object.fromEntries(stages.map((s) => [s, [log(s)]]))
+
+  it('run in order on create and update', async () => {
+    const cms = defineCms({ ...db, collections: { posts: { fields: title, hooks: logAll(writeStages) } } })
+    const post = await cms.create('posts', { title: 'a' })
+    await cms.update('posts', post.id, { title: 'b' })
+    expect(calls).toEqual([...writeStages, ...writeStages])
+  })
+
+  it('accept arrays and records in key order', async () => {
+    const make = (beforeChange: (() => void)[] | Record<string, () => void>) => defineCms({ ...db, collections: { posts: { fields: title, hooks: { beforeChange } } } })
+    await make({ b: log('b'), a: log('a') }).create('posts', { title: 'x' })
+    await make([log('b'), log('a')]).create('posts', { title: 'x' })
+    expect(calls).toEqual(['b', 'a', 'b', 'a'])
+  })
+
+  it('use a returned value and keep the input on undefined', async () => {
+    const posts = defineCollection({
+      fields: title,
+      hooks: {
+        beforeValidate: [({ data }) => ({ ...data, title: data.title?.trim() }), () => undefined],
+        afterChange: [({ doc }) => ({ ...doc, extra: 1 })],
+        afterOperation: [({ result }) => ({ ...(result as object), op: 1 })],
+      },
+    })
+    const cms = defineCms({ ...db, collections: { posts } })
+    const post = await cms.create('posts', { title: '  Hi  ' })
+    expect(post).toMatchObject({ title: 'Hi', extra: 1, op: 1 })
+    const stored = await cms.findById('posts', post.id)
+    expect(stored?.title).toBe('Hi')
+    expect(stored).not.toHaveProperty('extra')
+  })
+
+  it('pass operation, id and originalDoc', async () => {
+    const seen: Record<string, unknown>[] = []
+    const posts = defineCollection({
+      fields: title,
+      hooks: {
+        beforeChange: [({ operation, id, originalDoc, data }) => void seen.push({ operation, id, original: originalDoc?.title, data: data.title })],
+        afterChange: [({ operation, previousDoc, doc }) => void seen.push({ operation, previous: previousDoc?.title, doc: doc.title })],
+      },
+    })
+    const cms = defineCms({ ...db, collections: { posts } })
+    const post = await cms.create('posts', { title: 'a' })
+    await cms.update('posts', post.id, { title: 'b' })
+    expect(seen).toEqual([
+      { operation: 'create', id: undefined, original: undefined, data: 'a' },
+      { operation: 'create', previous: undefined, doc: 'a' },
+      { operation: 'update', id: post.id, original: 'a', data: 'b' },
+      { operation: 'update', previous: 'a', doc: 'b' },
+    ])
+  })
+})
