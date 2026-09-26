@@ -201,17 +201,20 @@ export function pick(collections: Record<string, Collection>, fields: Fields, do
 
 const META = ['id', 'createdAt', 'updatedAt']
 
-/** The first path in `select` that does not fit `fields` and the populate `spec`, or `undefined`. Same resolution rules as `populate()`. */
-export function checkSelect(collections: Record<string, Collection>, fields: Fields, select: SelectSpec, spec: Spec | true, prefix = ''): string | undefined {
+/**
+ * The first path in `select` that does not fit `fields` and the populate `spec`, or `undefined`. Same resolution rules as `populate()`.
+ * `doc`: this level is a document, so `id`, `createdAt` and `updatedAt` exist. Groups and globals have none.
+ */
+export function checkSelect(collections: Record<string, Collection>, fields: Fields, select: SelectSpec, spec: Spec | true, prefix = '', doc = true): string | undefined {
   for (const [key, s] of Object.entries(select)) {
     const path = prefix + key
-    if (s === true && META.includes(key)) continue
+    if (doc && s === true && META.includes(key)) continue
     if (!Object.hasOwn(fields, key) || (s !== true && !isObject(s))) return path
     if (s === true) continue
     const f = fields[key]
     const sub = typeof spec === 'object' ? spec[key] : spec
     let error: string | undefined
-    if (f.type === 'group') error = checkSelect(collections, f.fields, s, sub === true ? 1 : sub, `${path}.`)
+    if (f.type === 'group') error = checkSelect(collections, f.fields, s, sub === true ? 1 : sub, `${path}.`, false)
     else if (f.type === 'relation' || f.type === 'join') {
       if (!sub || (f.type === 'join' && typeof spec !== 'object')) return path
       const next = sub === true ? false : typeof sub === 'number' ? sub - 1 : sub

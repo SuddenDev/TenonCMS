@@ -102,6 +102,13 @@ describe('checkSelect', () => {
   const check = (select: Record<string, any>, spec: Parameters<typeof checkSelect>[3] = 2, name = 'posts') =>
     checkSelect(collections, collections[name].fields, select, spec)
 
+  it('accepts meta keys only on documents', () => {
+    expect(check({ author: { id: true, createdAt: true } })).toBeUndefined()
+    expect(check({ seo: { id: true } })).toBe('seo.id')
+    expect(check({ seo: { updatedAt: true } })).toBe('seo.updatedAt')
+    expect(checkSelect(collections, collections.posts.fields, { id: true }, 2, '', false)).toBe('id')
+  })
+
   it('accepts fields, meta keys, groups and resolved relations', () => {
     expect(check({ title: true, createdAt: true, id: true })).toBeUndefined()
     expect(check({ seo: true })).toBeUndefined()

@@ -34,9 +34,9 @@ export function useIntegral() {
     ) {
       return useAsyncData(`integral:${collection}:${id}:${JSON.stringify(options)}`, () => client.findById<K, O>(collection, id, options as never))
     },
-    getGlobal<K extends keyof Globals & string, const O extends ReadOptions<Collections, Globals[K]['fields']> = {}>(
+    getGlobal<K extends keyof Globals & string, const O extends ReadOptions<Collections, Globals[K]['fields'], false> = {}>(
       name: K,
-      options: Checked<O, Collections, Globals[K]['fields'], Depth> = {} as never,
+      options: Checked<O, Collections, Globals[K]['fields'], Depth, false> = {} as never,
     ) {
       return useAsyncData(`integral:global:${name}:${JSON.stringify(options)}`, () => client.getGlobal<K, O>(name, options))
     },

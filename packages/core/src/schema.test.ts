@@ -431,6 +431,11 @@ async function readTypes() {
   gsel.featured
   // @ts-expect-error unknown global key
   cms.getGlobal('site', { select: { nope: true } })
+  // @ts-expect-error a global has no `id`, `createdAt` or `updatedAt`
+  cms.getGlobal('site', { select: { id: true } })
+  // @ts-expect-error nor does a group
+  cms.find('posts', { select: { seo: { id: true } } })
+  cms.find('posts', { select: { id: true, createdAt: true, author: { updatedAt: true } } })
   const ws = (await wide.find('x', { select: { anything: { nested: true } } }))[0]
   ws.whatever
 }

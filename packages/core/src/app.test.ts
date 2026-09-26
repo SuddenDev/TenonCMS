@@ -956,6 +956,13 @@ describe('select over HTTP', () => {
     expect(await client.getGlobal('site', { select: { logo: { url: true } } })).toEqual({ logo: { id: m.id, url: '/a.png' } })
   })
 
+  it('rejects meta keys where they do not exist', async () => {
+    const { p } = ids
+    expect(await get(`/collections/posts/${p.id}?select=seo.id`)).toEqual({ status: 400, body: { message: 'Invalid select: seo.id' } })
+    expect(await get('/globals/site?select=createdAt')).toEqual({ status: 400, body: { message: 'Invalid select: createdAt' } })
+    await expect(r.cms.getGlobal('site', { select: { id: true } } as never)).rejects.toThrow('Invalid select: id')
+  })
+
   it('rejects prototype keys without touching Object.prototype', async () => {
     for (const q of ['__proto__.polluted', 'constructor.prototype.polluted', '__proto__']) {
       expect(await get(`/collections/posts?select=${q}`)).toEqual({ status: 400, body: { message: expect.stringMatching(/^Invalid select: /) } })

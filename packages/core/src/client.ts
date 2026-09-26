@@ -188,9 +188,9 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * Returns a global. Fields that were never saved are missing.
      * `GET /api/cms/globals/:name`
      */
-    getGlobal<K extends keyof Globals<C> & string, const O extends ReadOptions<Collections<C>, Globals<C>[K]['fields']> = {}>(
+    getGlobal<K extends keyof Globals<C> & string, const O extends ReadOptions<Collections<C>, Globals<C>[K]['fields'], false> = {}>(
       name: K,
-      options: Checked<O, Collections<C>, Globals<C>[K]['fields'], Depth<C>> = {} as never,
+      options: Checked<O, Collections<C>, Globals<C>[K]['fields'], Depth<C>, false> = {} as never,
     ) {
       return request<Partial<Read<Collections<C>, Globals<C>[K]['fields'], PopulateOf<O, Depth<C>>, SelectOf<O>>>>(
         'GET',

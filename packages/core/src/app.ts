@@ -85,7 +85,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     const name = globalName(c.req.param('name'))
     if (!name) return c.notFound()
     const fields = schema.globals![name].fields
-    const read = readOptions(fields, c.req.query())
+    const read = readOptions(fields, c.req.query(), false)
     if (typeof read === 'string') return c.json({ message: read }, 400)
     return c.json(strip(fields, await cms.getGlobal(name, read), await readLevel(c.req.raw)))
   })
@@ -129,13 +129,14 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   return api
 
   // The read options, or the message of a 400.
-  function readOptions(fields: Fields, query: { populate?: string; depth?: string; select?: string }): ReadOpts | string {
+  // `doc`: false for globals, which have no `id`, `createdAt` or `updatedAt`.
+  function readOptions(fields: Fields, query: { populate?: string; depth?: string; select?: string }, doc = true): ReadOpts | string {
     const spec = parsePopulate(collections, fields, query, cms.populate)
     if (typeof spec === 'string') return spec
     const read: ReadOpts = spec === false ? { populate: false } : typeof spec === 'number' ? { depth: spec } : { populate: spec }
     if (query.select === undefined) return read
     const select = parseSelect(query.select)
-    const error = checkSelect(collections, fields, select, spec)
+    const error = checkSelect(collections, fields, select, spec, '', doc)
     return error ? `Invalid select: ${error}` : { ...read, select }
   }
   function collectionName(name: string) {

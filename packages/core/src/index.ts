@@ -114,8 +114,8 @@ export function defineCms<
   const spec = (options: { populate?: boolean | object; depth?: number }): Spec =>
     options.populate === false ? false : typeof options.populate === 'object' ? (options.populate as Spec) : (options.depth ?? defaults.depth)
   // Throws for a `select` that does not fit the fields or what `populate` resolves.
-  const checkRead = (fields: Fields, options: ReadOpts) => {
-    const error = options.select && checkSelect(collections, fields, options.select, spec(options))
+  const checkRead = (fields: Fields, options: ReadOpts, doc = true) => {
+    const error = options.select && checkSelect(collections, fields, options.select, spec(options), '', doc)
     if (error) throw new Error(`Invalid select: ${error}`)
   }
   const count = (o?: object) => Object.keys(o ?? {}).length
@@ -367,14 +367,14 @@ export function defineCms<
       },
 
       /** Returns a global. Fields that were never saved are missing. */
-      async getGlobal<K extends keyof Globals<T> & string, const O extends ReadOptions<Collections<T>, Globals<T>[K]['fields']> = {}>(
+      async getGlobal<K extends keyof Globals<T> & string, const O extends ReadOptions<Collections<T>, Globals<T>[K]['fields'], false> = {}>(
         name: K,
-        options: Checked<O, Collections<T>, Globals<T>[K]['fields'], D> = {} as never,
+        options: Checked<O, Collections<T>, Globals<T>[K]['fields'], D, false> = {} as never,
       ): Promise<ReadGlobal<T, K, O, D>> {
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
         const { fields, hooks: h } = globals[name]
         return run(scope, 'getGlobal', { global: name }, { global: name, options }, async (s, args) => {
-          checkRead(fields, args.options)
+          checkRead(fields, args.options, false)
           const base = { ...common(s, { global: name }), operation: 'getGlobal' as const }
           const docs = await hooks(h?.beforeRead, 'docs', [(await loadGlobal(s, name)) ?? {}], base)
           await populate(await q(s), collections, fields, docs, spec(args.options), readHooks(s))

@@ -587,10 +587,13 @@ export type Populate<Cs, F extends Fields> = {
 }
 export type PopulateArg<Cs, F extends Fields> = Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>
 
-/** Keys a `select` object may name: fields, `id`, `createdAt` and `updatedAt`. An object is allowed under a group, and under a relation or join that `P` resolves. */
-export type Select<Cs, F extends Fields, P> = {
+/**
+ * Keys a `select` object may name: fields, and on a document (`Doc`) `id`, `createdAt` and `updatedAt`.
+ * An object is allowed under a group, and under a relation or join that `P` resolves.
+ */
+export type Select<Cs, F extends Fields, P, Doc extends boolean = true> = {
   [K in keyof F]?: F[K] extends { type: 'group'; fields: infer G extends Fields }
-    ? true | Select<Cs, G, Sub<P, K> extends true ? 1 : Sub<P, K>>
+    ? true | Select<Cs, G, Sub<P, K> extends true ? 1 : Sub<P, K>, false>
     : F[K] extends { type: 'relation'; collection: infer C }
       ? Sub<P, K> extends false | 0 | undefined
         ? true
@@ -602,8 +605,8 @@ export type Select<Cs, F extends Fields, P> = {
             : true
           : true | Select<Cs, FieldsOf<Cs, C>, Next<Sub<P, K>>>
         : true
-} & { id?: true; createdAt?: true; updatedAt?: true }
-export type SelectArg<Cs, F extends Fields, P> = Wide<Cs> extends true ? Record<string, any> : Select<Cs, F, P>
+} & (Doc extends true ? { id?: true; createdAt?: true; updatedAt?: true } : {})
+export type SelectArg<Cs, F extends Fields, P, Doc extends boolean = true> = Wide<Cs> extends true ? Record<string, any> : Select<Cs, F, P, Doc>
 
 /** `T` with only `id` and the keys of `S`, at every object level. Arrays and `null` pass through; so do plain records (an untyped schema). */
 type Selected<T, S> = [S] extends [true]
@@ -625,8 +628,8 @@ export type Exact<P, A> = P extends object
     : { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
   : P
 
-/** Read options of `find`, `findOne`, `findById` and `getGlobal`. */
-export type ReadOptions<Cs, F extends Fields> = {
+/** Read options of `find`, `findOne`, `findById` and `getGlobal`. `Doc` is `false` for globals, which have no `id`, `createdAt` or `updatedAt`. */
+export type ReadOptions<Cs, F extends Fields, Doc extends boolean = true> = {
   /** `false` returns ids. An object resolves only the listed paths, `true` one hop. Default: every relation up to `depth`. */
   populate?: boolean | PopulateArg<Cs, F>
   /** Hops resolved when `populate` is not an object. */
@@ -637,10 +640,10 @@ export type ReadOptions<Cs, F extends Fields> = {
    * join that `populate` resolves. `{}` returns only `id`. Hooks see the full documents; `afterOperation` sees the result.
    * Default: every field.
    */
-  select?: SelectArg<Cs, F, number>
+  select?: SelectArg<Cs, F, number, Doc>
 }
 /** Checks the `populate` and `select` literals in `O` against the fields at every level. `D` is the default depth. */
-export type Checked<O extends ReadOptions<Cs, F>, Cs, F extends Fields, D extends number = 2> = O & {
+export type Checked<O extends ReadOptions<Cs, F, Doc>, Cs, F extends Fields, D extends number = 2, Doc extends boolean = true> = O & {
   populate?: Exact<O['populate'], PopulateArg<Cs, F>>
-  select?: Exact<O['select'], SelectArg<Cs, F, PopulateOf<O, D>>>
+  select?: Exact<O['select'], SelectArg<Cs, F, PopulateOf<O, D>, Doc>>
 }
