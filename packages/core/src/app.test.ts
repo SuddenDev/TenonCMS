@@ -791,18 +791,18 @@ describe('select', () => {
     const { p } = ids
     const expected = { id: p.id, title: 'Hi', author: { id: ids.a.id, name: 'Ann' } }
     const select = { title: true, author: { name: true } } as const
-    expect(await cms.find('posts', { select } as never)).toEqual([expected])
-    expect(await cms.findOne('posts', { where: { title: 'Hi' }, select } as never)).toEqual(expected)
-    expect(await cms.findById('posts', p.id, { select } as never)).toEqual(expected)
-    expect(await cms.findById('posts', p.id, { select: {} } as never)).toEqual({ id: p.id })
-    expect(await cms.findById('posts', p.id, { select: { createdAt: true } } as never)).toEqual({ id: p.id, createdAt: p.createdAt })
+    expect(await cms.find('posts', { select })).toEqual([expected])
+    expect(await cms.findOne('posts', { where: { title: 'Hi' }, select })).toEqual(expected)
+    expect(await cms.findById('posts', p.id, { select })).toEqual(expected)
+    expect(await cms.findById('posts', p.id, { select: {} })).toEqual({ id: p.id })
+    expect(await cms.findById('posts', p.id, { select: { createdAt: true } })).toEqual({ id: p.id, createdAt: p.createdAt })
   })
 
   it('selects inside a global and through a join', async () => {
     const { m, p, a } = ids
     await cms.setGlobal('site', { logo: m.id, featured: [p.id] })
-    expect(await cms.getGlobal('site', { select: { featured: { title: true } } } as never)).toEqual({ featured: [{ id: p.id, title: 'Hi' }] })
-    expect(await cms.findById('authors', a.id, { populate: { posts: true }, select: { posts: { title: true } } } as never)).toEqual({
+    expect(await cms.getGlobal('site', { select: { featured: { title: true } } })).toEqual({ featured: [{ id: p.id, title: 'Hi' }] })
+    expect(await cms.findById('authors', a.id, { populate: { posts: true }, select: { posts: { title: true } } })).toEqual({
       id: a.id,
       posts: [{ id: p.id, title: 'Hi' }],
     })
@@ -832,7 +832,7 @@ describe('select', () => {
       secret: 'x'.repeat(32),
     })
     await cms.create('posts', { title: 'a', body: 'b' })
-    await cms.find('posts', { select: { title: true } } as never)
+    await cms.find('posts', { select: { title: true } })
     expect(seen).toEqual([
       ['body', 'createdAt', 'id', 'title', 'updatedAt'],
       ['id', 'title'],
@@ -887,6 +887,15 @@ describe('populate over HTTP', () => {
   it('types client reads', () => {
     ;async () => {
       const { client } = r
+      const s = await client.findById('posts', 'x', { select: { title: true, author: { name: true } } })
+      s.title satisfies string
+      s.author?.name satisfies string | undefined
+      // @ts-expect-error not selected
+      s.tags
+      // @ts-expect-error unresolved relation
+      client.find('posts', { populate: false, select: { author: { name: true } } })
+      // @ts-expect-error unknown key
+      client.getGlobal('site', { select: { nope: true } })
       const c = (await client.find('posts'))[0]
       const n: string = c.author!.name
       // @ts-expect-error unknown populate key
@@ -936,15 +945,15 @@ describe('select over HTTP', () => {
   it('selects through the client', async () => {
     const { client } = r
     const { p, a, m } = ids
-    expect(await client.findById('posts', p.id, { select: { title: true, author: { name: true } } } as never)).toEqual({
+    expect(await client.findById('posts', p.id, { select: { title: true, author: { name: true } } })).toEqual({
       id: p.id,
       title: 'Hi',
       author: { id: a.id, name: 'Ann' },
     })
-    expect((await client.find('posts', { select: {} } as never))[0]).toEqual({ id: p.id })
-    expect(await client.findOne('posts', { where: { title: 'Hi' }, populate: false, select: { author: true } } as never)).toEqual({ id: p.id, author: a.id })
+    expect((await client.find('posts', { select: {} }))[0]).toEqual({ id: p.id })
+    expect(await client.findOne('posts', { where: { title: 'Hi' }, populate: false, select: { author: true } })).toEqual({ id: p.id, author: a.id })
     await r.cms.setGlobal('site', { logo: m.id })
-    expect(await client.getGlobal('site', { select: { logo: { url: true } } } as never)).toEqual({ logo: { id: m.id, url: '/a.png' } })
+    expect(await client.getGlobal('site', { select: { logo: { url: true } } })).toEqual({ logo: { id: m.id, url: '/a.png' } })
   })
 
   it('is a reserved param, not a filter', async () => {

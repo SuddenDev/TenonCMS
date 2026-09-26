@@ -392,6 +392,47 @@ async function readTypes() {
   const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: '' })
   const w = (await wide.find('x'))[0]
   w.anything
+
+  const sel = (await cms.find('posts', { select: { title: true, author: { name: true } } }))[0]
+  sel.id satisfies string
+  sel.title satisfies string
+  sel.author?.name satisfies string | undefined
+  // @ts-expect-error not selected
+  sel.tags
+  // @ts-expect-error not selected inside the relation
+  sel.author?.avatar
+  // @ts-expect-error `createdAt` only when listed
+  sel.createdAt
+  const meta = await cms.findById('posts', 'x', { select: { createdAt: true } })
+  meta?.createdAt satisfies string | undefined
+  const idOnly = (await cms.find('posts', { select: {} }))[0]
+  idOnly satisfies { id: string }
+  // @ts-expect-error `select: {}` returns only `id`
+  idOnly.title
+  const grp = (await cms.find('posts', { populate: { seo: { image: true } }, select: { seo: { image: { url: true } } } }))[0]
+  grp.seo?.image?.url satisfies string | undefined
+  // @ts-expect-error unknown key
+  cms.find('posts', { select: { titel: true } })
+  // @ts-expect-error unknown nested key
+  cms.find('posts', { select: { author: { nam: true } } })
+  // @ts-expect-error an object on a plain field
+  cms.find('posts', { select: { title: { x: true } } })
+  // @ts-expect-error an object on an unresolved relation
+  cms.find('posts', { populate: false, select: { author: { name: true } } })
+  // @ts-expect-error depth 1 resolves author but not avatar
+  cms.find('posts', { depth: 1, select: { author: { avatar: { url: true } } } })
+  // @ts-expect-error a join is resolved only when populate names it
+  cms.find('authors', { select: { posts: { title: true } } })
+  const jsel = (await cms.find('authors', { populate: { posts: true }, select: { posts: { title: true } } }))[0]
+  jsel.posts[0].title satisfies string
+  const gsel = await cms.getGlobal('site', { select: { logo: { url: true } } })
+  gsel.logo?.url satisfies string | undefined
+  // @ts-expect-error not selected in a global
+  gsel.featured
+  // @ts-expect-error unknown global key
+  cms.getGlobal('site', { select: { nope: true } })
+  const ws = (await wide.find('x', { select: { anything: { nested: true } } }))[0]
+  ws.whatever
 }
 
 // Checked by `pnpm typecheck` only.

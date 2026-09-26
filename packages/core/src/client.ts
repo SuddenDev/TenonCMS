@@ -1,4 +1,4 @@
-import type { Checked, Data, Doc, Fields as FieldsOf, FilterKey, PopulateOf, Read, ReadDoc, ReadOptions, Schema } from './schema.ts'
+import type { Checked, Data, Doc, Fields as FieldsOf, FilterKey, PopulateOf, Read, ReadDoc, ReadOptions, Schema, SelectOf } from './schema.ts'
 
 export type { Checked, ReadOptions } from './schema.ts'
 // Helpers have no imports, so this file stays safe in the browser.
@@ -14,14 +14,17 @@ type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, 'required'>
 type HttpGroup<F> = F extends { type: 'group'; fields: infer G } ? Omit<F, 'fields'> & { fields: Extract<HttpFields<G>, FieldsOf> } : F
 // `Extract` keeps the result assignable to `Fields`.
 type Http<R> = string extends keyof R ? R : { [K in keyof R]: Omit<R[K], 'fields'> & { fields: R[K] extends { fields: infer F } ? Extract<HttpFields<F>, FieldsOf> : never } }
-type Collections<C extends { schema: Schema }> = Http<NonNullable<C['schema']['collections']>>
-type Globals<C extends { schema: Schema }> = Http<NonNullable<C['schema']['globals']>>
+/** The collections of `C` as the HTTP API sends them. The types of the client's read options build on these. */
+export type Collections<C extends { schema: Schema }> = Http<NonNullable<C['schema']['collections']>>
+/** The globals of `C` as the HTTP API sends them. */
+export type Globals<C extends { schema: Schema }> = Http<NonNullable<C['schema']['globals']>>
 type Fields<C extends { schema: Schema }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
 type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2
 type ReadCollection<C extends { schema: Schema }, K extends keyof Collections<C>, O> = ReadDoc<
   Collections<C>,
   Fields<C, K>,
-  PopulateOf<O, Depth<C>>
+  PopulateOf<O, Depth<C>>,
+  SelectOf<O>
 >
 /** Options of `find` and `findOne` for collection `K`. */
 export type FindOptions<C extends { schema: Schema }, K extends keyof Collections<C>> = ReadOptions<Collections<C>, Fields<C, K>> & {
@@ -131,7 +134,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      */
     find<K extends keyof Collections<C> & string, const O extends FindOptions<C, K> = {}>(
       collection: K,
-      options: Checked<O, Collections<C>, Fields<C, K>> = {} as never,
+      options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>> = {} as never,
     ) {
       const query = { ...options.where, ...(options.limit && { limit: options.limit }), ...readQuery(options) }
       return request<ReadCollection<C, K, O>[]>('GET', `/collections/${encodeURIComponent(collection)}`, undefined, query)
@@ -140,9 +143,9 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
     /** Returns the newest document that matches `where`, or `undefined`. */
     async findOne<K extends keyof Collections<C> & string, const O extends FindOptions<C, K>>(
       collection: K,
-      options: Checked<O, Collections<C>, Fields<C, K>>,
+      options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
     ): Promise<ReadCollection<C, K, O> | undefined> {
-      return (await client.find(collection, { ...options, limit: 1 } as never))[0] as ReadCollection<C, K, O> | undefined
+      return (await client.find<K, O>(collection, { ...options, limit: 1 } as never))[0]
     },
 
     /**
@@ -152,7 +155,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
     findById<K extends keyof Collections<C> & string, const O extends ReadOptions<Collections<C>, Fields<C, K>> = {}>(
       collection: K,
       id: string,
-      options: Checked<O, Collections<C>, Fields<C, K>> = {} as never,
+      options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>> = {} as never,
     ) {
       return request<ReadCollection<C, K, O>>('GET', doc(collection, id), undefined, readQuery(options))
     },
@@ -187,9 +190,9 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      */
     getGlobal<K extends keyof Globals<C> & string, const O extends ReadOptions<Collections<C>, Globals<C>[K]['fields']> = {}>(
       name: K,
-      options: Checked<O, Collections<C>, Globals<C>[K]['fields']> = {} as never,
+      options: Checked<O, Collections<C>, Globals<C>[K]['fields'], Depth<C>> = {} as never,
     ) {
-      return request<Partial<Read<Collections<C>, Globals<C>[K]['fields'], PopulateOf<O, Depth<C>>>>>(
+      return request<Partial<Read<Collections<C>, Globals<C>[K]['fields'], PopulateOf<O, Depth<C>>, SelectOf<O>>>>(
         'GET',
         `/globals/${encodeURIComponent(name)}`,
         undefined,

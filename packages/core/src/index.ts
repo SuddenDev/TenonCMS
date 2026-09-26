@@ -32,6 +32,7 @@ import {
   type ReadOptions,
   type RootHooks,
   type Schema,
+  type SelectOf,
   type Slot,
 } from './schema.ts'
 
@@ -84,10 +85,11 @@ type FindOptions<T extends Schema, K extends keyof Collections<T>> = ReadOptions
 type ReadCollection<T extends Schema, K extends keyof Collections<T>, O, D extends number> = ReadDoc<
   Collections<T>,
   Collections<T>[K]['fields'],
-  PopulateOf<O, D>
+  PopulateOf<O, D>,
+  SelectOf<O>
 >
 type ReadGlobal<T extends Schema, K extends keyof Globals<T>, O, D extends number> = Partial<
-  Read<Collections<T>, Globals<T>[K]['fields'], PopulateOf<O, D>>
+  Read<Collections<T>, Globals<T>[K]['fields'], PopulateOf<O, D>, SelectOf<O>>
 >
 
 
@@ -299,7 +301,7 @@ export function defineCms<
        */
       async find<K extends keyof Collections<T> & string, const O extends FindOptions<T, K> = {}>(
         collection: K,
-        options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
+        options: Checked<O, Collections<T>, Collections<T>[K]['fields'], D> = {} as never,
       ): Promise<ReadCollection<T, K, O, D>[]> {
         if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
         return run(scope, 'read', { collection }, { collection, options }, (s, args) => read(s, collection, args.options)) as Promise<ReadCollection<T, K, O, D>[]>
@@ -311,7 +313,7 @@ export function defineCms<
        */
       async findOne<K extends keyof Collections<T> & string, const O extends FindOptions<T, K>>(
         collection: K,
-        options: Checked<O, Collections<T>, Collections<T>[K]['fields']>,
+        options: Checked<O, Collections<T>, Collections<T>[K]['fields'], D>,
       ): Promise<ReadCollection<T, K, O, D> | undefined> {
         if (!Object.hasOwn(collections, collection)) throw new Error(`Unknown collection "${collection}"`)
         return run(scope, 'read', { collection }, { collection, options }, async (s, args) => (await read(s, collection, { ...args.options, limit: 1 }))[0]) as Promise<ReadCollection<T, K, O, D> | undefined>
@@ -321,7 +323,7 @@ export function defineCms<
       async findById<K extends keyof Collections<T> & string, const O extends ReadOptions<Collections<T>, Collections<T>[K]['fields']> = {}>(
         collection: K,
         id: string,
-        options: Checked<O, Collections<T>, Collections<T>[K]['fields']> = {} as never,
+        options: Checked<O, Collections<T>, Collections<T>[K]['fields'], D> = {} as never,
       ): Promise<ReadCollection<T, K, O, D> | undefined> {
         if (!Object.hasOwn(collections, collection)) return undefined
         return run(scope, 'read', { collection }, { collection, id, options }, async (s, args) => (await read(s, collection, { ...args.options, id: args.id }))[0]) as Promise<ReadCollection<T, K, O, D> | undefined>
@@ -367,7 +369,7 @@ export function defineCms<
       /** Returns a global. Fields that were never saved are missing. */
       async getGlobal<K extends keyof Globals<T> & string, const O extends ReadOptions<Collections<T>, Globals<T>[K]['fields']> = {}>(
         name: K,
-        options: Checked<O, Collections<T>, Globals<T>[K]['fields']> = {} as never,
+        options: Checked<O, Collections<T>, Globals<T>[K]['fields'], D> = {} as never,
       ): Promise<ReadGlobal<T, K, O, D>> {
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
         const { fields, hooks: h } = globals[name]

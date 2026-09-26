@@ -560,8 +560,10 @@ export type Resolve<Cs, F extends Fields, P> = Simplify<
 
 // An untyped schema (the admin's) reads plain records. The recursive types would not terminate.
 type Wide<Cs> = string extends keyof Cs ? true : false
-export type Read<Cs, F extends Fields, P> = Wide<Cs> extends true ? Record<string, any> : Resolve<Cs, F, P>
-export type ReadDoc<Cs, F extends Fields, P> = Simplify<Read<Cs, F, P> & Meta>
+export type Read<Cs, F extends Fields, P, S = true> = Wide<Cs> extends true ? Record<string, any> : Selected<Resolve<Cs, F, P>, S>
+// `createdAt` and `updatedAt` only when `S` lists them.
+type SelectedMeta<S> = [S] extends [true] ? Meta : Pick<Meta, 'id' | Extract<keyof S, keyof Meta>>
+export type ReadDoc<Cs, F extends Fields, P, S = true> = Simplify<Read<Cs, F, P, S> & SelectedMeta<S>>
 export type PopulateOf<O, D extends number> = O extends { populate: false }
   ? false
   : O extends { populate: infer P extends object }
@@ -585,9 +587,42 @@ export type Populate<Cs, F extends Fields> = {
 }
 export type PopulateArg<Cs, F extends Fields> = Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>
 
+/** Keys a `select` object may name: fields, `id`, `createdAt` and `updatedAt`. An object is allowed under a group, and under a relation or join that `P` resolves. */
+export type Select<Cs, F extends Fields, P> = {
+  [K in keyof F]?: F[K] extends { type: 'group'; fields: infer G extends Fields }
+    ? true | Select<Cs, G, Sub<P, K> extends true ? 1 : Sub<P, K>>
+    : F[K] extends { type: 'relation'; collection: infer C }
+      ? Sub<P, K> extends false | 0 | undefined
+        ? true
+        : true | Select<Cs, FieldsOf<Cs, C>, Next<Sub<P, K>>>
+      : F[K] extends { type: 'join'; collection: infer C }
+        ? K extends Joins<F, P>
+          ? number extends P
+            ? true | Select<Cs, FieldsOf<Cs, C>, Next<Sub<P, K>>>
+            : true
+          : true | Select<Cs, FieldsOf<Cs, C>, Next<Sub<P, K>>>
+        : true
+} & { id?: true; createdAt?: true; updatedAt?: true }
+export type SelectArg<Cs, F extends Fields, P> = Wide<Cs> extends true ? Record<string, any> : Select<Cs, F, P>
+
+/** `T` with only `id` and the keys of `S`, at every object level. Arrays and `null` pass through; so do plain records (an untyped schema). */
+type Selected<T, S> = [S] extends [true]
+  ? T
+  : T extends (infer U)[]
+    ? Selected<U, S>[]
+    : T extends object
+      ? string extends keyof T
+        ? T
+        : Simplify<{ [K in keyof T as K extends 'id' | keyof S ? K : never]: K extends keyof S ? Selected<T[K], S[K]> : T[K] }>
+      : T
+export type SelectOf<O> = O extends { select: infer S extends object } ? S : true
+
 // Generic inference skips excess property checks, so extra keys map to `never` at every level.
+// An object under a key that allows only `true` maps to `never`; without that rule `keyof never` accepts every key.
 export type Exact<P, A> = P extends object
-  ? { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
+  ? [A] extends [never]
+    ? never
+    : { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
   : P
 
 /** Read options of `find`, `findOne`, `findById` and `getGlobal`. */
@@ -596,8 +631,16 @@ export type ReadOptions<Cs, F extends Fields> = {
   populate?: boolean | PopulateArg<Cs, F>
   /** Hops resolved when `populate` is not an object. */
   depth?: number
+  /**
+   * The fields a read returns. `id` always comes back; `createdAt` and `updatedAt` only when listed. `true` keeps a value as
+   * `populate` leaves it: an id, ids, a document or documents. An object lists the keys inside a group, or inside a relation or
+   * join that `populate` resolves. `{}` returns only `id`. Hooks see the full documents; `afterOperation` sees the result.
+   * Default: every field.
+   */
+  select?: SelectArg<Cs, F, number>
 }
-/** Checks a `populate` object literal in `O` against the fields at every level. */
-export type Checked<O extends ReadOptions<Cs, F>, Cs, F extends Fields> = O & {
+/** Checks the `populate` and `select` literals in `O` against the fields at every level. `D` is the default depth. */
+export type Checked<O extends ReadOptions<Cs, F>, Cs, F extends Fields, D extends number = 2> = O & {
   populate?: Exact<O['populate'], PopulateArg<Cs, F>>
+  select?: Exact<O['select'], SelectArg<Cs, F, PopulateOf<O, D>>>
 }
