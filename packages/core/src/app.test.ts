@@ -779,6 +779,67 @@ describe('populate', () => {
   })
 })
 
+describe('select', () => {
+  let cms: ReturnType<typeof relational>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    cms = relational()
+    ids = await seed(cms)
+  })
+
+  it('returns id and the selected fields from every read method', async () => {
+    const { p } = ids
+    const expected = { id: p.id, title: 'Hi', author: { id: ids.a.id, name: 'Ann' } }
+    const select = { title: true, author: { name: true } } as const
+    expect(await cms.find('posts', { select } as never)).toEqual([expected])
+    expect(await cms.findOne('posts', { where: { title: 'Hi' }, select } as never)).toEqual(expected)
+    expect(await cms.findById('posts', p.id, { select } as never)).toEqual(expected)
+    expect(await cms.findById('posts', p.id, { select: {} } as never)).toEqual({ id: p.id })
+    expect(await cms.findById('posts', p.id, { select: { createdAt: true } } as never)).toEqual({ id: p.id, createdAt: p.createdAt })
+  })
+
+  it('selects inside a global and through a join', async () => {
+    const { m, p, a } = ids
+    await cms.setGlobal('site', { logo: m.id, featured: [p.id] })
+    expect(await cms.getGlobal('site', { select: { featured: { title: true } } } as never)).toEqual({ featured: [{ id: p.id, title: 'Hi' }] })
+    expect(await cms.findById('authors', a.id, { populate: { posts: true }, select: { posts: { title: true } } } as never)).toEqual({
+      id: a.id,
+      posts: [{ id: p.id, title: 'Hi' }],
+    })
+  })
+
+  it('rejects an unknown key, a nested object on a plain field and an unresolved relation', async () => {
+    await expect(cms.find('posts', { select: { titel: true } } as never)).rejects.toThrow('Invalid select: titel')
+    await expect(cms.find('posts', { select: { title: { x: true } } } as never)).rejects.toThrow('Invalid select: title')
+    await expect(cms.find('posts', { populate: false, select: { author: { name: true } } } as never)).rejects.toThrow('Invalid select: author')
+    await expect(cms.getGlobal('site', { select: { nope: true } } as never)).rejects.toThrow('Invalid select: nope')
+  })
+
+  it('runs after afterRead and before afterOperation', async () => {
+    const seen: string[][] = []
+    const keys = (d: object) => Object.keys(d).sort()
+    const cms = defineCms({
+      collections: {
+        posts: {
+          fields: { title: { type: 'text' }, body: { type: 'text' } },
+          hooks: {
+            afterRead: [({ docs, operation }) => void (operation === 'read' && seen.push(keys(docs[0])))],
+            afterOperation: [({ result, operation }) => void (operation === 'read' && seen.push(keys((result as object[])[0])))],
+          },
+        },
+      },
+      database: { url: ':memory:' },
+      secret: 'x'.repeat(32),
+    })
+    await cms.create('posts', { title: 'a', body: 'b' })
+    await cms.find('posts', { select: { title: true } } as never)
+    expect(seen).toEqual([
+      ['body', 'createdAt', 'id', 'title', 'updatedAt'],
+      ['id', 'title'],
+    ])
+  })
+})
+
 describe('populate over HTTP', () => {
   let r: ReturnType<typeof setup<ReturnType<typeof relational>>>
   let ids: Awaited<ReturnType<typeof seed>>

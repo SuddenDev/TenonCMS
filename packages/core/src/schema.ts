@@ -186,7 +186,7 @@ export type Slot<F> = F[] | Record<string, F>
  */
 export type Operation = 'create' | 'update' | 'delete' | 'read' | 'getGlobal' | 'setGlobal'
 
-type Options = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number }
+type Options = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number; select?: Record<string, unknown> }
 type Row = Record<string, any>
 
 /** The local API with untyped names and data, as hooks get it. */

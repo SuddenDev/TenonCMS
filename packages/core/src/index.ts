@@ -7,7 +7,7 @@ import { isObject, matchCondition } from './condition.ts'
 import { createDb, type Database, migrate, toDoc } from './db/index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
 import { slugify } from './helpers/slugify.ts'
-import { checkRefs, checkSchema, onDelete, populate, type ReadHooks, type Spec } from './relations.ts'
+import { checkRefs, checkSchema, checkSelect, onDelete, pick, populate, type ReadHooks, type SelectSpec, type Spec } from './relations.ts'
 import {
   type Checked,
   checkFields,
@@ -111,6 +111,11 @@ export function defineCms<
   const globals: Record<string, Global> = schema.globals ?? {}
   const spec = (options: { populate?: boolean | object; depth?: number }): Spec =>
     options.populate === false ? false : typeof options.populate === 'object' ? (options.populate as Spec) : (options.depth ?? defaults.depth)
+  // Throws for a `select` that does not fit the fields or what `populate` resolves.
+  const checkRead = (fields: Fields, options: ReadOpts) => {
+    const error = options.select && checkSelect(collections, fields, options.select, spec(options))
+    if (error) throw new Error(`Invalid select: ${error}`)
+  }
   const count = (o?: object) => Object.keys(o ?? {}).length
   consola.withTag('integral').info(`Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`)
   // Created lazily so no connection opens at import time.
@@ -248,6 +253,7 @@ export function defineCms<
   // `find`, `findOne` and `findById`: `beforeRead`, then relations, then `afterRead`.
   async function read(s: Inner, collection: string, options: ReadOpts) {
     const { fields, hooks: h } = collections[collection]
+    checkRead(fields, options)
     let query = (await q(s)).selectFrom('cms_documents').selectAll().where('collection', '=', collection)
     if (options.id !== undefined) query = query.where('id', '=', options.id)
     for (const [key, value] of Object.entries(options.where ?? {})) {
@@ -263,7 +269,8 @@ export function defineCms<
     const base = { ...common(s, { collection }), operation: 'read' as const }
     const docs = await hooks(h?.beforeRead, 'docs', (await query.execute()).map(toDoc), base)
     await populate(await q(s), collections, fields, docs, spec(options), readHooks(s))
-    return afterRead(s, { collection }, docs, 'read')
+    const result = await afterRead(s, { collection }, docs, 'read')
+    return options.select ? result.map((d) => pick(collections, fields, d, options.select!)) : result
   }
 
   // Populated documents run their own collection's read hooks, in the scope of the outer read.
@@ -365,10 +372,12 @@ export function defineCms<
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`)
         const { fields, hooks: h } = globals[name]
         return run(scope, 'getGlobal', { global: name }, { global: name, options }, async (s, args) => {
+          checkRead(fields, args.options)
           const base = { ...common(s, { global: name }), operation: 'getGlobal' as const }
           const docs = await hooks(h?.beforeRead, 'docs', [(await loadGlobal(s, name)) ?? {}], base)
           await populate(await q(s), collections, fields, docs, spec(args.options), readHooks(s))
-          return (await afterRead(s, { global: name }, docs, 'getGlobal'))[0]
+          const doc = (await afterRead(s, { global: name }, docs, 'getGlobal'))[0]
+          return args.options.select ? pick(collections, fields, doc, args.options.select) : doc
         }) as Promise<ReadGlobal<T, K, O, D>>
       },
 
@@ -403,7 +412,7 @@ type WriteOptions = { id?: string; effect?: boolean }
 
 // The stored data of a document, without `id`, `createdAt` and `updatedAt`.
 const stripMeta = ({ id, createdAt, updatedAt, ...data }: Record<string, unknown>) => data
-type ReadOpts = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number; id?: string }
+type ReadOpts = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number; select?: SelectSpec; id?: string }
 
 /** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */
 type Scope = {
