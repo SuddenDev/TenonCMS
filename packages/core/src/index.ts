@@ -41,7 +41,7 @@ export type { Collection, Schema, Data, Doc, Field, Fields, Global } from './sch
 
 export type { AuthOptions } from './auth.ts'
 export { ConflictError, type Reference, ValidationError } from './errors.ts'
-export { SLUG_PATTERN, seoMeta, slugify } from './helpers/index.ts'
+export { type BreadcrumbsOptions, breadcrumbs, SLUG_PATTERN, seoMeta, slugify } from './helpers/index.ts'
 
 export type PopulateConfig = {
   /** Hops resolved by `populate: true`. Default 2. */

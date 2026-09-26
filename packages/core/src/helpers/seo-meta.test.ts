@@ -10,6 +10,6 @@ it('seoMeta falls back to the title', () => {
 
 it('helpers come from the main and the browser-safe client entry', async () => {
   for (const entry of [await import('../index.ts'), await import('../client.ts')]) {
-    expect(entry).toMatchObject({ seoMeta, slugify: expect.any(Function), SLUG_PATTERN: expect.any(String) })
+    expect(entry).toMatchObject({ seoMeta, breadcrumbs: expect.any(Function), slugify: expect.any(Function), SLUG_PATTERN: expect.any(String) })
   }
 })
