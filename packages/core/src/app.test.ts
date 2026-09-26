@@ -1912,6 +1912,16 @@ describe('private', () => {
     expect((await get('email=e')).status).toBe(200)
   })
 
+  it('is left out of a select without a session and returned with one', async () => {
+    const cms = make()
+    const { client, fetch } = setup(cms)
+    const p = await cms.create('people', person)
+    const get = async () => (await fetch(`${origin}/api/cms/collections/people/${p.id}?select=name,email,contact.phone`)).json()
+    expect(await get()).toEqual({ id: p.id, name: 'A' })
+    await client.signUp(admin)
+    expect(await get()).toEqual({ id: p.id, name: 'A', email: 'e', contact: { phone: 'p' } })
+  })
+
   it('is missing in populated documents on public reads', async () => {
     const cms = make()
     const { client } = setup(cms)
