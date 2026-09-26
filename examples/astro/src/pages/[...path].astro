@@ -1,13 +1,19 @@
 ---
-import { seoMeta } from 'integral-cms'
+import { breadcrumbs, seoMeta } from 'integral-cms'
 
 export const prerender = false
 
 // Static routes like `/` and `/about` win over this one, so CMS pages at those paths never show.
 const path = `/${Astro.params.path ?? ''}`
-const page = await Astro.locals.integral.findOne('pages', { where: { path }, populate: false })
+// Two parent levels resolved, so the trail covers three levels of pages.
+const page = await Astro.locals.integral.findOne('pages', {
+  where: { path },
+  populate: { parent: { parent: true } },
+  select: { title: true, path: true, body: true, seo: true, parent: { title: true, path: true, parent: { title: true, path: true } } },
+})
 if (!page) return new Response('Not found', { status: 404 })
 const meta = seoMeta(page)
+const trail = breadcrumbs(page)
 ---
 
 <html lang="en">
@@ -19,6 +25,13 @@ const meta = seoMeta(page)
   </head>
   <body>
     <a href="/">← Home</a>
+    <nav aria-label="Breadcrumb">
+      <ol>
+        {trail.map((crumb, i) => (
+          <li>{i === trail.length - 1 ? <span aria-current="page">{crumb.title}</span> : <a href={crumb.path}>{crumb.title}</a>}</li>
+        ))}
+      </ol>
+    </nav>
     <h1>{page.title}</h1>
     <p style="white-space: pre-wrap">{page.body}</p>
   </body>
