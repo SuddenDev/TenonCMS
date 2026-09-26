@@ -197,6 +197,28 @@ export function pick(collections: Record<string, Collection>, fields: Fields, do
   return out
 }
 
+const META = ['id', 'createdAt', 'updatedAt']
+
+/** The first path in `select` that does not fit `fields` and the populate `spec`, or `undefined`. Same resolution rules as `populate()`. */
+export function checkSelect(collections: Record<string, Collection>, fields: Fields, select: SelectSpec, spec: Spec | true, prefix = ''): string | undefined {
+  for (const [key, s] of Object.entries(select)) {
+    const path = prefix + key
+    if (s === true && META.includes(key)) continue
+    if (!Object.hasOwn(fields, key) || (s !== true && !isObject(s))) return path
+    if (s === true) continue
+    const f = fields[key]
+    const sub = typeof spec === 'object' ? spec[key] : spec
+    let error: string | undefined
+    if (f.type === 'group') error = checkSelect(collections, f.fields, s, sub === true ? 1 : sub, `${path}.`)
+    else if (f.type === 'relation' || f.type === 'join') {
+      if (!sub || (f.type === 'join' && typeof spec !== 'object')) return path
+      const next = sub === true ? false : typeof sub === 'number' ? sub - 1 : sub
+      error = checkSelect(collections, collections[f.collection].fields, s, next, `${path}.`)
+    } else return path
+    if (error) return error
+  }
+}
+
 type Ref = { collection?: string; id?: string; global?: string; data: Record<string, any>; path: string[]; field: RelationField }
 
 const owner = (r: Ref) => (r.global ? `global:${r.global}` : `${r.collection}:${r.id}`)
