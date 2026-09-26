@@ -208,8 +208,36 @@ Everything is typed from the schema. Unknown collections or fields are type erro
 
 Reads are also available over HTTP without a session, because the site renders that content anyway.
 Query params are equality filters, and `limit` caps the result: `GET /api/cms/collections/posts?slug=hello&limit=1`, `GET /api/cms/globals/site`. `?category=null` matches an empty or missing field, like `null` in `where`; an empty value (`?category=`) adds no filter.
-`populate` and `depth` control [relations](#relations). Because of that, fields named `limit`, `populate` or `depth` cannot be filtered over HTTP.
+`populate` and `depth` control [relations](#relations), `select` the fields that come back. Because of that, fields named `limit`, `populate`, `depth` or `select` cannot be filtered over HTTP.
 Writes and the schema endpoint need an admin session.
+
+Reads return whole documents unless `select` lists the fields you need. `populate` decides which relations are resolved; `select` decides what comes back:
+
+```ts
+const page = await cms.findOne('pages', {
+  where: { path: '/about/team/person' },
+  populate: { parent: { parent: true } },
+  select: { title: true, path: true, parent: { title: true, path: true, parent: { title: true, path: true } } },
+})
+// { id, title, path, parent: { id, title, path, parent: { id, title, path } } }
+```
+
+| In `select` | Result |
+|---|---|
+| a field `: true` | the field's value |
+| a group `: true` | the whole group |
+| a group `: { … }` | only the listed children, by these same rules |
+| a relation or join `: true` | the value as `populate` leaves it: an id, ids, a document or documents |
+| a relation or join `: { … }` | the resolved document, or each item of a `many` relation or join, with only the listed fields |
+| a field not listed | left out |
+
+- `find`, `findOne`, `findById` and `getGlobal` accept it, in the local API, the client and `useIntegral()`. Writes do not.
+- `id` always comes back, at every level with documents. `createdAt` and `updatedAt` only when listed. `select: {}` returns only `id`.
+- A join still comes back only when `populate` names it. `private` fields stay hidden without a session; selecting one is not an error.
+- Hooks see full documents: `select` runs after `afterRead` and before `afterOperation`. The database still loads whole rows; `select` limits what leaves the read.
+- Result types contain only the selected fields. An unknown key, an object on a plain field and an object on a relation that `populate` does not resolve are type errors, and 400 over HTTP (`Invalid select: parent.nope`).
+
+Over HTTP, `?select=` is a comma-separated list of dot paths: `?populate=parent&select=title,path,parent.title,parent.path`. A path that ends at a group, relation or join means `true`; `seo` and `seo.title` together mean `seo: { title: true }` (the longer path wins). The client builds these paths from the object. An empty object inside ends a path, so `select: { parent: {} }` is `{ id }` in the local API but the whole `parent` over HTTP, as with `populate`.
 
 `update` and `setGlobal` change only the top-level fields they get; the others keep their stored values. `null` clears a field. A group you send replaces the stored group. This holds for the local API, HTTP `PUT` and the client:
 
@@ -224,6 +252,7 @@ import { createClient } from 'integral-cms/client'
 
 const client = createClient()
 await client.find('posts', { where: { featured: true } })
+await client.findOne('pages', { where: { path }, populate: { parent: true }, select: { title: true, parent: { title: true } } })
 await client.update('posts', id, post) // needs a session, so it works in admin pages
 await client.getSession() // the signed-in admin, or null
 ```
@@ -281,7 +310,7 @@ cms.find('authors', { populate: { posts: true } })        // join
 
 `defineCms({ populate: { depth: 2, maxDepth: 5 } })` sets the defaults: `depth` for `populate: true` (default 2), `maxDepth` for HTTP requests (default 5; the local API has no limit).
 
-Over HTTP: `?populate=false`, `?populate=author.avatar,tags`, `?depth=3`. The client turns a `populate` object into these paths. Unknown paths, fields that cannot populate and more hops than `maxDepth` return 400.
+Over HTTP: `?populate=false`, `?populate=author.avatar,tags`, `?depth=3`. The client turns a `populate` object into these paths. Unknown paths, fields that cannot populate and more hops than `maxDepth` return 400 with the path in the message (`Invalid populate: author.nope`, `Invalid depth: 9`).
 
 When a document is deleted, every relation that points to it applies its `onDelete` rule, all in one transaction and with the hooks of the referencing documents:
 
@@ -462,11 +491,38 @@ const { title, description, noindex } = seoMeta(doc)
 
 - `title` is `seo.title`, or the page's `title` when it is empty. Nothing is stored, so the fallback follows title changes.
 - `description` is `seo.description` or `undefined`. `noindex` is `true` only when `seo.noindex` is.
-- `seoMeta()`, `slugify()` and `SLUG_PATTERN` come from `integral-cms`. In browser code, import them from `integral-cms/client`, which pulls no server code.
+- `seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `integral-cms`. In browser code, import them from `integral-cms/client`, which pulls no server code.
+
+`breadcrumbs()` builds the trail from a page read with its parents resolved. Read only what the trail needs with [`select`](#2-read-content):
+
+```astro
+---
+import { breadcrumbs } from 'integral-cms'
+
+const page = await Astro.locals.integral.findOne('pages', {
+  where: { path },
+  populate: { parent: { parent: true } },
+  select: { title: true, path: true, parent: { title: true, path: true, parent: { title: true, path: true } } },
+})
+const trail = breadcrumbs(page) // [{ title: 'About', path: '/about' }, …, { title: 'Person', path: '/about/team/person' }]
+---
+
+<nav aria-label="Breadcrumb">
+  <ol>
+    {trail.map((crumb, i) => (
+      <li>{i === trail.length - 1 ? <span aria-current="page">{crumb.title}</span> : <a href={crumb.path}>{crumb.title}</a>}</li>
+    ))}
+  </ol>
+</nav>
+```
+
+- One entry per document from the root down to the page itself. A root page has one entry.
+- The walk stops at a `parent` that is not a document: `null`, missing, or an id `populate` did not resolve. It makes no queries, so resolve as many levels as your tree has; the trail then starts at the last resolved ancestor.
+- Options name the fields: `breadcrumbs(doc, { title: 'name', path: 'url', parent: 'up' })`. They default to `title`, `path` and `parent`, the names in `page.fields`. A missing title or path reads as `''`.
 
 Each example has a catch-all route that reads by `path`. Static routes win over it, so a CMS page at `/` (or `/about` in Astro) never shows:
 
-- Astro: `src/pages/[...path].astro` with `Astro.locals.integral.findOne`
+- Astro: `src/pages/[...path].astro` with `Astro.locals.integral.findOne`, `select` and breadcrumbs
 - Nuxt: `app/pages/[...path].vue` with `useIntegral().findOne` and `useSeoMeta`
 - TanStack Start: `src/routes/$.tsx` with a server function and `head`
 
@@ -688,11 +744,11 @@ Working:
 - Schema-in-code collections and globals with inferred types
 - Relations between collections: `relation` and `join` fields, typed `populate`, `onDelete` rules
 - Admin: list, create, edit, delete; globals; email/password login; custom fields and pages via `integral.admin.ts` (`mount(el, ctx)` from any framework)
-- Public read API with equality filters and `limit`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
+- Public read API with equality filters, `limit` and `select`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Collection, global and field hooks, run by the local API in one transaction per write
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
 - Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
-- `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `slugify()`
+- `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `breadcrumbs()` / `slugify()`
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions
