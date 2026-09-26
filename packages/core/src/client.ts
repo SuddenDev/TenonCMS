@@ -14,9 +14,9 @@ type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, 'required'>
 type HttpGroup<F> = F extends { type: 'group'; fields: infer G } ? Omit<F, 'fields'> & { fields: Extract<HttpFields<G>, FieldsOf> } : F
 // `Extract` keeps the result assignable to `Fields`.
 type Http<R> = string extends keyof R ? R : { [K in keyof R]: Omit<R[K], 'fields'> & { fields: R[K] extends { fields: infer F } ? Extract<HttpFields<F>, FieldsOf> : never } }
-/** The collections of `C` as the HTTP API sends them. The types of the client's read options build on these. */
+/** The collections of `C` as the HTTP API sends them: `private` fields are optional. Use them to type browser code; the client's read types build on them. */
 export type Collections<C extends { schema: Schema }> = Http<NonNullable<C['schema']['collections']>>
-/** The globals of `C` as the HTTP API sends them. */
+/** The globals of `C` as the HTTP API sends them: `private` fields are optional. */
 export type Globals<C extends { schema: Schema }> = Http<NonNullable<C['schema']['globals']>>
 type Fields<C extends { schema: Schema }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
 type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2

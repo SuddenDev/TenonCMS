@@ -257,6 +257,15 @@ await client.update('posts', id, post) // needs a session, so it works in admin 
 await client.getSession() // the signed-in admin, or null
 ```
 
+To type your own browser code, `Collections<C>` and `Globals<C>` give the schema as HTTP sends it, with `private` fields optional:
+
+```ts
+import type { Collections } from 'integral-cms/client'
+import type cms from '../integral.config'
+
+type PostFields = Collections<typeof cms>['posts']['fields']
+```
+
 The Astro and Nuxt adapters register your `cms` type, so `createClient()` needs no type argument. Without an adapter, add this to `tsconfig.json`:
 
 ```jsonc
@@ -764,6 +773,10 @@ Roadmap, roughly in order:
 7. Postgres
 8. SvelteKit adapter
 9. Publish to npm
+
+Build later, small and in no order:
+
+- A document type export, e.g. `DocOf<typeof cms, 'posts'>`: a post as a read returns it, without `Awaited<ReturnType<…>>`
 
 ## Prior art
 
