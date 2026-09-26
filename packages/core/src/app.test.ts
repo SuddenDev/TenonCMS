@@ -910,6 +910,52 @@ describe('populate over HTTP', () => {
   })
 })
 
+describe('select over HTTP', () => {
+  let r: ReturnType<typeof setup<ReturnType<typeof relational>>>
+  let ids: Awaited<ReturnType<typeof seed>>
+  beforeEach(async () => {
+    r = setup(relational())
+    ids = await seed(r.cms)
+  })
+  const get = async (path: string) => {
+    const res = await r.cms.fetch(new Request(`${origin}/api/cms${path}`))
+    return { status: res.status, body: await res.json().catch(() => null) }
+  }
+
+  it('returns only the selected fields', async () => {
+    const { p, a, m } = ids
+    const expected = { id: p.id, title: 'Hi', author: { id: a.id, name: 'Ann' } }
+    expect((await get('/collections/posts?select=title,author.name')).body).toEqual([expected])
+    expect((await get(`/collections/posts/${p.id}?select=title,author.name`)).body).toEqual(expected)
+    expect((await get(`/collections/posts/${p.id}?select=`)).body).toEqual({ id: p.id })
+    expect((await get(`/collections/posts/${p.id}?select=seo,seo.image.url`)).body).toEqual({ id: p.id, seo: { image: { id: m.id, url: '/a.png' } } })
+    await r.cms.setGlobal('site', { logo: m.id })
+    expect((await get('/globals/site?select=logo.url')).body).toEqual({ logo: { id: m.id, url: '/a.png' } })
+  })
+
+  it('is a reserved param, not a filter', async () => {
+    expect((await get('/collections/posts?select=title&title=Hi')).body).toHaveLength(1)
+    expect((await get('/collections/posts?select=title&title=No')).body).toHaveLength(0)
+  })
+
+  it.each([
+    ['?select=titel', 'titel'],
+    ['?select=title.x', 'title'],
+    ['?select=author.nope', 'author.nope'],
+    ['?populate=false&select=author.name', 'author'],
+    ['?depth=1&select=author.avatar.url', 'author.avatar'],
+    ['?populate=tags&select=author.name', 'author'],
+  ])('rejects %s', async (q, path) => {
+    const body = { message: `Invalid select: ${path}` }
+    expect(await get(`/collections/posts${q}`)).toEqual({ status: 400, body })
+    expect(await get(`/collections/posts/${ids.p.id}${q}`)).toEqual({ status: 400, body })
+  })
+
+  it('rejects an unknown key on a global', async () => {
+    expect(await get('/globals/site?select=nope')).toEqual({ status: 400, body: { message: 'Invalid select: nope' } })
+  })
+})
+
 describe('onDelete', () => {
   let cms: ReturnType<typeof relational>
   let ids: Awaited<ReturnType<typeof seed>>

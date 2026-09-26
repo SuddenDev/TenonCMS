@@ -6,7 +6,7 @@ import { API_BASE } from './client.ts'
 import { isObject } from './condition.ts'
 import type { Cms } from './index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
-import { parsePopulate } from './relations.ts'
+import { checkSelect, parsePopulate, parseSelect, type SelectSpec } from './relations.ts'
 import { type Field, type Fields, filterable, type Schema } from './schema.ts'
 
 /** `asUser(user)` returns the local API with the session user set for hooks. */
@@ -56,17 +56,17 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   api.on(['GET', 'POST'], '/auth/*', async (c) => (await cms.auth()).handler(c.req.raw))
 
   // Reads are public: the site renders this content anyway. Query params are equality filters,
-  // except `limit`, `populate` and `depth`, so fields with these names cannot be filtered over HTTP.
+  // except `limit`, `populate`, `depth` and `select`, so fields with these names cannot be filtered over HTTP.
   api.get('/collections/:name', async (c) => {
     const name = collectionName(c.req.param('name'))
     if (!name) return c.notFound()
-    const { limit, populate, depth, ...query } = c.req.query()
+    const { limit, populate, depth, select, ...query } = c.req.query()
     const fields = schema.collections![name].fields
     const level = await readLevel(c.req.raw)
     const where = whereFromQuery(fields, query, level)
     if (!where) return c.json({ message: 'Invalid filter' }, 400)
     if (limit !== undefined && !/^[1-9]\d*$/.test(limit)) return c.json({ message: 'Invalid limit' }, 400)
-    const read = readOptions(fields, { populate, depth })
+    const read = readOptions(fields, { populate, depth, select })
     if (typeof read === 'string') return c.json({ message: read }, 400)
     return c.json(strip(fields, await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read }), level))
   })
@@ -129,10 +129,14 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   return api
 
   // The read options, or the message of a 400.
-  function readOptions(fields: Fields, query: { populate?: string; depth?: string }): { populate?: boolean | Record<string, unknown>; depth?: number } | string {
-    const spec = parsePopulate(schema.collections ?? {}, fields, query, cms.populate)
+  function readOptions(fields: Fields, query: { populate?: string; depth?: string; select?: string }): ReadOpts | string {
+    const spec = parsePopulate(collections, fields, query, cms.populate)
     if (typeof spec === 'string') return spec
-    return spec === false ? { populate: false } : typeof spec === 'number' ? { depth: spec } : { populate: spec }
+    const read: ReadOpts = spec === false ? { populate: false } : typeof spec === 'number' ? { depth: spec } : { populate: spec }
+    if (query.select === undefined) return read
+    const select = parseSelect(query.select)
+    const error = checkSelect(collections, fields, select, spec)
+    return error ? `Invalid select: ${error}` : { ...read, select }
   }
   function collectionName(name: string) {
     return Object.hasOwn(schema.collections ?? {}, name) ? name : undefined
@@ -141,6 +145,8 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     return Object.hasOwn(schema.globals ?? {}, name) ? name : undefined
   }
 }
+
+type ReadOpts = { populate?: boolean | Record<string, unknown>; depth?: number; select?: SelectSpec }
 
 /** `public`: a read without a session. `admin`: a request with a session. */
 type Level = 'public' | 'admin'
