@@ -149,4 +149,10 @@ describe('parseSelect', () => {
     expect(parseSelect('')).toEqual({})
     expect(parseSelect('title,,path')).toEqual({ title: true, path: true })
   })
+
+  it('never writes to Object.prototype', () => {
+    const select = parseSelect('__proto__.polluted,constructor.prototype.polluted')
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+    expect(Object.keys(select)).toEqual(['__proto__', 'constructor'])
+  })
 })

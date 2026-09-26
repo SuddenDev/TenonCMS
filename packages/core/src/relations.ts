@@ -156,7 +156,8 @@ export function parsePopulate(
   if (query.depth !== undefined && (!/^\d+$/.test(query.depth) || Number(query.depth) > config.maxDepth)) return `Invalid depth: ${query.depth}`
   if (query.populate === 'false') return false
   if (query.populate === undefined) return query.depth === undefined ? config.depth : Number(query.depth)
-  const spec: Record<string, any> = {}
+  // Null-prototype nodes, like `parseSelect()`. The schema check above each write also rejects `__proto__` today.
+  const spec: Record<string, any> = Object.create(null)
   for (const path of query.populate.split(',')) {
     const keys = path.split('.')
     let node = spec
@@ -171,7 +172,7 @@ export function parsePopulate(
         current = collections[field.collection].fields
       } else return fail
       if (i === keys.length - 1) node[key] ??= true
-      else node = node[key] = typeof node[key] === 'object' ? node[key] : {}
+      else node = node[key] = typeof node[key] === 'object' ? node[key] : Object.create(null)
     }
   }
   return spec
@@ -222,13 +223,14 @@ export function checkSelect(collections: Record<string, Collection>, fields: Fie
 
 /** Parses `?select=`: dot paths, comma-separated. A longer path wins over its prefix. Keys are checked by `checkSelect()`. */
 export function parseSelect(query: string): SelectSpec {
-  const select: Record<string, any> = {}
+  // Null-prototype nodes, so a `__proto__` segment from the query cannot reach `Object.prototype`.
+  const select: Record<string, any> = Object.create(null)
   for (const path of query.split(',').filter(Boolean)) {
     const keys = path.split('.')
     let node = select
     for (const [i, key] of keys.entries()) {
       if (i === keys.length - 1) node[key] ??= true
-      else node = node[key] = typeof node[key] === 'object' ? node[key] : {}
+      else node = node[key] = typeof node[key] === 'object' ? node[key] : Object.create(null)
     }
   }
   return select

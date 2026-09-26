@@ -956,6 +956,14 @@ describe('select over HTTP', () => {
     expect(await client.getGlobal('site', { select: { logo: { url: true } } })).toEqual({ logo: { id: m.id, url: '/a.png' } })
   })
 
+  it('rejects prototype keys without touching Object.prototype', async () => {
+    for (const q of ['__proto__.polluted', 'constructor.prototype.polluted', '__proto__']) {
+      expect(await get(`/collections/posts?select=${q}`)).toEqual({ status: 400, body: { message: expect.stringMatching(/^Invalid select: /) } })
+      expect((await get(`/collections/posts?populate=${q}`)).status).toBe(400)
+    }
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+  })
+
   it('is a reserved param, not a filter', async () => {
     expect((await get('/collections/posts?select=title&title=Hi')).body).toHaveLength(1)
     expect((await get('/collections/posts?select=title&title=No')).body).toHaveLength(0)
