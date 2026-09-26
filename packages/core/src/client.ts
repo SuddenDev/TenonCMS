@@ -31,9 +31,9 @@ export type FindOptions<C extends { schema: Schema }, K extends keyof Collection
   limit?: number
 }
 
-// `{ author: { avatar: true } }` becomes `author.avatar`. An empty object ends a path too.
-function paths(populate: object, prefix = ''): string[] {
-  return Object.entries(populate).flatMap(([key, value]) =>
+// For `populate` and `select`: `{ author: { avatar: true } }` becomes `author.avatar`. An empty object ends a path too.
+function paths(spec: object, prefix = ''): string[] {
+  return Object.entries(spec).flatMap(([key, value]) =>
     value === true || (value && typeof value === 'object' && !Object.keys(value).length)
       ? [prefix + key]
       : value && typeof value === 'object'
@@ -41,9 +41,14 @@ function paths(populate: object, prefix = ''): string[] {
         : [],
   )
 }
-function readQuery(options: { populate?: boolean | object; depth?: number }) {
-  const { populate, depth } = options
-  return { populate: populate === false ? 'false' : typeof populate === 'object' ? paths(populate).join(',') || 'false' : undefined, depth }
+// `select: {}` is sent as an empty `select=`, which returns only `id`.
+function readQuery(options: { populate?: boolean | object; depth?: number; select?: object }) {
+  const { populate, depth, select } = options
+  return {
+    populate: populate === false ? 'false' : typeof populate === 'object' ? paths(populate).join(',') || 'false' : undefined,
+    depth,
+    select: select && paths(select).join(','),
+  }
 }
 
 /**

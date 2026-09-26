@@ -933,6 +933,20 @@ describe('select over HTTP', () => {
     expect((await get('/globals/site?select=logo.url')).body).toEqual({ logo: { id: m.id, url: '/a.png' } })
   })
 
+  it('selects through the client', async () => {
+    const { client } = r
+    const { p, a, m } = ids
+    expect(await client.findById('posts', p.id, { select: { title: true, author: { name: true } } } as never)).toEqual({
+      id: p.id,
+      title: 'Hi',
+      author: { id: a.id, name: 'Ann' },
+    })
+    expect((await client.find('posts', { select: {} } as never))[0]).toEqual({ id: p.id })
+    expect(await client.findOne('posts', { where: { title: 'Hi' }, populate: false, select: { author: true } } as never)).toEqual({ id: p.id, author: a.id })
+    await r.cms.setGlobal('site', { logo: m.id })
+    expect(await client.getGlobal('site', { select: { logo: { url: true } } } as never)).toEqual({ logo: { id: m.id, url: '/a.png' } })
+  })
+
   it('is a reserved param, not a filter', async () => {
     expect((await get('/collections/posts?select=title&title=Hi')).body).toHaveLength(1)
     expect((await get('/collections/posts?select=title&title=No')).body).toHaveLength(0)
