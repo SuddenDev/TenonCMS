@@ -146,14 +146,14 @@ async function byIds(q: Kysely<Database>, collection: string, ids: string[]) {
   return rows.map(toDoc)
 }
 
-/** Parses `?populate=` and `?depth=`. Returns `undefined` for an unknown path, a field that cannot populate or too many hops. */
+/** Parses `?populate=` and `?depth=`. Returns the error message for a bad depth, an unknown path, a field that cannot populate or too many hops. */
 export function parsePopulate(
   collections: Record<string, Collection>,
   fields: Fields,
   query: { populate?: string; depth?: string },
   config: { depth: number; maxDepth: number },
-): Spec | undefined {
-  if (query.depth !== undefined && (!/^\d+$/.test(query.depth) || Number(query.depth) > config.maxDepth)) return undefined
+): Spec | string {
+  if (query.depth !== undefined && (!/^\d+$/.test(query.depth) || Number(query.depth) > config.maxDepth)) return `Invalid depth: ${query.depth}`
   if (query.populate === 'false') return false
   if (query.populate === undefined) return query.depth === undefined ? config.depth : Number(query.depth)
   const spec: Record<string, any> = {}
@@ -163,12 +163,13 @@ export function parsePopulate(
     let current = fields
     let hops = 0
     for (const [i, key] of keys.entries()) {
+      const fail = `Invalid populate: ${keys.slice(0, i + 1).join('.')}`
       const field = Object.hasOwn(current, key) ? current[key] : undefined
       if (field?.type === 'group') current = field.fields
       else if (field?.type === 'relation' || field?.type === 'join') {
-        if (++hops > config.maxDepth) return undefined
+        if (++hops > config.maxDepth) return fail
         current = collections[field.collection].fields
-      } else return undefined
+      } else return fail
       if (i === keys.length - 1) node[key] ??= true
       else node = node[key] = typeof node[key] === 'object' ? node[key] : {}
     }

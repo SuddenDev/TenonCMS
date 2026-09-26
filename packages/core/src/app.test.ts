@@ -898,9 +898,15 @@ describe('populate over HTTP', () => {
     }
   })
 
-  it.each(['?depth=6', '?populate=title', '?populate=nope', '?populate=author.posts.author.posts.author.posts'])('rejects %s', async (q) => {
-    expect((await get(`/collections/posts${q}`)).status).toBe(400)
-    expect((await get(`/collections/posts/${ids.p.id}${q}`)).status).toBe(400)
+  it.each([
+    ['?depth=6', 'Invalid depth: 6'],
+    ['?populate=title', 'Invalid populate: title'],
+    ['?populate=nope', 'Invalid populate: nope'],
+    ['?populate=author.posts.author.posts.author.posts', 'Invalid populate: author.posts.author.posts.author.posts'],
+  ])('rejects %s', async (q, message) => {
+    expect(await get(`/collections/posts${q}`)).toEqual({ status: 400, body: { message } })
+    expect(await get(`/collections/posts/${ids.p.id}${q}`)).toEqual({ status: 400, body: { message } })
+    expect((await get(`/globals/site${q.replace('title', 'nope')}`)).status).toBe(400)
   })
 })
 

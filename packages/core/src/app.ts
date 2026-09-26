@@ -67,7 +67,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     if (!where) return c.json({ message: 'Invalid filter' }, 400)
     if (limit !== undefined && !/^[1-9]\d*$/.test(limit)) return c.json({ message: 'Invalid limit' }, 400)
     const read = readOptions(fields, { populate, depth })
-    if (!read) return c.json({ message: 'Invalid populate' }, 400)
+    if (typeof read === 'string') return c.json({ message: read }, 400)
     return c.json(strip(fields, await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read }), level))
   })
 
@@ -76,7 +76,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     if (!name) return c.notFound()
     const fields = schema.collections![name].fields
     const read = readOptions(fields, c.req.query())
-    if (!read) return c.json({ message: 'Invalid populate' }, 400)
+    if (typeof read === 'string') return c.json({ message: read }, 400)
     const doc = await cms.findById(name, c.req.param('id'), read)
     return doc ? c.json(strip(fields, doc, await readLevel(c.req.raw))) : c.notFound()
   })
@@ -86,7 +86,7 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     if (!name) return c.notFound()
     const fields = schema.globals![name].fields
     const read = readOptions(fields, c.req.query())
-    if (!read) return c.json({ message: 'Invalid populate' }, 400)
+    if (typeof read === 'string') return c.json({ message: read }, 400)
     return c.json(strip(fields, await cms.getGlobal(name, read), await readLevel(c.req.raw)))
   })
 
@@ -128,9 +128,10 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
 
   return api
 
-  function readOptions(fields: Fields, query: { populate?: string; depth?: string }): { populate?: boolean | Record<string, unknown>; depth?: number } | undefined {
+  // The read options, or the message of a 400.
+  function readOptions(fields: Fields, query: { populate?: string; depth?: string }): { populate?: boolean | Record<string, unknown>; depth?: number } | string {
     const spec = parsePopulate(schema.collections ?? {}, fields, query, cms.populate)
-    if (spec === undefined) return undefined
+    if (typeof spec === 'string') return spec
     return spec === false ? { populate: false } : typeof spec === 'number' ? { depth: spec } : { populate: spec }
   }
   function collectionName(name: string) {

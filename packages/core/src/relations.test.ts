@@ -39,17 +39,17 @@ describe('parsePopulate', () => {
   })
 
   it.each([
-    { populate: 'title' },
-    { populate: 'nope' },
-    { populate: 'author.nope' },
-    { populate: '' },
-    { populate: 'constructor' },
-    { depth: '3' },
-    { depth: '-1' },
-    { depth: 'x' },
-    { populate: 'author.posts.author' },
-  ])('rejects %o', (query) => {
-    expect(parse(query)).toBeUndefined()
+    [{ populate: 'title' }, 'Invalid populate: title'],
+    [{ populate: 'nope' }, 'Invalid populate: nope'],
+    [{ populate: 'author.nope' }, 'Invalid populate: author.nope'],
+    [{ populate: '' }, 'Invalid populate: '],
+    [{ populate: 'constructor' }, 'Invalid populate: constructor'],
+    [{ depth: '3' }, 'Invalid depth: 3'],
+    [{ depth: '-1' }, 'Invalid depth: -1'],
+    [{ depth: 'x' }, 'Invalid depth: x'],
+    [{ populate: 'author.posts.author' }, 'Invalid populate: author.posts.author'],
+  ])('rejects %o', (query, message) => {
+    expect(parse(query)).toBe(message)
   })
 })
 
