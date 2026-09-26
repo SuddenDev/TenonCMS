@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkSelect, parsePopulate, pick } from './relations.ts'
+import { checkSelect, parsePopulate, parseSelect, pick } from './relations.ts'
 import type { Collection } from './schema.ts'
 
 const collections: Record<string, Collection> = {
@@ -137,5 +137,16 @@ describe('checkSelect', () => {
 
   it('rejects a join that populate does not name', () => {
     expect(check({ posts: { title: true } }, 2, 'authors')).toBe('posts')
+  })
+})
+
+describe('parseSelect', () => {
+  it('builds nested objects from dot paths, longer path wins', () => {
+    expect(parseSelect('title,path,parent.title,parent.path')).toEqual({ title: true, path: true, parent: { title: true, path: true } })
+    expect(parseSelect('seo,seo.title')).toEqual({ seo: { title: true } })
+    expect(parseSelect('seo.title,seo')).toEqual({ seo: { title: true } })
+    expect(parseSelect('a.b.c')).toEqual({ a: { b: { c: true } } })
+    expect(parseSelect('')).toEqual({})
+    expect(parseSelect('title,,path')).toEqual({ title: true, path: true })
   })
 })

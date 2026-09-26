@@ -219,6 +219,20 @@ export function checkSelect(collections: Record<string, Collection>, fields: Fie
   }
 }
 
+/** Parses `?select=`: dot paths, comma-separated. A longer path wins over its prefix. Keys are checked by `checkSelect()`. */
+export function parseSelect(query: string): SelectSpec {
+  const select: Record<string, any> = {}
+  for (const path of query.split(',').filter(Boolean)) {
+    const keys = path.split('.')
+    let node = select
+    for (const [i, key] of keys.entries()) {
+      if (i === keys.length - 1) node[key] ??= true
+      else node = node[key] = typeof node[key] === 'object' ? node[key] : {}
+    }
+  }
+  return select
+}
+
 type Ref = { collection?: string; id?: string; global?: string; data: Record<string, any>; path: string[]; field: RelationField }
 
 const owner = (r: Ref) => (r.global ? `global:${r.global}` : `${r.collection}:${r.id}`)
