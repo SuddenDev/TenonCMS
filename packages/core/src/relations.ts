@@ -1,4 +1,5 @@
 import { type Kysely, sql } from 'kysely'
+import { isObject } from './condition.ts'
 import { type Database, type Row, toDoc } from './db/index.ts'
 import { ConflictError, ValidationError } from './errors.ts'
 import type { Collection, Field, Fields, Schema } from './schema.ts'
@@ -173,6 +174,27 @@ export function parsePopulate(
     }
   }
   return spec
+}
+
+/** Keys a read returns. `true` keeps the value; an object lists keys inside a group or a resolved relation or join. */
+export type SelectSpec = { [key: string]: true | SelectSpec }
+
+/** `doc` with only the keys in `select`. `id` is kept at every document level (`meta`). Values that are not objects stay as they are. */
+export function pick(collections: Record<string, Collection>, fields: Fields, doc: Record<string, any>, select: SelectSpec, meta = true): Record<string, any> {
+  const out: Record<string, any> = {}
+  for (const [key, s] of Object.entries(meta ? { id: true as const, ...select } : select)) {
+    if (!Object.hasOwn(doc, key)) continue
+    const value = doc[key]
+    const f = Object.hasOwn(fields, key) ? fields[key] : undefined
+    if (s === true || value == null || !f) out[key] = value
+    else if (f.type === 'group') out[key] = isObject(value) ? pick(collections, f.fields, value, s, false) : value
+    else if (f.type === 'relation' || f.type === 'join') {
+      const target = collections[f.collection].fields
+      const one = (d: unknown) => (isObject(d) ? pick(collections, target, d, s) : d)
+      out[key] = Array.isArray(value) ? value.map(one) : one(value)
+    } else out[key] = value
+  }
+  return out
 }
 
 type Ref = { collection?: string; id?: string; global?: string; data: Record<string, any>; path: string[]; field: RelationField }
