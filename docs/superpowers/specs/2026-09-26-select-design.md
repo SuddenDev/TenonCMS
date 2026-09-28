@@ -11,14 +11,18 @@ Reads return whole documents today. `populate` only decides which relations are 
 ## Usage
 
 ```ts
-const page = await cms.findOne('pages', {
-  where: { path: '/about/team/person' },
+const page = await cms.findOne("pages", {
+  where: { path: "/about/team/person" },
   populate: { parent: { parent: true } },
-  select: { title: true, path: true, parent: { title: true, path: true, parent: { title: true, path: true } } },
-})
+  select: {
+    title: true,
+    path: true,
+    parent: { title: true, path: true, parent: { title: true, path: true } },
+  },
+});
 // { id, title, path, parent: { id, title, path, parent: { id, title, path } } }
 
-breadcrumbs(page)
+breadcrumbs(page);
 // [{ title: 'About', path: '/about' }, { title: 'Team', path: '/about/team' }, { title: 'Person', path: '/about/team/person' }]
 ```
 
@@ -29,7 +33,11 @@ GET /api/cms/collections/pages?path=/about/team&populate=parent&select=title,pat
 ```
 
 ```ts
-await client.findOne('pages', { where: { path }, populate: { parent: true }, select: { title: true, parent: { title: true } } })
+await client.findOne("pages", {
+  where: { path },
+  populate: { parent: true },
+  select: { title: true, parent: { title: true } },
+});
 ```
 
 ## `select`
@@ -40,14 +48,14 @@ await client.findOne('pages', { where: { path }, populate: { parent: true }, sel
 
 Rules:
 
-| In `select` | Result |
-|---|---|
-| a field `: true` | the field's value |
-| a group `: true` | the whole group |
-| a group `: { … }` | only the listed children, by these same rules |
-| a relation or join `: true` | the value as `populate` leaves it: an id, ids, a document or documents |
+| In `select`                  | Result                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| a field `: true`             | the field's value                                                                                                  |
+| a group `: true`             | the whole group                                                                                                    |
+| a group `: { … }`            | only the listed children, by these same rules                                                                      |
+| a relation or join `: true`  | the value as `populate` leaves it: an id, ids, a document or documents                                             |
 | a relation or join `: { … }` | the resolved document, or each item of a `many` relation or join, with only the listed fields, by these same rules |
-| a field not listed | left out |
+| a field not listed           | left out                                                                                                           |
 
 - `id` is always returned, at every level with documents. `createdAt` and `updatedAt` are returned only when listed.
 - A join still comes back only when `populate` names it, as today.
@@ -82,7 +90,7 @@ The database still loads whole rows. A document is one JSON value in one row, an
 A helper in `src/helpers/breadcrumbs.ts`, exported from `integral-cms` and `integral-cms/client`. No imports, so it runs in the browser.
 
 ```ts
-breadcrumbs(doc, { title: 'title', path: 'path', parent: 'parent' })
+breadcrumbs(doc, { title: "title", path: "path", parent: "parent" });
 // → { title: string; path: string }[]
 ```
 

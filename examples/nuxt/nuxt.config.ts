@@ -1,12 +1,12 @@
-import { resolve } from 'node:path'
+import { resolve } from "node:path";
 
 export default defineNuxtConfig({
-  compatibilityDate: '2026-09-01',
-  modules: ['integral-cms/nuxt'],
+  compatibilityDate: "2026-09-01",
+  modules: ["integral-cms/nuxt"],
   // Set with NUXT_CMS_SECRET and NUXT_DATABASE_URL.
   runtimeConfig: {
-    cmsSecret: '',
+    cmsSecret: "",
     // Absolute, because `nuxt preview` runs the server from inside .output/.
-    databaseUrl: `file:${resolve('cms.db')}`,
+    databaseUrl: `file:${resolve("cms.db")}`,
   },
-})
+});

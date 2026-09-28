@@ -1,57 +1,96 @@
-import type { Checked, Data, Doc, Fields as FieldsOf, FilterKey, PopulateOf, Read, ReadDoc, ReadOptions, Schema, SelectOf } from './schema.ts'
+import type {
+  Checked,
+  Data,
+  Doc,
+  Fields as FieldsOf,
+  FilterKey,
+  PopulateOf,
+  Read,
+  ReadDoc,
+  ReadOptions,
+  Schema,
+  SelectOf,
+} from "./schema.ts";
 
-export type { Checked, ReadOptions } from './schema.ts'
+export type { Checked, ReadOptions } from "./schema.ts";
 // Helpers have no imports, so this file stays safe in the browser.
-export { type BreadcrumbsOptions, breadcrumbs, SLUG_PATTERN, seoMeta, slugify } from './helpers/index.ts'
+export {
+  type BreadcrumbsOptions,
+  breadcrumbs,
+  SLUG_PATTERN,
+  seoMeta,
+  slugify,
+} from "./helpers/index.ts";
 
 /** Path of the HTTP API. */
-export const API_BASE = '/api/cms'
+export const API_BASE = "/api/cms";
 
 // Fields as the HTTP API sends them: private fields optional.
 // Untyped fields (the admin's) stay as they are. The recursion would not terminate.
-type HttpFields<F> = string extends keyof F ? F : { [K in keyof F]: HttpField<F[K]> }
-type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, 'required'> : HttpGroup<F>
-type HttpGroup<F> = F extends { type: 'group'; fields: infer G } ? Omit<F, 'fields'> & { fields: Extract<HttpFields<G>, FieldsOf> } : F
+type HttpFields<F> = string extends keyof F ? F : { [K in keyof F]: HttpField<F[K]> };
+type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, "required"> : HttpGroup<F>;
+type HttpGroup<F> = F extends { type: "group"; fields: infer G }
+  ? Omit<F, "fields"> & { fields: Extract<HttpFields<G>, FieldsOf> }
+  : F;
 // `Extract` keeps the result assignable to `Fields`.
-type Http<R> = string extends keyof R ? R : { [K in keyof R]: Omit<R[K], 'fields'> & { fields: R[K] extends { fields: infer F } ? Extract<HttpFields<F>, FieldsOf> : never } }
+type Http<R> = string extends keyof R
+  ? R
+  : {
+      [K in keyof R]: Omit<R[K], "fields"> & {
+        fields: R[K] extends { fields: infer F } ? Extract<HttpFields<F>, FieldsOf> : never;
+      };
+    };
 /** The collections of `C` as the HTTP API sends them: `private` fields are optional. Use them to type browser code; the client's read types build on them. */
-export type Collections<C extends { schema: Schema }> = Http<NonNullable<C['schema']['collections']>>
+export type Collections<C extends { schema: Schema }> = Http<
+  NonNullable<C["schema"]["collections"]>
+>;
 /** The globals of `C` as the HTTP API sends them: `private` fields are optional. */
-export type Globals<C extends { schema: Schema }> = Http<NonNullable<C['schema']['globals']>>
-type Fields<C extends { schema: Schema }, K extends keyof Collections<C>> = Collections<C>[K]['fields']
-type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2
+export type Globals<C extends { schema: Schema }> = Http<NonNullable<C["schema"]["globals"]>>;
+type Fields<
+  C extends { schema: Schema },
+  K extends keyof Collections<C>,
+> = Collections<C>[K]["fields"];
+type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2;
 type ReadCollection<C extends { schema: Schema }, K extends keyof Collections<C>, O> = ReadDoc<
   Collections<C>,
   Fields<C, K>,
   PopulateOf<O, Depth<C>>,
   SelectOf<O>
->
+>;
 /** Options of `find` and `findOne` for collection `K`. */
-export type FindOptions<C extends { schema: Schema }, K extends keyof Collections<C>> = ReadOptions<Collections<C>, Fields<C, K>> & {
+export type FindOptions<C extends { schema: Schema }, K extends keyof Collections<C>> = ReadOptions<
+  Collections<C>,
+  Fields<C, K>
+> & {
   /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
-  where?: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean | null>>
+  where?: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean | null>>;
   /** Maximum number of documents. */
-  limit?: number
-}
+  limit?: number;
+};
 
 // For `populate` and `select`: `{ author: { avatar: true } }` becomes `author.avatar`. An empty object ends a path too.
-function paths(spec: object, prefix = ''): string[] {
+function paths(spec: object, prefix = ""): string[] {
   return Object.entries(spec).flatMap(([key, value]) =>
-    value === true || (value && typeof value === 'object' && !Object.keys(value).length)
+    value === true || (value && typeof value === "object" && !Object.keys(value).length)
       ? [prefix + key]
-      : value && typeof value === 'object'
+      : value && typeof value === "object"
         ? paths(value, `${prefix}${key}.`)
         : [],
-  )
+  );
 }
 // `select: {}` is sent as an empty `select=`, which returns only `id`.
 function readQuery(options: { populate?: boolean | object; depth?: number; select?: object }) {
-  const { populate, depth, select } = options
+  const { populate, depth, select } = options;
   return {
-    populate: populate === false ? 'false' : typeof populate === 'object' ? paths(populate).join(',') || 'false' : undefined,
+    populate:
+      populate === false
+        ? "false"
+        : typeof populate === "object"
+          ? paths(populate).join(",") || "false"
+          : undefined,
     depth,
-    select: select && paths(select).join(','),
-  }
+    select: select && paths(select).join(","),
+  };
 }
 
 /**
@@ -65,20 +104,30 @@ function readQuery(options: { populate?: boolean | object; depth?: number; selec
 export interface Register {}
 
 /** The registered `cms` type, or an untyped schema without a registration. */
-export type RegisteredCms = Register extends { cms: infer C extends { schema: Schema } } ? C : { schema: Schema }
+export type RegisteredCms = Register extends { cms: infer C extends { schema: Schema } }
+  ? C
+  : { schema: Schema };
 
 export type ClientOptions = {
   /** Origin of the host app, e.g. `https://example.com`. Defaults to the current origin. */
-  baseUrl?: string
+  baseUrl?: string;
   /** Custom `fetch`, e.g. one that forwards cookies. Defaults to the global `fetch`. */
-  fetch?: typeof fetch
-}
+  fetch?: typeof fetch;
+};
 
 /** The signed-in admin, as returned by `getSession()`. Dates are ISO strings. */
 export type Session = {
-  user: { id: string; name: string; email: string; emailVerified: boolean; image?: string | null; createdAt: string; updatedAt: string }
-  session: { id: string; userId: string; expiresAt: string; createdAt: string; updatedAt: string }
-}
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    image?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  session: { id: string; userId: string; expiresAt: string; createdAt: string; updatedAt: string };
+};
 
 /** Thrown by client methods when the API answers with a non-2xx status. */
 export class CmsError extends Error {
@@ -91,7 +140,7 @@ export class CmsError extends Error {
      */
     public body: any,
   ) {
-    super(body?.message ?? `Request failed (${status})`)
+    super(body?.message ?? `Request failed (${status})`);
   }
 }
 
@@ -110,22 +159,33 @@ export class CmsError extends Error {
  * const client = createClient()
  * const posts = await client.find('posts', { where: { featured: true } })
  */
-export function createClient<C extends { schema: Schema } = RegisteredCms>({ baseUrl = '', fetch: fetchFn = fetch }: ClientOptions = {}) {
-  async function request<T>(method: string, path: string, body?: unknown, query?: object): Promise<T> {
+export function createClient<C extends { schema: Schema } = RegisteredCms>({
+  baseUrl = "",
+  fetch: fetchFn = fetch,
+}: ClientOptions = {}) {
+  async function request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    query?: object,
+  ): Promise<T> {
     const params = new URLSearchParams(
-      Object.entries(query ?? {}).flatMap(([key, value]) => (value === undefined ? [] : [[key, String(value)]])),
-    )
-    const search = params.size ? `?${params}` : ''
+      Object.entries(query ?? {}).flatMap(([key, value]) =>
+        value === undefined ? [] : [[key, String(value)]],
+      ),
+    );
+    const search = params.size ? `?${params}` : "";
     const res = await fetchFn(`${baseUrl}${API_BASE}${path}${search}`, {
       method,
-      headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+      headers: body === undefined ? undefined : { "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
-    })
-    const data = res.status === 204 ? null : await res.json().catch(() => null)
-    if (!res.ok) throw new CmsError(res.status, data)
-    return data as T
+    });
+    const data = res.status === 204 ? null : await res.json().catch(() => null);
+    if (!res.ok) throw new CmsError(res.status, data);
+    return data as T;
   }
-  const doc = (collection: string, id: string) => `/collections/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`
+  const doc = (collection: string, id: string) =>
+    `/collections/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`;
 
   const client = {
     /**
@@ -136,8 +196,17 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
       collection: K,
       options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>> = {} as never,
     ) {
-      const query = { ...options.where, ...(options.limit && { limit: options.limit }), ...readQuery(options) }
-      return request<ReadCollection<C, K, O>[]>('GET', `/collections/${encodeURIComponent(collection)}`, undefined, query)
+      const query = {
+        ...options.where,
+        ...(options.limit && { limit: options.limit }),
+        ...readQuery(options),
+      };
+      return request<ReadCollection<C, K, O>[]>(
+        "GET",
+        `/collections/${encodeURIComponent(collection)}`,
+        undefined,
+        query,
+      );
     },
 
     /** Returns the newest document that matches `where`, or `undefined`. */
@@ -145,19 +214,27 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
       collection: K,
       options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
     ): Promise<ReadCollection<C, K, O> | undefined> {
-      return (await client.find<K, O>(collection, { ...options, limit: 1 } as never))[0]
+      return (await client.find<K, O>(collection, { ...options, limit: 1 } as never))[0];
     },
 
     /**
      * Returns one document. Throws a `CmsError` with status `404` if it does not exist.
      * `GET /api/cms/collections/:collection/:id`
      */
-    findById<K extends keyof Collections<C> & string, const O extends ReadOptions<Collections<C>, Fields<C, K>> = {}>(
+    findById<
+      K extends keyof Collections<C> & string,
+      const O extends ReadOptions<Collections<C>, Fields<C, K>> = {},
+    >(
       collection: K,
       id: string,
       options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>> = {} as never,
     ) {
-      return request<ReadCollection<C, K, O>>('GET', doc(collection, id), undefined, readQuery(options))
+      return request<ReadCollection<C, K, O>>(
+        "GET",
+        doc(collection, id),
+        undefined,
+        readQuery(options),
+      );
     },
 
     /**
@@ -165,15 +242,23 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * `POST /api/cms/collections/:collection`
      */
     create<K extends keyof Collections<C> & string>(collection: K, data: Data<Fields<C, K>>) {
-      return request<Doc<Fields<C, K>>>('POST', `/collections/${encodeURIComponent(collection)}`, data)
+      return request<Doc<Fields<C, K>>>(
+        "POST",
+        `/collections/${encodeURIComponent(collection)}`,
+        data,
+      );
     },
 
     /**
      * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
      * `PUT /api/cms/collections/:collection/:id`
      */
-    update<K extends keyof Collections<C> & string>(collection: K, id: string, data: Partial<Data<Fields<C, K>>>) {
-      return request<Doc<Fields<C, K>>>('PUT', doc(collection, id), data)
+    update<K extends keyof Collections<C> & string>(
+      collection: K,
+      id: string,
+      data: Partial<Data<Fields<C, K>>>,
+    ) {
+      return request<Doc<Fields<C, K>>>("PUT", doc(collection, id), data);
     },
 
     /**
@@ -181,31 +266,38 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * `DELETE /api/cms/collections/:collection/:id`
      */
     delete(collection: keyof Collections<C> & string, id: string) {
-      return request<null>('DELETE', doc(collection, id))
+      return request<null>("DELETE", doc(collection, id));
     },
 
     /**
      * Returns a global. Fields that were never saved are missing.
      * `GET /api/cms/globals/:name`
      */
-    getGlobal<K extends keyof Globals<C> & string, const O extends ReadOptions<Collections<C>, Globals<C>[K]['fields'], false> = {}>(
+    getGlobal<
+      K extends keyof Globals<C> & string,
+      const O extends ReadOptions<Collections<C>, Globals<C>[K]["fields"], false> = {},
+    >(
       name: K,
-      options: Checked<O, Collections<C>, Globals<C>[K]['fields'], Depth<C>, false> = {} as never,
+      options: Checked<O, Collections<C>, Globals<C>[K]["fields"], Depth<C>, false> = {} as never,
     ) {
-      return request<Partial<Read<Collections<C>, Globals<C>[K]['fields'], PopulateOf<O, Depth<C>>, SelectOf<O>>>>(
-        'GET',
-        `/globals/${encodeURIComponent(name)}`,
-        undefined,
-        readQuery(options),
-      )
+      return request<
+        Partial<Read<Collections<C>, Globals<C>[K]["fields"], PopulateOf<O, Depth<C>>, SelectOf<O>>>
+      >("GET", `/globals/${encodeURIComponent(name)}`, undefined, readQuery(options));
     },
 
     /**
      * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
      * `PUT /api/cms/globals/:name`
      */
-    setGlobal<K extends keyof Globals<C> & string>(name: K, data: Partial<Data<Globals<C>[K]['fields']>>) {
-      return request<Data<Globals<C>[K]['fields']>>('PUT', `/globals/${encodeURIComponent(name)}`, data)
+    setGlobal<K extends keyof Globals<C> & string>(
+      name: K,
+      data: Partial<Data<Globals<C>[K]["fields"]>>,
+    ) {
+      return request<Data<Globals<C>[K]["fields"]>>(
+        "PUT",
+        `/globals/${encodeURIComponent(name)}`,
+        data,
+      );
     },
 
     /**
@@ -213,7 +305,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * `GET /api/cms/schema`
      */
     getSchema() {
-      return request<{ collections?: Collections<C>; globals?: Globals<C> }>('GET', '/schema')
+      return request<{ collections?: Collections<C>; globals?: Globals<C> }>("GET", "/schema");
     },
 
     /**
@@ -221,7 +313,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * `POST /api/cms/auth/sign-up/email`
      */
     async signUp(data: { name: string; email: string; password: string }) {
-      return (await request<{ user: Session['user'] }>('POST', '/auth/sign-up/email', data)).user
+      return (await request<{ user: Session["user"] }>("POST", "/auth/sign-up/email", data)).user;
     },
 
     /**
@@ -229,7 +321,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * `POST /api/cms/auth/sign-in/email`
      */
     async signIn(data: { email: string; password: string }) {
-      return (await request<{ user: Session['user'] }>('POST', '/auth/sign-in/email', data)).user
+      return (await request<{ user: Session["user"] }>("POST", "/auth/sign-in/email", data)).user;
     },
 
     /**
@@ -237,7 +329,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * `POST /api/cms/auth/sign-out`
      */
     async signOut() {
-      await request('POST', '/auth/sign-out', {})
+      await request("POST", "/auth/sign-out", {});
     },
 
     /**
@@ -248,10 +340,12 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({ bas
      * user?.name
      */
     getSession() {
-      return request<Session | null>('GET', '/auth/get-session')
+      return request<Session | null>("GET", "/auth/get-session");
     },
-  }
-  return client
+  };
+  return client;
 }
 
-export type Client<C extends { schema: Schema } = RegisteredCms> = ReturnType<typeof createClient<C>>
+export type Client<C extends { schema: Schema } = RegisteredCms> = ReturnType<
+  typeof createClient<C>
+>;

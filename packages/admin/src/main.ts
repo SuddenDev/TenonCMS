@@ -1,3 +1,3 @@
-import { mountAdmin } from './index'
+import { mountAdmin } from "./index";
 
-mountAdmin('#app')
+mountAdmin("#app");

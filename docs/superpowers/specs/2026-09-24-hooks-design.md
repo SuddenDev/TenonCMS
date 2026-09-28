@@ -24,18 +24,18 @@ hooks: { beforeChange: { ...rest, fillSeo } }
 
 ## Hook set
 
-| Hook | Collection | Global | Field | Root |
-|---|---|---|---|---|
-| `beforeOperation` | ✓ | | | |
-| `beforeValidate` | ✓ | ✓ | ✓ | |
-| `beforeChange` | ✓ | ✓ | ✓ | |
-| `afterChange` | ✓ | ✓ | ✓ | |
-| `beforeRead` | ✓ | ✓ | | |
-| `afterRead` | ✓ | ✓ | ✓ | |
-| `beforeDelete` | ✓ | | | |
-| `afterDelete` | ✓ | | | |
-| `afterOperation` | ✓ | | | |
-| `afterError` | ✓ | | | ✓ |
+| Hook              | Collection | Global | Field | Root |
+| ----------------- | ---------- | ------ | ----- | ---- |
+| `beforeOperation` | ✓          |        |       |      |
+| `beforeValidate`  | ✓          | ✓      | ✓     |      |
+| `beforeChange`    | ✓          | ✓      | ✓     |      |
+| `afterChange`     | ✓          | ✓      | ✓     |      |
+| `beforeRead`      | ✓          | ✓      |       |      |
+| `afterRead`       | ✓          | ✓      | ✓     |      |
+| `beforeDelete`    | ✓          |        |       |      |
+| `afterDelete`     | ✓          |        |       |      |
+| `afterOperation`  | ✓          |        |       |      |
+| `afterError`      | ✓          |        |       | ✓    |
 
 ## Where hooks run
 
@@ -62,17 +62,17 @@ At each stage, field hooks run first, in field order and depth-first into groups
 
 Every hook gets one object. A hook MAY return a replacement for its main value; returning `undefined` keeps the input. Hooks MAY be async.
 
-| Hook | Main value | Other arguments |
-|---|---|---|
-| `beforeOperation` | `args` (the operation's input) | `operation` |
-| `beforeValidate`, `beforeChange` | `data` | `operation`, `id`, `originalDoc` |
-| `afterChange` | `doc` | `operation`, `previousDoc` |
-| `beforeRead`, `afterRead` | `docs` (array) | `operation` |
-| `beforeDelete` | none | `id`, `doc` |
-| `afterDelete` | none | `id`, `doc` |
-| `afterOperation` | `result` | `operation`, `args` |
-| `afterError` | none | `error`, `operation`, `collection` or `global` |
-| field hooks | `value` | `data`, `siblingData`, `originalDoc`, `path` (e.g. `seo.title`), `operation` |
+| Hook                             | Main value                     | Other arguments                                                              |
+| -------------------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
+| `beforeOperation`                | `args` (the operation's input) | `operation`                                                                  |
+| `beforeValidate`, `beforeChange` | `data`                         | `operation`, `id`, `originalDoc`                                             |
+| `afterChange`                    | `doc`                          | `operation`, `previousDoc`                                                   |
+| `beforeRead`, `afterRead`        | `docs` (array)                 | `operation`                                                                  |
+| `beforeDelete`                   | none                           | `id`, `doc`                                                                  |
+| `afterDelete`                    | none                           | `id`, `doc`                                                                  |
+| `afterOperation`                 | `result`                       | `operation`, `args`                                                          |
+| `afterError`                     | none                           | `error`, `operation`, `collection` or `global`                               |
+| field hooks                      | `value`                        | `data`, `siblingData`, `originalDoc`, `path` (e.g. `seo.title`), `operation` |
 
 All hooks also get:
 

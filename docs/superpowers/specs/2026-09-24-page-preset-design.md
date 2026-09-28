@@ -9,19 +9,19 @@ Most websites need pages with nested URLs and SEO fields. The preset gives hosts
 ## Usage
 
 ```ts
-import { defineCollection } from 'integral-cms'
-import { page, seo } from 'integral-cms/presets'
+import { defineCollection } from "integral-cms";
+import { page, seo } from "integral-cms/presets";
 
 export const pages = defineCollection({
-  label: 'Pages',
-  titleField: 'title',
-  fields: { ...page.fields, ...seo.fields, body: { type: 'textarea' } },
+  label: "Pages",
+  titleField: "title",
+  fields: { ...page.fields, ...seo.fields, body: { type: "textarea" } },
   hooks: {
     beforeValidate: page.hooks.beforeValidate,
     beforeChange: page.hooks.beforeChange,
     afterChange: page.hooks.afterChange,
   },
-})
+});
 ```
 
 Customizing:
@@ -39,10 +39,10 @@ fields: {
 A catch-all route reads a page by its stored path and builds `<head>` with `seoMeta()`:
 
 ```ts
-import { seoMeta } from 'integral-cms/presets'
+import { seoMeta } from "integral-cms/presets";
 
-const doc = await cms.findOne('pages', { where: { path: '/about/team' } })
-const { title, description, noindex } = seoMeta(doc)
+const doc = await cms.findOne("pages", { where: { path: "/about/team" } });
+const { title, description, noindex } = seoMeta(doc);
 // HTTP: GET /api/cms/collections/pages?path=/about/team
 ```
 
@@ -85,12 +85,12 @@ Server:
 
 ## `page.fields`
 
-| Field | Definition |
-|---|---|
-| `title` | `{ type: 'text', required: true }` |
-| `slug` | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path' }` |
+| Field    | Definition                                                        |
+| -------- | ----------------------------------------------------------------- |
+| `title`  | `{ type: 'text', required: true }`                                |
+| `slug`   | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path' }` |
 | `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }` |
-| `path` | `{ type: 'text', readOnly: true }` |
+| `path`   | `{ type: 'text', readOnly: true }`                                |
 
 - `onDelete: 'restrict'`: deleting a page with children returns 409 and lists them. No subtree is lost, no URL changes silently.
 - A collection with another name overrides one line: `parent: { ...page.fields.parent, collection: 'docs' }`. The hooks read the collection name from their arguments.
@@ -106,20 +106,20 @@ Server:
 
 Named records, built by `treeHooks()` with the default field names.
 
-| Stage | Name | Does |
-|---|---|---|
-| `beforeValidate` | `slugFromTitle` | Fills an empty `slug` from `title` with `slugify()`. It runs before `required` is checked, so API and script writes MAY omit the slug. |
-| `beforeChange` | `noCycle` | `ValidationError` on `parent` if the parent is the document itself or one of its descendants. |
-| `beforeChange` | `path` | Computes `path` from the parent's stored path and the slug. It overwrites any `path` in the input. |
-| `beforeChange` | `uniquePath` | `ValidationError` on `slug` if another document in the collection has the same path. |
-| `afterChange` | `descendantPaths` | If `path` changed, calls `cms.update` on each direct child. Each child's own hooks recompute its path and recurse to its children. |
+| Stage            | Name              | Does                                                                                                                                   |
+| ---------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `beforeValidate` | `slugFromTitle`   | Fills an empty `slug` from `title` with `slugify()`. It runs before `required` is checked, so API and script writes MAY omit the slug. |
+| `beforeChange`   | `noCycle`         | `ValidationError` on `parent` if the parent is the document itself or one of its descendants.                                          |
+| `beforeChange`   | `path`            | Computes `path` from the parent's stored path and the slug. It overwrites any `path` in the input.                                     |
+| `beforeChange`   | `uniquePath`      | `ValidationError` on `slug` if another document in the collection has the same path.                                                   |
+| `afterChange`    | `descendantPaths` | If `path` changed, calls `cms.update` on each direct child. Each child's own hooks recompute its path and recurse to its children.     |
 
 All run inside the write transaction (spec 3), so two parallel saves cannot claim the same path.
 
 ### `treeHooks(options?)`
 
 ```ts
-treeHooks({ title: 'name', parent: 'parentCategory', slug: 'handle', path: 'url' })
+treeHooks({ title: "name", parent: "parentCategory", slug: "handle", path: "url" });
 ```
 
 Returns the same records for other field names. Every option defaults to the name used in `page.fields`. `title` is the field `slugFromTitle` reads. The slug field MUST name the same path field, so the admin prefix reads it: with `treeHooks({ path: 'url' })`, the slug is `{ type: 'slug', from: 'name', parent: 'parentCategory', path: 'url' }`. For trees without URLs, a host omits `path` and `uniquePath` and keeps `noCycle`.
@@ -145,7 +145,7 @@ seo: {
 A pure helper. It has no hooks and stores nothing.
 
 ```ts
-seoMeta(doc) // { title, description, noindex }
+seoMeta(doc); // { title, description, noindex }
 ```
 
 - `title`: `doc.seo.title`, or `doc.title` when it is empty. So the fallback follows title changes.

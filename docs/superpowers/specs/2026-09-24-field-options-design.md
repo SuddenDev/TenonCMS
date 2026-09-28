@@ -15,21 +15,21 @@ The admin reads the schema from `/schema` as JSON. Functions in `integral.config
 
 ## Options
 
-| Option | Types | Admin | Server |
-|---|---|---|---|
-| `label` | all | ✓ (exists) | |
-| `description` | all | help text below the field | |
-| `placeholder` | text, textarea, number, date | ✓ | |
-| `required` | all | ✓ (exists) | ✓ (exists) |
-| `default` | all except `join` | pre-fills plain values | applies on create |
-| `minLength`, `maxLength`, `pattern` | text, textarea | HTML attributes | zod |
-| `min`, `max` | number | HTML attributes | zod |
-| `validate` | all except `join` | shows errors | runs |
-| `condition` | all | show / hide, clear on save | skips validation |
-| `unique` | see below | | runs |
-| `private`, `hidden` | all except `group` children of hidden groups | see below | see below |
-| `readOnly` | all, at any depth (spec 5) | shown disabled | none |
-| `hooks` | spec 3 | | |
+| Option                              | Types                                        | Admin                      | Server            |
+| ----------------------------------- | -------------------------------------------- | -------------------------- | ----------------- |
+| `label`                             | all                                          | ✓ (exists)                 |                   |
+| `description`                       | all                                          | help text below the field  |                   |
+| `placeholder`                       | text, textarea, number, date                 | ✓                          |                   |
+| `required`                          | all                                          | ✓ (exists)                 | ✓ (exists)        |
+| `default`                           | all except `join`                            | pre-fills plain values     | applies on create |
+| `minLength`, `maxLength`, `pattern` | text, textarea                               | HTML attributes            | zod               |
+| `min`, `max`                        | number                                       | HTML attributes            | zod               |
+| `validate`                          | all except `join`                            | shows errors               | runs              |
+| `condition`                         | all                                          | show / hide, clear on save | skips validation  |
+| `unique`                            | see below                                    |                            | runs              |
+| `private`, `hidden`                 | all except `group` children of hidden groups | see below                  | see below         |
+| `readOnly`                          | all, at any depth (spec 5)                   | shown disabled             | none              |
+| `hooks`                             | spec 3                                       |                            |                   |
 
 ## `default`
 
@@ -54,7 +54,8 @@ Both admin (HTML attributes) and server (zod in `dataSchema()`) enforce them. Em
 ## `validate`
 
 ```ts
-validate: (value, { data, siblingData, originalDoc, operation, path, cms, user }) => true | string | Promise<true | string>
+validate: (value, { data, siblingData, originalDoc, operation, path, cms, user }) =>
+  true | string | Promise<true | string>;
 ```
 
 - Server only. Runs after zod, before `beforeChange` hooks.
@@ -95,10 +96,10 @@ Behavior:
 
 ## `private` and `hidden`
 
-| | Local API and hooks | HTTP with session (admin) | HTTP without session |
-|---|---|---|---|
-| `private` | read and write | read and write | not sent, not filterable |
-| `hidden` | read and write | not sent, not filterable, not writable, not in `/schema` | not sent, not filterable |
+|           | Local API and hooks | HTTP with session (admin)                                | HTTP without session     |
+| --------- | ------------------- | -------------------------------------------------------- | ------------------------ |
+| `private` | read and write      | read and write                                           | not sent, not filterable |
+| `hidden`  | read and write      | not sent, not filterable, not writable, not in `/schema` | not sent, not filterable |
 
 - A filter on a field the caller cannot see returns 400, like an unknown field, so values cannot be probed.
 - Hidden fields in HTTP input are ignored.

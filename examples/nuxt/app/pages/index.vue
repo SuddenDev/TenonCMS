@@ -1,14 +1,14 @@
 <script setup lang="ts">
-const cms = useIntegral()
-const { data: site } = await cms.getGlobal('site')
-const { data: posts } = await cms.find('posts')
+const cms = useIntegral();
+const { data: site } = await cms.getGlobal("site");
+const { data: posts } = await cms.find("posts");
 
-useHead({ title: () => site.value?.title ?? 'My site' })
+useHead({ title: () => site.value?.title ?? "My site" });
 </script>
 
 <template>
   <main>
-    <h1>{{ site?.title ?? 'My site' }}</h1>
+    <h1>{{ site?.title ?? "My site" }}</h1>
     <p v-if="site?.tagline">{{ site.tagline }}</p>
     <ul>
       <li v-for="post in posts" :key="post.id">

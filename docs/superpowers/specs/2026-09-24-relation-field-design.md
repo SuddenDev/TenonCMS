@@ -18,12 +18,12 @@ parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' }
 posts: { type: 'join', collection: 'posts', on: 'author' }
 ```
 
-| Cardinality | How |
-|---|---|
-| m-1 | `relation` on the "many" side |
-| 1-m | the same `relation`, read from the other side with a `join` |
-| m-m | `relation` with `many: true`; `join` for the other side |
-| 1-1 | `relation`; uniqueness is not enforced in v1 |
+| Cardinality | How                                                         |
+| ----------- | ----------------------------------------------------------- |
+| m-1         | `relation` on the "many" side                               |
+| 1-m         | the same `relation`, read from the other side with a `join` |
+| m-m         | `relation` with `many: true`; `join` for the other side     |
+| 1-1         | `relation`; uniqueness is not enforced in v1                |
 
 ### `relation`
 
@@ -67,12 +67,12 @@ Known ceiling: reverse lookups (`join`, delete scans) scan the source collection
 Applies to `find`, `findOne`, `findById` and `getGlobal`, in the local API and the client.
 
 ```ts
-cms.find('posts')                                        // populate all, default depth
-cms.find('posts', { depth: 1 })
-cms.find('posts', { populate: false })                   // ids only
-cms.find('posts', { populate: { author: { avatar: true }, tags: true } })
-cms.find('pages', { populate: { seo: { image: true } } }) // through a group
-cms.find('authors', { populate: { posts: true } })       // join
+cms.find("posts"); // populate all, default depth
+cms.find("posts", { depth: 1 });
+cms.find("posts", { populate: false }); // ids only
+cms.find("posts", { populate: { author: { avatar: true }, tags: true } });
+cms.find("pages", { populate: { seo: { image: true } } }); // through a group
+cms.find("authors", { populate: { posts: true } }); // join
 ```
 
 - `populate: true` (default) resolves every `relation` up to `depth` hops. Group keys do not count as hops.

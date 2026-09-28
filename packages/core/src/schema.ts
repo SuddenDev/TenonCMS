@@ -1,131 +1,131 @@
-import type { User } from 'better-auth'
-import { z } from 'zod'
-import { type Condition, isObject, matchCondition } from './condition.ts'
-import { ValidationError } from './errors.ts'
-import { SLUG_PATTERN } from './helpers/slugify.ts'
+import type { User } from "better-auth";
+import { z } from "zod";
+import { type Condition, isObject, matchCondition } from "./condition.ts";
+import { ValidationError } from "./errors.ts";
+import { SLUG_PATTERN } from "./helpers/slugify.ts";
 
 // Options of every field, joins included.
 type Common = {
   /** Label in the admin. Defaults to the field key. */
-  label?: string
+  label?: string;
   /** Help text below the input in the admin. */
-  description?: string
+  description?: string;
   /**
    * The field applies only when this matches the document. Otherwise the admin hides it and saves it as `null`,
    * and the server skips `required`, the built-in checks and `validate`. The type check still runs. See {@link Condition}.
    */
-  condition?: Condition
+  condition?: Condition;
   /** Sent over HTTP only with a session, so the admin sees it and public reads do not. Not filterable without a session. On a group, it applies to the whole group. */
-  private?: boolean
-}
+  private?: boolean;
+};
 
 // `V` is the value hooks see. `S` is the stored value, which `default` and `validate` get.
 type Base<V = string, S = V> = Common & {
   /** The value MUST be present on create and update. Optional fields read as `null` or missing. */
-  required?: boolean
+  required?: boolean;
   /** Functions that run for this field on every write and read. Field hooks run before the collection's or global's hooks. */
-  hooks?: FieldHooks<V>
+  hooks?: FieldHooks<V>;
   /**
    * The value on `create` when the input leaves the field `undefined` (not `null`). Applied before `beforeValidate` hooks.
    * Not applied on `update`. Inside a group, only when the group is sent.
    * A plain value also pre-fills new documents in the admin. A function runs on the server only.
    */
-  default?: S | Fn<HookArgs, S | null | undefined>
+  default?: S | Fn<HookArgs, S | null | undefined>;
   /**
    * Server only. Returns `true`, or an error message for this field. Runs after the type checks and before `beforeChange` hooks.
    * All messages of a write come back together in one `ValidationError`. Skipped when `condition` is false.
    */
-  validate?: Validate<S>
+  validate?: Validate<S>;
   /**
    * No other document of the collection MAY have the same value. Checked after `beforeChange` hooks; a collision is a
    * `ValidationError` with `Already used`. `null` and missing values never collide. Case-sensitive.
    * Only on top-level `text`, `textarea`, `number`, `date`, `select`, `slug` and single `relation` fields of a collection.
    */
-  unique?: boolean
+  unique?: boolean;
   /**
    * Admin only: the input is shown disabled. The local API, HTTP and hooks can still write the value, and input is not stripped.
    * A hook that owns the value MUST overwrite it. On a group, it disables all fields inside. Default `false`.
    */
-  readOnly?: boolean
-}
+  readOnly?: boolean;
+};
 
 // Options of `text` and `textarea`.
 type TextOptions = {
   /** Shown in the empty input. */
-  placeholder?: string
+  placeholder?: string;
   /** Minimum number of characters. An empty optional value is not checked. */
-  minLength?: number
+  minLength?: number;
   /** Maximum number of characters. */
-  maxLength?: number
+  maxLength?: number;
   /**
    * A regular expression source, e.g. `'[a-z0-9-]+'`. It MUST match the whole value; `^` and `$` are implied.
    * A string, not a `RegExp`, because the admin checks it too. It compiles with the `v` flag, like the HTML `pattern`
    * attribute. An empty optional value is not checked. `<textarea>` has no `pattern` attribute, so there only the server checks it.
    */
-  pattern?: string
-}
+  pattern?: string;
+};
 
 /** One field of a collection, a global or a group. `type` picks the kind of value. */
 export type Field =
   | (Base &
       TextOptions & {
         /** `text`: one line. `textarea`: several lines. */
-        type: 'text' | 'textarea'
+        type: "text" | "textarea";
       })
   | (Base & {
       /** An ISO date string (`2026-09-24`). */
-      type: 'date'
+      type: "date";
       /** Shown in the empty input. */
-      placeholder?: string
+      placeholder?: string;
     })
   | (Base<number> & {
-      type: 'number'
+      type: "number";
       /** Shown in the empty input. */
-      placeholder?: string
+      placeholder?: string;
       /** Smallest allowed value. */
-      min?: number
+      min?: number;
       /** Largest allowed value. */
-      max?: number
+      max?: number;
     })
-  | (Base<boolean> & { type: 'boolean' })
+  | (Base<boolean> & { type: "boolean" })
   | (Base & {
-      type: 'select'
+      type: "select";
       /** The allowed values. The stored value is one of them. */
-      options: readonly string[]
+      options: readonly string[];
     })
   | (Base & {
       /** Stored as a string. The admin renders it with the input registered under the name, e.g. `custom:color` → `fields.color`. */
-      type: `custom:${string}`
+      type: `custom:${string}`;
     })
   | (Base & {
       /**
        * A URL part, stored as a string. A value MUST match `SLUG_PATTERN` (`about-us`); the server and the admin check it.
        * An empty slug is filled from `from`, by the server before `beforeValidate` and by the admin while the editor types.
        */
-      type: 'slug'
+      type: "slug";
       /**
        * A sibling field. The server fills an empty slug from it on every write. On a new document, the admin fills the slug
        * from it while the editor types, until the slug is edited. A saved slug never changes on its own, so URLs stay stable.
        */
-      from?: string
+      from?: string;
       /** A sibling `relation` field. The admin shows the selected parent's `path` value before the input, e.g. `/about/`. Without a parent, `/`. */
-      parent?: string
+      parent?: string;
       /** The field of the parent document that the admin shows as the prefix. Default `'path'`. */
-      path?: string
+      path?: string;
     })
   | (Base<Record<string, unknown>> & {
       /** Nests fields under one key, stored as an object. The admin shows it as its own section. Not filterable. */
-      type: 'group'
+      type: "group";
       /** The nested fields. Groups MAY contain groups. */
-      fields: Fields
+      fields: Fields;
     })
   | (Base<unknown, string | string[]> & {
       /** Stores the id of a document in `collection`. Reads resolve it to the document, see `populate`. */
-      type: 'relation'
+      type: "relation";
       /** Name of the collection the ids point to. It MAY be the collection that holds this field. */
-      collection: string
+      collection: string;
       /** Store an array of ids instead of one id. Not filterable. With `required`, at least one id. */
-      many?: boolean
+      many?: boolean;
       /**
        * What happens to this field when the referenced document is deleted:
        * - `'set-null'`: this field becomes `null`; in a `many` relation, the id is removed from the array.
@@ -134,49 +134,49 @@ export type Field =
        *
        * Default: `'restrict'` when `required`, else `'set-null'`. `required` with `'set-null'` is not allowed.
        */
-      onDelete?: 'set-null' | 'restrict' | 'cascade'
+      onDelete?: "set-null" | "restrict" | "cascade";
     })
   | (Common & {
       /** Not stored. Lists the documents of `collection` whose relation at `on` points here. Only in collections, at the top level. */
-      type: 'join'
+      type: "join";
       /** Name of the collection whose documents point here. */
-      collection: string
+      collection: string;
       /** Path of the relation field in `collection` that points here, e.g. `author` or `seo.image`. */
-      on: string
-      required?: never
-    })
+      on: string;
+      required?: never;
+    });
 
-export type Fields = Record<string, Field>
+export type Fields = Record<string, Field>;
 
 export type Collection<F extends Fields = Fields> = {
   /** Name in the admin. Defaults to the collection key. */
-  label?: string
-  fields: F
+  label?: string;
+  fields: F;
   /** Field shown in the admin list view. Defaults to the first field. */
-  titleField?: string
+  titleField?: string;
   /** Functions that run on every read, write and delete of this collection. Typed only through `defineCollection()`. */
-  hooks?: CollectionHooks<F>
-}
+  hooks?: CollectionHooks<F>;
+};
 
 export type Global<F extends Fields = Fields> = {
   /** Name in the admin. Defaults to the global key. */
-  label?: string
-  fields: F
+  label?: string;
+  fields: F;
   /** Functions that run on every read and write of this global. Typed only through `defineGlobal()`. */
-  hooks?: GlobalHooks<F>
-}
+  hooks?: GlobalHooks<F>;
+};
 
 export type Schema = {
-  collections?: Record<string, Collection>
-  globals?: Record<string, Global>
-}
+  collections?: Record<string, Collection>;
+  globals?: Record<string, Global>;
+};
 
-type Awaitable<T> = T | Promise<T>
+type Awaitable<T> = T | Promise<T>;
 // Method syntax makes the parameter bivariant, so a typed collection is still a `Collection`.
-type Fn<A, R> = { hook(args: A): Awaitable<R | void> }['hook']
+type Fn<A, R> = { hook(args: A): Awaitable<R | void> }["hook"];
 
 /** Hooks of one stage. An array, or a record whose keys name the hooks, so a host can leave one out by name. They run in order. */
-export type Slot<F> = F[] | Record<string, F>
+export type Slot<F> = F[] | Record<string, F>;
 
 /**
  * The operation a hook runs in:
@@ -184,82 +184,90 @@ export type Slot<F> = F[] | Record<string, F>
  * - `'read'`: `find`, `findOne` and `findById`, and documents loaded by `populate`.
  * - `'getGlobal'`, `'setGlobal'`: a global read or write.
  */
-export type Operation = 'create' | 'update' | 'delete' | 'read' | 'getGlobal' | 'setGlobal'
+export type Operation = "create" | "update" | "delete" | "read" | "getGlobal" | "setGlobal";
 
-type Options = { where?: Record<string, unknown>; limit?: number; populate?: boolean | object; depth?: number; select?: Record<string, unknown> }
-type Row = Record<string, any>
+type Options = {
+  where?: Record<string, unknown>;
+  limit?: number;
+  populate?: boolean | object;
+  depth?: number;
+  select?: Record<string, unknown>;
+};
+type Row = Record<string, any>;
 
 /** The local API with untyped names and data, as hooks get it. */
 export type LocalApi = {
-  find(collection: string, options?: Options): Promise<Row[]>
-  findOne(collection: string, options: Options): Promise<Row | undefined>
-  findById(collection: string, id: string, options?: Options): Promise<Row | undefined>
-  create(collection: string, data: Record<string, unknown>): Promise<Row>
-  update(collection: string, id: string, data: Record<string, unknown>): Promise<Row | undefined>
-  delete(collection: string, id: string): Promise<void>
-  getGlobal(name: string, options?: Options): Promise<Row>
-  setGlobal(name: string, data: Record<string, unknown>): Promise<Row>
-}
+  find(collection: string, options?: Options): Promise<Row[]>;
+  findOne(collection: string, options: Options): Promise<Row | undefined>;
+  findById(collection: string, id: string, options?: Options): Promise<Row | undefined>;
+  create(collection: string, data: Record<string, unknown>): Promise<Row>;
+  update(collection: string, id: string, data: Record<string, unknown>): Promise<Row | undefined>;
+  delete(collection: string, id: string): Promise<void>;
+  getGlobal(name: string, options?: Options): Promise<Row>;
+  setGlobal(name: string, data: Record<string, unknown>): Promise<Row>;
+};
 
 /** Arguments every hook gets. */
 export type HookArgs = {
   /** The local API, bound to the current transaction. Nested calls run their own hooks. Untyped. */
-  cms: LocalApi
+  cms: LocalApi;
   /** The session user of an HTTP write. `null` for public reads and for server calls of the local API. */
-  user: User | null
+  user: User | null;
   /** One object shared by all hooks of an operation and every nested call inside it. Use it to pass values along or to stop loops. */
-  context: Record<string, unknown>
+  context: Record<string, unknown>;
   /** Name of the collection. Missing for globals. */
-  collection?: string
+  collection?: string;
   /** Name of the global. Missing for collections. */
-  global?: string
-}
+  global?: string;
+};
 
 /** Arguments of field hooks and `validate`. */
 export type FieldArgs = HookArgs & {
   /** The whole document. Untyped. */
-  data: Record<string, unknown>
+  data: Record<string, unknown>;
   /** The object that holds this field: `data` at the top level, the group's value inside a group. Untyped. */
-  siblingData: Record<string, unknown>
+  siblingData: Record<string, unknown>;
   /** The stored document before this write. Missing on create and on reads. Untyped. */
-  originalDoc?: Record<string, unknown>
+  originalDoc?: Record<string, unknown>;
   /** Dot path of the field, e.g. `seo.title`. */
-  path: string
-  operation: Operation
-}
+  path: string;
+  operation: Operation;
+};
 
 type FieldHook<V> = Fn<
   FieldArgs & {
     /** The field's value. Return a new value to replace it. */
-    value: V | null | undefined
+    value: V | null | undefined;
   },
   V | null | undefined
->
+>;
 
 // Method syntax makes the parameters bivariant, like `Fn`.
-type Validate<V> = { validate(value: V | null | undefined, args: FieldArgs): Awaitable<true | string> }['validate']
+type Validate<V> = {
+  validate(value: V | null | undefined, args: FieldArgs): Awaitable<true | string>;
+}["validate"];
 
 /** Hooks of one field. A hook MAY return a new value; `undefined` keeps the old one. */
 export type FieldHooks<V> = {
   /** Runs on unvalidated input, before schema validation. */
-  beforeValidate?: Slot<FieldHook<V>>
+  beforeValidate?: Slot<FieldHook<V>>;
   /** Runs on validated data, before the write. Its result is validated again. */
-  beforeChange?: Slot<FieldHook<V>>
+  beforeChange?: Slot<FieldHook<V>>;
   /** Runs after the write, on the stored document. */
-  afterChange?: Slot<FieldHook<V>>
+  afterChange?: Slot<FieldHook<V>>;
   /** Runs once per document on every read and after writes. */
-  afterRead?: Slot<FieldHook<V>>
-}
+  afterRead?: Slot<FieldHook<V>>;
+};
 
 // A collection written inline in `defineCms` has the wide `Fields`, so its hooks get `any`.
-type D<F extends Fields> = Fields extends F ? any : Data<F>
-type DocOf<F extends Fields> = Fields extends F ? any : Doc<F>
+type D<F extends Fields> = Fields extends F ? any : Data<F>;
+type DocOf<F extends Fields> = Fields extends F ? any : Doc<F>;
 
 type ChangeArgs = HookArgs & {
-  operation: Operation
+  operation: Operation;
   /** Id of the document. Missing on create and for globals. */
-  id?: string
-}
+  id?: string;
+};
 
 /**
  * Hooks of a collection. Each hook gets one object and MAY be async. A hook MAY return a replacement for its main value
@@ -271,267 +279,331 @@ type ChangeArgs = HookArgs & {
  */
 export type CollectionHooks<F extends Fields> = {
   /** Runs first in every operation. `args` is the operation's input, e.g. `{ collection, id, data }`. */
-  beforeOperation?: Slot<Fn<HookArgs & { operation: Operation; args: Record<string, unknown> }, Record<string, unknown>>>
+  beforeOperation?: Slot<
+    Fn<HookArgs & { operation: Operation; args: Record<string, unknown> }, Record<string, unknown>>
+  >;
   /** Runs on unvalidated input of `create` and `update`. The result is validated. */
-  beforeValidate?: Slot<Fn<ChangeArgs & { data: Partial<D<F>>; originalDoc?: DocOf<F> }, Partial<D<F>>>>
+  beforeValidate?: Slot<
+    Fn<ChangeArgs & { data: Partial<D<F>>; originalDoc?: DocOf<F> }, Partial<D<F>>>
+  >;
   /** Runs on validated data, before the write. The result MUST pass validation again. */
-  beforeChange?: Slot<Fn<ChangeArgs & { data: D<F>; originalDoc?: DocOf<F> }, D<F>>>
+  beforeChange?: Slot<Fn<ChangeArgs & { data: D<F>; originalDoc?: DocOf<F> }, D<F>>>;
   /** Runs after the write, in the same transaction. `previousDoc` is missing on create. */
-  afterChange?: Slot<Fn<HookArgs & { operation: Operation; doc: DocOf<F>; previousDoc?: DocOf<F> }, DocOf<F>>>
+  afterChange?: Slot<
+    Fn<HookArgs & { operation: Operation; doc: DocOf<F>; previousDoc?: DocOf<F> }, DocOf<F>>
+  >;
   /** Runs once per read on the loaded documents, before relations are resolved. */
-  beforeRead?: Slot<Fn<HookArgs & { operation: Operation; docs: DocOf<F>[] }, DocOf<F>[]>>
+  beforeRead?: Slot<Fn<HookArgs & { operation: Operation; docs: DocOf<F>[] }, DocOf<F>[]>>;
   /** Runs once per read on all returned documents, and after writes on the written one. */
-  afterRead?: Slot<Fn<HookArgs & { operation: Operation; docs: DocOf<F>[] }, DocOf<F>[]>>
+  afterRead?: Slot<Fn<HookArgs & { operation: Operation; docs: DocOf<F>[] }, DocOf<F>[]>>;
   /** Runs before a document is deleted. Does not run for a missing document. */
-  beforeDelete?: Slot<Fn<HookArgs & { id: string; doc: DocOf<F> }, void>>
+  beforeDelete?: Slot<Fn<HookArgs & { id: string; doc: DocOf<F> }, void>>;
   /** Runs after the document and its `onDelete` effects are deleted, in the same transaction. */
-  afterDelete?: Slot<Fn<HookArgs & { id: string; doc: DocOf<F> }, void>>
+  afterDelete?: Slot<Fn<HookArgs & { id: string; doc: DocOf<F> }, void>>;
   /** Runs last in every operation. `result` is what the operation returns. */
-  afterOperation?: Slot<Fn<HookArgs & { operation: Operation; args: Record<string, unknown>; result: unknown }, unknown>>
+  afterOperation?: Slot<
+    Fn<HookArgs & { operation: Operation; args: Record<string, unknown>; result: unknown }, unknown>
+  >;
   /**
    * Runs after an unexpected error, once the transaction is rolled back, then the root `afterError`.
    * Does not run for `ValidationError` (400) or `ConflictError` (409). The error is rethrown.
    */
-  afterError?: Slot<Fn<HookArgs & { operation: Operation; error: unknown }, void>>
-}
+  afterError?: Slot<Fn<HookArgs & { operation: Operation; error: unknown }, void>>;
+};
 
 /** Hooks of a global. Same as {@link CollectionHooks}; `docs` holds the one global. */
-export type GlobalHooks<F extends Fields> = Pick<CollectionHooks<F>, 'beforeValidate' | 'beforeChange' | 'afterChange' | 'beforeRead' | 'afterRead'>
+export type GlobalHooks<F extends Fields> = Pick<
+  CollectionHooks<F>,
+  "beforeValidate" | "beforeChange" | "afterChange" | "beforeRead" | "afterRead"
+>;
 
 /** Hooks of `defineCms`. */
 export type RootHooks = {
   /** Runs after an unexpected error in any operation, after the collection's `afterError`. Not for 400 or 409. */
-  afterError?: Slot<Fn<HookArgs & { operation: Operation; error: unknown }, void>>
-}
+  afterError?: Slot<Fn<HookArgs & { operation: Operation; error: unknown }, void>>;
+};
 
-type FieldValue<F extends Field> = F extends { type: 'group'; fields: infer G extends Fields }
+type FieldValue<F extends Field> = F extends { type: "group"; fields: infer G extends Fields }
   ? Data<G>
-  : F extends { type: 'number' }
+  : F extends { type: "number" }
     ? number
-    : F extends { type: 'boolean' }
+    : F extends { type: "boolean" }
       ? boolean
-      : F extends { type: 'select'; options: readonly (infer O)[] }
+      : F extends { type: "select"; options: readonly (infer O)[] }
         ? O
-        : F extends { type: 'relation' }
+        : F extends { type: "relation" }
           ? F extends { many: true }
             ? string[]
             : string
-          : string
+          : string;
 
-type RequiredField = { required: true }
+type RequiredField = { required: true };
 
 export type Data<F extends Fields> = {
-  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K] extends RequiredField ? K : never]: FieldValue<F[K]>
+  [
+    K in keyof F as F[K] extends { type: "join" } ? never : F[K] extends RequiredField ? K : never
+  ]: FieldValue<F[K]>;
 } & {
-  [K in keyof F as F[K] extends { type: 'join' } ? never : F[K] extends RequiredField ? never : K]?: FieldValue<F[K]> | null
-}
+  [
+    K in keyof F as F[K] extends { type: "join" } ? never : F[K] extends RequiredField ? never : K
+  ]?: FieldValue<F[K]> | null;
+};
 
 /** Field keys that `where` accepts. Groups, joins and `many` relations are not filterable. */
 export type FilterKey<F extends Fields> = {
-  [K in keyof F]: F[K] extends { type: 'group' | 'join' } | { many: true } ? never : K
-}[keyof F]
+  [K in keyof F]: F[K] extends { type: "group" | "join" } | { many: true } ? never : K;
+}[keyof F];
 
 export type Doc<F extends Fields> = Data<F> & {
-  id: string
-  createdAt: string
-  updatedAt: string
-}
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 /** Dot paths of relation fields in `F` that point to `Target`, through groups. */
-type RelationPaths<F, Target extends string, P extends string = ''> = {
-  [K in keyof F & string]: F[K] extends { type: 'group'; fields: infer G }
+type RelationPaths<F, Target extends string, P extends string = ""> = {
+  [K in keyof F & string]: F[K] extends { type: "group"; fields: infer G }
     ? RelationPaths<G, Target, `${P}${K}.`>
-    : F[K] extends { type: 'relation'; collection: Target }
+    : F[K] extends { type: "relation"; collection: Target }
       ? `${P}${K}`
-      : never
-}[keyof F & string]
+      : never;
+}[keyof F & string];
 
 /** An error type. No value matches it, so the type error shows `message` and the values `use` allows. */
-type Invalid<M extends string, U = never> = { message: M; use: U }
+type Invalid<M extends string, U = never> = { message: M; use: U };
 
 /** The error for an invalid join `on`, with the relation paths it may use. */
 type JoinError<F, N extends string, Self extends string> = [RelationPaths<F, Self>] extends [never]
   ? Invalid<`no relation in '${N}' points to '${Self}'`>
-  : Invalid<`not a relation in '${N}' that points to '${Self}'`, RelationPaths<F, Self>>
+  : Invalid<`not a relation in '${N}' that points to '${Self}'`, RelationPaths<F, Self>>;
 
 /** `F` with each invalid `collection` or `on` replaced by the values it accepts, so the error names them. */
 // Widened `string` values are not checked; only literals can be.
 type CheckFields<F, C, Self extends string> = {
-  [K in keyof F]: F[K] extends { type: 'group'; fields: infer G }
-    ? { [P in keyof F[K]]: P extends 'fields' ? CheckFields<G, C, Self> : F[K][P] }
-    : F[K] extends { type: 'relation' | 'join'; collection: infer N }
+  [K in keyof F]: F[K] extends { type: "group"; fields: infer G }
+    ? { [P in keyof F[K]]: P extends "fields" ? CheckFields<G, C, Self> : F[K][P] }
+    : F[K] extends { type: "relation" | "join"; collection: infer N }
       ? string extends N
         ? F[K]
         : N extends keyof C
-        ? F[K] extends { type: 'join'; on: infer O }
-          ? string extends O
-            ? F[K]
-            : O extends RelationPaths<FieldsOf<C, N>, Self>
-            ? F[K]
-            : { [P in keyof F[K]]: P extends 'on' ? JoinError<FieldsOf<C, N>, N & string, Self> : F[K][P] }
-          : F[K]
-        : { [P in keyof F[K]]: P extends 'collection' ? Invalid<`'${N & string}' is not a collection`, keyof C & string> : F[K][P] }
-      : F[K]
-}
+          ? F[K] extends { type: "join"; on: infer O }
+            ? string extends O
+              ? F[K]
+              : O extends RelationPaths<FieldsOf<C, N>, Self>
+                ? F[K]
+                : {
+                    [P in keyof F[K]]: P extends "on"
+                      ? JoinError<FieldsOf<C, N>, N & string, Self>
+                      : F[K][P];
+                  }
+            : F[K]
+          : {
+              [P in keyof F[K]]: P extends "collection"
+                ? Invalid<`'${N & string}' is not a collection`, keyof C & string>
+                : F[K][P];
+            }
+      : F[K];
+};
 
 /**
  * Checks every relation and join in `S` against the collections in `C`.
  * Resolves to `S` when all are valid. Use it as `S & NoInfer<CheckRefs<S, C>>`, so `S` is inferred from the argument alone.
  */
 export type CheckRefs<S, C> = S extends { [K in keyof S]: { fields: unknown } }
-  ? { [K in keyof S]: { [P in keyof S[K]]: P extends 'fields' ? CheckFields<S[K][P], C, K & string> : S[K][P] } } extends infer R
+  ? {
+      [K in keyof S]: {
+        [P in keyof S[K]]: P extends "fields" ? CheckFields<S[K][P], C, K & string> : S[K][P];
+      };
+    } extends infer R
     ? S extends R
       ? S
       : R
     : never
-  : S
+  : S;
 
 // `H` keeps the literal hooks, so a host can leave one hook of a record out by name.
 export function defineCollection<
   const F extends Fields,
-  const T extends Omit<Collection<F>, 'fields' | 'hooks'>,
+  const T extends Omit<Collection<F>, "fields" | "hooks">,
   const H extends CollectionHooks<NoInfer<F>>,
 >(collection: T & { fields: F; hooks?: H }): T & { fields: F; hooks: H } {
-  return { ...collection, hooks: collection.hooks ?? ({} as H) }
+  return { ...collection, hooks: collection.hooks ?? ({} as H) };
 }
 
-export function defineGlobal<const F extends Fields, const T extends Omit<Global<F>, 'fields' | 'hooks'>, const H extends GlobalHooks<NoInfer<F>>>(
-  global: T & { fields: F; hooks?: H },
-): T & { fields: F; hooks: H } {
-  return { ...global, hooks: global.hooks ?? ({} as H) }
+export function defineGlobal<
+  const F extends Fields,
+  const T extends Omit<Global<F>, "fields" | "hooks">,
+  const H extends GlobalHooks<NoInfer<F>>,
+>(global: T & { fields: F; hooks?: H }): T & { fields: F; hooks: H } {
+  return { ...global, hooks: global.hooks ?? ({} as H) };
 }
 
-const uniqueTypes = ['text', 'textarea', 'number', 'date', 'select', 'slug', 'relation']
+const uniqueTypes = ["text", "textarea", "number", "date", "select", "slug", "relation"];
 
 /** Throws for a condition on an unknown field, `unique` where it cannot apply, or an invalid `pattern`. */
 export function checkFields(schema: Schema) {
   const owners = [
-    ...Object.entries(schema.collections ?? {}).map(([name, c]) => ({ name, fields: c.fields, global: false })),
-    ...Object.entries(schema.globals ?? {}).map(([name, g]) => ({ name, fields: g.fields, global: true })),
-  ]
+    ...Object.entries(schema.collections ?? {}).map(([name, c]) => ({
+      name,
+      fields: c.fields,
+      global: false,
+    })),
+    ...Object.entries(schema.globals ?? {}).map(([name, g]) => ({
+      name,
+      fields: g.fields,
+      global: true,
+    })),
+  ];
   for (const { name, fields, global } of owners) {
-    walk(fields, fields, name, !global)
-    dataSchema(fields)
+    walk(fields, fields, name, !global);
+    dataSchema(fields);
   }
 }
 
 // `top`: fields at the top level of a collection, the only place `unique` works.
 function walk(fields: Fields, root: Fields, where: string, top: boolean) {
   for (const [key, f] of Object.entries(fields)) {
-    const at = `${where}.${key}`
-    if ('unique' in f && f.unique && (!top || !uniqueTypes.includes(f.type) || (f.type === 'relation' && f.many)))
-      throw new Error(`integral-cms: "${at}" cannot be unique`)
+    const at = `${where}.${key}`;
+    if (
+      "unique" in f &&
+      f.unique &&
+      (!top || !uniqueTypes.includes(f.type) || (f.type === "relation" && f.many))
+    )
+      throw new Error(`integral-cms: "${at}" cannot be unique`);
     for (const path of conditionPaths(f.condition ?? {})) {
-      const target = path.startsWith('/') ? fieldAt(root, path.slice(1)) : fieldAt(fields, path)
-      if (!target) throw new Error(`integral-cms: condition on "${at}" names unknown field "${path}"`)
+      const target = path.startsWith("/") ? fieldAt(root, path.slice(1)) : fieldAt(fields, path);
+      if (!target)
+        throw new Error(`integral-cms: condition on "${at}" names unknown field "${path}"`);
     }
-    if (f.type === 'group') walk(f.fields, root, at, false)
+    if (f.type === "group") walk(f.fields, root, at, false);
   }
 }
 
 function conditionPaths(condition: Condition): string[] {
-  return Object.entries(condition).flatMap(([key, c]) => (key === '$every' || key === '$some' ? (c as Condition[]).flatMap(conditionPaths) : [key]))
+  return Object.entries(condition).flatMap(([key, c]) =>
+    key === "$every" || key === "$some" ? (c as Condition[]).flatMap(conditionPaths) : [key],
+  );
 }
 
 // The field at a dot path.
 function fieldAt(fields: Fields, path: string): Field | undefined {
-  const [key, ...rest] = path.split('.')
-  const f = Object.hasOwn(fields, key) ? fields[key] : undefined
-  if (!f || !rest.length) return f
-  return f.type === 'group' ? fieldAt(f.fields, rest.join('.')) : undefined
+  const [key, ...rest] = path.split(".");
+  const f = Object.hasOwn(fields, key) ? fields[key] : undefined;
+  if (!f || !rest.length) return f;
+  return f.type === "group" ? fieldAt(f.fields, rest.join(".")) : undefined;
 }
 
 /** Whether `where` accepts `key`. Groups, joins and `many` relations are not filterable. */
 export function filterable(fields: Fields, key: string) {
-  if (!Object.hasOwn(fields, key)) return false
-  const field = fields[key]
-  return field.type !== 'group' && field.type !== 'join' && !(field.type === 'relation' && field.many)
+  if (!Object.hasOwn(fields, key)) return false;
+  const field = fields[key];
+  return (
+    field.type !== "group" && field.type !== "join" && !(field.type === "relation" && field.many)
+  );
 }
 
 // `on`: the field's condition matches. Otherwise only the type is checked.
-function fieldSchema(field: Exclude<Field, { type: 'join' | 'group' }>, on: boolean): z.ZodType {
-  const required = on && field.required
+function fieldSchema(field: Exclude<Field, { type: "join" | "group" }>, on: boolean): z.ZodType {
+  const required = on && field.required;
   switch (field.type) {
-    case 'number': {
-      let s = z.number()
-      if (on && field.min !== undefined) s = s.min(field.min)
-      if (on && field.max !== undefined) s = s.max(field.max)
-      return s
+    case "number": {
+      let s = z.number();
+      if (on && field.min !== undefined) s = s.min(field.min);
+      if (on && field.max !== undefined) s = s.max(field.max);
+      return s;
     }
-    case 'text':
-    case 'textarea': {
+    case "text":
+    case "textarea": {
       // Browsers compile the HTML `pattern` attribute with the `v` flag. The server MUST match them.
       // Compiled even when unused, so an invalid pattern always throws.
-      const pattern = field.pattern === undefined ? undefined : new RegExp(`^(?:${field.pattern})$`, 'v')
-      if (!on) return z.string()
-      let s = z.string().min(Math.max(field.minLength ?? 0, required ? 1 : 0))
-      if (field.maxLength !== undefined) s = s.max(field.maxLength)
-      if (pattern) s = s.regex(pattern)
-      return required ? s : z.literal('').or(s)
+      const pattern =
+        field.pattern === undefined ? undefined : new RegExp(`^(?:${field.pattern})$`, "v");
+      if (!on) return z.string();
+      let s = z.string().min(Math.max(field.minLength ?? 0, required ? 1 : 0));
+      if (field.maxLength !== undefined) s = s.max(field.maxLength);
+      if (pattern) s = s.regex(pattern);
+      return required ? s : z.literal("").or(s);
     }
-    case 'slug': {
-      if (!on) return z.string()
-      const s = z.string().regex(new RegExp(`^(?:${SLUG_PATTERN})$`, 'v'))
-      return required ? s : z.literal('').or(s)
+    case "slug": {
+      if (!on) return z.string();
+      const s = z.string().regex(new RegExp(`^(?:${SLUG_PATTERN})$`, "v"));
+      return required ? s : z.literal("").or(s);
     }
-    case 'boolean':
-      return z.boolean()
-    case 'date':
-      return z.iso.date()
-    case 'select':
-      return z.enum(field.options as [string, ...string[]])
-    case 'relation': {
-      const id = z.string().min(1)
-      if (!field.many) return id
-      const ids = z.array(id).refine((a) => new Set(a).size === a.length, 'Duplicate id')
-      return required ? ids.min(1) : ids
+    case "boolean":
+      return z.boolean();
+    case "date":
+      return z.iso.date();
+    case "select":
+      return z.enum(field.options as [string, ...string[]]);
+    case "relation": {
+      const id = z.string().min(1);
+      if (!field.many) return id;
+      const ids = z.array(id).refine((a) => new Set(a).size === a.length, "Duplicate id");
+      return required ? ids.min(1) : ids;
     }
     default:
-      return required ? z.string().min(1) : z.string()
+      return required ? z.string().min(1) : z.string();
   }
 }
 
 /** Validates `data`. Throws a `ValidationError` keyed by field path. */
 export function parseData(schema: z.ZodType, data: unknown) {
-  const result = schema.safeParse(data)
-  if (!result.success) throw new ValidationError(Object.fromEntries(result.error.issues.map((i) => [i.path.join('.'), i.message])))
-  return result.data as Record<string, unknown>
+  const result = schema.safeParse(data);
+  if (!result.success)
+    throw new ValidationError(
+      Object.fromEntries(result.error.issues.map((i) => [i.path.join("."), i.message])),
+    );
+  return result.data as Record<string, unknown>;
 }
 
 /**
  * Builds the validator for `data`. Unknown keys are stripped.
  * A field whose `condition` is false keeps its type check, but `required` and the built-in checks are skipped.
  */
-export function dataSchema(fields: Fields, data: unknown = {}, root = data, active = true): z.ZodObject {
-  const siblings = isObject(data) ? data : {}
+export function dataSchema(
+  fields: Fields,
+  data: unknown = {},
+  root = data,
+  active = true,
+): z.ZodObject {
+  const siblings = isObject(data) ? data : {};
   return z.object(
     Object.fromEntries(
       Object.entries(fields).flatMap(([name, field]) => {
-        if (field.type === 'join') return []
-        const on = active && (!field.condition || matchCondition(field.condition, root, siblings))
-        const s = field.type === 'group' ? dataSchema(field.fields, siblings[name], root, on) : fieldSchema(field, on)
-        return [[name, on && field.required ? s : s.optional().nullable()]]
+        if (field.type === "join") return [];
+        const on = active && (!field.condition || matchCondition(field.condition, root, siblings));
+        const s =
+          field.type === "group"
+            ? dataSchema(field.fields, siblings[name], root, on)
+            : fieldSchema(field, on);
+        return [[name, on && field.required ? s : s.optional().nullable()]];
       }),
     ),
-  )
+  );
 }
 
 // Read types. `Cs` is the collections record. `P` is `false` (ids), a number (hops left) or a populate object.
-type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-type Meta = { id: string; createdAt: string; updatedAt: string }
-type Simplify<T> = { [K in keyof T]: T[K] } & {}
+type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+type Meta = { id: string; createdAt: string; updatedAt: string };
+type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
-type Sub<P, K> = P extends number ? P : P extends object ? (K extends keyof P ? P[K] : false) : false
-type Next<S> = S extends true ? false : S extends number ? Prev[S] : S
+type Sub<P, K> = P extends number
+  ? P
+  : P extends object
+    ? K extends keyof P
+      ? P[K]
+      : false
+    : false;
+type Next<S> = S extends true ? false : S extends number ? Prev[S] : S;
 type Target<Cs, C, P> = C extends keyof Cs
   ? Cs[C] extends { fields: infer F extends Fields }
     ? Simplify<Resolve<Cs, F, P> & Meta>
     : never
-  : never
+  : never;
 
-type Value<Cs, F, S> = F extends { type: 'group'; fields: infer G extends Fields }
+type Value<Cs, F, S> = F extends { type: "group"; fields: infer G extends Fields }
   ? Resolve<Cs, G, S extends true ? 1 : S>
-  : F extends { type: 'relation'; collection: infer C }
+  : F extends { type: "relation"; collection: infer C }
     ? S extends false | 0 | undefined
       ? F extends { many: true }
         ? string[]
@@ -539,74 +611,93 @@ type Value<Cs, F, S> = F extends { type: 'group'; fields: infer G extends Fields
       : F extends { many: true }
         ? Target<Cs, C, Next<S>>[]
         : Target<Cs, C, Next<S>>
-    : F extends { type: 'join'; collection: infer C }
+    : F extends { type: "join"; collection: infer C }
       ? Target<Cs, C, Next<S>>[]
       : F extends Field
         ? FieldValue<F>
-        : never
+        : never;
 
 // Joins are absent unless named in a populate object.
 type Joins<F, P> = {
-  [K in keyof F]: F[K] extends { type: 'join' } ? (P extends object ? (K extends keyof P ? never : K) : K) : never
-}[keyof F]
-type Req<F> = { [K in keyof F]: F[K] extends RequiredField | { type: 'join' } ? K : never }[keyof F]
+  [K in keyof F]: F[K] extends { type: "join" }
+    ? P extends object
+      ? K extends keyof P
+        ? never
+        : K
+      : K
+    : never;
+}[keyof F];
+type Req<F> = {
+  [K in keyof F]: F[K] extends RequiredField | { type: "join" } ? K : never;
+}[keyof F];
 
 /** Data of `fields` as a read returns it, with relations resolved as `P` says. */
 export type Resolve<Cs, F extends Fields, P> = Simplify<
   { [K in Exclude<keyof F, Req<F> | Joins<F, P>>]?: Value<Cs, F[K], Sub<P, K>> | null } & {
-    [K in Exclude<Req<F>, Joins<F, P>>]: Value<Cs, F[K], Sub<P, K>>
+    [K in Exclude<Req<F>, Joins<F, P>>]: Value<Cs, F[K], Sub<P, K>>;
   }
->
+>;
 
 // An untyped schema (the admin's) reads plain records. The recursive types would not terminate.
-type Wide<Cs> = string extends keyof Cs ? true : false
-export type Read<Cs, F extends Fields, P, S = true> = Wide<Cs> extends true ? Record<string, any> : Selected<Resolve<Cs, F, P>, S>
+type Wide<Cs> = string extends keyof Cs ? true : false;
+export type Read<Cs, F extends Fields, P, S = true> =
+  Wide<Cs> extends true ? Record<string, any> : Selected<Resolve<Cs, F, P>, S>;
 // `createdAt` and `updatedAt` only when `S` lists them.
-type SelectedMeta<S> = [S] extends [true] ? Meta : Pick<Meta, 'id' | Extract<keyof S, keyof Meta>>
-export type ReadDoc<Cs, F extends Fields, P, S = true> = Simplify<Read<Cs, F, P, S> & SelectedMeta<S>>
+type SelectedMeta<S> = [S] extends [true] ? Meta : Pick<Meta, "id" | Extract<keyof S, keyof Meta>>;
+export type ReadDoc<Cs, F extends Fields, P, S = true> = Simplify<
+  Read<Cs, F, P, S> & SelectedMeta<S>
+>;
 export type PopulateOf<O, D extends number> = O extends { populate: false }
   ? false
   : O extends { populate: infer P extends object }
     ? P
     : O extends { depth: infer N extends number }
       ? N
-      : D
+      : D;
 
-type FieldsOf<Cs, C> = C extends keyof Cs ? (Cs[C] extends { fields: infer F extends Fields } ? F : never) : never
+type FieldsOf<Cs, C> = C extends keyof Cs
+  ? Cs[C] extends { fields: infer F extends Fields }
+    ? F
+    : never
+  : never;
 
 /** Paths a `populate` object may name: groups, relations and joins, nested along their targets. */
 export type Populate<Cs, F extends Fields> = {
-  [K in keyof F as F[K] extends { type: 'group' | 'relation' | 'join' } ? K : never]?: F[K] extends {
-    type: 'group'
-    fields: infer G extends Fields
+  [
+    K in keyof F as F[K] extends { type: "group" | "relation" | "join" } ? K : never
+  ]?: F[K] extends {
+    type: "group";
+    fields: infer G extends Fields;
   }
     ? true | Populate<Cs, G>
     : F[K] extends { collection: infer C }
       ? true | Populate<Cs, FieldsOf<Cs, C>>
-      : never
-}
-export type PopulateArg<Cs, F extends Fields> = Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>
+      : never;
+};
+export type PopulateArg<Cs, F extends Fields> =
+  Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>;
 
 /**
  * Keys a `select` object may name: fields, and on a document (`Doc`) `id`, `createdAt` and `updatedAt`.
  * An object is allowed under a group, and under a relation or join that `P` resolves.
  */
 export type Select<Cs, F extends Fields, P, Doc extends boolean = true> = {
-  [K in keyof F]?: F[K] extends { type: 'group'; fields: infer G extends Fields }
+  [K in keyof F]?: F[K] extends { type: "group"; fields: infer G extends Fields }
     ? true | Select<Cs, G, Sub<P, K> extends true ? 1 : Sub<P, K>, false>
-    : F[K] extends { type: 'relation'; collection: infer C }
+    : F[K] extends { type: "relation"; collection: infer C }
       ? Sub<P, K> extends false | 0 | undefined
         ? true
         : true | Select<Cs, FieldsOf<Cs, C>, Next<Sub<P, K>>>
-      : F[K] extends { type: 'join'; collection: infer C }
+      : F[K] extends { type: "join"; collection: infer C }
         ? K extends Joins<F, P>
           ? number extends P
             ? true | Select<Cs, FieldsOf<Cs, C>, Next<Sub<P, K>>>
             : true
           : true | Select<Cs, FieldsOf<Cs, C>, Next<Sub<P, K>>>
-        : true
-} & (Doc extends true ? { id?: true; createdAt?: true; updatedAt?: true } : {})
-export type SelectArg<Cs, F extends Fields, P, Doc extends boolean = true> = Wide<Cs> extends true ? Record<string, any> : Select<Cs, F, P, Doc>
+        : true;
+} & (Doc extends true ? { id?: true; createdAt?: true; updatedAt?: true } : {});
+export type SelectArg<Cs, F extends Fields, P, Doc extends boolean = true> =
+  Wide<Cs> extends true ? Record<string, any> : Select<Cs, F, P, Doc>;
 
 /** `T` with only `id` and the keys of `S`, at every object level. Arrays and `null` pass through; so do plain records (an untyped schema). */
 type Selected<T, S> = [S] extends [true]
@@ -616,9 +707,13 @@ type Selected<T, S> = [S] extends [true]
     : T extends object
       ? string extends keyof T
         ? T
-        : Simplify<{ [K in keyof T as K extends 'id' | keyof S ? K : never]: K extends keyof S ? Selected<T[K], S[K]> : T[K] }>
-      : T
-export type SelectOf<O> = O extends { select: infer S extends object } ? S : true
+        : Simplify<{
+            [K in keyof T as K extends "id" | keyof S ? K : never]: K extends keyof S
+              ? Selected<T[K], S[K]>
+              : T[K];
+          }>
+      : T;
+export type SelectOf<O> = O extends { select: infer S extends object } ? S : true;
 
 // Generic inference skips excess property checks, so extra keys map to `never` at every level.
 // An object under a key that allows only `true` maps to `never`; without that rule `keyof never` accepts every key.
@@ -626,24 +721,30 @@ export type Exact<P, A> = P extends object
   ? [A] extends [never]
     ? never
     : { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
-  : P
+  : P;
 
 /** Read options of `find`, `findOne`, `findById` and `getGlobal`. `Doc` is `false` for globals, which have no `id`, `createdAt` or `updatedAt`. */
 export type ReadOptions<Cs, F extends Fields, Doc extends boolean = true> = {
   /** `false` returns ids. An object resolves only the listed paths, `true` one hop. Default: every relation up to `depth`. */
-  populate?: boolean | PopulateArg<Cs, F>
+  populate?: boolean | PopulateArg<Cs, F>;
   /** Hops resolved when `populate` is not an object. */
-  depth?: number
+  depth?: number;
   /**
    * The fields a read returns. `id` always comes back; `createdAt` and `updatedAt` only when listed. `true` keeps a value as
    * `populate` leaves it: an id, ids, a document or documents. An object lists the keys inside a group, or inside a relation or
    * join that `populate` resolves. `{}` returns only `id`. Hooks see the full documents; `afterOperation` sees the result.
    * Default: every field.
    */
-  select?: SelectArg<Cs, F, number, Doc>
-}
+  select?: SelectArg<Cs, F, number, Doc>;
+};
 /** Checks the `populate` and `select` literals in `O` against the fields at every level. `D` is the default depth. */
-export type Checked<O extends ReadOptions<Cs, F, Doc>, Cs, F extends Fields, D extends number = 2, Doc extends boolean = true> = O & {
-  populate?: Exact<O['populate'], PopulateArg<Cs, F>>
-  select?: Exact<O['select'], SelectArg<Cs, F, PopulateOf<O, D>, Doc>>
-}
+export type Checked<
+  O extends ReadOptions<Cs, F, Doc>,
+  Cs,
+  F extends Fields,
+  D extends number = 2,
+  Doc extends boolean = true,
+> = O & {
+  populate?: Exact<O["populate"], PopulateArg<Cs, F>>;
+  select?: Exact<O["select"], SelectArg<Cs, F, PopulateOf<O, D>, Doc>>;
+};

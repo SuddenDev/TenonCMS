@@ -3,7 +3,7 @@ const route = useRoute();
 const { data: post } = await useIntegral().findOne("posts", {
   where: { slug: String(route.params.slug) },
   populate: true,
-  depth: 1
+  depth: 1,
 });
 if (!post.value)
   throw createError({
@@ -20,16 +20,12 @@ useHead({ title: post.value.title });
     <NuxtLink to="/">← Home</NuxtLink>
     <h1
       :style="
-        post.color
-          ? { borderLeft: `4px solid ${post.color}`, paddingLeft: '8px' }
-          : undefined
+        post.color ? { borderLeft: `4px solid ${post.color}`, paddingLeft: '8px' } : undefined
       "
     >
       {{ post.title }}
     </h1>
-    <time v-if="post.publishedAt" :datetime="post.publishedAt">{{
-      post.publishedAt
-    }}</time>
+    <time v-if="post.publishedAt" :datetime="post.publishedAt">{{ post.publishedAt }}</time>
     <p style="white-space: pre-wrap">{{ post.body }}</p>
     <div class="json">
       <pre>{{ post }}</pre>

@@ -1,6 +1,9 @@
 // Helpers run in browser bundles too, so this file MUST have no imports.
 
-type SeoDoc = { title?: unknown; seo?: { title?: string | null; description?: string | null; noindex?: boolean | null } | null }
+type SeoDoc = {
+  title?: unknown;
+  seo?: { title?: string | null; description?: string | null; noindex?: boolean | null } | null;
+};
 
 /**
  * The `<head>` values of a document with `seo.fields`. Stores nothing.
@@ -10,8 +13,8 @@ type SeoDoc = { title?: unknown; seo?: { title?: string | null; description?: st
  */
 export function seoMeta(doc: SeoDoc) {
   return {
-    title: doc.seo?.title || String(doc.title ?? ''),
+    title: doc.seo?.title || String(doc.title ?? ""),
     description: doc.seo?.description || undefined,
     noindex: doc.seo?.noindex === true,
-  }
+  };
 }

@@ -43,39 +43,68 @@ Checked with `@libsql/client` 0.18 and TypeScript 6.0.3 (spike in the session sc
 In `src/schema.ts`. `Cs` is the collections record. `P` is `false` (ids), a number (hops left), or a populate object.
 
 ```ts
-type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-type Meta = { id: string; createdAt: string; updatedAt: string }
-type Simplify<T> = { [K in keyof T]: T[K] } & {}
+type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+type Meta = { id: string; createdAt: string; updatedAt: string };
+type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
-type Sub<P, K> = P extends number ? P : P extends object ? (K extends keyof P ? P[K] : false) : false
-type Next<S> = S extends true ? false : S extends number ? Prev[S] : S
-type Target<Cs, C, P> = C extends keyof Cs ? Simplify<Resolve<Cs, Cs[C]['fields'], P> & Meta> : never
+type Sub<P, K> = P extends number
+  ? P
+  : P extends object
+    ? K extends keyof P
+      ? P[K]
+      : false
+    : false;
+type Next<S> = S extends true ? false : S extends number ? Prev[S] : S;
+type Target<Cs, C, P> = C extends keyof Cs
+  ? Simplify<Resolve<Cs, Cs[C]["fields"], P> & Meta>
+  : never;
 
-type Value<Cs, F, S> =
-  F extends { type: 'group'; fields: infer G extends Fields } ? Resolve<Cs, G, S extends true ? 1 : S>
-  : F extends { type: 'relation'; collection: infer C } ?
-      S extends false | 0 | undefined ? (F extends { many: true } ? string[] : string)
-      : F extends { many: true } ? Target<Cs, C, Next<S>>[] : Target<Cs, C, Next<S>>
-  : F extends { type: 'join'; collection: infer C } ? Target<Cs, C, Next<S>>[]
-  : FieldValue<F>
+type Value<Cs, F, S> = F extends { type: "group"; fields: infer G extends Fields }
+  ? Resolve<Cs, G, S extends true ? 1 : S>
+  : F extends { type: "relation"; collection: infer C }
+    ? S extends false | 0 | undefined
+      ? F extends { many: true }
+        ? string[]
+        : string
+      : F extends { many: true }
+        ? Target<Cs, C, Next<S>>[]
+        : Target<Cs, C, Next<S>>
+    : F extends { type: "join"; collection: infer C }
+      ? Target<Cs, C, Next<S>>[]
+      : FieldValue<F>;
 
 // Joins are absent unless named in a populate object.
-type Joins<F, P> = { [K in keyof F]: F[K] extends { type: 'join' } ? (P extends object ? (K extends keyof P ? never : K) : K) : never }[keyof F]
-type Req<F> = { [K in keyof F]: F[K] extends { required: true } | { type: 'join' } ? K : never }[keyof F]
+type Joins<F, P> = {
+  [K in keyof F]: F[K] extends { type: "join" }
+    ? P extends object
+      ? K extends keyof P
+        ? never
+        : K
+      : K
+    : never;
+}[keyof F];
+type Req<F> = {
+  [K in keyof F]: F[K] extends { required: true } | { type: "join" } ? K : never;
+}[keyof F];
 export type Resolve<Cs, F extends Fields, P> = Simplify<
-  { [K in Exclude<keyof F, Req<F> | Joins<F, P>>]?: Value<Cs, F[K], Sub<P, K>> | null } &
-  { [K in Exclude<Req<F>, Joins<F, P>>]: Value<Cs, F[K], Sub<P, K>> }
->
+  { [K in Exclude<keyof F, Req<F> | Joins<F, P>>]?: Value<Cs, F[K], Sub<P, K>> | null } & {
+    [K in Exclude<Req<F>, Joins<F, P>>]: Value<Cs, F[K], Sub<P, K>>;
+  }
+>;
 
 export type Populate<Cs, F extends Fields> = {
-  [K in keyof F as F[K] extends { type: 'group' | 'relation' | 'join' } ? K : never]?:
-    F[K] extends { type: 'group'; fields: infer G extends Fields } ? true | Populate<Cs, G>
-    : F[K] extends { collection: infer C extends keyof Cs } ? true | Populate<Cs, Cs[C]['fields']> : never
-}
+  [
+    K in keyof F as F[K] extends { type: "group" | "relation" | "join" } ? K : never
+  ]?: F[K] extends { type: "group"; fields: infer G extends Fields }
+    ? true | Populate<Cs, G>
+    : F[K] extends { collection: infer C extends keyof Cs }
+      ? true | Populate<Cs, Cs[C]["fields"]>
+      : never;
+};
 // Generic inference skips excess property checks, so extra keys are mapped to `never` at every level.
 export type Exact<P, A> = P extends object
   ? { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
-  : P
+  : P;
 ```
 
 Local API signature (Task 6 onward):
@@ -97,39 +126,69 @@ Added in Task 4 to `src/app.test.ts`. `setup()` takes the instance: `function se
 const relational = () =>
   defineCms({
     collections: {
-      media: { fields: { url: { type: 'text', required: true }, usedIn: { type: 'join', collection: 'posts', on: 'seo.image' } } },
-      authors: {
-        titleField: 'name',
+      media: {
         fields: {
-          name: { type: 'text', required: true },
-          avatar: { type: 'relation', collection: 'media' },
-          posts: { type: 'join', collection: 'posts', on: 'author' },
+          url: { type: "text", required: true },
+          usedIn: { type: "join", collection: "posts", on: "seo.image" },
         },
       },
-      tags: { fields: { name: { type: 'text', required: true }, posts: { type: 'join', collection: 'posts', on: 'tags' } } },
+      authors: {
+        titleField: "name",
+        fields: {
+          name: { type: "text", required: true },
+          avatar: { type: "relation", collection: "media" },
+          posts: { type: "join", collection: "posts", on: "author" },
+        },
+      },
+      tags: {
+        fields: {
+          name: { type: "text", required: true },
+          posts: { type: "join", collection: "posts", on: "tags" },
+        },
+      },
       posts: {
         fields: {
-          title: { type: 'text', required: true },
-          author: { type: 'relation', collection: 'authors' },
-          tags: { type: 'relation', collection: 'tags', many: true },
-          seo: { type: 'group', fields: { image: { type: 'relation', collection: 'media' } } },
+          title: { type: "text", required: true },
+          author: { type: "relation", collection: "authors" },
+          tags: { type: "relation", collection: "tags", many: true },
+          seo: { type: "group", fields: { image: { type: "relation", collection: "media" } } },
         },
       },
-      notes: { fields: { post: { type: 'relation', collection: 'posts', required: true } } },
-      pages: { fields: { title: { type: 'text', required: true }, parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } } },
+      notes: { fields: { post: { type: "relation", collection: "posts", required: true } } },
+      pages: {
+        fields: {
+          title: { type: "text", required: true },
+          parent: { type: "relation", collection: "pages", onDelete: "cascade" },
+        },
+      },
     },
-    globals: { site: { fields: { logo: { type: 'relation', collection: 'media' }, featured: { type: 'relation', collection: 'posts', many: true } } } },
-    database: { url: ':memory:' },
-    secret: 'x'.repeat(32),
-  })
+    globals: {
+      site: {
+        fields: {
+          logo: { type: "relation", collection: "media" },
+          featured: { type: "relation", collection: "posts", many: true },
+        },
+      },
+    },
+    database: { url: ":memory:" },
+    secret: "x".repeat(32),
+  });
 
 // Seeds one graph through the local API and returns the ids.
 async function seed(cms: ReturnType<typeof relational>) {
-  const m = await cms.create('media', { url: '/a.png' })
-  const a = await cms.create('authors', { name: 'Ann', avatar: m.id })
-  const [t1, t2] = [await cms.create('tags', { name: 'one' }), await cms.create('tags', { name: 'two' })]
-  const p = await cms.create('posts', { title: 'Hi', author: a.id, tags: [t1.id, t2.id], seo: { image: m.id } })
-  return { m, a, t1, t2, p }
+  const m = await cms.create("media", { url: "/a.png" });
+  const a = await cms.create("authors", { name: "Ann", avatar: m.id });
+  const [t1, t2] = [
+    await cms.create("tags", { name: "one" }),
+    await cms.create("tags", { name: "two" }),
+  ];
+  const p = await cms.create("posts", {
+    title: "Hi",
+    author: a.id,
+    tags: [t1.id, t2.id],
+    seo: { image: m.id },
+  });
+  return { m, a, t1, t2, p };
 }
 ```
 
@@ -138,29 +197,35 @@ async function seed(cms: ReturnType<typeof relational>) {
 ### Task 1: Validate relation values
 
 RED
+
 - `src/schema.test.ts`, new `describe('relation values')`:
 
 ```ts
 const s = dataSchema({
-  author: { type: 'relation', collection: 'authors' },
-  tags: { type: 'relation', collection: 'tags', many: true },
-  lead: { type: 'relation', collection: 'authors', required: true, many: true },
-  posts: { type: 'join', collection: 'posts', on: 'author' },
-})
-it('accepts ids, keeps order and strips joins', () => {
-  expect(s.parse({ author: 'a', tags: ['y', 'x'], lead: ['a'], posts: ['p'] })).toEqual({ author: 'a', tags: ['y', 'x'], lead: ['a'] })
-})
-it('rejects duplicates, empty ids and an empty required many', () => {
-  expect(s.safeParse({ lead: ['a', 'a'] }).success).toBe(false)
-  expect(s.safeParse({ lead: ['a'], author: '' }).success).toBe(false)
-  expect(s.safeParse({ lead: [] }).success).toBe(false)
-  expect(s.safeParse({ lead: ['a'], tags: 'x' }).success).toBe(false)
-})
+  author: { type: "relation", collection: "authors" },
+  tags: { type: "relation", collection: "tags", many: true },
+  lead: { type: "relation", collection: "authors", required: true, many: true },
+  posts: { type: "join", collection: "posts", on: "author" },
+});
+it("accepts ids, keeps order and strips joins", () => {
+  expect(s.parse({ author: "a", tags: ["y", "x"], lead: ["a"], posts: ["p"] })).toEqual({
+    author: "a",
+    tags: ["y", "x"],
+    lead: ["a"],
+  });
+});
+it("rejects duplicates, empty ids and an empty required many", () => {
+  expect(s.safeParse({ lead: ["a", "a"] }).success).toBe(false);
+  expect(s.safeParse({ lead: ["a"], author: "" }).success).toBe(false);
+  expect(s.safeParse({ lead: [] }).success).toBe(false);
+  expect(s.safeParse({ lead: ["a"], tags: "x" }).success).toBe(false);
+});
 ```
 
 - Run: `pnpm --filter integral-cms test -- src/schema.test.ts -t 'relation values'`. Expected failure: `fieldSchema` falls to `default` (string), so `tags: ['y', 'x']` fails to parse and `posts` is kept.
 
 GREEN
+
 - `src/schema.ts`: add both members to `Field` (types are needed for the test file to compile in `pnpm typecheck` later; Task 2 tests them):
 
 ```ts
@@ -171,10 +236,10 @@ GREEN
 - `fieldSchema`: `case 'relation'`:
 
 ```ts
-const id = z.string().min(1)
-if (!field.many) return id
-const ids = z.array(id).refine((a) => new Set(a).size === a.length, 'Duplicate id')
-return field.required ? ids.min(1) : ids
+const id = z.string().min(1);
+if (!field.many) return id;
+const ids = z.array(id).refine((a) => new Set(a).size === a.length, "Duplicate id");
+return field.required ? ids.min(1) : ids;
 ```
 
 - `dataSchema`: skip `join` entries (`.filter(([, f]) => f.type !== 'join')`), so zod strips them.
@@ -185,30 +250,36 @@ Commit: `feat(core): validate relation field values`
 ### Task 2: Relation and join in `Data` and `Doc`
 
 RED
+
 - `src/schema.test.ts`, a type-only block. It is never called; `tsc` checks it:
 
 ```ts
 // Checked by `pnpm typecheck` only.
 function writeTypes() {
-  const fields = defineCollection({ fields: {
-    author: { type: 'relation', collection: 'authors', required: true },
-    tags: { type: 'relation', collection: 'tags', many: true },
-    posts: { type: 'join', collection: 'posts', on: 'author' },
-  } }).fields
-  const d: Data<typeof fields> = { author: 'a', tags: ['t'] }
-  const t: string[] | null | undefined = d.tags
+  const fields = defineCollection({
+    fields: {
+      author: { type: "relation", collection: "authors", required: true },
+      tags: { type: "relation", collection: "tags", many: true },
+      posts: { type: "join", collection: "posts", on: "author" },
+    },
+  }).fields;
+  const d: Data<typeof fields> = { author: "a", tags: ["t"] };
+  const t: string[] | null | undefined = d.tags;
   // @ts-expect-error joins are not stored
-  d.posts
+  d.posts;
   // @ts-expect-error a relation is written as ids
-  const bad: Data<typeof fields> = { author: { id: 'a' } }
+  const bad: Data<typeof fields> = { author: { id: "a" } };
   // @ts-expect-error `required` does not apply to joins
-  defineCollection({ fields: { p: { type: 'join', collection: 'posts', on: 'author', required: true } } })
+  defineCollection({
+    fields: { p: { type: "join", collection: "posts", on: "author", required: true } },
+  });
 }
 ```
 
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: `d.posts` compiles (unused `@ts-expect-error`), and `d.tags` is `string`.
 
 GREEN
+
 - `FieldValue`: `F extends { type: 'relation' } ? (F extends { many: true } ? string[] : string)` before the `string` fallback.
 - `Data`: add `F[K] extends { type: 'join' } ? never :` to both key filters.
 - Run again. Expect pass. Also `pnpm --filter integral-cms test` stays green.
@@ -218,55 +289,72 @@ Commit: `feat(core): type relation and join fields`
 ### Task 3: Startup checks
 
 RED
+
 - `src/app.test.ts`, `describe('relation schema')`, one `it.each` over configs that MUST throw. Build each with `defineCms({ ...config, database: { url: ':memory:' }, secret: '' })` and cast the config `as never`:
 
-| Case | Config (collections unless noted) | Message matches |
-|---|---|---|
-| unknown target | `posts: { fields: { a: { type: 'relation', collection: 'nope' } } }` | `/unknown collection "nope"/` |
-| join on unknown field | `a: { fields: { p: { type: 'join', collection: 'posts', on: 'x' } } }, posts: { fields: {} }` | `/join "a.p"/` |
-| join on a non-relation | `on: 'title'` with `title: { type: 'text' }` | `/join "a.p"/` |
-| join on a relation to another collection | `posts.author` targets `b`, join lives in `a` | `/join "a.p"/` |
-| required + set-null | `{ type: 'relation', collection: 'a', required: true, onDelete: 'set-null' }` | `/set-null/` |
-| join in a global | `globals: { g: { fields: { p: { type: 'join', … } } } }` | `/join/` |
-| join in a group | `g: { type: 'group', fields: { p: { type: 'join', … } } }` | `/join/` |
-| cascade in a global | `globals: { g: { fields: { a: { type: 'relation', collection: 'a', onDelete: 'cascade' } } } }` | `/cascade/` |
+| Case                                     | Config (collections unless noted)                                                               | Message matches               |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------- |
+| unknown target                           | `posts: { fields: { a: { type: 'relation', collection: 'nope' } } }`                            | `/unknown collection "nope"/` |
+| join on unknown field                    | `a: { fields: { p: { type: 'join', collection: 'posts', on: 'x' } } }, posts: { fields: {} }`   | `/join "a.p"/`                |
+| join on a non-relation                   | `on: 'title'` with `title: { type: 'text' }`                                                    | `/join "a.p"/`                |
+| join on a relation to another collection | `posts.author` targets `b`, join lives in `a`                                                   | `/join "a.p"/`                |
+| required + set-null                      | `{ type: 'relation', collection: 'a', required: true, onDelete: 'set-null' }`                   | `/set-null/`                  |
+| join in a global                         | `globals: { g: { fields: { p: { type: 'join', … } } } }`                                        | `/join/`                      |
+| join in a group                          | `g: { type: 'group', fields: { p: { type: 'join', … } } }`                                      | `/join/`                      |
+| cascade in a global                      | `globals: { g: { fields: { a: { type: 'relation', collection: 'a', onDelete: 'cascade' } } } }` | `/cascade/`                   |
 
 - Plus one passing case: `relational()` does not throw. And `on: 'seo.image'` resolves (covered by the fixture).
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'relation schema'`. Expected failure: nothing throws.
 
 GREEN
+
 - New `src/relations.ts`:
 
 ```ts
-export function relationPaths(fields: Fields, prefix: string[] = []): { path: string[]; field: RelationField }[] {
+export function relationPaths(
+  fields: Fields,
+  prefix: string[] = [],
+): { path: string[]; field: RelationField }[] {
   return Object.entries(fields).flatMap(([key, f]) =>
-    f.type === 'relation' ? [{ path: [...prefix, key], field: f }]
-    : f.type === 'group' ? relationPaths(f.fields, [...prefix, key])
-    : [],
-  )
+    f.type === "relation"
+      ? [{ path: [...prefix, key], field: f }]
+      : f.type === "group"
+        ? relationPaths(f.fields, [...prefix, key])
+        : [],
+  );
 }
 
 export function checkSchema(schema: Schema) {
-  const collections = schema.collections ?? {}
-  const fail = (m: string) => { throw new Error(`integral-cms: ${m}`) }
+  const collections = schema.collections ?? {};
+  const fail = (m: string) => {
+    throw new Error(`integral-cms: ${m}`);
+  };
   const owners = [
     ...Object.entries(collections).map(([n, c]) => ({ n, fields: c.fields, global: false })),
-    ...Object.entries(schema.globals ?? {}).map(([n, g]) => ({ n, fields: g.fields, global: true })),
-  ]
+    ...Object.entries(schema.globals ?? {}).map(([n, g]) => ({
+      n,
+      fields: g.fields,
+      global: true,
+    })),
+  ];
   for (const { n, fields, global } of owners) {
     for (const { path, field } of relationPaths(fields)) {
-      if (!Object.hasOwn(collections, field.collection)) fail(`relation "${n}.${path.join('.')}" targets unknown collection "${field.collection}"`)
-      if (field.required && field.onDelete === 'set-null') fail(`relation "${n}.${path.join('.')}" is required and cannot use onDelete: 'set-null'`)
-      if (global && field.onDelete === 'cascade') fail(`relation "${n}.${path.join('.')}" is in a global and cannot use onDelete: 'cascade'`)
+      if (!Object.hasOwn(collections, field.collection))
+        fail(`relation "${n}.${path.join(".")}" targets unknown collection "${field.collection}"`);
+      if (field.required && field.onDelete === "set-null")
+        fail(`relation "${n}.${path.join(".")}" is required and cannot use onDelete: 'set-null'`);
+      if (global && field.onDelete === "cascade")
+        fail(`relation "${n}.${path.join(".")}" is in a global and cannot use onDelete: 'cascade'`);
     }
     // walk all fields: a join is allowed only at the top level of a collection
     for (const [key, f] of Object.entries(fields)) {
-      if (f.type === 'group' && hasJoin(f.fields)) fail(`join inside group "${n}.${key}"`)
-      if (f.type !== 'join') continue
-      if (global) fail(`join "${n}.${key}" in a global`)
-      const source = collections[f.collection]?.fields
-      const target = source && relationPaths(source).find((r) => r.path.join('.') === f.on)
-      if (target?.field.collection !== n) fail(`join "${n}.${key}" needs "${f.on}" to be a relation to "${n}" in "${f.collection}"`)
+      if (f.type === "group" && hasJoin(f.fields)) fail(`join inside group "${n}.${key}"`);
+      if (f.type !== "join") continue;
+      if (global) fail(`join "${n}.${key}" in a global`);
+      const source = collections[f.collection]?.fields;
+      const target = source && relationPaths(source).find((r) => r.path.join(".") === f.on);
+      if (target?.field.collection !== n)
+        fail(`join "${n}.${key}" needs "${f.on}" to be a relation to "${n}" in "${f.collection}"`);
     }
   }
 }
@@ -281,6 +369,7 @@ Commit: `feat(core): check relation and join fields at startup`
 ### Task 4: Write checks
 
 RED
+
 - Add the fixture (see Test fixture) and the `setup(cms)` parameter.
 - `describe('relation writes')`, with `const { cms, client } = setup(relational())` in a `beforeEach` and `client.signUp(admin)`:
   - `rejects an unknown id`: `client.create('posts', { title: 'x', author: 'nope' })` → 400. Same for `tags: ['nope']`, `seo: { image: 'nope' }`, and `client.setGlobal('site', { logo: 'nope' })`.
@@ -291,26 +380,42 @@ RED
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'relation writes'`. Expected failure: unknown ids and self-references return 201/200.
 
 GREEN
+
 - `src/relations.ts`:
 
 ```ts
 export class HttpError extends Error {
-  constructor(public status: 400, public body: object) { super(JSON.stringify(body)) }
+  constructor(
+    public status: 400,
+    public body: object,
+  ) {
+    super(JSON.stringify(body));
+  }
 }
 
 // Every id MUST exist in its target collection. One query per relation field.
-export async function checkRefs(q: Kysely<Database>, fields: Fields, data: Record<string, unknown>, self?: { collection: string; id: string }) {
+export async function checkRefs(
+  q: Kysely<Database>,
+  fields: Fields,
+  data: Record<string, unknown>,
+  self?: { collection: string; id: string },
+) {
   for (const { path, field } of relationPaths(fields)) {
-    const value = at(data, path)
-    const ids = value == null ? [] : field.many ? (value as string[]) : [value as string]
-    const fail = (message: string) => { throw new HttpError(400, { error: [{ path, message }] }) }
-    if (self && field.collection === self.collection && ids.includes(self.id)) fail('A document cannot reference itself')
-    if (!ids.length) continue
-    const found = await q.selectFrom('cms_documents').select('id')
-      .where('collection', '=', field.collection)
+    const value = at(data, path);
+    const ids = value == null ? [] : field.many ? (value as string[]) : [value as string];
+    const fail = (message: string) => {
+      throw new HttpError(400, { error: [{ path, message }] });
+    };
+    if (self && field.collection === self.collection && ids.includes(self.id))
+      fail("A document cannot reference itself");
+    if (!ids.length) continue;
+    const found = await q
+      .selectFrom("cms_documents")
+      .select("id")
+      .where("collection", "=", field.collection)
       .where(sql<boolean>`id IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`)
-      .execute()
-    if (found.length !== new Set(ids).size) fail(`Unknown id in "${field.collection}"`)
+      .execute();
+    if (found.length !== new Set(ids).size) fail(`Unknown id in "${field.collection}"`);
   }
 }
 ```
@@ -325,6 +430,7 @@ Commit: `feat(core): reject unknown and self-referencing relation ids`
 ### Task 5: Filters
 
 RED
+
 - `describe('relation filters')` on `relational()`:
   - `filters by a single relation`: `cms.find('posts', { where: { author: a.id } })` returns `p`; over HTTP `?author=<a.id>` too.
   - `rejects many relations and joins`: `cms.find('posts', { where: { tags: 'x' } as never })` rejects with `/not filterable/`; `cms.find('authors', { where: { posts: 'x' } as never })` too; HTTP `?tags=x` and `/collections/authors?posts=x` → 400.
@@ -332,6 +438,7 @@ RED
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'relation filters'` and `pnpm --filter integral-cms typecheck`. Expected failure: the `json_extract` filter on `tags` runs and returns `[]`; the type line compiles.
 
 GREEN
+
 - `src/schema.ts`: `export type FilterKeys<F extends Fields> = { [K in keyof F]: F[K] extends { type: 'group' | 'join' } | { many: true } ? never : K }[keyof F]`. Use it in `where` in `index.ts` and `client.ts` (replacing the group exclusion from spec 1).
 - `src/index.ts` `find`: after the `Object.hasOwn` check, throw `Field "${key}" is not filterable` for `join` and `many` relations. `src/app.ts` `whereFromQuery`: return `undefined` for the same types.
 - Run both commands again. Expect pass.
@@ -343,39 +450,47 @@ Commit: `feat(core): filter by single relations only`
 Types first, so the runtime tasks after this one typecheck. The runtime still returns ids until Task 10; tests stay green because no test reads a populated value yet.
 
 RED
+
 - `src/schema.test.ts`: a module-level `const cms = defineCms({ ...same collections and globals as the fixture, database: { url: ':memory:' }, secret: '' })` (nothing connects at import time) and a never-called `async function readTypes()`:
 
 ```ts
-const p = (await cms.find('posts'))[0]
-const name: string = p.author!.name
-const url: string | null | undefined = p.author?.avatar?.url
-const t: string = p.tags![0].name
-const img: string | null | undefined = p.seo?.image?.url
-const ids = (await cms.find('posts', { populate: false }))[0]
-const aid: string | null | undefined = ids.author
-const one = await cms.findById('posts', 'x', { populate: false })
-const aid2: string | null | undefined = one?.author
-const a = (await cms.find('authors'))[0]
+const p = (await cms.find("posts"))[0];
+const name: string = p.author!.name;
+const url: string | null | undefined = p.author?.avatar?.url;
+const t: string = p.tags![0].name;
+const img: string | null | undefined = p.seo?.image?.url;
+const ids = (await cms.find("posts", { populate: false }))[0];
+const aid: string | null | undefined = ids.author;
+const one = await cms.findById("posts", "x", { populate: false });
+const aid2: string | null | undefined = one?.author;
+const a = (await cms.find("authors"))[0];
 // @ts-expect-error joins are absent unless named
-a.posts
+a.posts;
 // @ts-expect-error `populate: false` returns ids
-ids.author?.name
+ids.author?.name;
 ```
 
 - Untyped schema, same block: `const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: '' }); const w = (await wide.find('x'))[0]; w.anything`.
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: `p.author!.name` does not exist on `string`; `findById` takes no options.
 
 GREEN
+
 - `src/schema.ts`: `Prev`, `Meta`, `Simplify`, `Sub`, `Next`, `Target`, `Value`, `Joins`, `Req`, `Resolve` from the Type design. Plus:
 
 ```ts
 // An untyped schema (the admin's) reads plain records; the recursive types would not terminate.
-type Wide<Cs> = string extends keyof Cs ? true : false
-export type Read<Cs, F extends Fields, P> = Wide<Cs> extends true ? Record<string, any> : Resolve<Cs, F, P>
-export type ReadDoc<Cs, F extends Fields, P> = Simplify<Read<Cs, F, P> & Meta>
-export type ReadOptions = { populate?: boolean | object; depth?: number }
-export type PopulateOf<O, D extends number> =
-  O extends { populate: false } ? false : O extends { populate: infer P extends object } ? P : O extends { depth: infer N extends number } ? N : D
+type Wide<Cs> = string extends keyof Cs ? true : false;
+export type Read<Cs, F extends Fields, P> =
+  Wide<Cs> extends true ? Record<string, any> : Resolve<Cs, F, P>;
+export type ReadDoc<Cs, F extends Fields, P> = Simplify<Read<Cs, F, P> & Meta>;
+export type ReadOptions = { populate?: boolean | object; depth?: number };
+export type PopulateOf<O, D extends number> = O extends { populate: false }
+  ? false
+  : O extends { populate: infer P extends object }
+    ? P
+    : O extends { depth: infer N extends number }
+      ? N
+      : D;
 ```
 
 - `src/index.ts`: `find`, `findOne`, `findById(collection, id, options?)`, `getGlobal(name, options?)` get `const O extends … = {}` and return `ReadDoc<Collections<T>, Fields, PopulateOf<O, 2>>` (globals: `Partial<Read<…>>`, no `Meta`). `FindOptions` gains `populate?: boolean` and `depth?: number` for now; Task 8 narrows `populate`. Runtime ignores both for now.
@@ -387,33 +502,40 @@ Commit: `feat(core): type populated reads`
 ### Task 7: Read types: `depth` and the config default
 
 RED
+
 - `readTypes()`:
 
 ```ts
-const d1 = (await cms.find('posts', { depth: 1 }))[0]
-const av: string | null | undefined = d1.author?.avatar
-const d0 = (await cms.find('posts', { depth: 0 }))[0]
-const s: string | null | undefined = d0.author
-const deep = defineCms({ collections: { pages: { fields: { parent: { type: 'relation', collection: 'pages' } } } }, populate: { depth: 3 }, database, secret: '' })
-const pg = (await deep.find('pages'))[0]
-const p3: string | null | undefined = pg.parent?.parent?.parent?.parent
+const d1 = (await cms.find("posts", { depth: 1 }))[0];
+const av: string | null | undefined = d1.author?.avatar;
+const d0 = (await cms.find("posts", { depth: 0 }))[0];
+const s: string | null | undefined = d0.author;
+const deep = defineCms({
+  collections: { pages: { fields: { parent: { type: "relation", collection: "pages" } } } },
+  populate: { depth: 3 },
+  database,
+  secret: "",
+});
+const pg = (await deep.find("pages"))[0];
+const p3: string | null | undefined = pg.parent?.parent?.parent?.parent;
 // @ts-expect-error depth 3 ends at the fourth hop
-pg.parent?.parent?.parent?.parent?.id
+pg.parent?.parent?.parent?.parent?.id;
 ```
 
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: `populate` is not a `defineCms` option; `depth: 1` still resolves two hops.
 
 GREEN
+
 - `src/index.ts`:
 
 ```ts
 export type PopulateConfig = {
   /** Hops resolved by `populate: true`. Default 2. */
-  depth?: number
+  depth?: number;
   /** Limit for HTTP requests. Default 5. The local API has no limit. */
-  maxDepth?: number
-}
-type DefaultDepth<P extends PopulateConfig> = P['depth'] extends number ? P['depth'] : 2
+  maxDepth?: number;
+};
+type DefaultDepth<P extends PopulateConfig> = P["depth"] extends number ? P["depth"] : 2;
 ```
 
 - `defineCms<const C, const G, const P extends PopulateConfig = {}>`, option `populate?: P`. Return type uses `PopulateOf<O, DefaultDepth<P>>`.
@@ -426,29 +548,31 @@ Commit: `feat(core): type populate depth from the config`
 ### Task 8: Read types: populate objects
 
 RED
+
 - `readTypes()`:
 
 ```ts
-const o = (await cms.find('posts', { populate: { author: { avatar: true }, tags: true } }))[0]
-const u: string | null | undefined = o.author?.avatar?.url
-const img: string | null | undefined = o.seo?.image
-const g = (await cms.find('posts', { populate: { seo: { image: true } } }))[0]
-const gu: string | undefined = g.seo?.image?.url
-const g1 = (await cms.find('posts', { populate: { seo: true } }))[0]
-const gu1: string | undefined = g1.seo?.image?.url
+const o = (await cms.find("posts", { populate: { author: { avatar: true }, tags: true } }))[0];
+const u: string | null | undefined = o.author?.avatar?.url;
+const img: string | null | undefined = o.seo?.image;
+const g = (await cms.find("posts", { populate: { seo: { image: true } } }))[0];
+const gu: string | undefined = g.seo?.image?.url;
+const g1 = (await cms.find("posts", { populate: { seo: true } }))[0];
+const gu1: string | undefined = g1.seo?.image?.url;
 // @ts-expect-error unknown key
-cms.find('posts', { populate: { autor: true } })
+cms.find("posts", { populate: { autor: true } });
 // @ts-expect-error unknown nested key
-cms.find('posts', { populate: { author: { avatr: true } } })
+cms.find("posts", { populate: { author: { avatr: true } } });
 // @ts-expect-error scalars cannot be populated
-cms.find('posts', { populate: { title: true } })
+cms.find("posts", { populate: { title: true } });
 // @ts-expect-error an extra key next to a valid one
-cms.find('posts', { populate: { author: true, nope: true } })
+cms.find("posts", { populate: { author: true, nope: true } });
 ```
 
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: every `@ts-expect-error` is unused (`populate` is `boolean` or any object).
 
 GREEN
+
 - `src/schema.ts`: `Populate`, `Exact` from the Type design, and `PopulateArg<Cs, F> = Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>`.
 - `src/index.ts`: `FindOptions` `populate?: boolean | PopulateArg<…>`; each read method's `options` parameter is `O & { populate?: Exact<O['populate'], PopulateArg<…>> }`.
 - Run again. Expect pass.
@@ -458,23 +582,25 @@ Commit: `feat(core): check populate objects against the schema`
 ### Task 9: Read types: joins and globals
 
 RED
+
 - `readTypes()`:
 
 ```ts
-const j = (await cms.find('authors', { populate: { posts: true } }))[0]
-const title: string = j.posts[0].title
-const author: string | null | undefined = j.posts[0].author
-const jj = (await cms.find('authors', { populate: { posts: { tags: true } } }))[0]
-const tag: string = jj.posts[0].tags![0].name
-const site = await cms.getGlobal('site')
-const logo: string | null | undefined = site.logo?.url
-const siteIds = await cms.getGlobal('site', { populate: false })
-const logoId: string | null | undefined = siteIds.logo
+const j = (await cms.find("authors", { populate: { posts: true } }))[0];
+const title: string = j.posts[0].title;
+const author: string | null | undefined = j.posts[0].author;
+const jj = (await cms.find("authors", { populate: { posts: { tags: true } } }))[0];
+const tag: string = jj.posts[0].tags![0].name;
+const site = await cms.getGlobal("site");
+const logo: string | null | undefined = site.logo?.url;
+const siteIds = await cms.getGlobal("site", { populate: false });
+const logoId: string | null | undefined = siteIds.logo;
 ```
 
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: whatever Tasks 6–8 missed here. If all lines already compile, the task is a regression guard; keep the lines and commit them as a test.
 
 GREEN
+
 - Fix only what fails. Likely spots: `getGlobal` options typing (`Populate` on global fields), `Joins`/`Req` on named joins.
 
 Commit: `test(core): cover join and global read types`
@@ -482,6 +608,7 @@ Commit: `test(core): cover join and global read types`
 ### Task 10: Populate at runtime: default and `populate: false`
 
 RED
+
 - `describe('populate')` on `relational()`, seeded with `seed()`:
   - `resolves relations up to the default depth`: `(await cms.find('posts'))[0]` matches `{ author: { id: a.id, name: 'Ann', avatar: { id: m.id, url: '/a.png' } }, tags: [{ name: 'one' }, { name: 'two' }], seo: { image: { url: '/a.png' } } }`.
   - `returns ids with populate: false`: `{ author: a.id, tags: [t1.id, t2.id], seo: { image: m.id } }`.
@@ -490,31 +617,50 @@ RED
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'populate'`. Expected failure: `author` is a string.
 
 GREEN
+
 - `src/relations.ts`:
 
 ```ts
 /** `false`: ids. Number: hops left. Object: listed paths only; `true` inside means one hop. */
-export type Spec = false | number | { [key: string]: true | Spec }
+export type Spec = false | number | { [key: string]: true | Spec };
 
-export async function populate(q: Kysely<Database>, collections: Record<string, Collection>, fields: Fields, docs: Record<string, any>[], spec: Spec | true) {
-  if (!spec || !docs.length) return
+export async function populate(
+  q: Kysely<Database>,
+  collections: Record<string, Collection>,
+  fields: Fields,
+  docs: Record<string, any>[],
+  spec: Spec | true,
+) {
+  if (!spec || !docs.length) return;
   for (const [key, field] of Object.entries(fields)) {
-    const sub = typeof spec === 'object' ? spec[key] : spec
-    if (!sub) continue
-    if (field.type === 'group') {
-      await populate(q, collections, field.fields, docs.map((d) => d[key]).filter(Boolean), sub === true ? 1 : sub)
-      continue
+    const sub = typeof spec === "object" ? spec[key] : spec;
+    if (!sub) continue;
+    if (field.type === "group") {
+      await populate(
+        q,
+        collections,
+        field.fields,
+        docs.map((d) => d[key]).filter(Boolean),
+        sub === true ? 1 : sub,
+      );
+      continue;
     }
-    if (field.type !== 'relation' && field.type !== 'join') continue
-    if (field.type === 'join' && typeof spec !== 'object') continue
-    const next = sub === true ? false : typeof sub === 'number' ? sub - 1 : sub
-    const target = collections[field.collection].fields
-    if (field.type === 'relation') {
-      const found = new Map((await byIds(q, field.collection, [...new Set(docs.flatMap((d) => d[key] ?? []))])).map((d) => [d.id, d]))
-      await populate(q, collections, target, [...found.values()], next)
+    if (field.type !== "relation" && field.type !== "join") continue;
+    if (field.type === "join" && typeof spec !== "object") continue;
+    const next = sub === true ? false : typeof sub === "number" ? sub - 1 : sub;
+    const target = collections[field.collection].fields;
+    if (field.type === "relation") {
+      const found = new Map(
+        (await byIds(q, field.collection, [...new Set(docs.flatMap((d) => d[key] ?? []))])).map(
+          (d) => [d.id, d],
+        ),
+      );
+      await populate(q, collections, target, [...found.values()], next);
       for (const d of docs) {
-        if (d[key] == null) continue
-        d[key] = field.many ? d[key].map((id: string) => found.get(id)).filter(Boolean) : found.get(d[key]) ?? null
+        if (d[key] == null) continue;
+        d[key] = field.many
+          ? d[key].map((id: string) => found.get(id)).filter(Boolean)
+          : (found.get(d[key]) ?? null);
       }
     }
     // join: Task 13
@@ -522,12 +668,14 @@ export async function populate(q: Kysely<Database>, collections: Record<string, 
 }
 
 async function byIds(q: Kysely<Database>, collection: string, ids: string[]) {
-  if (!ids.length) return []
-  const rows = await q.selectFrom('cms_documents').selectAll()
-    .where('collection', '=', collection)
+  if (!ids.length) return [];
+  const rows = await q
+    .selectFrom("cms_documents")
+    .selectAll()
+    .where("collection", "=", collection)
     .where(sql<boolean>`id IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`)
-    .execute()
-  return rows.map(toDoc)
+    .execute();
+  return rows.map(toDoc);
 }
 ```
 
@@ -540,12 +688,14 @@ Commit: `feat(core): populate relations on read`
 ### Task 11: Populate at runtime: `depth` and cycles
 
 RED
+
 - `populate › limits hops with depth`: `cms.find('posts', { depth: 1 })` has `author.avatar === m.id`; `depth: 0` has `author === a.id`.
 - `populate › ends cycles at the depth limit`: pages `x` and `y`, `x.parent = y`, then `y.parent = x` (allowed: not a self-reference). `cms.findById('pages', x.id, { depth: 3 })`: hop 1 is `y`, hop 2 is `x`, hop 3 is `y` as a document whose `parent` is the id `x.id`. So `parent.parent.parent.parent === x.id`.
 - `populate › uses the config depth`: a second `defineCms` with `populate: { depth: 1 }` (same schema, spread from a shared `relationalConfig`) returns `author.avatar` as an id.
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'populate'`. Expected failure: only if Task 10's `spec()` misses `depth` or `config.depth`. If it passes, it is a regression guard.
 
 GREEN
+
 - Fix `spec()` if needed. Refactor the fixture into `relationalConfig` + `relational(extra = {})` only if the config test needs it.
 
 Commit: `test(core): cover populate depth and cycles`
@@ -553,12 +703,14 @@ Commit: `test(core): cover populate depth and cycles`
 ### Task 12: Populate at runtime: populate objects
 
 RED
+
 - `populate › resolves only listed paths`: `populate: { author: { avatar: true } }` → `author.avatar.url === '/a.png'`, `tags` stays ids, `seo.image` stays an id.
 - `populate › resolves through groups`: `populate: { seo: { image: true } }` → `seo.image.url`; `populate: { seo: true }` → the same.
 - `populate › ignores depth with an object`: `{ populate: { author: true }, depth: 5 }` → `author.avatar === m.id`.
 - Run. Expected failure: whichever branch of `populate()` is wrong; the object branch was written in Task 10 but not tested.
 
 GREEN
+
 - Fix `populate()` only where a test fails.
 
 Commit: `test(core): cover populate objects and groups`
@@ -566,6 +718,7 @@ Commit: `test(core): cover populate objects and groups`
 ### Task 13: Joins
 
 RED
+
 - `populate › resolves a named join newest first`: create `p2` for author `a` after `p`. `cms.findById('authors', a.id, { populate: { posts: true } })` → `posts.map((x) => x.id)` is `[p2.id, p.id]`, and `posts[0].author === a.id` (a `populate: false` read).
 - `populate › leaves unnamed joins out`: `cms.findById('authors', a.id)` has no `posts` key (`not.toHaveProperty('posts')`).
 - `populate › joins over many relations and groups`: `tags` `t2` with `{ posts: true }` → `[p]`; `media` with `{ usedIn: true }` → `[p]`; an author with no posts → `posts: []`.
@@ -573,23 +726,31 @@ RED
 - Run. Expected failure: `posts` is absent.
 
 GREEN
+
 - In `populate()`, the join branch. One query per join field per hop:
 
 ```ts
-const source = relationPaths(target).find((r) => r.path.join('.') === field.on)!.field
-const path = `$.${field.on}`
-const ids = JSON.stringify(docs.map((d) => d.id))
-const rows = (await (source.many
-  ? sql<Row & { ref: string }>`SELECT d.*, j.value AS ref FROM cms_documents d, json_each(d.data, ${path}) j
+const source = relationPaths(target).find((r) => r.path.join(".") === field.on)!.field;
+const path = `$.${field.on}`;
+const ids = JSON.stringify(docs.map((d) => d.id));
+const rows = (
+  await (
+    source.many
+      ? sql<
+          Row & { ref: string }
+        >`SELECT d.*, j.value AS ref FROM cms_documents d, json_each(d.data, ${path}) j
       WHERE d.collection = ${field.collection} AND j.value IN (SELECT value FROM json_each(${ids}))
       ORDER BY d.created_at DESC, d.rowid DESC`
-  : sql<Row & { ref: string }>`SELECT d.*, json_extract(d.data, ${path}) AS ref FROM cms_documents d
+      : sql<
+          Row & { ref: string }
+        >`SELECT d.*, json_extract(d.data, ${path}) AS ref FROM cms_documents d
       WHERE d.collection = ${field.collection} AND json_extract(d.data, ${path}) IN (SELECT value FROM json_each(${ids}))
       ORDER BY d.created_at DESC, d.rowid DESC`
-).execute(q)).rows
-const byId = new Map(rows.map((r) => [r.id, toDoc(r)]))
-await populate(q, collections, target, [...byId.values()], next)
-for (const d of docs) d[key] = rows.filter((r) => r.ref === d.id).map((r) => byId.get(r.id))
+  ).execute(q)
+).rows;
+const byId = new Map(rows.map((r) => [r.id, toDoc(r)]));
+await populate(q, collections, target, [...byId.values()], next);
+for (const d of docs) d[key] = rows.filter((r) => r.ref === d.id).map((r) => byId.get(r.id));
 ```
 
 - Run again. Expect pass.
@@ -599,10 +760,12 @@ Commit: `feat(core): populate join fields`
 ### Task 14: Globals
 
 RED
+
 - `populate › resolves global relations`: `cms.setGlobal('site', { logo: m.id, featured: [p.id] })`; `cms.getGlobal('site')` → `logo.url === '/a.png'`, `featured[0].author.name === 'Ann'`; `{ populate: false }` → ids.
 - Run. Expected failure: `logo` is a string.
 
 GREEN
+
 - `getGlobal`: `const data = row ? JSON.parse(row.data) : {}`, then `populate(q, collections, globalFields, [data], spec(options))`.
 - Run again. Expect pass.
 
@@ -613,51 +776,69 @@ Commit: `feat(core): populate relations in globals`
 Pure function, unit tested next to the code.
 
 RED
+
 - New `src/relations.test.ts`, `describe('parsePopulate')`, with the fixture's schema as a plain object (no `defineCms`), `config = { depth: 2, maxDepth: 2 }`:
 
 ```ts
-const parse = (q: Record<string, string>, name = 'posts') => parsePopulate(schema, schema.collections[name].fields, q, config)
-expect(parse({})).toEqual(2)
-expect(parse({ populate: 'false' })).toEqual(false)
-expect(parse({ depth: '1' })).toEqual(1)
-expect(parse({ populate: 'author.avatar,tags' })).toEqual({ author: { avatar: true }, tags: true })
-expect(parse({ populate: 'author,author.avatar' })).toEqual({ author: { avatar: true } })
-expect(parse({ populate: 'seo.image' })).toEqual({ seo: { image: true } })
-expect(parse({ populate: 'seo' })).toEqual({ seo: true })
-expect(parse({ populate: 'posts.tags' }, 'authors')).toEqual({ posts: { tags: true } })
-for (const bad of [{ populate: 'title' }, { populate: 'nope' }, { populate: 'author.nope' }, { populate: '' },
-  { depth: '3' }, { depth: '-1' }, { depth: 'x' }, { populate: 'author.posts.author' }])
-  expect(parse(bad)).toBeUndefined()
+const parse = (q: Record<string, string>, name = "posts") =>
+  parsePopulate(schema, schema.collections[name].fields, q, config);
+expect(parse({})).toEqual(2);
+expect(parse({ populate: "false" })).toEqual(false);
+expect(parse({ depth: "1" })).toEqual(1);
+expect(parse({ populate: "author.avatar,tags" })).toEqual({ author: { avatar: true }, tags: true });
+expect(parse({ populate: "author,author.avatar" })).toEqual({ author: { avatar: true } });
+expect(parse({ populate: "seo.image" })).toEqual({ seo: { image: true } });
+expect(parse({ populate: "seo" })).toEqual({ seo: true });
+expect(parse({ populate: "posts.tags" }, "authors")).toEqual({ posts: { tags: true } });
+for (const bad of [
+  { populate: "title" },
+  { populate: "nope" },
+  { populate: "author.nope" },
+  { populate: "" },
+  { depth: "3" },
+  { depth: "-1" },
+  { depth: "x" },
+  { populate: "author.posts.author" },
+])
+  expect(parse(bad)).toBeUndefined();
 ```
 
 - Run: `pnpm --filter integral-cms test -- src/relations.test.ts`. Expected failure: `parsePopulate` is not exported.
 
 GREEN
+
 - `src/relations.ts`:
 
 ```ts
 // Returns `undefined` for an invalid path, an unknown field or too many hops.
-export function parsePopulate(schema: Schema, fields: Fields, query: { populate?: string; depth?: string }, config: { depth: number; maxDepth: number }): Spec | undefined {
+export function parsePopulate(
+  schema: Schema,
+  fields: Fields,
+  query: { populate?: string; depth?: string },
+  config: { depth: number; maxDepth: number },
+): Spec | undefined {
   if (query.depth !== undefined) {
-    if (!/^\d+$/.test(query.depth) || Number(query.depth) > config.maxDepth) return undefined
+    if (!/^\d+$/.test(query.depth) || Number(query.depth) > config.maxDepth) return undefined;
   }
-  if (query.populate === 'false') return false
-  if (query.populate === undefined) return query.depth === undefined ? config.depth : Number(query.depth)
-  const spec: Record<string, any> = {}
-  for (const path of query.populate.split(',')) {
-    let node = spec
-    let current = fields
-    let hops = 0
-    for (const [i, key] of path.split('.').entries()) {
-      const field = Object.hasOwn(current, key) ? current[key] : undefined
-      if (!field || !['group', 'relation', 'join'].includes(field.type)) return undefined
-      if (field.type !== 'group' && ++hops > config.maxDepth) return undefined
-      current = field.type === 'group' ? field.fields : schema.collections![field.collection].fields
-      if (i === path.split('.').length - 1) node[key] ??= true
-      else node = node[key] = typeof node[key] === 'object' ? node[key] : {}
+  if (query.populate === "false") return false;
+  if (query.populate === undefined)
+    return query.depth === undefined ? config.depth : Number(query.depth);
+  const spec: Record<string, any> = {};
+  for (const path of query.populate.split(",")) {
+    let node = spec;
+    let current = fields;
+    let hops = 0;
+    for (const [i, key] of path.split(".").entries()) {
+      const field = Object.hasOwn(current, key) ? current[key] : undefined;
+      if (!field || !["group", "relation", "join"].includes(field.type)) return undefined;
+      if (field.type !== "group" && ++hops > config.maxDepth) return undefined;
+      current =
+        field.type === "group" ? field.fields : schema.collections![field.collection].fields;
+      if (i === path.split(".").length - 1) node[key] ??= true;
+      else node = node[key] = typeof node[key] === "object" ? node[key] : {};
     }
   }
-  return spec
+  return spec;
 }
 ```
 
@@ -669,6 +850,7 @@ Commit: `feat(core): parse populate paths from the query string`
 ### Task 16: HTTP read routes
 
 RED
+
 - `describe('populate over HTTP')` on `setup(relational())`, raw requests via `cms.fetch(new Request(...))`:
   - `GET /collections/posts` → `author.name === 'Ann'` (default).
   - `?populate=false` → `author === a.id`.
@@ -681,6 +863,7 @@ RED
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'populate over HTTP'`. Expected failure: `populate` is treated as a filter field → 400 on every `?populate=`, and `?depth=6` → 400 for the wrong reason (unknown field). Check the first case fails on the value, not the status.
 
 GREEN
+
 - `src/app.ts`: in all three read routes, take `populate` and `depth` out of the query like `limit` does:
 
 ```ts
@@ -698,6 +881,7 @@ Commit: `feat(core): accept populate and depth on HTTP reads`
 ### Task 17: Client
 
 RED
+
 - `describe('populate over HTTP')`, same fixture, now via `client`:
   - `client.find('posts', { populate: { author: { avatar: true } } })` → `[0].author.avatar.url === '/a.png'`.
   - `client.findById('posts', p.id, { populate: false })` → `author === a.id`.
@@ -706,32 +890,42 @@ RED
 - Types, in a never-called function in `app.test.ts` with `client` typed from `relational()`:
 
 ```ts
-const c = (await client.find('posts'))[0]
-const n: string = c.author!.name
+const c = (await client.find("posts"))[0];
+const n: string = c.author!.name;
 // @ts-expect-error unknown populate key
-client.find('posts', { populate: { autor: true } })
-const ids = await client.findById('posts', 'x', { populate: false })
-const aid: string | null | undefined = ids.author
+client.find("posts", { populate: { autor: true } });
+const ids = await client.findById("posts", "x", { populate: false });
+const aid: string | null | undefined = ids.author;
 ```
 
 - Run the tests and `pnpm --filter integral-cms typecheck`. Expected failure: the client sends no `populate`, and its types say `author` is a string.
 
 GREEN
+
 - `src/client.ts`:
 
 ```ts
-type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2
-type Cs<C extends { schema: Schema }> = NonNullable<C['schema']['collections']>
+type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2;
+type Cs<C extends { schema: Schema }> = NonNullable<C["schema"]["collections"]>;
 
 // `{ author: { avatar: true } }` becomes `author.avatar`. An empty object is a path end too.
-function paths(p: object, prefix = ''): string[] {
+function paths(p: object, prefix = ""): string[] {
   return Object.entries(p).flatMap(([k, v]) =>
-    v === true || (v && typeof v === 'object' && !Object.keys(v).length) ? [prefix + k] : v && typeof v === 'object' ? paths(v, `${prefix}${k}.`) : [],
-  )
+    v === true || (v && typeof v === "object" && !Object.keys(v).length)
+      ? [prefix + k]
+      : v && typeof v === "object"
+        ? paths(v, `${prefix}${k}.`)
+        : [],
+  );
 }
 function readQuery(o: { populate?: boolean | object; depth?: number }) {
-  const p = o.populate === false ? 'false' : typeof o.populate === 'object' ? paths(o.populate).join(',') || 'false' : undefined
-  return { populate: p, depth: o.depth }
+  const p =
+    o.populate === false
+      ? "false"
+      : typeof o.populate === "object"
+        ? paths(o.populate).join(",") || "false"
+        : undefined;
+  return { populate: p, depth: o.depth };
 }
 ```
 
@@ -743,36 +937,62 @@ Commit: `feat(core): populate reads in the client`
 ### Task 18: Delete: `set-null`
 
 RED
+
 - `describe('onDelete')` on `relational()` with `seed()`:
   - `set-null clears single, many, grouped and global references`: `cms.setGlobal('site', { logo: m.id, featured: [p.id] })`. `cms.delete('media', m.id)` → `findById('posts', p.id, { populate: false })` has `seo.image === null`; `findById('authors', a.id, …)` has `avatar === null`; `getGlobal('site', { populate: false }).logo === null`. `cms.delete('tags', t1.id)` → `tags` is `[t2.id]`.
   - `set-null updates updatedAt`: the post's `updatedAt` changes.
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'onDelete'`. Expected failure: `seo.image` is still `m.id`.
 
 GREEN
+
 - `src/relations.ts`:
 
 ```ts
-type Ref = { collection?: string; global?: string; id?: string; data: Record<string, any>; path: string[]; field: RelationField }
+type Ref = {
+  collection?: string;
+  global?: string;
+  id?: string;
+  data: Record<string, any>;
+  path: string[];
+  field: RelationField;
+};
 
 // Every document and global that holds `id` in a relation to `collection`. One query per relation field.
-async function references(q: Kysely<Database>, schema: Schema, collection: string, id: string): Promise<Ref[]>
+async function references(
+  q: Kysely<Database>,
+  schema: Schema,
+  collection: string,
+  id: string,
+): Promise<Ref[]>;
 ```
 
-  - For each collection and global, for each `relationPaths()` entry whose `field.collection === collection`: single → `json_extract(data, ${path}) = ${id}`; many → `EXISTS (SELECT 1 FROM json_each(data, ${path}) WHERE value = ${id})`. Globals query `cms_globals` the same way.
+- For each collection and global, for each `relationPaths()` entry whose `field.collection === collection`: single → `json_extract(data, ${path}) = ${id}`; many → `EXISTS (SELECT 1 FROM json_each(data, ${path}) WHERE value = ${id})`. Globals query `cms_globals` the same way.
 
 ```ts
-export async function remove(trx: Kysely<Database>, schema: Schema, collection: string, id: string, visited: Set<string>) {
-  if (visited.has(`${collection}:${id}`)) return
-  visited.add(`${collection}:${id}`)
-  const refs = (await references(trx, schema, collection, id)).filter((r) => !r.id || !visited.has(`${r.collection}:${r.id}`))
+export async function remove(
+  trx: Kysely<Database>,
+  schema: Schema,
+  collection: string,
+  id: string,
+  visited: Set<string>,
+) {
+  if (visited.has(`${collection}:${id}`)) return;
+  visited.add(`${collection}:${id}`);
+  const refs = (await references(trx, schema, collection, id)).filter(
+    (r) => !r.id || !visited.has(`${r.collection}:${r.id}`),
+  );
   // restrict: Task 19, cascade: Task 20
   for (const r of refs) {
-    const parent = at(r.data, r.path.slice(0, -1))
-    const key = r.path.at(-1)!
-    parent[key] = r.field.many ? parent[key].filter((x: string) => x !== id) : null
-    await writeData(trx, r)
+    const parent = at(r.data, r.path.slice(0, -1));
+    const key = r.path.at(-1)!;
+    parent[key] = r.field.many ? parent[key].filter((x: string) => x !== id) : null;
+    await writeData(trx, r);
   }
-  await trx.deleteFrom('cms_documents').where('collection', '=', collection).where('id', '=', id).execute()
+  await trx
+    .deleteFrom("cms_documents")
+    .where("collection", "=", collection)
+    .where("id", "=", id)
+    .execute();
 }
 ```
 
@@ -785,22 +1005,24 @@ Commit: `feat(core): clear references on delete`
 ### Task 19: Delete: `restrict`
 
 RED
+
 - `onDelete › restrict blocks the delete and changes nothing`: `cms.create('notes', { post: p.id })` (required → restrict by default). Also set `site.featured = [p.id]` (set-null). Over HTTP, `client.delete('posts', p.id)` → 409, `CmsError.body.references` equals `[{ collection: 'notes', id: note.id }]`. After it, `p` exists and `site.featured` still holds `p.id` (the rollback covers set-null writes done before the check).
 - `onDelete › explicit restrict`: a `restrict` relation without `required` in a small `defineCms` also blocks. In the same instance, a global `g` with `pin: { type: 'relation', collection: 'posts', onDelete: 'restrict' }` pointing at the post: `references` contains `{ global: 'g' }`.
 - `onDelete › restrict throws ConflictError locally`: `cms.delete('posts', p.id)` rejects with `toBeInstanceOf(ConflictError)` and `toMatchObject({ references: [{ collection: 'notes', id: note.id }] })`. Import `ConflictError` from `./index.ts`.
 - Run. Expected failure: `ConflictError` is not exported; over HTTP 204, and the note points to a deleted post.
 
 GREEN
+
 - New `src/errors.ts`, no imports:
 
 ```ts
 // This file MUST stay free of imports. Presets import it in browser bundles, where zod MUST NOT go.
-export type Reference = { collection: string; id: string } | { global: string }
+export type Reference = { collection: string; id: string } | { global: string };
 
 /** Thrown when a delete hits `restrict` references. HTTP returns 409 with `references`. */
 export class ConflictError extends Error {
   constructor(public references: Reference[]) {
-    super('Referenced by other documents')
+    super("Referenced by other documents");
   }
 }
 ```
@@ -810,9 +1032,15 @@ export class ConflictError extends Error {
 - In `remove`, before any write:
 
 ```ts
-const blocking = refs.filter((r) => (r.field.onDelete ?? (r.field.required ? 'restrict' : 'set-null')) === 'restrict')
+const blocking = refs.filter(
+  (r) => (r.field.onDelete ?? (r.field.required ? "restrict" : "set-null")) === "restrict",
+);
 if (blocking.length)
-  throw new ConflictError(blocking.map((r) => (r.global ? { global: r.global } : { collection: r.collection!, id: r.id! })))
+  throw new ConflictError(
+    blocking.map((r) =>
+      r.global ? { global: r.global } : { collection: r.collection!, id: r.id! },
+    ),
+  );
 ```
 
 - The `set-null` loop filters to `set-null` refs only. The throw rolls back the transaction, including effects of outer cascade levels.
@@ -823,16 +1051,19 @@ Commit: `feat(core): block deletes of restricted references with ConflictError`
 ### Task 20: Delete: `cascade`
 
 RED
+
 - `onDelete › cascade deletes recursively`: pages `root ← child ← grandchild` (`parent` has `cascade`). `cms.delete('pages', root.id)` → all three gone.
 - `onDelete › cascade ends cycles`: `x.parent = y`, `y.parent = x`. `cms.delete('pages', x.id)` resolves and both are gone.
 - `onDelete › cascade applies the rules of deleted documents`: a `notes`-like restrict reference to `child` makes deleting `root` return 409 and leaves all three pages in place. Needs a relation to `pages` with restrict: add `pin: { type: 'relation', collection: 'pages', required: true }` to `notes` in the fixture.
 - Run. Expected failure: children are left with `parent: null`.
 
 GREEN
+
 - In `remove`, after the restrict check:
 
 ```ts
-for (const r of refs.filter((r) => r.field.onDelete === 'cascade')) await remove(trx, schema, r.collection!, r.id!, visited)
+for (const r of refs.filter((r) => r.field.onDelete === "cascade"))
+  await remove(trx, schema, r.collection!, r.id!, visited);
 ```
 
 - Cascade from globals cannot occur (Task 3 check), so `collection` and `id` are set.

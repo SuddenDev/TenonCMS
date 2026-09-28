@@ -16,9 +16,7 @@ async function submit() {
   busy.value = true;
   error.value = "";
   try {
-    await (signUp.value
-      ? client.signUp(form.value)
-      : client.signIn(form.value));
+    await (signUp.value ? client.signUp(form.value) : client.signIn(form.value));
     emit("done");
   } catch (e) {
     error.value = (e as Error).message;
@@ -29,9 +27,7 @@ async function submit() {
 </script>
 
 <template>
-  <div
-    class="flex min-h-screen items-center justify-center bg-zinc-50 p-4 text-zinc-900"
-  >
+  <div class="flex min-h-screen items-center justify-center bg-zinc-50 p-4 text-zinc-900">
     <form
       class="flex w-full max-w-sm flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-6"
       @submit.prevent="submit"
@@ -45,13 +41,7 @@ async function submit() {
       </label>
       <label class="flex flex-col gap-1 text-sm">
         Email
-        <input
-          v-model="form.email"
-          type="email"
-          class="input"
-          required
-          autocomplete="email"
-        />
+        <input v-model="form.email" type="email" class="input" required autocomplete="email" />
       </label>
       <label class="flex flex-col gap-1 text-sm">
         Password
@@ -68,18 +58,8 @@ async function submit() {
       <Button size="lg" :disabled="busy">
         {{ signUp ? "Create account" : "Sign in" }}
       </Button>
-      <Button
-        variant="link"
-        size="xs"
-        type="button"
-        class="opacity-80"
-        @click="signUp = !signUp"
-      >
-        {{
-          signUp
-            ? "I already have an account"
-            : "First time? Create the admin account"
-        }}
+      <Button variant="link" size="xs" type="button" class="opacity-80" @click="signUp = !signUp">
+        {{ signUp ? "I already have an account" : "First time? Create the admin account" }}
       </Button>
     </form>
   </div>

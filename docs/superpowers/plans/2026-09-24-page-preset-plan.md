@@ -22,24 +22,26 @@ Paths are relative to `packages/core` unless noted. Run one test with `pnpm --fi
 ### Task 1: `readOnly` option
 
 RED
+
 - `src/schema.test.ts`, new `describe('readOnly')`:
 
 ```ts
 const fields = {
-  title: { type: 'text', required: true },
-  path: { type: 'text', readOnly: true },
-  seo: { type: 'group', fields: { title: { type: 'text', readOnly: true } } },
-} as const satisfies Fields
+  title: { type: "text", required: true },
+  path: { type: "text", readOnly: true },
+  seo: { type: "group", fields: { title: { type: "text", readOnly: true } } },
+} as const satisfies Fields;
 
-it('accepts readOnly at any depth and keeps it writable', () => {
-  const input: Data<typeof fields> = { title: 'A', path: '/a', seo: { title: 'S' } }
-  void input
-})
+it("accepts readOnly at any depth and keeps it writable", () => {
+  const input: Data<typeof fields> = { title: "A", path: "/a", seo: { title: "S" } };
+  void input;
+});
 ```
 
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: `readOnly` does not exist in type `Field`.
 
 GREEN
+
 - `src/schema.ts`, in `Base`: `/** The admin shows the field disabled. The API and hooks can still write it. */ readOnly?: boolean`.
 - Run the typecheck again. Expect pass.
 
@@ -58,36 +60,43 @@ Commit: `feat(admin): disable readOnly fields`
 ### Task 3: `slugify`
 
 RED
+
 - New `src/slugify.test.ts`:
 
 ```ts
-import { SLUG_PATTERN, slugify } from './slugify.ts'
+import { SLUG_PATTERN, slugify } from "./slugify.ts";
 
 it.each([
-  ['Über uns', 'uber-uns'],
-  ['  Hello,   World!  ', 'hello-world'],
-  ['--Straße 5--', 'strasse-5'],
-  ['C’est la vie', 'c-est-la-vie'],
-  ['', ''],
-])('slugify: %s', (text, expected) => expect(slugify(text)).toBe(expected))
+  ["Über uns", "uber-uns"],
+  ["  Hello,   World!  ", "hello-world"],
+  ["--Straße 5--", "strasse-5"],
+  ["C’est la vie", "c-est-la-vie"],
+  ["", ""],
+])("slugify: %s", (text, expected) => expect(slugify(text)).toBe(expected));
 
-it('produces values that match the pattern', () => {
-  expect(new RegExp(`^(?:${SLUG_PATTERN})$`, 'v').test(slugify('Über uns!'))).toBe(true)
-})
+it("produces values that match the pattern", () => {
+  expect(new RegExp(`^(?:${SLUG_PATTERN})$`, "v").test(slugify("Über uns!"))).toBe(true);
+});
 ```
 
 - Run: `pnpm --filter integral-cms test -- src/slugify.test.ts`. Expected failure: `Cannot find module './slugify.ts'`.
 
 GREEN
+
 - New `src/slugify.ts`, no imports:
 
 ```ts
 /** Admin and server MUST both use this file. It MUST stay free of imports; the admin bundles it. */
-export const SLUG_PATTERN = '[a-z0-9]+(-[a-z0-9]+)*'
+export const SLUG_PATTERN = "[a-z0-9]+(-[a-z0-9]+)*";
 
 export function slugify(text: string) {
-  return text.normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ß/g, 'ss').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  return text
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/ß/g, "ss")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 ```
 
@@ -98,25 +107,37 @@ Commit: `feat(core): add slugify`
 ### Task 4: `slug` field type in core
 
 RED
+
 - `src/schema.test.ts`, `describe('slug')`:
 
 ```ts
-const s = dataSchema({ slug: { type: 'slug', from: 'title' } })
+const s = dataSchema({ slug: { type: "slug", from: "title" } });
 
-it('requires a slug that matches the pattern', () => {
-  for (const ok of ['a', 'about-us', 'v2']) expect(s.safeParse({ slug: ok }).success, ok).toBe(true)
-  for (const bad of [{}, { slug: null }, { slug: '' }, { slug: 'Not Valid' }, { slug: 'a--b' }, { slug: '-a' }, { slug: 'a-' }])
-    expect(s.safeParse(bad).success, JSON.stringify(bad)).toBe(false)
-})
+it("requires a slug that matches the pattern", () => {
+  for (const ok of ["a", "about-us", "v2"])
+    expect(s.safeParse({ slug: ok }).success, ok).toBe(true);
+  for (const bad of [
+    {},
+    { slug: null },
+    { slug: "" },
+    { slug: "Not Valid" },
+    { slug: "a--b" },
+    { slug: "-a" },
+    { slug: "a-" },
+  ])
+    expect(s.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
+});
 
-it('types a slug as a required string', () => {
-  const f = { slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' } } as const satisfies Fields
-  ;(d: Data<typeof f>) => d.slug satisfies string
+it("types a slug as a required string", () => {
+  const f = {
+    slug: { type: "slug", from: "title", parent: "parent", path: "path" },
+  } as const satisfies Fields;
+  (d: Data<typeof f>) => d.slug satisfies string;
   // @ts-expect-error a slug is always required
-  const missing: Data<typeof f> = {}
+  const missing: Data<typeof f> = {};
   // @ts-expect-error `required` does not apply to slugs
-  defineCollection({ fields: { s: { type: 'slug', required: false } } })
-})
+  defineCollection({ fields: { s: { type: "slug", required: false } } });
+});
 ```
 
 - `src/schema.test.ts`, in spec 6's `describe('defineCms checks')`, extend `accepts unique on top-level …` with `{ s: { type: 'slug', from: 'title', unique: true } }`. Add `throws for unique on a slug inside a group`.
@@ -124,6 +145,7 @@ it('types a slug as a required string', () => {
 - Run: `pnpm --filter integral-cms test -- src/schema.test.ts -t slug`, `pnpm --filter integral-cms test -- src/app.test.ts -t unique` and `pnpm --filter integral-cms typecheck`. Expected failure: `fieldSchema` falls to its default branch (any string, optional), so `{}` and `'Not Valid'` pass; `type: 'slug'` is not in `Field`; `defineCms` throws `"posts.slug" cannot be unique`.
 
 GREEN
+
 - `src/schema.ts`:
 
 ```ts
@@ -159,20 +181,37 @@ No automated test (the admin has none).
 
 ```ts
 // New documents follow the source field until the editor edits the slug. Existing slugs never change, so URLs stay stable.
-const edited = ref(false)
-watch(() => props.field.type === 'slug' && props.field.from ? props.siblings?.data[props.field.from] : undefined, (text) => {
-  if (props.isNew && !edited.value && typeof text === 'string') model.value = slugify(text)
-})
+const edited = ref(false);
+watch(
+  () =>
+    props.field.type === "slug" && props.field.from
+      ? props.siblings?.data[props.field.from]
+      : undefined,
+  (text) => {
+    if (props.isNew && !edited.value && typeof text === "string") model.value = slugify(text);
+  },
+);
 
-const prefix = ref('/')
-watch(() => props.field.type === 'slug' && props.field.parent ? props.siblings?.data[props.field.parent] : undefined, async (id) => {
-  const relation = props.field.type === 'slug' && props.field.parent ? props.siblings?.fields[props.field.parent] : undefined
-  const parent = typeof id === 'string' && relation?.type === 'relation'
-    ? await client.findById(relation.collection, id, { populate: false })
-    : undefined
-  const value = parent?.[props.field.type === 'slug' ? props.field.path ?? 'path' : 'path']
-  prefix.value = `${typeof value === 'string' ? value.replace(/\/$/, '') : ''}/`
-}, { immediate: true })
+const prefix = ref("/");
+watch(
+  () =>
+    props.field.type === "slug" && props.field.parent
+      ? props.siblings?.data[props.field.parent]
+      : undefined,
+  async (id) => {
+    const relation =
+      props.field.type === "slug" && props.field.parent
+        ? props.siblings?.fields[props.field.parent]
+        : undefined;
+    const parent =
+      typeof id === "string" && relation?.type === "relation"
+        ? await client.findById(relation.collection, id, { populate: false })
+        : undefined;
+    const value = parent?.[props.field.type === "slug" ? (props.field.path ?? "path") : "path"];
+    prefix.value = `${typeof value === "string" ? value.replace(/\/$/, "") : ""}/`;
+  },
+  { immediate: true },
+);
 ```
 
 - Manual check with the Astro example's `pages` collection (Task 14) or a temporary one: a new page's slug follows the title while typing; editing the slug stops that; an existing page keeps its slug when the title changes; picking a parent shows its path as the prefix (`/about/`), clearing it shows `/`; a temporary slug with `path: 'url'` on a collection whose parents have a `url` field shows that value; `Not Valid` blocks the save.
@@ -183,53 +222,57 @@ Commit: `feat(admin): fill slugs from their source field`
 ### Task 6: `integral-cms/presets` with `page.fields` and `slugFromTitle`
 
 RED
+
 - New `src/presets.test.ts`:
 
 ```ts
-import { page } from './presets.ts'
+import { page } from "./presets.ts";
 
-const fill = (data: object) => page.hooks.beforeValidate.slugFromTitle({ data } as any)
+const fill = (data: object) => page.hooks.beforeValidate.slugFromTitle({ data } as any);
 
-it('slugFromTitle fills an empty slug', () => {
-  expect(fill({ title: 'Über uns' })?.slug).toBe('uber-uns')
-  expect(fill({ title: 'Über uns', slug: '' })?.slug).toBe('uber-uns')
-})
+it("slugFromTitle fills an empty slug", () => {
+  expect(fill({ title: "Über uns" })?.slug).toBe("uber-uns");
+  expect(fill({ title: "Über uns", slug: "" })?.slug).toBe("uber-uns");
+});
 
-it('slugFromTitle keeps a given slug', () => {
-  expect(fill({ title: 'A', slug: 'b' })).toBeUndefined()
-})
+it("slugFromTitle keeps a given slug", () => {
+  expect(fill({ title: "A", slug: "b" })).toBeUndefined();
+});
 ```
 
 - `src/schema.test.ts`, test `types a collection built from page.fields`: `Doc<typeof page.fields>['title']` and `['slug']` are `string`.
 - Run: `pnpm --filter integral-cms test -- src/presets.test.ts`. Expected failure: `Cannot find module './presets.ts'`.
 
 GREEN
+
 - New `src/presets.ts`:
 
 ```ts
-import type { Fields } from './schema.ts'
-import { slugify } from './slugify.ts'
+import type { Fields } from "./schema.ts";
+import { slugify } from "./slugify.ts";
 
 const fields = {
-  title: { type: 'text', required: true },
-  slug: { type: 'slug', from: 'title', parent: 'parent', path: 'path' },
-  parent: { type: 'relation', collection: 'pages', onDelete: 'restrict' },
-  path: { type: 'text', readOnly: true },
-} as const satisfies Fields
+  title: { type: "text", required: true },
+  slug: { type: "slug", from: "title", parent: "parent", path: "path" },
+  parent: { type: "relation", collection: "pages", onDelete: "restrict" },
+  path: { type: "text", readOnly: true },
+} as const satisfies Fields;
 
 // Presets MUST fit any collection, so hook arguments are untyped.
 export function treeHooks() {
   return {
     beforeValidate: {
-      slugFromTitle: ({ data }: any) => (data.slug ? undefined : { ...data, slug: slugify(String(data.title ?? '')) }),
+      slugFromTitle: ({ data }: any) =>
+        data.slug ? undefined : { ...data, slug: slugify(String(data.title ?? "")) },
     },
-  }
+  };
 }
 
-export const page = { fields, hooks: treeHooks() }
+export const page = { fields, hooks: treeHooks() };
 ```
 
-  `as const` keeps the literal types, so a spread into `defineCollection` infers `title` and `slug` as required.
+`as const` keeps the literal types, so a spread into `defineCollection` infers `title` and `slug` as required.
+
 - `tsdown.config.ts`: add `'src/presets.ts'` to `entry`. `package.json` `exports`:
 
 ```json
@@ -243,65 +286,83 @@ Commit: `feat(core): add presets export with page fields and slug hook`
 ### Task 7: `path` hook
 
 RED
+
 - `src/presets.test.ts`, path rules through the hook with a fake `cms`:
 
 ```ts
 const path = async (slug: string, parentPath?: string) =>
-  (await page.hooks.beforeChange.path({
-    data: { slug, parent: parentPath === undefined ? null : 'p' },
-    collection: 'pages',
-    cms: { findById: async () => ({ path: parentPath }) },
-  } as any))?.path
+  (
+    await page.hooks.beforeChange.path({
+      data: { slug, parent: parentPath === undefined ? null : "p" },
+      collection: "pages",
+      cms: { findById: async () => ({ path: parentPath }) },
+    } as any)
+  )?.path;
 
-it('path: index at root is /', async () => expect(await path('index')).toBe('/'))
-it('path: root page', async () => expect(await path('about')).toBe('/about'))
-it('path: child of / has one slash', async () => expect(await path('child', '/')).toBe('/child'))
-it('path: nested child', async () => expect(await path('berlin', '/about/team')).toBe('/about/team/berlin'))
+it("path: index at root is /", async () => expect(await path("index")).toBe("/"));
+it("path: root page", async () => expect(await path("about")).toBe("/about"));
+it("path: child of / has one slash", async () => expect(await path("child", "/")).toBe("/child"));
+it("path: nested child", async () =>
+  expect(await path("berlin", "/about/team")).toBe("/about/team/berlin"));
 ```
 
 - `src/app.test.ts`: let `setup()` take the instance (`function setup(cms = define('x'.repeat(32)))`). Add a `pages` fixture and `describe('page preset')`:
 
 ```ts
-let failSlug: string | undefined
-const definePages = () => defineCms({
-  collections: {
-    pages: {
-      titleField: 'title',
-      fields: { ...page.fields, body: { type: 'textarea' } },
-      hooks: {
-        beforeValidate: page.hooks.beforeValidate,
-        beforeChange: {
-          ...page.hooks.beforeChange,
-          // Lets a test fail one descendant update.
-          fail: ({ originalDoc }: any) => { if (originalDoc?.slug === failSlug) throw new Error('boom') },
+let failSlug: string | undefined;
+const definePages = () =>
+  defineCms({
+    collections: {
+      pages: {
+        titleField: "title",
+        fields: { ...page.fields, body: { type: "textarea" } },
+        hooks: {
+          beforeValidate: page.hooks.beforeValidate,
+          beforeChange: {
+            ...page.hooks.beforeChange,
+            // Lets a test fail one descendant update.
+            fail: ({ originalDoc }: any) => {
+              if (originalDoc?.slug === failSlug) throw new Error("boom");
+            },
+          },
+          afterChange: page.hooks.afterChange,
         },
-        afterChange: page.hooks.afterChange,
       },
     },
-  },
-  database: { url: ':memory:' },
-  secret: 'x'.repeat(32),
-})
+    database: { url: ":memory:" },
+    secret: "x".repeat(32),
+  });
 
 // Field keys of a 400 body, for ValidationError and zod errors alike.
 async function fieldErrors(promise: Promise<unknown>) {
-  const e = await promise.then(() => undefined, (e: unknown) => e)
-  if (!(e instanceof CmsError)) return e
-  return [e.status, [...Object.keys(e.body?.errors ?? {}), ...(e.body?.error ?? []).map((i: any) => i.path.join('.'))]]
+  const e = await promise.then(
+    () => undefined,
+    (e: unknown) => e,
+  );
+  if (!(e instanceof CmsError)) return e;
+  return [
+    e.status,
+    [
+      ...Object.keys(e.body?.errors ?? {}),
+      ...(e.body?.error ?? []).map((i: any) => i.path.join(".")),
+    ],
+  ];
 }
 ```
 
-  `beforeEach`: `failSlug = undefined`, `setup(definePages())`, sign up. `afterChange` and the extra `beforeChange` keys are empty records until later tasks.
-  Tests:
-  - `stores nested paths`: create `about`, `team` (parent about), `berlin` (parent team) via `client.create`; `cms.findById(..., { populate: false })` paths are `/about`, `/about/team`, `/about/team/berlin`.
-  - `stores / for index at root`.
-  - `fills an empty slug from the title`: `{ title: 'Über uns', slug: '' }` stores `slug: 'uber-uns'`, `path: '/uber-uns'`.
-  - `rejects an invalid slug`: `{ title: 'A', slug: 'Not Valid' }` → `[400, ['slug']]`.
-  - `overwrites path in input`: `client.create('pages', { title: 'A', slug: 'a', path: '/x' })` stores `/a`; `cms.update('pages', id, { title: 'A', slug: 'a', path: '/y' })` keeps `/a`. `readOnly` is admin-only, so the hook MUST overwrite.
-  - `reads a page by path over HTTP`: `fetch('/api/cms/collections/pages?path=/about/team')` without a cookie returns `[team]`.
+`beforeEach`: `failSlug = undefined`, `setup(definePages())`, sign up. `afterChange` and the extra `beforeChange` keys are empty records until later tasks.
+Tests:
+
+- `stores nested paths`: create `about`, `team` (parent about), `berlin` (parent team) via `client.create`; `cms.findById(..., { populate: false })` paths are `/about`, `/about/team`, `/about/team/berlin`.
+- `stores / for index at root`.
+- `fills an empty slug from the title`: `{ title: 'Über uns', slug: '' }` stores `slug: 'uber-uns'`, `path: '/uber-uns'`.
+- `rejects an invalid slug`: `{ title: 'A', slug: 'Not Valid' }` → `[400, ['slug']]`.
+- `overwrites path in input`: `client.create('pages', { title: 'A', slug: 'a', path: '/x' })` stores `/a`; `cms.update('pages', id, { title: 'A', slug: 'a', path: '/y' })` keeps `/a`. `readOnly` is admin-only, so the hook MUST overwrite.
+- `reads a page by path over HTTP`: `fetch('/api/cms/collections/pages?path=/about/team')` without a cookie returns `[team]`.
 - Run: `pnpm --filter integral-cms test -- src/presets.test.ts src/app.test.ts -t path`. Expected failure: `page.hooks.beforeChange` is undefined and stored paths are missing.
 
 GREEN
+
 - `src/presets.ts`, in `treeHooks()`:
 
 ```ts
@@ -322,10 +383,12 @@ Commit: `feat(core): compute page paths from parent and slug`
 ### Task 8: `uniquePath`
 
 RED
+
 - `describe('page preset')`: `rejects a duplicate path`: a second root `about` → `[400, ['slug']]`; `team` under `about` and `team` under `contact` both succeed. Also on update: renaming `contact` to slug `about` → `[400, ['slug']]`; updating `about` with its own slug passes.
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'duplicate path'`. Expected failure: the second `about` returns 201.
 
 GREEN
+
 - `beforeChange.uniquePath`, after `path` in the record:
 
 ```ts
@@ -335,7 +398,8 @@ async uniquePath({ data, id, collection, cms }: any) {
 },
 ```
 
-  Import `ValidationError` from `./errors.ts`, not from `./index.ts` or `./schema.ts`. Both import zod, and `presets.ts` runs in browser bundles.
+Import `ValidationError` from `./errors.ts`, not from `./index.ts` or `./schema.ts`. Both import zod, and `presets.ts` runs in browser bundles.
+
 - Run again, then the full suite.
 
 Commit: `feat(core): reject duplicate page paths`
@@ -343,10 +407,12 @@ Commit: `feat(core): reject duplicate page paths`
 ### Task 9: `noCycle`
 
 RED
+
 - `rejects moving a page under its own descendant`: `about` → `team` → `berlin`; `client.update('pages', about.id, { title: 'About', slug: 'about', parent: berlin.id })` → `[400, ['parent']]`, and `about`'s stored `parent` stays `null`.
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t descendant`. Expected failure: 200, the update stores the cycle.
 
 GREEN
+
 - `beforeChange.noCycle`, first in the record:
 
 ```ts
@@ -359,7 +425,8 @@ async noCycle({ data, id, collection, cms }: any) {
 },
 ```
 
-  The walk also catches `parent === id`. `seen` ends the loop on a cycle that already exists in the data.
+The walk also catches `parent === id`. `seen` ends the loop on a cycle that already exists in the data.
+
 - Run again, then the full suite.
 
 Commit: `feat(core): reject cycles in page trees`
@@ -367,11 +434,13 @@ Commit: `feat(core): reject cycles in page trees`
 ### Task 10: `descendantPaths`
 
 RED
+
 - `rewrites descendant paths on rename`: `about` → `team` → `berlin`; rename `about` to slug `company` via `client.update`; stored paths are `/company`, `/company/team`, `/company/team/berlin`.
 - `rolls back a rename when a descendant update fails`: same tree, `failSlug = 'berlin'`, the rename returns 500; all three stored paths are unchanged (`/about…`).
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'rename'`. Expected failure: children keep `/about/team`; the rollback test fails because the rename returns 200.
 
 GREEN
+
 - `afterChange.descendantPaths`:
 
 ```ts
@@ -382,7 +451,8 @@ async descendantPaths({ doc, previousDoc, collection, cms }: any) {
 },
 ```
 
-  Each child's own `path` hook recomputes its path and its `descendantPaths` recurses. All of it runs in the write transaction (spec 3), so the failing grandchild rolls back the rename.
+Each child's own `path` hook recomputes its path and its `descendantPaths` recurses. All of it runs in the write transaction (spec 3), so the failing grandchild rolls back the rename.
+
 - Run again, then the full suite.
 
 Commit: `feat(core): rewrite descendant paths when a page moves`
@@ -400,33 +470,39 @@ Commit: `test(core): cover page delete and hook omission`
 ### Task 12: `treeHooks(options)` for other field names
 
 RED
+
 - `src/app.test.ts`, test `treeHooks › works with other field names`:
 
 ```ts
-const hooks = treeHooks({ title: 'name', slug: 'handle', parent: 'parentCategory', path: 'url' })
+const hooks = treeHooks({ title: "name", slug: "handle", parent: "parentCategory", path: "url" });
 const cms = defineCms({
   collections: {
     categories: {
       fields: {
-        name: { type: 'text', required: true },
-        handle: { type: 'slug', from: 'name', parent: 'parentCategory', path: 'url' },
-        parentCategory: { type: 'relation', collection: 'categories' },
-        url: { type: 'text', readOnly: true },
+        name: { type: "text", required: true },
+        handle: { type: "slug", from: "name", parent: "parentCategory", path: "url" },
+        parentCategory: { type: "relation", collection: "categories" },
+        url: { type: "text", readOnly: true },
       },
       hooks,
     },
   },
-  database: { url: ':memory:' },
-  secret: 'x'.repeat(32),
-})
-const shoes = await cms.create('categories', { name: 'Shoes', handle: '' })
-const boots = await cms.create('categories', { name: 'Boots', handle: '', parentCategory: shoes.id })
-expect([shoes.url, boots.url]).toEqual(['/shoes', '/shoes/boots'])
+  database: { url: ":memory:" },
+  secret: "x".repeat(32),
+});
+const shoes = await cms.create("categories", { name: "Shoes", handle: "" });
+const boots = await cms.create("categories", {
+  name: "Boots",
+  handle: "",
+  parentCategory: shoes.id,
+});
+expect([shoes.url, boots.url]).toEqual(["/shoes", "/shoes/boots"]);
 ```
 
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t treeHooks`. Expected failure: `treeHooks` is not exported with options, so `handle` stays empty (400) and `url` is missing.
 
 GREEN
+
 - `treeHooks({ title = 'title', slug = 'slug', parent = 'parent', path = 'path' } = {})`. Replace every literal field name in the hooks with the option (`data[title]`, `data[slug]`, `{ [path]: ... }`, `where: { [parent]: doc.id }`, `ValidationError({ [slug]: … })`, and so on). Export `treeHooks`.
 - Run the test, the full suite and `pnpm --filter integral-cms typecheck`.
 
@@ -435,49 +511,61 @@ Commit: `feat(core): let treeHooks take field names`
 ### Task 13: `seo` fields and `seoMeta`
 
 RED
+
 - `src/presets.test.ts`:
 
 ```ts
-import { seoMeta } from './presets.ts'
+import { seoMeta } from "./presets.ts";
 
-it('seoMeta falls back to the title', () => {
-  expect(seoMeta({ title: 'About', seo: null })).toEqual({ title: 'About', description: undefined, noindex: false })
-  expect(seoMeta({ title: 'About', seo: { title: '', description: 'D', noindex: true } }))
-    .toEqual({ title: 'About', description: 'D', noindex: true })
-  expect(seoMeta({ title: 'About', seo: { title: 'Custom' } }).title).toBe('Custom')
-})
+it("seoMeta falls back to the title", () => {
+  expect(seoMeta({ title: "About", seo: null })).toEqual({
+    title: "About",
+    description: undefined,
+    noindex: false,
+  });
+  expect(seoMeta({ title: "About", seo: { title: "", description: "D", noindex: true } })).toEqual({
+    title: "About",
+    description: "D",
+    noindex: true,
+  });
+  expect(seoMeta({ title: "About", seo: { title: "Custom" } }).title).toBe("Custom");
+});
 ```
 
 - `src/app.test.ts`: add `...seo.fields` to the `pages` fixture. Test `page preset › stores seo as sent`: create `about` with `seo: { description: 'D' }`; `cms.findById` has `seo.title` missing or `null`.
 - Run: `pnpm --filter integral-cms test -- src/presets.test.ts src/app.test.ts -t seo`. Expected failure: `seo` and `seoMeta` are not exported from `./presets.ts`.
 
 GREEN
+
 - `src/presets.ts`:
 
 ```ts
 export const seo = {
   fields: {
     seo: {
-      type: 'group',
-      label: 'SEO',
+      type: "group",
+      label: "SEO",
       fields: {
-        title: { type: 'text' },
-        description: { type: 'textarea' },
-        noindex: { type: 'boolean', label: 'Hide from search engines' },
+        title: { type: "text" },
+        description: { type: "textarea" },
+        noindex: { type: "boolean", label: "Hide from search engines" },
       },
     },
   } as const satisfies Fields,
-}
+};
 
-type SeoDoc = { title?: unknown; seo?: { title?: string | null; description?: string | null; noindex?: boolean | null } | null }
+type SeoDoc = {
+  title?: unknown;
+  seo?: { title?: string | null; description?: string | null; noindex?: boolean | null } | null;
+};
 
 /** `<head>` values for a document with `seo.fields`. Nothing is stored, so the title fallback follows `title`. */
 export function seoMeta(doc: SeoDoc) {
   return {
-    title: doc.seo?.title || String(doc.title ?? ''),
+    title: doc.seo?.title || String(doc.title ?? ""),
     description: doc.seo?.description || undefined,
     noindex: doc.seo?.noindex === true,
-  }
+  };
 }
 ```
 
@@ -537,7 +625,8 @@ curl -s "$B/api/cms/collections/pages?path=/company/our-team" | grep -o '"path":
 curl -s $B/ | grep -a -o Hello
 ```
 
-  Expect: `<title>Company</title>` and the description; `<title>Our Team</title>` and `noindex`; `404`; `"path":"/company/our-team"`; `Hello`.
+Expect: `<title>Company</title>` and the description; `<title>Our Team</title>` and `noindex`; `404`; `"path":"/company/our-team"`; `Hello`.
+
 - Admin check on `localhost:4321/admin`: Pages list shows both; `path` is disabled; a new page's slug follows the title until edited; `Our Team` shows the prefix `/company/`; renaming `Company` to slug `firm` moves `Our Team` to `/firm/our-team`; deleting `Company` shows the 409 message.
 - `pnpm --filter example-astro typecheck`.
 
@@ -550,15 +639,20 @@ Commit: `feat(examples): add pages to the astro example`
 
 ```vue
 <script setup lang="ts">
-import { seoMeta } from 'integral-cms/presets'
+import { seoMeta } from "integral-cms/presets";
 
-const route = useRoute()
-const path = `/${[route.params.path ?? []].flat().join('/')}`
-const { data: page } = await useIntegral().findOne('pages', { where: { path }, populate: false })
-if (!page.value) throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true })
+const route = useRoute();
+const path = `/${[route.params.path ?? []].flat().join("/")}`;
+const { data: page } = await useIntegral().findOne("pages", { where: { path }, populate: false });
+if (!page.value)
+  throw createError({ statusCode: 404, statusMessage: "Page not found", fatal: true });
 
-const meta = seoMeta(page.value)
-useSeoMeta({ title: meta.title, description: meta.description, robots: meta.noindex ? 'noindex' : undefined })
+const meta = seoMeta(page.value);
+useSeoMeta({
+  title: meta.title,
+  description: meta.description,
+  robots: meta.noindex ? "noindex" : undefined,
+});
 </script>
 
 <template>
@@ -583,44 +677,44 @@ Commit: `feat(examples): add pages to the nuxt example`
 - `examples/tanstack-start/src/routes/$.tsx`:
 
 ```tsx
-import { Link, createFileRoute, notFound } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/react-start'
-import { seoMeta } from 'integral-cms/presets'
-import cms from '../../integral.config'
+import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { seoMeta } from "integral-cms/presets";
+import cms from "../../integral.config";
 
 const getPage = createServerFn()
   .validator((path: string) => path)
   .handler(async ({ data: path }) => {
-    const page = await cms.findOne('pages', { where: { path }, populate: false })
-    if (!page) throw notFound()
-    return page
-  })
+    const page = await cms.findOne("pages", { where: { path }, populate: false });
+    if (!page) throw notFound();
+    return page;
+  });
 
-export const Route = createFileRoute('/$')({
-  loader: ({ params }) => getPage({ data: `/${params._splat ?? ''}` }),
+export const Route = createFileRoute("/$")({
+  loader: ({ params }) => getPage({ data: `/${params._splat ?? ""}` }),
   head: ({ loaderData: p }) => {
-    const m = p && seoMeta(p)
+    const m = p && seoMeta(p);
     return {
       meta: [
         { title: m?.title },
-        ...(m?.description ? [{ name: 'description', content: m.description }] : []),
-        ...(m?.noindex ? [{ name: 'robots', content: 'noindex' }] : []),
+        ...(m?.description ? [{ name: "description", content: m.description }] : []),
+        ...(m?.noindex ? [{ name: "robots", content: "noindex" }] : []),
       ],
-    }
+    };
   },
   component: Page,
   notFoundComponent: () => <p>Page not found</p>,
-})
+});
 
 function Page() {
-  const page = Route.useLoaderData()
+  const page = Route.useLoaderData();
   return (
     <main>
       <Link to="/">← Home</Link>
       <h1>{page.title}</h1>
-      <p style={{ whiteSpace: 'pre-wrap' }}>{page.body}</p>
+      <p style={{ whiteSpace: "pre-wrap" }}>{page.body}</p>
     </main>
-  )
+  );
 }
 ```
 

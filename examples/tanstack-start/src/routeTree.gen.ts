@@ -8,114 +8,114 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as SplatRouteImport } from './routes/$'
-import { Route as AdminSplatRouteImport } from './routes/admin.$'
-import { Route as PostsSlugRouteImport } from './routes/posts/$slug'
-import { Route as ApiCmsSplatRouteImport } from './routes/api/cms/$'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as SplatRouteImport } from "./routes/$";
+import { Route as AdminSplatRouteImport } from "./routes/admin.$";
+import { Route as PostsSlugRouteImport } from "./routes/posts/$slug";
+import { Route as ApiCmsSplatRouteImport } from "./routes/api/cms/$";
 
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SplatRoute = SplatRouteImport.update({
-  id: '/$',
-  path: '/$',
+  id: "/$",
+  path: "/$",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AdminSplatRoute = AdminSplatRouteImport.update({
-  id: '/admin/$',
-  path: '/admin/$',
+  id: "/admin/$",
+  path: "/admin/$",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const PostsSlugRoute = PostsSlugRouteImport.update({
-  id: '/posts/$slug',
-  path: '/posts/$slug',
+  id: "/posts/$slug",
+  path: "/posts/$slug",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiCmsSplatRoute = ApiCmsSplatRouteImport.update({
-  id: '/api/cms/$',
-  path: '/api/cms/$',
+  id: "/api/cms/$",
+  path: "/api/cms/$",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/$': typeof SplatRoute
-  '/admin/$': typeof AdminSplatRoute
-  '/posts/$slug': typeof PostsSlugRoute
-  '/api/cms/$': typeof ApiCmsSplatRoute
+  "/": typeof IndexRoute;
+  "/$": typeof SplatRoute;
+  "/admin/$": typeof AdminSplatRoute;
+  "/posts/$slug": typeof PostsSlugRoute;
+  "/api/cms/$": typeof ApiCmsSplatRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/$': typeof SplatRoute
-  '/admin/$': typeof AdminSplatRoute
-  '/posts/$slug': typeof PostsSlugRoute
-  '/api/cms/$': typeof ApiCmsSplatRoute
+  "/": typeof IndexRoute;
+  "/$": typeof SplatRoute;
+  "/admin/$": typeof AdminSplatRoute;
+  "/posts/$slug": typeof PostsSlugRoute;
+  "/api/cms/$": typeof ApiCmsSplatRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/$': typeof SplatRoute
-  '/admin/$': typeof AdminSplatRoute
-  '/posts/$slug': typeof PostsSlugRoute
-  '/api/cms/$': typeof ApiCmsSplatRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/$": typeof SplatRoute;
+  "/admin/$": typeof AdminSplatRoute;
+  "/posts/$slug": typeof PostsSlugRoute;
+  "/api/cms/$": typeof ApiCmsSplatRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
-  id: '__root__' | '/' | '/$' | '/admin/$' | '/posts/$slug' | '/api/cms/$'
-  fileRoutesById: FileRoutesById
+  fileRoutesByFullPath: FileRoutesByFullPath;
+  fullPaths: "/" | "/$" | "/admin/$" | "/posts/$slug" | "/api/cms/$";
+  fileRoutesByTo: FileRoutesByTo;
+  to: "/" | "/$" | "/admin/$" | "/posts/$slug" | "/api/cms/$";
+  id: "__root__" | "/" | "/$" | "/admin/$" | "/posts/$slug" | "/api/cms/$";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  SplatRoute: typeof SplatRoute
-  AdminSplatRoute: typeof AdminSplatRoute
-  PostsSlugRoute: typeof PostsSlugRoute
-  ApiCmsSplatRoute: typeof ApiCmsSplatRoute
+  IndexRoute: typeof IndexRoute;
+  SplatRoute: typeof SplatRoute;
+  AdminSplatRoute: typeof AdminSplatRoute;
+  PostsSlugRoute: typeof PostsSlugRoute;
+  ApiCmsSplatRoute: typeof ApiCmsSplatRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$': {
-      id: '/$'
-      path: '/$'
-      fullPath: '/$'
-      preLoaderRoute: typeof SplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/$': {
-      id: '/admin/$'
-      path: '/admin/$'
-      fullPath: '/admin/$'
-      preLoaderRoute: typeof AdminSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/posts/$slug': {
-      id: '/posts/$slug'
-      path: '/posts/$slug'
-      fullPath: '/posts/$slug'
-      preLoaderRoute: typeof PostsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/cms/$': {
-      id: '/api/cms/$'
-      path: '/api/cms/$'
-      fullPath: '/api/cms/$'
-      preLoaderRoute: typeof ApiCmsSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/$": {
+      id: "/$";
+      path: "/$";
+      fullPath: "/$";
+      preLoaderRoute: typeof SplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/admin/$": {
+      id: "/admin/$";
+      path: "/admin/$";
+      fullPath: "/admin/$";
+      preLoaderRoute: typeof AdminSplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/posts/$slug": {
+      id: "/posts/$slug";
+      path: "/posts/$slug";
+      fullPath: "/posts/$slug";
+      preLoaderRoute: typeof PostsSlugRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/cms/$": {
+      id: "/api/cms/$";
+      path: "/api/cms/$";
+      fullPath: "/api/cms/$";
+      preLoaderRoute: typeof ApiCmsSplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -125,16 +125,16 @@ const rootRouteChildren: RootRouteChildren = {
   AdminSplatRoute: AdminSplatRoute,
   PostsSlugRoute: PostsSlugRoute,
   ApiCmsSplatRoute: ApiCmsSplatRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
+import type { getRouter } from "./router.tsx";
+import type { createStart } from "@tanstack/react-start";
+declare module "@tanstack/react-start" {
   interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
   }
 }

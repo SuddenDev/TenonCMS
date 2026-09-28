@@ -1,15 +1,15 @@
 {
   "name": "integral-cms-monorepo",
   "version": "0.7.0",
+  "private": true,
   "author": {
-    "email": "hello@dtampe.com",
     "name": "Dominik Tampe",
+    "email": "hello@dtampe.com",
     "url": "https://dtampe.com"
   },
-  "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.11.0",
   "scripts": {
+    "prepare": "husky",
     "build:packages": "pnpm --filter integral-cms build && pnpm --filter @integral-cms/admin build",
     "tarball": "pnpm build:packages && pnpm --filter integral-cms pack --pack-destination dist",
     "dev:astro": "pnpm build:packages && CMS_URL=http://localhost:4321 pnpm --parallel --filter integral-cms --filter @integral-cms/admin --filter example-astro dev",
@@ -17,9 +17,22 @@
     "dev:tanstack": "pnpm build:packages && CMS_URL=http://localhost:3100 pnpm --parallel --filter integral-cms --filter @integral-cms/admin --filter example-tanstack-start dev",
     "build": "pnpm build:packages && pnpm --filter \"./examples/*\" build",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
-    "test": "pnpm --filter integral-cms test"
+    "test": "pnpm --filter integral-cms test",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
     "typescript": "^6.0.3"
-  }
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,vue,astro}": "oxlint --fix --no-error-on-unmatched-pattern",
+    "*": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "packageManager": "pnpm@10.11.0"
 }

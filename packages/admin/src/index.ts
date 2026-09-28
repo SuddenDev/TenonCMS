@@ -2,11 +2,7 @@ import { useHead } from "@unhead/vue";
 import { createHead } from "@unhead/vue/client";
 import { createApp, h } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
-import type {
-  AdminOptions,
-  IntegralContext,
-  Page,
-} from "../../core/src/admin/index.d.ts";
+import type { AdminOptions, IntegralContext, Page } from "../../core/src/admin/index.d.ts";
 import App from "./App.vue";
 import Mount from "./components/Mount.vue";
 import CollectionList from "./pages/CollectionList.vue";
@@ -20,15 +16,9 @@ export function defineAdmin(options: AdminOptions): AdminOptions {
   return options;
 }
 
-export function mountAdmin(
-  el: string | Element,
-  options: AdminOptions = {},
-  base = "/admin",
-) {
+export function mountAdmin(el: string | Element, options: AdminOptions = {}, base = "/admin") {
   // The styles are global. The admin runs on a page of its own, so they never reach the host's pages.
-  document.head.append(
-    Object.assign(document.createElement("style"), { textContent: css }),
-  );
+  document.head.append(Object.assign(document.createElement("style"), { textContent: css }));
   const page = ({ mount, label }: Page) => ({
     setup() {
       useHead({ title: label });

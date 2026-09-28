@@ -2,10 +2,13 @@
   "name": "integral-cms",
   "version": "0.7.0",
   "author": {
-    "email": "hello@dtampe.com",
     "name": "Dominik Tampe",
+    "email": "hello@dtampe.com",
     "url": "https://dtampe.com"
   },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -63,6 +66,23 @@
     "kysely": "^0.29.0",
     "zod": "^4.6.5"
   },
+  "devDependencies": {
+    "@nuxt/kit": "^4.5.2",
+    "@nuxt/nitro-server": "4.5.2",
+    "@nuxt/schema": "^4.5.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "astro": "^7.3.4",
+    "h3": "^1.15.11",
+    "nuxt": "^4.5.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tsdown": "^0.23.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "vue": "^3.5.43"
+  },
   "peerDependencies": {
     "@nuxt/kit": ">=3",
     "@nuxt/schema": ">=3",
@@ -98,25 +118,5 @@
     "vue": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@nuxt/kit": "^4.5.2",
-    "@nuxt/nitro-server": "4.5.2",
-    "@nuxt/schema": "^4.5.2",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "astro": "^7.3.4",
-    "h3": "^1.15.11",
-    "nuxt": "^4.5.2",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "tsdown": "^0.23.0",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.1",
-    "vue": "^3.5.43"
-  },
-  "files": [
-    "dist"
-  ]
+  }
 }

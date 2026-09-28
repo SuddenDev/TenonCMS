@@ -1,7 +1,7 @@
-import { createApp, h, reactive, Suspense, type Component } from 'vue'
-import type { Mount } from './index.d.ts'
+import { createApp, h, reactive, Suspense, type Component } from "vue";
+import type { Mount } from "./index.d.ts";
 
-export type { FieldContext, IntegralContext, Mount, PageContext } from './index.d.ts'
+export type { FieldContext, IntegralContext, Mount, PageContext } from "./index.d.ts";
 
 /**
  * Turns a Vue component into a {@link Mount} for `integral.admin.ts`.
@@ -17,9 +17,9 @@ export type { FieldContext, IntegralContext, Mount, PageContext } from './index.
  */
 export function renderVue<Ctx extends object>(component: Component): Mount<Ctx> {
   return (el, ctx) => {
-    const props = reactive({ ...ctx })
-    const app = createApp({ render: () => h(Suspense, null, () => h(component, props)) })
-    app.mount(el)
-    return { update: (ctx) => Object.assign(props, ctx), unmount: () => app.unmount() }
-  }
+    const props = reactive({ ...ctx });
+    const app = createApp({ render: () => h(Suspense, null, () => h(component, props)) });
+    app.mount(el);
+    return { update: (ctx) => Object.assign(props, ctx), unmount: () => app.unmount() };
+  };
 }

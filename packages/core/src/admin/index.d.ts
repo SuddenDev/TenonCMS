@@ -15,15 +15,15 @@
  *   return () => input.remove()
  * }
  */
-export type Mount<Ctx> = (el: HTMLElement, ctx: Ctx) => (() => void) | MountHandle<Ctx>
+export type Mount<Ctx> = (el: HTMLElement, ctx: Ctx) => (() => void) | MountHandle<Ctx>;
 
 /** Returned by a {@link Mount} that reacts to context changes. */
 export type MountHandle<Ctx> = {
   /** Called with the new context, e.g. when the field value or the route changes. */
-  update?: (ctx: Ctx) => void
+  update?: (ctx: Ctx) => void;
   /** Called when the admin removes the element. MUST release everything the mount created. */
-  unmount: () => void
-}
+  unmount: () => void;
+};
 
 /** Helpers from the admin, in every context as `integral`. */
 export type IntegralContext = {
@@ -33,36 +33,36 @@ export type IntegralContext = {
    * Same-origin links under it open in the admin without a page reload. Links with `target`, `download`
    * or a modifier key, links elsewhere, and clicks with `preventDefault()` stay normal links.
    */
-  base: string
+  base: string;
   /**
    * Opens an admin view without reloading the page. For links, a plain `href` under `base` is enough.
    * @param path Relative to {@link IntegralContext.base}, e.g. `/reports/posts/1?tab=body`.
    */
-  navigate: (path: string) => void
-}
+  navigate: (path: string) => void;
+};
 
 /** Context of a custom field input. */
 export type FieldContext = {
   /** Field name in the collection, global or group, e.g. `color`. */
-  name: string
+  name: string;
   /** Field definition from the config. */
   field: {
     /** Field type, e.g. `custom:color`. */
-    type: string
+    type: string;
     /** Label shown above the input. */
-    label?: string
+    label?: string;
     /** The document cannot be saved while the field is empty. */
-    required?: boolean
+    required?: boolean;
     /** The input SHOULD be shown disabled. The admin still saves the value. */
-    readOnly?: boolean
-  }
+    readOnly?: boolean;
+  };
   /** Current value. Custom fields store strings. `null` or `undefined` when empty. */
-  value: any
+  value: any;
   /** Sets the value in the form. The admin saves it with the document. */
-  onChange: (value: any) => void
+  onChange: (value: any) => void;
   /** Helpers from the admin. */
-  integral: IntegralContext
-}
+  integral: IntegralContext;
+};
 
 /**
  * Context of a custom page. Updates on every route change.
@@ -72,26 +72,26 @@ export type FieldContext = {
  */
 export type PageContext = {
   /** Route params, e.g. `{ id }` for `/reports/:id`. */
-  params: Record<string, string | string[]>
+  params: Record<string, string | string[]>;
   /** Query string, e.g. `{ tab: 'body' }` for `?tab=body`. */
-  query: Record<string, string | string[] | null | (string | null)[]>
+  query: Record<string, string | string[] | null | (string | null)[]>;
   /** Helpers from the admin. */
-  integral: IntegralContext
-}
+  integral: IntegralContext;
+};
 
 /** A custom admin page. */
 export type Page = {
   /** Sidebar label. Pages without one stay out of the sidebar, e.g. detail routes with params. */
-  label?: string
+  label?: string;
   /**
    * Path under the admin path. Defaults to `/<key>`. `/` is the start page. Params work: `/reports/:id`.
    *
    * A page on a built-in path, e.g. `/collections/posts`, replaces the built-in view.
    */
-  route?: `/${string}`
+  route?: `/${string}`;
   /** Renders the page. */
-  mount: Mount<PageContext>
-}
+  mount: Mount<PageContext>;
+};
 
 /** Admin customization. Default export of `integral.admin.ts`. */
 export type AdminOptions = {
@@ -100,14 +100,14 @@ export type AdminOptions = {
    * @example
    * fields: { color: renderVue(ColorInput) }
    */
-  fields?: Record<string, Mount<FieldContext>>
+  fields?: Record<string, Mount<FieldContext>>;
   /**
    * Extra pages by key.
    * @example
    * pages: { stats: { label: 'Stats', mount: renderVue(Stats) } }
    */
-  pages?: Record<string, Page>
-}
+  pages?: Record<string, Page>;
+};
 
 /**
  * Types the admin options. Use it as the default export of `integral.admin.ts`.
@@ -117,7 +117,7 @@ export type AdminOptions = {
  *   pages: { stats: { label: 'Stats', mount: renderVue(Stats) } },
  * })
  */
-export function defineAdmin(options: AdminOptions): AdminOptions
+export function defineAdmin(options: AdminOptions): AdminOptions;
 
 /**
  * Mounts the admin into `el` and returns an unmount function.
@@ -128,4 +128,4 @@ export function defineAdmin(options: AdminOptions): AdminOptions
  * @param options Usually the default export of `integral.admin.ts`.
  * @param base Path the admin is served at. Defaults to `/admin`.
  */
-export function mountAdmin(el: string | Element, options?: AdminOptions, base?: string): () => void
+export function mountAdmin(el: string | Element, options?: AdminOptions, base?: string): () => void;

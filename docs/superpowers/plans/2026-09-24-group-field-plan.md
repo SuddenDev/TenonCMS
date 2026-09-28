@@ -22,39 +22,46 @@ All paths are relative to `packages/core` unless noted. Run tests with `pnpm --f
 ### Task 1: Validate groups
 
 RED
+
 - `src/schema.test.ts`, new `describe('group', ...)`:
 
 ```ts
 const schema = dataSchema({
   seo: {
-    type: 'group',
+    type: "group",
     fields: {
-      title: { type: 'text', required: true },
-      meta: { type: 'group', fields: { robots: { type: 'text' } } },
+      title: { type: "text", required: true },
+      meta: { type: "group", fields: { robots: { type: "text" } } },
     },
   },
-  address: { type: 'group', required: true, fields: { city: { type: 'text' } } },
-})
+  address: { type: "group", required: true, fields: { city: { type: "text" } } },
+});
 
-it('validates nested data and strips unknown keys at every depth', () => {
-  expect(schema.parse({ seo: { title: 'T', x: 1, meta: { robots: 'noindex', y: 2 } }, address: { city: 'B', z: 3 } }))
-    .toEqual({ seo: { title: 'T', meta: { robots: 'noindex' } }, address: { city: 'B' } })
-})
+it("validates nested data and strips unknown keys at every depth", () => {
+  expect(
+    schema.parse({
+      seo: { title: "T", x: 1, meta: { robots: "noindex", y: 2 } },
+      address: { city: "B", z: 3 },
+    }),
+  ).toEqual({ seo: { title: "T", meta: { robots: "noindex" } }, address: { city: "B" } });
+});
 
-it('allows an optional group to be missing or null and skips its required fields then', () => {
-  expect(schema.safeParse({ address: {} }).success).toBe(true)
-  expect(schema.safeParse({ seo: null, address: {} }).success).toBe(true)
-})
+it("allows an optional group to be missing or null and skips its required fields then", () => {
+  expect(schema.safeParse({ address: {} }).success).toBe(true);
+  expect(schema.safeParse({ seo: null, address: {} }).success).toBe(true);
+});
 
-it('requires a required group', () => {
-  expect(schema.safeParse({}).success).toBe(false)
-  expect(schema.safeParse({ address: null }).success).toBe(false)
-})
+it("requires a required group", () => {
+  expect(schema.safeParse({}).success).toBe(false);
+  expect(schema.safeParse({ address: null }).success).toBe(false);
+});
 
-it('checks required and typed fields inside a present group', () => {
-  expect(schema.safeParse({ seo: {}, address: {} }).success).toBe(false)
-  expect(schema.safeParse({ seo: { title: 'T', meta: { robots: 1 } }, address: {} }).success).toBe(false)
-})
+it("checks required and typed fields inside a present group", () => {
+  expect(schema.safeParse({ seo: {}, address: {} }).success).toBe(false);
+  expect(schema.safeParse({ seo: { title: "T", meta: { robots: 1 } }, address: {} }).success).toBe(
+    false,
+  );
+});
 ```
 
 - `src/app.test.ts`: in `define()`, add to `posts.fields`:
@@ -63,25 +70,31 @@ it('checks required and typed fields inside a present group', () => {
 seo: { type: 'group', label: 'SEO', fields: { title: { type: 'text' }, noindex: { type: 'boolean' } } },
 ```
 
-  and in `describe('writes')`:
+and in `describe('writes')`:
 
 ```ts
-it('store and read a group', async () => {
-  await client.signUp(admin)
-  const post = await client.create('posts', { title: 'Hi', seo: { title: 'S', noindex: true, extra: 1 } } as never)
-  expect(post.seo).toEqual({ title: 'S', noindex: true })
-  expect((await client.findById('posts', post.id)).seo).toEqual({ title: 'S', noindex: true })
-})
+it("store and read a group", async () => {
+  await client.signUp(admin);
+  const post = await client.create("posts", {
+    title: "Hi",
+    seo: { title: "S", noindex: true, extra: 1 },
+  } as never);
+  expect(post.seo).toEqual({ title: "S", noindex: true });
+  expect((await client.findById("posts", post.id)).seo).toEqual({ title: "S", noindex: true });
+});
 
-it('reject invalid group data', async () => {
-  await client.signUp(admin)
-  expect(await status(client.create('posts', { title: 'Hi', seo: { noindex: 'yes' } } as never))).toBe(400)
-})
+it("reject invalid group data", async () => {
+  await client.signUp(admin);
+  expect(
+    await status(client.create("posts", { title: "Hi", seo: { noindex: "yes" } } as never)),
+  ).toBe(400);
+});
 ```
 
 - Run: `pnpm --filter integral-cms test -- src/schema.test.ts src/app.test.ts`. Expected failure: the valid-data tests fail with a Zod issue "expected string, received object", because `fieldSchema()` falls through to `z.string()` for `type: 'group'`; `store and read a group` gets 400. (The reject tests may already pass; that is fine.)
 
 GREEN
+
 - `src/schema.ts`:
 
 ```ts
@@ -107,32 +120,38 @@ Commit: `feat(core): add group field validation`
 ### Task 2: Infer nested types
 
 RED
+
 - `src/schema.test.ts`:
 
 ```ts
-import type { Data, Fields } from './schema.ts'
+import type { Data, Fields } from "./schema.ts";
 
 const fields = {
-  seo: { type: 'group', fields: { title: { type: 'text' }, noindex: { type: 'boolean' } } },
-  address: { type: 'group', required: true, fields: { geo: { type: 'group', fields: { lat: { type: 'number' } } } } },
-} as const satisfies Fields
+  seo: { type: "group", fields: { title: { type: "text" }, noindex: { type: "boolean" } } },
+  address: {
+    type: "group",
+    required: true,
+    fields: { geo: { type: "group", fields: { lat: { type: "number" } } } },
+  },
+} as const satisfies Fields;
 
-it('infers nested group types', () => {
+it("infers nested group types", () => {
   // Type-level only; the function never runs.
-  ;(d: Data<typeof fields>) => {
-    const title: string | null | undefined = d.seo?.title
-    const lat: number | null | undefined = d.address.geo?.lat
+  (d: Data<typeof fields>) => {
+    const title: string | null | undefined = d.seo?.title;
+    const lat: number | null | undefined = d.address.geo?.lat;
     // @ts-expect-error an optional group can be null
-    d.seo.title
+    d.seo.title;
     // @ts-expect-error `noindex` is a boolean
-    const n: string | null | undefined = d.seo?.noindex
-  }
-})
+    const n: string | null | undefined = d.seo?.noindex;
+  };
+});
 ```
 
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: `Property 'title' does not exist on type 'string'`, because `FieldValue` maps a group to `string`.
 
 GREEN
+
 - `src/schema.ts`, first branch of `FieldValue`:
 
 ```ts
@@ -149,24 +168,28 @@ Commit: `feat(core): infer group field types`
 ### Task 3: Reject group keys in filters
 
 RED
+
 - `src/app.test.ts`, `describe('local API')`:
 
 ```ts
-it('rejects group keys in where', async () => {
-  await expect(cms.find('posts', { where: { seo: null } as never })).rejects.toThrow(/Unknown field/)
-})
+it("rejects group keys in where", async () => {
+  await expect(cms.find("posts", { where: { seo: null } as never })).rejects.toThrow(
+    /Unknown field/,
+  );
+});
 ```
 
 - Add `'?seo=x'` to the `it.each([...])('reject %s')` list in `describe('reads')`.
 - Run: `pnpm --filter integral-cms test -- src/app.test.ts -t 'group keys|reject'`. Expected failure: `find` resolves to `[]` (the key exists in the schema, `json_extract` just matches nothing), and `?seo=x` returns 200.
 
 GREEN
+
 - `src/schema.ts`:
 
 ```ts
 /** Whether `where` accepts `key`. Groups are not filterable. */
 export function filterable(fields: Fields, key: string) {
-  return Object.hasOwn(fields, key) && fields[key].type !== 'group'
+  return Object.hasOwn(fields, key) && fields[key].type !== "group";
 }
 ```
 
@@ -179,27 +202,31 @@ Commit: `fix(core): reject group keys in filters`
 ### Task 4: Exclude group keys from `where` types
 
 RED
+
 - `src/app.test.ts`, `describe('local API')`:
 
 ```ts
-it('rejects group keys in where at the type level', () => {
-  ;() => {
+it("rejects group keys in where at the type level", () => {
+  () => {
     // @ts-expect-error `seo` is a group
-    cms.find('posts', { where: { seo: null } })
+    cms.find("posts", { where: { seo: null } });
     // @ts-expect-error `seo` is a group
-    client.find('posts', { where: { seo: 'x' } })
-  }
-})
+    client.find("posts", { where: { seo: "x" } });
+  };
+});
 ```
 
 - Run: `pnpm --filter integral-cms typecheck`. Expected failure: `Unused '@ts-expect-error' directive` twice.
 
 GREEN
+
 - `src/schema.ts`:
 
 ```ts
 /** Field keys that `where` accepts. Groups are not filterable. */
-export type FilterKey<F extends Fields> = { [K in keyof F]: F[K] extends { type: 'group' } ? never : K }[keyof F]
+export type FilterKey<F extends Fields> = {
+  [K in keyof F]: F[K] extends { type: "group" } ? never : K;
+}[keyof F];
 ```
 
 - `src/index.ts` `FindOptions`: `Partial<Record<FilterKey<Collections<T>[K]['fields']>, ...>>`.
@@ -218,21 +245,25 @@ Admin components have no unit tests. Verify manually.
 // Groups always render as objects, so their inputs have a model to bind to.
 // On save, an optional group with only empty values becomes null, so its required children do not apply.
 // Empty strings become null, so cleared optional fields pass validation.
-function normalize(fields: Fields, value: Record<string, any> | null | undefined, save = false): Record<string, unknown> {
+function normalize(
+  fields: Fields,
+  value: Record<string, any> | null | undefined,
+  save = false,
+): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(fields).map(([k, f]) => {
-      const v = value?.[k]
-      if (f.type === 'group') {
-        const g = normalize(f.fields, v, save)
-        return [k, save && !f.required && isEmpty(g) ? null : g]
+      const v = value?.[k];
+      if (f.type === "group") {
+        const g = normalize(f.fields, v, save);
+        return [k, save && !f.required && isEmpty(g) ? null : g];
       }
-      if (f.type === 'boolean') return [k, v ?? false]
-      return [k, v === '' || v === undefined ? null : v]
+      if (f.type === "boolean") return [k, v ?? false];
+      return [k, v === "" || v === undefined ? null : v];
     }),
-  )
+  );
 }
 
-const data = ref(normalize(props.fields, props.initial))
+const data = ref(normalize(props.fields, props.initial));
 // in submit(): await props.save(normalize(props.fields, data.value, true) as Data<Fields>)
 ```
 
@@ -241,12 +272,13 @@ const data = ref(normalize(props.fields, props.initial))
 ```ts
 /** A group value is empty when every value is null, '', false, [] or an empty group. */
 export function isEmpty(value: unknown): boolean {
-  if (value === null || value === undefined || value === '' || value === false) return true
-  return typeof value === 'object' && Object.values(value).every(isEmpty)
+  if (value === null || value === undefined || value === "" || value === false) return true;
+  return typeof value === "object" && Object.values(value).every(isEmpty);
 }
 ```
 
-  Keep the existing comment that the payload follows the current fields.
+Keep the existing comment that the payload follows the current fields.
+
 - `packages/admin/src/components/FieldInput.vue`, first branch of the template (the SFC refers to itself by file name):
 
 ```vue
@@ -263,17 +295,22 @@ export function isEmpty(value: unknown): boolean {
 <label v-else-if="field.type === 'boolean'" ...>
 ```
 
-  New prop `loose?: boolean`: the field sits in an optional group that is empty. Every input binds `:required="field.required && !loose"` instead of `field.required`, and the `*` marker follows the same rule. Custom fields inside a group get the child key as `name` through this recursion; nothing else changes.
+New prop `loose?: boolean`: the field sits in an optional group that is empty. Every input binds `:required="field.required && !loose"` instead of `field.required`, and the `*` marker follows the same rule. Custom fields inside a group get the child key as `name` through this recursion; nothing else changes.
+
 - `packages/admin/src/api.ts`, `titleField()`: default to the first non-group field:
 
 ```ts
-return collection.titleField ?? Object.keys(collection.fields).find((k) => collection.fields[k].type !== 'group')
+return (
+  collection.titleField ??
+  Object.keys(collection.fields).find((k) => collection.fields[k].type !== "group")
+);
 ```
 
 - `src/admin/index.d.ts`, `FieldContext.name` doc: "Field name in the collection, global or group, e.g. `color`."
 - Check types: `pnpm -r typecheck` (with no watcher running, `pnpm typecheck`).
 
 Manual verification (dev playground):
+
 1. Temporarily add to `examples/astro/collections/posts.ts`:
    `seo: { type: 'group', label: 'SEO', fields: { title: { type: 'text' }, noindex: { type: 'boolean' }, color: { type: 'custom:color' }, og: { type: 'group', fields: { image: { type: 'text' } } } } }`.
 2. `npx astro dev stop` in `examples/astro`, delete `examples/astro/cms.db`, run `pnpm dev:astro`, open `localhost:5173/admin/`, sign up.

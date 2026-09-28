@@ -46,45 +46,45 @@ On first visit, choose "Create the admin account". Only the first user can sign 
 
 ```ts
 // collections/posts.ts
-import { defineCollection } from 'integral-cms'
+import { defineCollection } from "integral-cms";
 
 export const posts = defineCollection({
-  label: 'Posts',
-  titleField: 'title',
+  label: "Posts",
+  titleField: "title",
   fields: {
-    title: { type: 'text', required: true },
-    slug: { type: 'slug', from: 'title', unique: true },
-    author: { type: 'relation', collection: 'authors' },
-    publishedAt: { type: 'date' },
-    category: { type: 'select', options: ['news', 'guide'] },
-    featured: { type: 'boolean' },
-    body: { type: 'textarea' },
+    title: { type: "text", required: true },
+    slug: { type: "slug", from: "title", unique: true },
+    author: { type: "relation", collection: "authors" },
+    publishedAt: { type: "date" },
+    category: { type: "select", options: ["news", "guide"] },
+    featured: { type: "boolean" },
+    body: { type: "textarea" },
   },
-})
+});
 ```
 
 ```ts
 // collections/authors.ts
 export const authors = defineCollection({
-  titleField: 'name',
+  titleField: "name",
   fields: {
-    name: { type: 'text', required: true },
-    posts: { type: 'join', collection: 'posts', on: 'author' },
+    name: { type: "text", required: true },
+    posts: { type: "join", collection: "posts", on: "author" },
   },
-})
+});
 ```
 
 ```ts
 // integral.config.ts
-import { admin, twoFactor } from 'better-auth/plugins'
-import { defineCms } from 'integral-cms'
-import { authors } from './collections/authors'
-import { posts } from './collections/posts'
+import { admin, twoFactor } from "better-auth/plugins";
+import { defineCms } from "integral-cms";
+import { authors } from "./collections/authors";
+import { posts } from "./collections/posts";
 
 export default defineCms({
   collections: { posts, authors },
-  globals: { site: { fields: { title: { type: 'text', required: true } } } },
-  database: { url: 'file:/absolute/path/cms.db' }, // or libsql://…, plus authToken
+  globals: { site: { fields: { title: { type: "text", required: true } } } },
+  database: { url: "file:/absolute/path/cms.db" }, // or libsql://…, plus authToken
   secret: process.env.CMS_SECRET!, // at least 32 characters
   // Optional, see Auth below.
   auth: {
@@ -92,7 +92,7 @@ export default defineCms({
     databaseHooks: { user: { create: { after: sendWelcome } } },
     session: { expiresIn: 60 * 60 * 24 * 30 },
   },
-})
+});
 ```
 
 Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `slug`, `group`, `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
@@ -129,21 +129,21 @@ seo: {
 
 #### Field options
 
-| Option | Types | What it does |
-|---|---|---|
-| `label` | all | Label in the admin |
-| `description` | all | Help text below the field in the admin |
-| `placeholder` | `text`, `textarea`, `number`, `date` | Shown in the empty input |
-| `required` | all but `join` | The value MUST be present |
-| `default` | all but `join` | Value on `create` when the field is `undefined` |
-| `minLength`, `maxLength`, `pattern` | `text`, `textarea` | String length, and a regular expression for the whole value |
-| `min`, `max` | `number` | Number range |
-| `validate` | all but `join` | Your check, on the server |
-| `condition` | all | The field applies only when this matches |
-| `unique` | top-level `text`, `textarea`, `number`, `date`, `select`, `slug`, single `relation` | No two documents MAY have the same value |
-| `private` | all | Keep values out of public HTTP reads |
-| `readOnly` | all but `join` | The admin shows the input disabled |
-| `hooks` | all but `join` | See [Hooks](#hooks) |
+| Option                              | Types                                                                               | What it does                                                |
+| ----------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `label`                             | all                                                                                 | Label in the admin                                          |
+| `description`                       | all                                                                                 | Help text below the field in the admin                      |
+| `placeholder`                       | `text`, `textarea`, `number`, `date`                                                | Shown in the empty input                                    |
+| `required`                          | all but `join`                                                                      | The value MUST be present                                   |
+| `default`                           | all but `join`                                                                      | Value on `create` when the field is `undefined`             |
+| `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                  | String length, and a regular expression for the whole value |
+| `min`, `max`                        | `number`                                                                            | Number range                                                |
+| `validate`                          | all but `join`                                                                      | Your check, on the server                                   |
+| `condition`                         | all                                                                                 | The field applies only when this matches                    |
+| `unique`                            | top-level `text`, `textarea`, `number`, `date`, `select`, `slug`, single `relation` | No two documents MAY have the same value                    |
+| `private`                           | all                                                                                 | Keep values out of public HTTP reads                        |
+| `readOnly`                          | all but `join`                                                                      | The admin shows the input disabled                          |
+| `hooks`                             | all but `join`                                                                      | See [Hooks](#hooks)                                         |
 
 The admin gets the schema as JSON, so functions never reach the browser:
 
@@ -196,12 +196,12 @@ color: { type: 'text', condition: { '/settings.mode': 'advanced' } },
 ### 2. Read content
 
 ```ts
-await cms.find('posts')                                   // all, newest first
-await cms.find('posts', { where: { category: 'news' } })   // equality filters
-await cms.find('posts', { limit: 5 })                      // the 5 newest
-await cms.findOne('posts', { where: { slug: 'hello' } })
-await cms.findById('posts', id)
-await cms.getGlobal('site')
+await cms.find("posts"); // all, newest first
+await cms.find("posts", { where: { category: "news" } }); // equality filters
+await cms.find("posts", { limit: 5 }); // the 5 newest
+await cms.findOne("posts", { where: { slug: "hello" } });
+await cms.findById("posts", id);
+await cms.getGlobal("site");
 ```
 
 Everything is typed from the schema. Unknown collections or fields are type errors.
@@ -214,22 +214,26 @@ Writes and the schema endpoint need an admin session.
 Reads return whole documents unless `select` lists the fields you need. `populate` decides which relations are resolved; `select` decides what comes back:
 
 ```ts
-const page = await cms.findOne('pages', {
-  where: { path: '/about/team/person' },
+const page = await cms.findOne("pages", {
+  where: { path: "/about/team/person" },
   populate: { parent: { parent: true } },
-  select: { title: true, path: true, parent: { title: true, path: true, parent: { title: true, path: true } } },
-})
+  select: {
+    title: true,
+    path: true,
+    parent: { title: true, path: true, parent: { title: true, path: true } },
+  },
+});
 // { id, title, path, parent: { id, title, path, parent: { id, title, path } } }
 ```
 
-| In `select` | Result |
-|---|---|
-| a field `: true` | the field's value |
-| a group `: true` | the whole group |
-| a group `: { … }` | only the listed children, by these same rules |
-| a relation or join `: true` | the value as `populate` leaves it: an id, ids, a document or documents |
+| In `select`                  | Result                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| a field `: true`             | the field's value                                                                             |
+| a group `: true`             | the whole group                                                                               |
+| a group `: { … }`            | only the listed children, by these same rules                                                 |
+| a relation or join `: true`  | the value as `populate` leaves it: an id, ids, a document or documents                        |
 | a relation or join `: { … }` | the resolved document, or each item of a `many` relation or join, with only the listed fields |
-| a field not listed | left out |
+| a field not listed           | left out                                                                                      |
 
 - `find`, `findOne`, `findById` and `getGlobal` accept it, in the local API, the client and `useIntegral()`. Writes do not.
 - `id` always comes back, at every level with documents. `createdAt` and `updatedAt` only when listed. `select: {}` returns only `id`.
@@ -242,28 +246,32 @@ Over HTTP, `?select=` is a comma-separated list of dot paths: `?populate=parent&
 `update` and `setGlobal` change only the top-level fields they get; the others keep their stored values. `null` clears a field. A group you send replaces the stored group. This holds for the local API, HTTP `PUT` and the client:
 
 ```ts
-await cms.update('posts', id, { views: 5 }) // title, body and the rest stay
+await cms.update("posts", id, { views: 5 }); // title, body and the rest stay
 ```
 
 In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your schema:
 
 ```ts
-import { createClient } from 'integral-cms/client'
+import { createClient } from "integral-cms/client";
 
-const client = createClient()
-await client.find('posts', { where: { featured: true } })
-await client.findOne('pages', { where: { path }, populate: { parent: true }, select: { title: true, parent: { title: true } } })
-await client.update('posts', id, post) // needs a session, so it works in admin pages
-await client.getSession() // the signed-in admin, or null
+const client = createClient();
+await client.find("posts", { where: { featured: true } });
+await client.findOne("pages", {
+  where: { path },
+  populate: { parent: true },
+  select: { title: true, parent: { title: true } },
+});
+await client.update("posts", id, post); // needs a session, so it works in admin pages
+await client.getSession(); // the signed-in admin, or null
 ```
 
 To type your own browser code, `Collections<C>` and `Globals<C>` give the schema as HTTP sends it, with `private` fields optional:
 
 ```ts
-import type { Collections } from 'integral-cms/client'
-import type cms from '../integral.config'
+import type { Collections } from "integral-cms/client";
+import type cms from "../integral.config";
 
-type PostFields = Collections<typeof cms>['posts']['fields']
+type PostFields = Collections<typeof cms>["posts"]["fields"];
 ```
 
 The Astro and Nuxt adapters register your `cms` type, so `createClient()` needs no type argument. Without an adapter, add this to `tsconfig.json`:
@@ -288,10 +296,10 @@ parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } // self-r
 posts: { type: 'join', collection: 'posts', on: 'author' }             // 1-m, on `authors`
 ```
 
-| Field | Options | Where |
-|---|---|---|
-| `relation` | `collection` (target), `many`, `onDelete`, `label`, `required` | top level and in groups, in collections and globals; targets collections only |
-| `join` | `collection` (source), `on` (path to a relation there, e.g. `author` or `seo.image`), `label` | top level of collections only; not stored |
+| Field      | Options                                                                                       | Where                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `relation` | `collection` (target), `many`, `onDelete`, `label`, `required`                                | top level and in groups, in collections and globals; targets collections only |
+| `join`     | `collection` (source), `on` (path to a relation there, e.g. `author` or `seo.image`), `label` | top level of collections only; not stored                                     |
 
 - Ids live in the document JSON: a string, or a string array with `many`. Writes check that every id exists in the target collection and that a document does not reference itself (400). `many` arrays keep their order and reject duplicates. A required `many` relation needs at least one id.
 - `defineCms` also checks `collection` and `join.on` at the type level: a typo shows as an error in `integral.config.ts`, naming the field path and the allowed values.
@@ -302,12 +310,12 @@ posts: { type: 'join', collection: 'posts', on: 'author' }             // 1-m, o
 Reads resolve relations into documents:
 
 ```ts
-cms.find('posts')                                         // every relation, default depth
-cms.find('posts', { depth: 1 })
-cms.find('posts', { populate: false })                    // ids only
-cms.find('posts', { populate: { author: { avatar: true }, tags: true } })
-cms.find('pages', { populate: { seo: { image: true } } }) // through a group
-cms.find('authors', { populate: { posts: true } })        // join
+cms.find("posts"); // every relation, default depth
+cms.find("posts", { depth: 1 });
+cms.find("posts", { populate: false }); // ids only
+cms.find("posts", { populate: { author: { avatar: true }, tags: true } });
+cms.find("pages", { populate: { seo: { image: true } } }); // through a group
+cms.find("authors", { populate: { posts: true } }); // join
 ```
 
 - `populate: true` (default) resolves every relation up to `depth` hops. Group keys do not count as hops.
@@ -337,38 +345,42 @@ Known limits:
 Hooks run your code at fixed points of every read, write and delete: to change data, check it across documents, add computed values or react to changes. The names follow Payload's.
 
 ```ts
-import { defineCollection, ValidationError } from 'integral-cms'
+import { defineCollection, ValidationError } from "integral-cms";
 
 export const posts = defineCollection({
   fields: {
-    title: { type: 'text', required: true, hooks: { beforeChange: [({ value }) => value?.trim()] } },
-    slug: { type: 'text', required: true },
+    title: {
+      type: "text",
+      required: true,
+      hooks: { beforeChange: [({ value }) => value?.trim()] },
+    },
+    slug: { type: "text", required: true },
   },
   hooks: {
     beforeChange: {
       uniqueSlug: async ({ data, id, cms }) => {
-        const other = await cms.findOne('posts', { where: { slug: data.slug } })
-        if (other && other.id !== id) throw new ValidationError({ slug: 'Already used' })
+        const other = await cms.findOne("posts", { where: { slug: data.slug } });
+        if (other && other.id !== id) throw new ValidationError({ slug: "Already used" });
       },
     },
     afterRead: [({ docs }) => docs.map((d) => ({ ...d, url: `/blog/${d.slug}` }))],
   },
-})
+});
 ```
 
 - Each stage takes an array or a record of functions. They run in order. A record lets a host leave one out by name: `const { uniqueSlug, ...rest } = posts.hooks.beforeChange`.
 - A hook gets one object and MAY be async. It MAY return a replacement for its main value; `undefined` keeps it.
 - Hooks run for every local API call. HTTP and the admin call the local API, so they run there too.
 
-| Hook | Where | Main value | Other arguments |
-|---|---|---|---|
-| `beforeOperation` | collection | `args` (the call's input) | `operation` |
-| `beforeValidate`, `beforeChange` | collection, global, field | `data` | `operation`, `id`, `originalDoc` |
-| `afterChange` | collection, global, field | `doc` | `operation`, `previousDoc` |
-| `beforeRead`, `afterRead` | collection, global (`afterRead` also field) | `docs` (array) | `operation` |
-| `beforeDelete`, `afterDelete` | collection | none | `id`, `doc` |
-| `afterOperation` | collection | `result` | `operation`, `args` |
-| `afterError` | collection, `defineCms` | none | `error`, `operation` |
+| Hook                             | Where                                       | Main value                | Other arguments                  |
+| -------------------------------- | ------------------------------------------- | ------------------------- | -------------------------------- |
+| `beforeOperation`                | collection                                  | `args` (the call's input) | `operation`                      |
+| `beforeValidate`, `beforeChange` | collection, global, field                   | `data`                    | `operation`, `id`, `originalDoc` |
+| `afterChange`                    | collection, global, field                   | `doc`                     | `operation`, `previousDoc`       |
+| `beforeRead`, `afterRead`        | collection, global (`afterRead` also field) | `docs` (array)            | `operation`                      |
+| `beforeDelete`, `afterDelete`    | collection                                  | none                      | `id`, `doc`                      |
+| `afterOperation`                 | collection                                  | `result`                  | `operation`, `args`              |
+| `afterError`                     | collection, `defineCms`                     | none                      | `error`, `operation`             |
 
 Field hooks get `value`, plus `data`, `siblingData` (the group that holds the field), `originalDoc` and `path` (e.g. `seo.title`). Every hook also gets `cms` (the local API), `user` (the session user of an HTTP write, else `null`), `context` and `collection` or `global`.
 
@@ -398,11 +410,13 @@ Transactions: every write runs in one transaction with its hooks, its `onDelete`
 `context` is one object for all hooks of an operation and every nested call. A hook that writes to its own collection runs its own hooks again; stop the loop with `context`:
 
 ```ts
-afterChange: [async ({ doc, cms, context }) => {
-  if (context.counted) return
-  context.counted = true
-  await cms.update('posts', doc.id, { views: (doc.views ?? 0) + 1 })
-}]
+afterChange: [
+  async ({ doc, cms, context }) => {
+    if (context.counted) return;
+    context.counted = true;
+    await cms.update("posts", doc.id, { views: (doc.views ?? 0) + 1 });
+  },
+];
 ```
 
 Types:
@@ -419,25 +433,25 @@ Coming from Payload: the hook names are the same. `req.user` is `user`, `req.con
 
 ```ts
 // collections/pages.ts
-import { defineCollection } from 'integral-cms'
-import { page, seo } from 'integral-cms/presets'
+import { defineCollection } from "integral-cms";
+import { page, seo } from "integral-cms/presets";
 
 export const pages = defineCollection({
-  label: 'Pages',
-  titleField: 'title',
-  fields: { ...page.fields, ...seo.fields, body: { type: 'textarea' } },
+  label: "Pages",
+  titleField: "title",
+  fields: { ...page.fields, ...seo.fields, body: { type: "textarea" } },
   hooks: page.hooks,
-})
+});
 ```
 
 `page.fields`:
 
-| Field | Definition |
-|---|---|
-| `title` | `{ type: 'text', required: true }` |
-| `slug` | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path', required: true }` |
-| `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }` |
-| `path` | `{ type: 'text', readOnly: true }` |
+| Field    | Definition                                                                        |
+| -------- | --------------------------------------------------------------------------------- |
+| `title`  | `{ type: 'text', required: true }`                                                |
+| `slug`   | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path', required: true }` |
+| `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }`                 |
+| `path`   | `{ type: 'text', readOnly: true }`                                                |
 
 `seo.fields` is one optional group `seo` with `title`, `description` and `noindex`.
 
@@ -449,12 +463,12 @@ Paths are stored, so reads never compute them:
 
 `page.hooks`:
 
-| Stage | Name | Does |
-|---|---|---|
-| `beforeChange` | `validParent` | 400 on `parent` if the parent is the page itself or one of its descendants |
-| `beforeChange` | `buildPath` | Sets `path` from the parent's path and the slug. It overwrites any `path` in the input |
-| `beforeChange` | `uniquePath` | 400 on `slug` if another page has the same path |
-| `afterChange` | `updateChildPaths` | When `path` changes, saves each child again with no changes, so its `buildPath` runs and the whole subtree gets new paths |
+| Stage          | Name               | Does                                                                                                                      |
+| -------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `beforeChange` | `validParent`      | 400 on `parent` if the parent is the page itself or one of its descendants                                                |
+| `beforeChange` | `buildPath`        | Sets `path` from the parent's path and the slug. It overwrites any `path` in the input                                    |
+| `beforeChange` | `uniquePath`       | 400 on `slug` if another page has the same path                                                                           |
+| `afterChange`  | `updateChildPaths` | When `path` changes, saves each child again with no changes, so its `buildPath` runs and the whole subtree gets new paths |
 
 The slug itself needs no hook: `from: 'title'` fills an empty slug on the server too.
 
@@ -491,10 +505,10 @@ Nesting without URLs keeps only `validParent`.
 Read a page by its path like any other field, and build `<head>` with `seoMeta()`:
 
 ```ts
-import { seoMeta } from 'integral-cms'
+import { seoMeta } from "integral-cms";
 
-const doc = await cms.findOne('pages', { where: { path: '/about/team' } })
-const { title, description, noindex } = seoMeta(doc)
+const doc = await cms.findOne("pages", { where: { path: "/about/team" } });
+const { title, description, noindex } = seoMeta(doc);
 // HTTP: GET /api/cms/collections/pages?path=/about/team
 ```
 
@@ -539,12 +553,12 @@ Each example has a catch-all route that reads by `path`. Static routes win over 
 
 ```ts
 // astro.config.ts: needs an SSR adapter, e.g. @astrojs/node
-import integralCms from 'integral-cms/astro'
+import integralCms from "integral-cms/astro";
 
 export default defineConfig({
-  adapter: node({ mode: 'standalone' }),
+  adapter: node({ mode: "standalone" }),
   integrations: [integralCms()], // reads ./integral.config.ts, options: { entry, admin }
-})
+});
 ```
 
 The integration adds a middleware that exposes the instance as `Astro.locals.integral`, fully typed.
@@ -564,9 +578,9 @@ Secrets go through `astro:env`; see `examples/astro/integral.config.ts`.
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['integral-cms/nuxt'], // reads ./integral.config.ts, options: integralCms: { entry, admin }
-  runtimeConfig: { cmsSecret: '', databaseUrl: `file:${resolve('cms.db')}` },
-})
+  modules: ["integral-cms/nuxt"], // reads ./integral.config.ts, options: integralCms: { entry, admin }
+  runtimeConfig: { cmsSecret: "", databaseUrl: `file:${resolve("cms.db")}` },
+});
 ```
 
 `integral.config.ts` can call `useRuntimeConfig()` for the secret and database URL.
@@ -576,8 +590,8 @@ During SSR it calls the CMS in-process; on client-side navigation it fetches the
 
 ```vue
 <script setup lang="ts">
-const { data: posts } = await useIntegral().find('posts')
-const { data: post } = await useIntegral().findOne('posts', { where: { slug: 'hello' } })
+const { data: posts } = await useIntegral().find("posts");
+const { data: post } = await useIntegral().findOne("posts", { where: { slug: "hello" } });
 </script>
 ```
 
@@ -589,36 +603,40 @@ No module needed. A splat server route hands API requests to the CMS. `integralA
 
 ```ts
 // src/routes/api/cms/$.ts
-const handle = ({ request }: { request: Request }) => cms.fetch(request)
+const handle = ({ request }: { request: Request }) => cms.fetch(request);
 
-export const Route = createFileRoute('/api/cms/$')({
+export const Route = createFileRoute("/api/cms/$")({
   server: { handlers: { GET: handle, POST: handle, PUT: handle, DELETE: handle } },
-})
+});
 ```
 
 ```ts
 // vite.config.ts
-import { integralAdmin } from 'integral-cms/vite'
+import { integralAdmin } from "integral-cms/vite";
 
-export default defineConfig({ plugins: [tanstackStart(), nitro(), viteReact(), integralAdmin()] })
+export default defineConfig({ plugins: [tanstackStart(), nitro(), viteReact(), integralAdmin()] });
 ```
 
 ```ts
 // src/routes/admin.$.ts
-import html from '#integral/admin-html'
+import html from "#integral/admin-html";
 
-export const Route = createFileRoute('/admin/$')({
-  server: { handlers: { GET: () => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } }) } },
-})
+export const Route = createFileRoute("/admin/$")({
+  server: {
+    handlers: {
+      GET: () => new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } }),
+    },
+  },
+});
 ```
 
 ```tsx
 // src/routes/index.tsx: loaders run on client and server, so read content in a server function
-import cms from '../../integral.config'
+import cms from "../../integral.config";
 
-const getPosts = createServerFn().handler(() => cms.find('posts'))
+const getPosts = createServerFn().handler(() => cms.find("posts"));
 
-export const Route = createFileRoute('/')({ loader: () => getPosts(), component: Home })
+export const Route = createFileRoute("/")({ loader: () => getPosts(), component: Home });
 ```
 
 `integralAdmin()` also keeps `integral-cms` external in the SSR build, because bundling it breaks libsql's native binding.
@@ -628,9 +646,9 @@ export const Route = createFileRoute('/')({ loader: () => getPosts(), component:
 Send `/api/cms/*` to `cms.fetch(request)`. With Vite, use `integralAdmin()` as in TanStack Start and return `#integral/admin-html` for `/admin` and `/admin/*`. Otherwise serve a page of its own with an empty element and mount into it:
 
 ```ts
-import { mountAdmin } from 'integral-cms/admin'
+import { mountAdmin } from "integral-cms/admin";
 
-mountAdmin('#admin')
+mountAdmin("#admin");
 ```
 
 ## Auth
@@ -646,11 +664,11 @@ mountAdmin('#admin')
 
 Coming from Payload, the auth hooks map to better-auth's request hooks:
 
-| Payload | better-auth |
-| --- | --- |
-| `beforeLogin` | `hooks.before` with `ctx.path === '/sign-in/email'` |
-| `afterLogin` | `hooks.after` with `ctx.path === '/sign-in/email'` |
-| `afterLogout` | `hooks.after` with `ctx.path === '/sign-out'` |
+| Payload               | better-auth                                                 |
+| --------------------- | ----------------------------------------------------------- |
+| `beforeLogin`         | `hooks.before` with `ctx.path === '/sign-in/email'`         |
+| `afterLogin`          | `hooks.after` with `ctx.path === '/sign-in/email'`          |
+| `afterLogout`         | `hooks.after` with `ctx.path === '/sign-out'`               |
 | `afterForgotPassword` | `hooks.after` with `ctx.path === '/request-password-reset'` |
 
 ```ts
@@ -671,15 +689,15 @@ Create `integral.admin.ts` next to `integral.config.ts`. Astro, Nuxt and `integr
 
 ```ts
 // integral.admin.ts
-import { defineAdmin } from 'integral-cms/admin'
+import { defineAdmin } from "integral-cms/admin";
 
 export default defineAdmin({
   fields: { color: mountColorInput },
   pages: {
-    home: { route: '/', mount: mountHome },
-    stats: { label: 'Stats', mount: mountStats },
+    home: { route: "/", mount: mountHome },
+    stats: { label: "Stats", mount: mountStats },
   },
-})
+});
 ```
 
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
@@ -689,11 +707,15 @@ export default defineAdmin({
 Every slot is one function, `mount(el, ctx)`, so any framework can plug in. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers:
 
 ```ts
-import { renderVue } from 'integral-cms/admin/vue'
-import { renderReact } from 'integral-cms/admin/react'
+import { renderVue } from "integral-cms/admin/vue";
+import { renderReact } from "integral-cms/admin/react";
 
-fields: { color: renderVue(ColorInput) }      // a .vue component, gets the context as reactive props
-fields: { color: renderReact(ColorInput) }    // a React component, re-rendered on context changes
+fields: {
+  color: renderVue(ColorInput);
+} // a .vue component, gets the context as reactive props
+fields: {
+  color: renderReact(ColorInput);
+} // a React component, re-rendered on context changes
 ```
 
 They import your `vue` or `react-dom`, so the components run in your app's runtime with HMR. Other frameworks, or no framework, write the function directly:
@@ -739,12 +761,12 @@ examples/tanstack-start  TanStack Start (React) app on Nitro v3
 
 ## Scripts
 
-| Command | What it does |
-| --- | --- |
+| Command                                        | What it does                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
 | `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` | Build packages, start the example and the admin playground on `:5173/admin/` |
-| `pnpm --filter @integral-cms/admin watch` | Rebuild the admin into the example on change |
-| `pnpm build` | Build packages and all examples |
-| `pnpm typecheck` | Build packages, then type-check everything |
+| `pnpm --filter @integral-cms/admin watch`      | Rebuild the admin into the example on change                                 |
+| `pnpm build`                                   | Build packages and all examples                                              |
+| `pnpm typecheck`                               | Build packages, then type-check everything                                   |
 
 ## Status
 
