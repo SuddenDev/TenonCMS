@@ -78,19 +78,21 @@ function paths(spec: object, prefix = ""): string[] {
         : [],
   );
 }
-// `select: {}` is sent as an empty `select=`, which returns only `id`.
-function readQuery(options: { populate?: boolean | object; depth?: number; select?: object }) {
-  const { populate, depth, select } = options;
-  return {
-    populate:
-      populate === false
-        ? "false"
-        : typeof populate === "object"
-          ? paths(populate).join(",") || "false"
-          : undefined,
-    depth,
-    select: select && paths(select).join(","),
-  };
+// `select: {}` is sent as an empty `select=`, which returns only `id`. A populate object with no paths means ids.
+function readQuery({
+  populate,
+  depth,
+  select,
+}: {
+  populate?: boolean | object;
+  depth?: number;
+  select?: object;
+}) {
+  const query: Record<string, string | number | undefined> = { depth };
+  if (populate === false) query.populate = "false";
+  else if (typeof populate === "object") query.populate = paths(populate).join(",") || "false";
+  if (select) query.select = paths(select).join(",");
+  return query;
 }
 
 /**
@@ -144,6 +146,120 @@ export class CmsError extends Error {
   }
 }
 
+type Global<C extends { schema: Schema }, K extends keyof Globals<C>> = Globals<C>[K]["fields"];
+
+/** The HTTP client. Names and document types come from `C`, the registered `cms`. See {@link Register}. */
+export type Client<C extends { schema: Schema } = RegisteredCms> = {
+  /**
+   * Lists documents of a collection, newest first.
+   * `GET /api/cms/collections/:collection`
+   */
+  find<K extends keyof Collections<C> & string, const O extends FindOptions<C, K> = {}>(
+    collection: K,
+    options?: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
+  ): Promise<ReadCollection<C, K, O>[]>;
+  /** Returns the newest document that matches `where`, or `undefined`. */
+  findOne<K extends keyof Collections<C> & string, const O extends FindOptions<C, K>>(
+    collection: K,
+    options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
+  ): Promise<ReadCollection<C, K, O> | undefined>;
+  /**
+   * Returns one document. Throws a `CmsError` with status `404` if it does not exist.
+   * `GET /api/cms/collections/:collection/:id`
+   */
+  findById<
+    K extends keyof Collections<C> & string,
+    const O extends ReadOptions<Collections<C>, Fields<C, K>> = {},
+  >(
+    collection: K,
+    id: string,
+    options?: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
+  ): Promise<ReadCollection<C, K, O>>;
+  /**
+   * Creates a document. Needs a session.
+   * `POST /api/cms/collections/:collection`
+   */
+  create<K extends keyof Collections<C> & string>(
+    collection: K,
+    data: Data<Fields<C, K>>,
+  ): Promise<Doc<Fields<C, K>>>;
+  /**
+   * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
+   * `PUT /api/cms/collections/:collection/:id`
+   */
+  update<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    data: Partial<Data<Fields<C, K>>>,
+  ): Promise<Doc<Fields<C, K>>>;
+  /**
+   * Deletes a document. Needs a session.
+   * `DELETE /api/cms/collections/:collection/:id`
+   */
+  delete(collection: keyof Collections<C> & string, id: string): Promise<null>;
+  /**
+   * Returns a global. Fields that were never saved are missing.
+   * `GET /api/cms/globals/:name`
+   */
+  getGlobal<
+    K extends keyof Globals<C> & string,
+    const O extends ReadOptions<Collections<C>, Global<C, K>, false> = {},
+  >(
+    name: K,
+    options?: Checked<O, Collections<C>, Global<C, K>, Depth<C>, false>,
+  ): Promise<Partial<Read<Collections<C>, Global<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>>>;
+  /**
+   * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
+   * `PUT /api/cms/globals/:name`
+   */
+  setGlobal<K extends keyof Globals<C> & string>(
+    name: K,
+    data: Partial<Data<Global<C, K>>>,
+  ): Promise<Data<Global<C, K>>>;
+  /**
+   * Returns the collections and globals with their fields. Needs a session.
+   * `GET /api/cms/schema`
+   */
+  getSchema(): Promise<{ collections?: Collections<C>; globals?: Globals<C> }>;
+  /**
+   * Creates the first admin and signs them in. Throws a `CmsError` with status `403` once an admin exists.
+   * `POST /api/cms/auth/sign-up/email`
+   */
+  signUp(data: { name: string; email: string; password: string }): Promise<Session["user"]>;
+  /**
+   * Signs in and sets the session cookie. Throws a `CmsError` with status `401` for a wrong email or password.
+   * `POST /api/cms/auth/sign-in/email`
+   */
+  signIn(data: { email: string; password: string }): Promise<Session["user"]>;
+  /**
+   * Signs out and clears the session cookie.
+   * `POST /api/cms/auth/sign-out`
+   */
+  signOut(): Promise<void>;
+  /**
+   * Returns the signed-in admin, or `null` without a session.
+   * `GET /api/cms/auth/get-session`
+   * @example
+   * const { user } = (await client.getSession()) ?? {}
+   * user?.name
+   */
+  getSession(): Promise<Session | null>;
+  /**
+   * Calls any route under `/api/cms`, e.g. a plugin's. `body` is sent as JSON, `query` as the query string.
+   * Throws a `CmsError` for an error status.
+   * @example
+   * await client.request<{ count: number }>('/redirects/lookup', { query: { path } })
+   * await client.request('/redirects/import', { method: 'POST', body: rows })
+   */
+  request<T = unknown>(
+    path: `/${string}`,
+    options?: { method?: string; body?: unknown; query?: object },
+  ): Promise<T>;
+};
+
+type ReadQuery = { populate?: boolean | object; depth?: number; select?: object };
+type FindQuery = ReadQuery & { where?: object; limit?: number };
+
 /**
  * Typed HTTP client for `/api/cms`. It has the same methods as the local API, so code reads the same on
  * both sides. Use it in the browser: admin pages, islands, client components. On the server, call the
@@ -162,13 +278,8 @@ export class CmsError extends Error {
 export function createClient<C extends { schema: Schema } = RegisteredCms>({
   baseUrl = "",
   fetch: fetchFn = fetch,
-}: ClientOptions = {}) {
-  async function request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-    query?: object,
-  ): Promise<T> {
+}: ClientOptions = {}): Client<C> {
+  async function request(method: string, path: string, body?: unknown, query?: object) {
     const params = new URLSearchParams(
       Object.entries(query ?? {}).flatMap(([key, value]) =>
         value === undefined ? [] : [[key, String(value)]],
@@ -182,184 +293,43 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     });
     const data = res.status === 204 ? null : await res.json().catch(() => null);
     if (!res.ok) throw new CmsError(res.status, data);
-    return data as T;
+    return data;
   }
-  const doc = (collection: string, id: string) =>
-    `/collections/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`;
+  const enc = encodeURIComponent;
+  const collection = (name: string) => `/collections/${enc(name)}`;
+  const doc = (name: string, id: string) => `${collection(name)}/${enc(id)}`;
+  const global = (name: string) => `/globals/${enc(name)}`;
+  const user = async (path: string, data: object) => (await request("POST", path, data)).user;
 
+  // The implementation is untyped; `Client` types it for the host.
   const client = {
-    /**
-     * Lists documents of a collection, newest first.
-     * `GET /api/cms/collections/:collection`
-     */
-    find<K extends keyof Collections<C> & string, const O extends FindOptions<C, K> = {}>(
-      collection: K,
-      options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>> = {} as never,
-    ) {
-      const query = {
-        ...options.where,
-        ...(options.limit && { limit: options.limit }),
-        ...readQuery(options),
-      };
-      return request<ReadCollection<C, K, O>[]>(
-        "GET",
-        `/collections/${encodeURIComponent(collection)}`,
-        undefined,
-        query,
-      );
-    },
-
-    /** Returns the newest document that matches `where`, or `undefined`. */
-    async findOne<K extends keyof Collections<C> & string, const O extends FindOptions<C, K>>(
-      collection: K,
-      options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
-    ): Promise<ReadCollection<C, K, O> | undefined> {
-      return (await client.find<K, O>(collection, { ...options, limit: 1 } as never))[0];
-    },
-
-    /**
-     * Returns one document. Throws a `CmsError` with status `404` if it does not exist.
-     * `GET /api/cms/collections/:collection/:id`
-     */
-    findById<
-      K extends keyof Collections<C> & string,
-      const O extends ReadOptions<Collections<C>, Fields<C, K>> = {},
-    >(
-      collection: K,
-      id: string,
-      options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>> = {} as never,
-    ) {
-      return request<ReadCollection<C, K, O>>(
-        "GET",
-        doc(collection, id),
-        undefined,
-        readQuery(options),
-      );
-    },
-
-    /**
-     * Creates a document. Needs a session.
-     * `POST /api/cms/collections/:collection`
-     */
-    create<K extends keyof Collections<C> & string>(collection: K, data: Data<Fields<C, K>>) {
-      return request<Doc<Fields<C, K>>>(
-        "POST",
-        `/collections/${encodeURIComponent(collection)}`,
-        data,
-      );
-    },
-
-    /**
-     * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
-     * `PUT /api/cms/collections/:collection/:id`
-     */
-    update<K extends keyof Collections<C> & string>(
-      collection: K,
-      id: string,
-      data: Partial<Data<Fields<C, K>>>,
-    ) {
-      return request<Doc<Fields<C, K>>>("PUT", doc(collection, id), data);
-    },
-
-    /**
-     * Deletes a document. Needs a session.
-     * `DELETE /api/cms/collections/:collection/:id`
-     */
-    delete(collection: keyof Collections<C> & string, id: string) {
-      return request<null>("DELETE", doc(collection, id));
-    },
-
-    /**
-     * Returns a global. Fields that were never saved are missing.
-     * `GET /api/cms/globals/:name`
-     */
-    getGlobal<
-      K extends keyof Globals<C> & string,
-      const O extends ReadOptions<Collections<C>, Globals<C>[K]["fields"], false> = {},
-    >(
-      name: K,
-      options: Checked<O, Collections<C>, Globals<C>[K]["fields"], Depth<C>, false> = {} as never,
-    ) {
-      return request<
-        Partial<Read<Collections<C>, Globals<C>[K]["fields"], PopulateOf<O, Depth<C>>, SelectOf<O>>>
-      >("GET", `/globals/${encodeURIComponent(name)}`, undefined, readQuery(options));
-    },
-
-    /**
-     * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
-     * `PUT /api/cms/globals/:name`
-     */
-    setGlobal<K extends keyof Globals<C> & string>(
-      name: K,
-      data: Partial<Data<Globals<C>[K]["fields"]>>,
-    ) {
-      return request<Data<Globals<C>[K]["fields"]>>(
-        "PUT",
-        `/globals/${encodeURIComponent(name)}`,
-        data,
-      );
-    },
-
-    /**
-     * Returns the collections and globals with their fields. Needs a session.
-     * `GET /api/cms/schema`
-     */
-    getSchema() {
-      return request<{ collections?: Collections<C>; globals?: Globals<C> }>("GET", "/schema");
-    },
-
-    /**
-     * Creates the first admin and signs them in. Throws a `CmsError` with status `403` once an admin exists.
-     * `POST /api/cms/auth/sign-up/email`
-     */
-    async signUp(data: { name: string; email: string; password: string }) {
-      return (await request<{ user: Session["user"] }>("POST", "/auth/sign-up/email", data)).user;
-    },
-
-    /**
-     * Signs in and sets the session cookie. Throws a `CmsError` with status `401` for a wrong email or password.
-     * `POST /api/cms/auth/sign-in/email`
-     */
-    async signIn(data: { email: string; password: string }) {
-      return (await request<{ user: Session["user"] }>("POST", "/auth/sign-in/email", data)).user;
-    },
-
-    /**
-     * Signs out and clears the session cookie.
-     * `POST /api/cms/auth/sign-out`
-     */
-    async signOut() {
+    find: (name: string, { where, limit, ...read }: FindQuery = {}) =>
+      request("GET", collection(name), undefined, {
+        ...where,
+        ...(limit && { limit }),
+        ...readQuery(read),
+      }),
+    findOne: async (name: string, options: FindQuery) =>
+      (await client.find(name, { ...options, limit: 1 }))[0],
+    findById: (name: string, id: string, options: ReadQuery = {}) =>
+      request("GET", doc(name, id), undefined, readQuery(options)),
+    create: (name: string, data: unknown) => request("POST", collection(name), data),
+    update: (name: string, id: string, data: unknown) => request("PUT", doc(name, id), data),
+    delete: (name: string, id: string) => request("DELETE", doc(name, id)),
+    getGlobal: (name: string, options: ReadQuery = {}) =>
+      request("GET", global(name), undefined, readQuery(options)),
+    setGlobal: (name: string, data: unknown) => request("PUT", global(name), data),
+    getSchema: () => request("GET", "/schema"),
+    signUp: (data: object) => user("/auth/sign-up/email", data),
+    signIn: (data: object) => user("/auth/sign-in/email", data),
+    signOut: async () => {
       await request("POST", "/auth/sign-out", {});
     },
-
-    /**
-     * Returns the signed-in admin, or `null` without a session.
-     * `GET /api/cms/auth/get-session`
-     * @example
-     * const { user } = (await client.getSession()) ?? {}
-     * user?.name
-     */
-    getSession() {
-      return request<Session | null>("GET", "/auth/get-session");
-    },
-
-    /**
-     * Calls any route under `/api/cms`, e.g. a plugin's. `body` is sent as JSON, `query` as the query string.
-     * Throws a `CmsError` for an error status.
-     * @example
-     * await client.request<{ count: number }>('/redirects/lookup', { query: { path } })
-     * await client.request('/redirects/import', { method: 'POST', body: rows })
-     */
-    request<T = unknown>(
-      path: `/${string}`,
-      { method = "GET", body, query }: { method?: string; body?: unknown; query?: object } = {},
-    ) {
-      return request<T>(method, path, body, query);
-    },
+    getSession: () => request("GET", "/auth/get-session"),
+    request: (
+      path: string,
+      { method = "GET", body, query } = {} as NonNullable<Parameters<Client["request"]>[1]>,
+    ) => request(method, path, body, query),
   };
-  return client;
+  return client as unknown as Client<C>;
 }
-
-export type Client<C extends { schema: Schema } = RegisteredCms> = ReturnType<
-  typeof createClient<C>
->;

@@ -1,0 +1,153 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createClient as createLibsql } from "@libsql/client";
+import { CmsError, createClient } from "../client.ts";
+import { defineCms, type PopulateConfig, type Schema } from "../index.ts";
+
+export const origin = "http://localhost";
+export const base = {
+  collections: {
+    posts: {
+      fields: {
+        title: { type: "text", required: true },
+        views: { type: "number" },
+        featured: { type: "boolean" },
+        seo: {
+          type: "group",
+          label: "SEO",
+          fields: { title: { type: "text" }, noindex: { type: "boolean" } },
+        },
+      },
+    },
+  },
+  globals: { site: { fields: { name: { type: "text" } } } },
+  database: { url: ":memory:" },
+  secret: "x".repeat(32),
+} as const;
+export const define = (secret: string) => defineCms({ ...base, secret });
+
+export function setup<
+  C extends { schema: Schema; fetch(request: Request): Promise<Response> } = ReturnType<
+    typeof define
+  >,
+>(cms: C = define(base.secret) as never) {
+  let cookie = "";
+  // Keeps the session cookie between requests, like a browser.
+  const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
+    headers.set("origin", origin);
+    if (cookie) headers.set("cookie", cookie);
+    const res = await cms.fetch(new Request(input, { ...init, headers }));
+    const set = res.headers.getSetCookie().map((c) => c.split(";")[0]);
+    if (set.length) cookie = set.join("; ");
+    return res;
+  };
+  return { cms, fetch, client: createClient<typeof cms>({ baseUrl: origin, fetch }) };
+}
+
+/** A fresh instance, a client with its own cookie jar, and a raw fetch under `/api/cms`. */
+export function fresh() {
+  const s = setup();
+  const fetchWithSession = (path: string, init?: RequestInit) =>
+    s.fetch(`${origin}/api/cms${path}`, init);
+  return { cms: s.cms, client: s.client, fetchWithSession };
+}
+export type Env = ReturnType<typeof fresh>;
+
+export const admin = { name: "Admin", email: "a@b.co", password: "password123" };
+
+export const tmpDb = () => `file:${mkdtempSync(join(tmpdir(), "integral-"))}/cms.db`;
+
+export async function tables(url: string) {
+  const db = createLibsql({ url });
+  try {
+    return (await db.execute(`SELECT name FROM sqlite_master WHERE type = 'table'`)).rows.map(
+      (r) => r.name,
+    );
+  } finally {
+    db.close();
+  }
+}
+
+export async function status(promise: Promise<unknown>) {
+  const error = await promise.then(
+    () => undefined,
+    (e: unknown) => e,
+  );
+  return error instanceof CmsError ? error.status : error;
+}
+
+export const relational = (url = ":memory:", populate: PopulateConfig = {}) =>
+  defineCms({
+    collections: {
+      media: {
+        fields: {
+          url: { type: "text", required: true },
+          usedIn: { type: "join", collection: "posts", on: "seo.image" },
+        },
+      },
+      authors: {
+        titleField: "name",
+        fields: {
+          name: { type: "text", required: true },
+          avatar: { type: "relation", collection: "media" },
+          posts: { type: "join", collection: "posts", on: "author" },
+        },
+      },
+      tags: {
+        fields: {
+          name: { type: "text", required: true },
+          posts: { type: "join", collection: "posts", on: "tags" },
+        },
+      },
+      posts: {
+        fields: {
+          title: { type: "text", required: true },
+          author: { type: "relation", collection: "authors" },
+          tags: { type: "relation", collection: "tags", many: true },
+          seo: { type: "group", fields: { image: { type: "relation", collection: "media" } } },
+        },
+      },
+      notes: {
+        fields: {
+          post: { type: "relation", collection: "posts", required: true },
+          pin: { type: "relation", collection: "pages", required: true },
+        },
+      },
+      pages: {
+        fields: {
+          title: { type: "text", required: true },
+          parent: { type: "relation", collection: "pages", onDelete: "cascade" },
+        },
+      },
+    },
+    globals: {
+      site: {
+        fields: {
+          logo: { type: "relation", collection: "media" },
+          featured: { type: "relation", collection: "posts", many: true },
+        },
+      },
+    },
+    populate,
+    database: { url },
+    secret: "x".repeat(32),
+  });
+
+// Seeds one graph through the local API and returns the ids.
+export async function seed(cms: ReturnType<typeof relational>) {
+  const m = await cms.create("media", { url: "/a.png" });
+  const a = await cms.create("authors", { name: "Ann", avatar: m.id });
+  const [t1, t2] = [
+    await cms.create("tags", { name: "one" }),
+    await cms.create("tags", { name: "two" }),
+  ];
+  const p = await cms.create("posts", {
+    title: "Hi",
+    author: a.id,
+    tags: [t1.id, t2.id],
+    seo: { image: m.id },
+  });
+  return { m, a, t1, t2, p };
+}

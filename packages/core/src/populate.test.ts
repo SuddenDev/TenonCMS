@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkSelect, parsePopulate, parseSelect, pick } from "./relations.ts";
+import { badSelectPath, pick } from "./populate.ts";
 import type { Collection } from "./schema.ts";
 
 const collections: Record<string, Collection> = {
@@ -21,40 +21,6 @@ const collections: Record<string, Collection> = {
     },
   },
 };
-
-describe("parsePopulate", () => {
-  const parse = (query: { populate?: string; depth?: string }, name = "posts") =>
-    parsePopulate(collections, collections[name].fields, query, { depth: 2, maxDepth: 2 });
-
-  it("parses depth, false and paths", () => {
-    expect(parse({})).toEqual(2);
-    expect(parse({ populate: "false" })).toEqual(false);
-    expect(parse({ depth: "1" })).toEqual(1);
-    expect(parse({ populate: "author.avatar,tags" })).toEqual({
-      author: { avatar: true },
-      tags: true,
-    });
-    expect(parse({ populate: "author,author.avatar" })).toEqual({ author: { avatar: true } });
-    expect(parse({ populate: "author.avatar,author" })).toEqual({ author: { avatar: true } });
-    expect(parse({ populate: "seo.image" })).toEqual({ seo: { image: true } });
-    expect(parse({ populate: "seo" })).toEqual({ seo: true });
-    expect(parse({ populate: "posts.tags" }, "authors")).toEqual({ posts: { tags: true } });
-  });
-
-  it.each([
-    [{ populate: "title" }, "Invalid populate: title"],
-    [{ populate: "nope" }, "Invalid populate: nope"],
-    [{ populate: "author.nope" }, "Invalid populate: author.nope"],
-    [{ populate: "" }, "Invalid populate: "],
-    [{ populate: "constructor" }, "Invalid populate: constructor"],
-    [{ depth: "3" }, "Invalid depth: 3"],
-    [{ depth: "-1" }, "Invalid depth: -1"],
-    [{ depth: "x" }, "Invalid depth: x"],
-    [{ populate: "author.posts.author" }, "Invalid populate: author.posts.author"],
-  ])("rejects %o", (query, message) => {
-    expect(parse(query)).toBe(message);
-  });
-});
 
 describe("pick", () => {
   const media = { id: "m", url: "/a.png", createdAt: "c", updatedAt: "u" };
@@ -114,18 +80,18 @@ describe("pick", () => {
   });
 });
 
-describe("checkSelect", () => {
+describe("badSelectPath", () => {
   const check = (
     select: Record<string, any>,
-    spec: Parameters<typeof checkSelect>[3] = 2,
+    spec: Parameters<typeof badSelectPath>[3] = 2,
     name = "posts",
-  ) => checkSelect(collections, collections[name].fields, select, spec);
+  ) => badSelectPath(collections, collections[name].fields, select, spec);
 
   it("accepts meta keys only on documents", () => {
     expect(check({ author: { id: true, createdAt: true } })).toBeUndefined();
     expect(check({ seo: { id: true } })).toBe("seo.id");
     expect(check({ seo: { updatedAt: true } })).toBe("seo.updatedAt");
-    expect(checkSelect(collections, collections.posts.fields, { id: true }, 2, "", false)).toBe(
+    expect(badSelectPath(collections, collections.posts.fields, { id: true }, 2, "", false)).toBe(
       "id",
     );
   });
@@ -165,26 +131,5 @@ describe("checkSelect", () => {
 
   it("rejects a join that populate does not name", () => {
     expect(check({ posts: { title: true } }, 2, "authors")).toBe("posts");
-  });
-});
-
-describe("parseSelect", () => {
-  it("builds nested objects from dot paths, longer path wins", () => {
-    expect(parseSelect("title,path,parent.title,parent.path")).toEqual({
-      title: true,
-      path: true,
-      parent: { title: true, path: true },
-    });
-    expect(parseSelect("seo,seo.title")).toEqual({ seo: { title: true } });
-    expect(parseSelect("seo.title,seo")).toEqual({ seo: { title: true } });
-    expect(parseSelect("a.b.c")).toEqual({ a: { b: { c: true } } });
-    expect(parseSelect("")).toEqual({});
-    expect(parseSelect("title,,path")).toEqual({ title: true, path: true });
-  });
-
-  it("never writes to Object.prototype", () => {
-    const select = parseSelect("__proto__.polluted,constructor.prototype.polluted");
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
-    expect(Object.keys(select)).toEqual(["__proto__", "constructor"]);
   });
 });
