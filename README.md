@@ -32,6 +32,9 @@ pnpm dev:nuxt                                         # http://localhost:3000/ad
 
 cp examples/tanstack-start/.env.example examples/tanstack-start/.env   # set CMS_SECRET (32+ chars)
 pnpm dev:tanstack                                     # http://localhost:3100/admin
+
+cp examples/standalone/.env.example examples/standalone/.env   # set CMS_SECRET (32+ chars)
+pnpm dev:standalone                                   # http://localhost:3200/admin
 ```
 
 Generate a secret with `openssl rand -hex 32`.
@@ -820,16 +823,17 @@ packages/admin   Vue 3 + Tailwind admin, built as a library into core's dist/adm
 examples/astro   Astro 7 app, mixing prerendered pages and SSR pages, on @astrojs/node
 examples/nuxt    Nuxt 4 app
 examples/tanstack-start  TanStack Start (React) app on Nitro v3
+examples/standalone      Headless CMS without a site: API and admin on Vite + Nitro v3
 ```
 
 ## Scripts
 
-| Command                                        | What it does                                                                 |
-| ---------------------------------------------- | ---------------------------------------------------------------------------- |
-| `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` | Build packages, start the example and the admin playground on `:5173/admin/` |
-| `pnpm --filter @integral-cms/admin watch`      | Rebuild the admin into the example on change                                 |
-| `pnpm build`                                   | Build packages and all examples                                              |
-| `pnpm typecheck`                               | Build packages, then type-check everything                                   |
+| Command                                                           | What it does                                                                 |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` / `dev:standalone` | Build packages, start the example and the admin playground on `:5173/admin/` |
+| `pnpm --filter @integral-cms/admin watch`                         | Rebuild the admin into the example on change                                 |
+| `pnpm build`                                                      | Build packages and all examples                                              |
+| `pnpm typecheck`                                                  | Build packages, then type-check everything                                   |
 
 ## Status
 

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite/client", "node", "integral-cms/register"],
+    "paths": { "#integral/config": ["./integral.config.ts"] }
+  },
+  "include": ["server.ts", "collections", "integral.config.ts", "vite.config.ts"]
+}

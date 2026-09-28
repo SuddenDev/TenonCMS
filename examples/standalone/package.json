@@ -1,0 +1,21 @@
+{
+  "name": "example-standalone",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3200",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env .output/server/index.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "integral-cms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "nitro": "3.0.260903-beta",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0"
+  }
+}
