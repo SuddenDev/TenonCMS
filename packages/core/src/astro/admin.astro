@@ -1,7 +1,7 @@
 ---
-export const prerender = false
+export const prerender = false;
 
-const base = Astro.routePattern.replace('/[...path]', '')
+const base = Astro.routePattern.replace("/[...path]", "");
 ---
 
 <html lang="en">
@@ -13,7 +13,7 @@ const base = Astro.routePattern.replace('/[...path]', '')
   <body>
     <div id="admin" data-base={base}></div>
     <script>
-      import '../admin/entry.ts'
+      import "../admin/entry.ts";
     </script>
   </body>
 </html>

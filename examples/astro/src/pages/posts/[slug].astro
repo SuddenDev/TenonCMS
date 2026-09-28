@@ -1,8 +1,8 @@
 ---
-export const prerender = false
+export const prerender = false;
 
-const post = await Astro.locals.integral.findOne('posts', { where: { slug: Astro.params.slug! } })
-if (!post) return new Response('Not found', { status: 404 })
+const post = await Astro.locals.integral.findOne("posts", { where: { slug: Astro.params.slug! } });
+if (!post) return new Response("Not found", { status: 404 });
 ---
 
 <html lang="en">
@@ -12,7 +12,9 @@ if (!post) return new Response('Not found', { status: 404 })
   </head>
   <body>
     <a href="/">← Home</a>
-    <h1 style={post.color ? `border-left: 4px solid ${post.color}; padding-left: 8px` : undefined}>{post.title}</h1>
+    <h1 style={post.color ? `border-left: 4px solid ${post.color}; padding-left: 8px` : undefined}>
+      {post.title}
+    </h1>
     {post.author && <p style="color:blue">{post.author.name}</p>}
     {post.publishedAt && <time datetime={post.publishedAt}>{post.publishedAt}</time>}
     <p style="white-space: pre-wrap">{post.body}</p>

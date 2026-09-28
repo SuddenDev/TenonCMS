@@ -1,9 +1,9 @@
 ---
-export const prerender = false
+export const prerender = false;
 
-const { integral: cms } = Astro.locals
-const site = await cms.getGlobal('site')
-const posts = await cms.find('posts')
+const { integral: cms } = Astro.locals;
+const site = await cms.getGlobal("site");
+const posts = await cms.find("posts");
 ---
 
 <html lang="en">
@@ -12,17 +12,19 @@ const posts = await cms.find('posts')
     <title>{site.title ?? 'My site'}</title>
   </head>
   <body>
-    <h1>{site.title ?? 'My site'}</h1>
+    <h1>{site.title ?? "My site"}</h1>
     {site.tagline && <p>{site.tagline}</p>}
     <ul>
       {posts.map((post) => (
         <li>
           <a href={`/posts/${post.slug}`}>{post.title}</a>
-          {post.featured && ' ★'}
+          {post.featured && " ★"}
           <p>{post.author?.name}</p>
         </li>
       ))}
     </ul>
-    <p><a href="/admin">Admin</a></p>
+    <p>
+      <a href="/admin">Admin</a>
+    </p>
   </body>
 </html>

@@ -18,8 +18,8 @@
     "build": "pnpm build:packages && pnpm --filter \"./examples/*\" build",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "test": "pnpm --filter integral-cms test",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
+    "fmt": "oxfmt && prettier --write \"**/*.astro\"",
+    "fmt:check": "oxfmt --check && prettier --check \"**/*.astro\"",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix"
   },
@@ -28,11 +28,14 @@
     "lint-staged": "^17.6.0",
     "oxfmt": "^0.71.0",
     "oxlint": "^1.86.0",
+    "prettier": "^3.9.9",
+    "prettier-plugin-astro": "^1.1.0",
     "typescript": "^6.0.3"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,vue,astro}": "oxlint --fix --no-error-on-unmatched-pattern",
-    "*": "oxfmt --no-error-on-unmatched-pattern"
+    "*": "oxfmt --no-error-on-unmatched-pattern",
+    "*.astro": "prettier --write"
   },
   "packageManager": "pnpm@10.11.0"
 }
