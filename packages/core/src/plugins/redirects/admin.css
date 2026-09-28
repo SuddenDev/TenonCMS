@@ -1,0 +1,44 @@
+.redirects-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 32rem;
+}
+
+.redirects-tools h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.redirects-tools form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.redirects-tools label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.redirects-tools .row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.redirects-tools .row button {
+  white-space: nowrap;
+}
+
+.redirects-tools p,
+.redirects-tools output {
+  font-size: 0.875rem;
+  color: #52525b;
+}
+
+.redirects-tools a {
+  text-decoration: underline;
+}

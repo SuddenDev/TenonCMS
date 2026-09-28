@@ -342,6 +342,20 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     getSession() {
       return request<Session | null>("GET", "/auth/get-session");
     },
+
+    /**
+     * Calls any route under `/api/cms`, e.g. a plugin's. `body` is sent as JSON, `query` as the query string.
+     * Throws a `CmsError` for an error status.
+     * @example
+     * await client.request<{ count: number }>('/redirects/lookup', { query: { path } })
+     * await client.request('/redirects/import', { method: 'POST', body: rows })
+     */
+    request<T = unknown>(
+      path: `/${string}`,
+      { method = "GET", body, query }: { method?: string; body?: unknown; query?: object } = {},
+    ) {
+      return request<T>(method, path, body, query);
+    },
   };
   return client;
 }

@@ -6,11 +6,16 @@ import { API_BASE } from "./client.ts";
 import { isObject } from "./condition.ts";
 import type { Cms } from "./index.ts";
 import { ConflictError, ValidationError } from "./errors.ts";
+import type { Plugin, PublicRouteEnv, RouteEnv } from "./plugin.ts";
 import { checkSelect, parsePopulate, parseSelect, type SelectSpec } from "./relations.ts";
 import { type Field, type Fields, filterable, type Schema } from "./schema.ts";
 
 /** `asUser(user)` returns the local API with the session user set for hooks. */
-export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>) {
+export function createApp(
+  cms: Cms<Schema>,
+  asUser: (user: User) => Cms<Schema>,
+  plugins: readonly Plugin[] = [],
+) {
   const { schema } = cms;
   const collections = schema.collections ?? {};
   // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
@@ -47,7 +52,18 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   }
 
   // Reads use `cms` (no user). Writes use `c.var.cms`, which carries the session user.
-  const api = new Hono<{ Variables: { cms: Cms<Schema> } }>().basePath(API_BASE);
+  const api = new Hono<{ Variables: { cms: Cms<Schema>; user: User } }>().basePath(API_BASE);
+  // Mounts each plugin's routes of one kind under its name.
+  const mount = (kind: "routes" | "publicRoutes") => {
+    for (const plugin of plugins) {
+      // Both kinds get a sub-app that satisfies their environment.
+      const add = plugin[kind] as ((api: Hono<RouteEnv & PublicRouteEnv>) => void) | undefined;
+      if (!add) continue;
+      const sub = new Hono<RouteEnv & PublicRouteEnv>();
+      add(sub);
+      api.route(`/${plugin.name}`, sub);
+    }
+  };
   // Every error body has `message`, like better-auth's. Only expected errors send their own; others MAY hold internals.
   api.onError((err, c) => {
     if (err instanceof ValidationError)
@@ -61,6 +77,12 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
   api.notFound((c) => c.json({ message: "Not Found" }, 404));
 
   api.on(["GET", "POST"], "/auth/*", async (c) => (await cms.auth()).handler(c.req.raw));
+
+  api.use(async (c, next) => {
+    c.set("cms", cms);
+    await next();
+  });
+  mount("publicRoutes");
 
   // Reads are public: the site renders this content anyway. Query params are equality filters,
   // except `limit`, `populate`, `depth` and `select`, so fields with these names cannot be filtered over HTTP.
@@ -109,10 +131,12 @@ export function createApp(cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>)
     const session = await (await cms.auth()).api.getSession({ headers: c.req.raw.headers });
     if (!session) return c.json({ message: "Unauthorized" }, 401);
     c.set("cms", asUser(session.user));
+    c.set("user", session.user);
     await next();
   });
 
   api.get("/schema", (c) => c.json(publicSchema));
+  mount("routes");
 
   api.post("/collections/:name", async (c) => {
     const name = collectionName(c.req.param("name"));

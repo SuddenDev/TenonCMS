@@ -263,6 +263,7 @@ await client.findOne("pages", {
 });
 await client.update("posts", id, post); // needs a session, so it works in admin pages
 await client.getSession(); // the signed-in admin, or null
+await client.request("/redirects/lookup", { query: { path } }); // any route under /api/cms, e.g. a plugin's
 ```
 
 To type your own browser code, `Collections<C>` and `Globals<C>` give the schema as HTTP sends it, with `private` fields optional:
@@ -384,6 +385,18 @@ export const posts = defineCollection({
 
 Field hooks get `value`, plus `data`, `siblingData` (the group that holds the field), `originalDoc` and `path` (e.g. `seo.title`). Every hook also gets `cms` (the local API), `user` (the session user of an HTTP write, else `null`), `context` and `collection` or `global`.
 
+Root hooks run for every collection and global. `defineCms({ hooks })` takes every stage of the table; `collection` or `global` says which one is running, and `data`, `doc` and `docs` are untyped. Globals run only their own stages. [Plugins](#plugins) add hooks the same way.
+
+```ts
+defineCms({
+  hooks: {
+    afterChange: [
+      ({ collection, global, doc }) => console.log("changed", collection ?? global, doc.id),
+    ],
+  },
+});
+```
+
 Order:
 
 ```
@@ -392,7 +405,7 @@ find, findOne, findById, getGlobal: beforeOperation → beforeRead → populate 
 delete: beforeOperation → beforeDelete → delete + onDelete effects → afterDelete → afterOperation
 ```
 
-- At each stage, field hooks run first, in field order and depth-first into groups, then the collection's or global's. A group's own hooks run before its fields'.
+- At each stage, field hooks run first, in field order and depth-first into groups, then the collection's or global's, then the plugins' and last the root hooks of `defineCms`. A group's own hooks run before its fields'.
 - Globals have no `beforeOperation` and `afterOperation`.
 - `beforeChange` gets validated data, and its result is validated again, so a hook cannot store invalid data.
 - `afterRead` runs once per read with all documents (field `afterRead` once per value). Documents loaded by `populate` run their own collection's `beforeRead` and `afterRead`, once per relation field per hop.
@@ -690,19 +703,23 @@ Create `integral.admin.ts` next to `integral.config.ts`. Astro, Nuxt and `integr
 ```ts
 // integral.admin.ts
 import { defineAdmin } from "integral-cms/admin";
+import { redirectsAdmin } from "integral-cms/plugins/redirects/admin";
 
 export default defineAdmin({
   fields: { color: mountColorInput },
   pages: {
     home: { route: "/", mount: mountHome },
-    stats: { label: "Stats", mount: mountStats },
+    stats: { menu: { label: "Stats", icon: "chart-bar", order: 5 }, mount: mountStats },
   },
+  plugins: [redirectsAdmin()],
 });
 ```
 
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
-- `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`. Pages with a `label` are linked in the sidebar.
+- `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`.
+- `menu` puts a page in the sidebar: `label`, an optional `icon` ([Lucide](https://lucide.dev/icons) name) and `order`. The sidebar is one list sorted by `order`: collections sit at 10, globals at 20, pages default to 30. Equal orders keep their definition order. Pages without `menu` are reachable by URL only.
 - A page on a built-in path replaces that view: `route: '/'` replaces the start page, `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
+- `plugins` takes the admin halves of [plugins](#plugins). Their fields and pages merge in before yours; a key used twice throws when the admin mounts.
 
 Every slot is one function, `mount(el, ctx)`, so any framework can plug in. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers:
 
@@ -742,6 +759,50 @@ Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ params, qu
 
 To serve the admin elsewhere, pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `integralAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
 
+## Plugins
+
+A plugin is a package with two halves. The server half goes into `integral.config.ts`, the admin half into `integral.admin.ts`. Both are plain objects, so a host can also spread their parts by hand to rename or leave out something.
+
+```ts
+// integral.config.ts
+import { redirects } from "integral-cms/plugins/redirects";
+export default defineCms({ collections: { pages }, plugins: [redirects()] });
+
+// integral.admin.ts
+import { redirectsAdmin } from "integral-cms/plugins/redirects/admin";
+export default defineAdmin({ plugins: [redirectsAdmin()] });
+```
+
+The server half, from `definePlugin()`:
+
+| Key            | What it adds                                                                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`         | Unique, lowercase, e.g. `redirects`. Prefix of the plugin's routes                                                                                              |
+| `collections`  | Collections, typed like the host's: `cms.find('redirects')` works. A name the host or another plugin uses throws at startup                                     |
+| `globals`      | Globals, the same way. The admin renders them, so a global doubles as the plugin's settings page                                                                |
+| `hooks`        | Root hooks for every collection and global, run after the collection's own hooks and before the host's root hooks                                               |
+| `routes`       | `(api) => api.get(…)` on a Hono sub-app at `/api/cms/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, `c.var.user` is that user |
+| `publicRoutes` | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                               |
+
+Route errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `auth`, `collections`, `globals` and `schema` are reserved names.
+
+The admin half, from `defineAdminPlugin()`, has `name`, `fields` and `pages`, exactly as `integral.admin.ts` does. Pages call plugin routes with `client.request()`.
+
+A plugin does not need a route for everything. What the site needs at a pretty URL is a framework route in the host, calling a helper the plugin exports with the local API. That is how the redirects plugin resolves a path:
+
+```ts
+// src/middleware.ts (Astro)
+import { resolveRedirect } from "integral-cms/plugins/redirects";
+import cms from "../integral.config";
+
+export const onRequest = defineMiddleware(async (context, next) => {
+  const redirect = await resolveRedirect(cms, context.url.pathname);
+  return redirect ? context.redirect(redirect.to, redirect.status) : next();
+});
+```
+
+`redirects({ collections: ['pages'], field: 'path' })` adds the `redirects` collection (`from`, `to`, `permanent`), a hook that creates a redirect when a listed document's path changes and keeps chains one hop long, `GET /api/cms/redirects/lookup?path=` for everyone, `POST /api/cms/redirects/import` (an array of redirects) for admins, and a "Redirect tools" admin page to test paths and import.
+
 ## Environment and deployment
 
 - `dev` and `preview` load `.env` in all examples. The examples' `start` scripts pass `--env-file-if-exists=.env` to Node.
@@ -780,6 +841,7 @@ Working:
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
 - Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
 - `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `breadcrumbs()` / `slugify()`
+- Plugins with a server half (collections, globals, root hooks, routes) and an admin half (fields, pages); `integral-cms/plugins/redirects` as the first one
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions

@@ -2,7 +2,12 @@ import { useHead } from "@unhead/vue";
 import { createHead } from "@unhead/vue/client";
 import { createApp, h } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
-import type { AdminOptions, IntegralContext, Page } from "../../core/src/admin/index.d.ts";
+import type {
+  AdminOptions,
+  AdminPlugin,
+  IntegralContext,
+  Page,
+} from "../../core/src/admin/index.d.ts";
 import App from "./App.vue";
 import Mount from "./components/Mount.vue";
 import CollectionList from "./pages/CollectionList.vue";
@@ -16,12 +21,32 @@ export function defineAdmin(options: AdminOptions): AdminOptions {
   return options;
 }
 
-export function mountAdmin(el: string | Element, options: AdminOptions = {}, base = "/admin") {
+export function defineAdminPlugin(plugin: AdminPlugin): AdminPlugin {
+  return plugin;
+}
+
+// The plugins' fields and pages, then the host's. A key used twice throws.
+function merge({ plugins = [], ...host }: AdminOptions): AdminOptions {
+  const out: Required<Pick<AdminOptions, "fields" | "pages">> = { fields: {}, pages: {} };
+  for (const { name, ...plugin } of [...plugins, { name: "integral.admin.ts", ...host }]) {
+    for (const kind of ["fields", "pages"] as const) {
+      for (const [key, value] of Object.entries(plugin[kind] ?? {})) {
+        if (Object.hasOwn(out[kind], key))
+          throw new Error(`integral-cms: duplicate admin ${kind} key "${key}" in ${name}`);
+        out[kind][key] = value as never;
+      }
+    }
+  }
+  return out;
+}
+
+export function mountAdmin(el: string | Element, raw: AdminOptions = {}, base = "/admin") {
+  const options = merge(raw);
   // The styles are global. The admin runs on a page of its own, so they never reach the host's pages.
   document.head.append(Object.assign(document.createElement("style"), { textContent: css }));
-  const page = ({ mount, label }: Page) => ({
+  const page = ({ mount, menu }: Page) => ({
     setup() {
-      useHead({ title: label });
+      useHead({ title: menu?.label });
       return () =>
         h(Mount, {
           mount,

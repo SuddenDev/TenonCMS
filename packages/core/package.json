@@ -49,6 +49,14 @@
     "./presets": {
       "types": "./dist/presets/index.d.mts",
       "default": "./dist/presets/index.mjs"
+    },
+    "./plugins/redirects": {
+      "types": "./dist/plugins/redirects/index.d.mts",
+      "default": "./dist/plugins/redirects/index.mjs"
+    },
+    "./plugins/redirects/admin": {
+      "types": "./dist/plugins/redirects/admin.d.mts",
+      "default": "./dist/plugins/redirects/admin.mjs"
     }
   },
   "scripts": {

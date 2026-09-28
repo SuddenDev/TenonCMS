@@ -317,11 +317,12 @@ export type GlobalHooks<F extends Fields> = Pick<
   "beforeValidate" | "beforeChange" | "afterChange" | "beforeRead" | "afterRead"
 >;
 
-/** Hooks of `defineCms`. */
-export type RootHooks = {
-  /** Runs after an unexpected error in any operation, after the collection's `afterError`. Not for 400 or 409. */
-  afterError?: Slot<Fn<HookArgs & { operation: Operation; error: unknown }, void>>;
-};
+/**
+ * Hooks of `defineCms` and of plugins. They run for every collection and global, after the collection's or
+ * global's own hooks of the same stage. `collection` or `global` names the target; `data`, `doc` and `docs` are untyped.
+ * Globals run only the stages of {@link GlobalHooks}.
+ */
+export type RootHooks = CollectionHooks<Fields>;
 
 type FieldValue<F extends Field> = F extends { type: "group"; fields: infer G extends Fields }
   ? Data<G>

@@ -5,8 +5,12 @@ import { ColorInput, PostReport, Stats } from "./src/admin";
 export default defineAdmin({
   fields: { color: renderReact(ColorInput) },
   pages: {
-    stats: { label: "Stats", route: "/reports/stats", mount: renderReact(Stats) },
-    // No label: reachable from the Stats page, not the sidebar.
+    stats: {
+      menu: { label: "Stats", icon: "chart-bar" },
+      route: "/reports/stats",
+      mount: renderReact(Stats),
+    },
+    // No menu: reachable from the Stats page, not the sidebar.
     post: { route: "/reports/posts/:id", mount: renderReact(PostReport) },
   },
 });

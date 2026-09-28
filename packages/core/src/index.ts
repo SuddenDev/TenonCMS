@@ -7,6 +7,7 @@ import { isObject, matchCondition } from "./condition.ts";
 import { createDb, type Database, migrate, toDoc } from "./db/index.ts";
 import { ConflictError, ValidationError } from "./errors.ts";
 import { slugify } from "./helpers/slugify.ts";
+import { mergePlugins, type Plugin } from "./plugin.ts";
 import {
   checkRefs,
   checkSchema,
@@ -48,6 +49,7 @@ import {
 
 export { defineCollection, defineGlobal } from "./schema.ts";
 export type { Collection, Schema, Data, Doc, Field, Fields, Global } from "./schema.ts";
+export { definePlugin, type Plugin } from "./plugin.ts";
 
 export type { AuthOptions } from "./auth.ts";
 export { ConflictError, type Reference, ValidationError } from "./errors.ts";
@@ -67,15 +69,31 @@ export type PopulateConfig = {
 };
 type DefaultDepth<P extends PopulateConfig> = P["depth"] extends number ? P["depth"] : 2;
 
+type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
+  k: infer I,
+) => void
+  ? I
+  : never;
+// `unknown` without plugins, so `C & PluginCollections<[]>` is `C`.
+type PluginCollections<PL extends readonly Plugin[]> = UnionToIntersection<
+  NonNullable<PL[number]["collections"]>
+>;
+type PluginGlobals<PL extends readonly Plugin[]> = UnionToIntersection<
+  NonNullable<PL[number]["globals"]>
+>;
+
 export type CmsOptions<
   C extends Record<string, Collection>,
   G extends Record<string, Global>,
   A extends AuthOptions = {},
   P extends PopulateConfig = {},
+  PL extends readonly Plugin[] = [],
 > = {
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
-  collections?: C & NoInfer<CheckRefs<C, C> & Record<string, Collection>>;
-  globals?: G & NoInfer<CheckRefs<G, C> & Record<string, Global>>;
+  collections?: C & NoInfer<CheckRefs<C, C & PluginCollections<PL>> & Record<string, Collection>>;
+  globals?: G & NoInfer<CheckRefs<G, C & PluginCollections<PL>> & Record<string, Global>>;
+  /** Plugins, from `definePlugin()`. Their collections, globals and hooks merge into the instance. */
+  plugins?: PL;
   /** Defaults for reads that resolve relations. */
   populate?: P;
   database: { url: string; authToken?: string };
@@ -123,21 +141,23 @@ export function defineCms<
   const G extends Record<string, Global> = {},
   const A extends AuthOptions = {},
   const P extends PopulateConfig = {},
+  const PL extends readonly Plugin[] = [],
 >({
   database,
   secret,
   auth: host = {} as A,
   populate: config = {} as P,
   hooks: rootHooks = {},
-  ...schema
-}: CmsOptions<C, G, A, P>) {
-  type T = { collections?: C; globals?: G };
+  plugins = [] as unknown as PL,
+  ...own
+}: CmsOptions<C, G, A, P, PL>) {
+  type T = { collections?: C & PluginCollections<PL>; globals?: G & PluginGlobals<PL> };
   type D = DefaultDepth<P>;
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 };
+  const schema = mergePlugins(plugins, own);
   checkSchema(schema, defaults);
   checkFields(schema);
-  const collections: Record<string, Collection> = schema.collections ?? {};
-  const globals: Record<string, Global> = schema.globals ?? {};
+  const { collections, globals } = schema;
   const spec = (options: { populate?: boolean | object; depth?: number }): Spec =>
     options.populate === false
       ? false
@@ -197,10 +217,11 @@ export function defineCms<
     const body = async (trx = scope.trx) => {
       const s: Scope = { ...scope, trx, context, nested: true };
       const inner: Inner = { ...s, cms: bind(s) as unknown as LocalApi };
-      const h = name.collection ? collections[name.collection].hooks : undefined;
+      // Globals have no `beforeOperation` and `afterOperation`, root ones included.
+      const of = (stage: Stage) => (name.collection ? slot(name, stage) : undefined);
       const base = { ...common(inner, name), operation };
-      const input = await hooks(h?.beforeOperation, "args", args, base);
-      return (await hooks(h?.afterOperation, "result", await fn(inner, input), {
+      const input = await hooks(of("beforeOperation"), "args", args, base);
+      return (await hooks(of("afterOperation"), "result", await fn(inner, input), {
         ...base,
         args: input,
       })) as R;
@@ -217,11 +238,7 @@ export function defineCms<
           operation,
           error,
         };
-        const slots = [
-          name.collection ? collections[name.collection].hooks?.afterError : undefined,
-          rootHooks.afterError,
-        ];
-        for (const fn of slots.flatMap(list)) {
+        for (const fn of slot(name, "afterError")) {
           // An error here MUST NOT replace the original one.
           try {
             await fn(args);
@@ -248,6 +265,12 @@ export function defineCms<
   // The fields and hooks of a collection or global.
   const target = ({ collection, global }: Name) =>
     collection ? collections[collection] : globals[global!];
+  // The hooks of a stage: the collection's or global's, then the plugins', then the host's root hooks.
+  const slot = (name: Name, stage: Stage): ((args: any) => unknown)[] => [
+    ...list<(args: any) => unknown>((target(name).hooks as RootHooks | undefined)?.[stage]),
+    ...plugins.flatMap((p) => list<(args: any) => unknown>(p.hooks?.[stage])),
+    ...list<(args: any) => unknown>(rootHooks[stage]),
+  ];
 
   // Shared by `create`, `update` and `setGlobal`. Returns `undefined` for a missing document.
   async function write(
@@ -257,7 +280,7 @@ export function defineCms<
     input: unknown,
     { id, effect }: WriteOptions = {},
   ) {
-    const { fields, hooks: h } = target(name);
+    const { fields } = target(name);
     const db = await q(s);
     const originalDoc = name.global
       ? await loadGlobal(s, name.global)
@@ -283,7 +306,7 @@ export function defineCms<
       await applyDefaults(fields, copy, common(s, name));
     if (isObject(copy)) fillSlugs(fields, copy);
     if (isObject(copy)) await fieldHooks("beforeValidate", fields, copy, fieldArgs(copy));
-    const valid = validate(await hooks(h?.beforeValidate, "data", copy, base));
+    const valid = validate(await hooks(slot(name, "beforeValidate"), "data", copy, base));
     // `onDelete` effects only clear references, so the document's own rules do not apply.
     if (!effect) {
       const errors: Record<string, string> = {};
@@ -292,7 +315,7 @@ export function defineCms<
     }
     await fieldHooks("beforeChange", fields, valid, fieldArgs(valid));
     // Validated again, so a hook cannot store invalid data.
-    const data = validate(await hooks(h?.beforeChange, "data", valid, base));
+    const data = validate(await hooks(slot(name, "beforeChange"), "data", valid, base));
     if (name.collection) await checkUnique(db, name.collection, fields, data, id);
     if (!effect)
       await checkRefs(db, fields, data, id ? { collection: name.collection!, id } : undefined);
@@ -332,7 +355,7 @@ export function defineCms<
       );
     }
     await fieldHooks("afterChange", fields, stored, fieldArgs(stored));
-    const doc = await hooks(h?.afterChange, "doc", stored, {
+    const doc = await hooks(slot(name, "afterChange"), "doc", stored, {
       ...common(s, name),
       operation,
       previousDoc: originalDoc,
@@ -347,15 +370,15 @@ export function defineCms<
     docs: Record<string, any>[],
     operation: Operation,
   ) {
-    const { fields, hooks: h } = target(name);
+    const { fields } = target(name);
     for (const doc of docs)
       await fieldHooks("afterRead", fields, doc, { ...common(s, name), operation, data: doc });
-    return hooks(h?.afterRead, "docs", docs, { ...common(s, name), operation });
+    return hooks(slot(name, "afterRead"), "docs", docs, { ...common(s, name), operation });
   }
 
   // `find`, `findOne` and `findById`: `beforeRead`, then relations, then `afterRead`.
   async function read(s: Inner, collection: string, options: ReadOpts) {
-    const { fields, hooks: h } = collections[collection];
+    const { fields } = collections[collection];
     checkRead(fields, options);
     let query = (await q(s))
       .selectFrom("cms_documents")
@@ -375,7 +398,12 @@ export function defineCms<
     query = query.orderBy("created_at", "desc").orderBy(sql`rowid`, "desc");
     if (options.limit) query = query.limit(options.limit);
     const base = { ...common(s, { collection }), operation: "read" as const };
-    const docs = await hooks(h?.beforeRead, "docs", (await query.execute()).map(toDoc), base);
+    const docs = await hooks(
+      slot({ collection }, "beforeRead"),
+      "docs",
+      (await query.execute()).map(toDoc),
+      base,
+    );
     await populate(await q(s), collections, fields, docs, spec(options), readHooks(s));
     const result = await afterRead(s, { collection }, docs, "read");
     return options.select
@@ -386,7 +414,7 @@ export function defineCms<
   // Populated documents run their own collection's read hooks, in the scope of the outer read.
   const readHooks = (s: Inner): ReadHooks => ({
     before: (collection, docs) =>
-      hooks(collections[collection].hooks?.beforeRead, "docs", docs, {
+      hooks(slot({ collection }, "beforeRead"), "docs", docs, {
         ...common(s, { collection }),
         operation: "read",
       }),
@@ -502,11 +530,10 @@ export function defineCms<
       async delete(collection: keyof Collections<T> & string, id: string) {
         if (!Object.hasOwn(collections, collection)) return;
         await run(scope, "delete", { collection }, { collection, id }, async (s, args) => {
-          const h = collections[collection].hooks;
           const doc = await load(s, collection, args.id);
           if (!doc) return;
           const base = { ...common(s, { collection }), id: args.id, doc };
-          await hooks(h?.beforeDelete, "doc", doc, base);
+          await hooks(slot({ collection }, "beforeDelete"), "doc", doc, base);
           const db = await q(s);
           await db
             .deleteFrom("cms_documents")
@@ -518,7 +545,7 @@ export function defineCms<
             setGlobal: (name, data) => setGlobal(s, name, data, true),
             delete: (collection, id) => s.cms.delete(collection, id),
           });
-          await hooks(h?.afterDelete, "doc", doc, base);
+          await hooks(slot({ collection }, "afterDelete"), "doc", doc, base);
         });
       },
 
@@ -531,7 +558,7 @@ export function defineCms<
         options: Checked<O, Collections<T>, Globals<T>[K]["fields"], D, false> = {} as never,
       ): Promise<ReadGlobal<T, K, O, D>> {
         if (!Object.hasOwn(globals, name)) throw new Error(`Unknown global "${name}"`);
-        const { fields, hooks: h } = globals[name];
+        const { fields } = globals[name];
         return run(
           scope,
           "getGlobal",
@@ -541,7 +568,7 @@ export function defineCms<
             checkRead(fields, args.options, false);
             const base = { ...common(s, { global: name }), operation: "getGlobal" as const };
             const docs = await hooks(
-              h?.beforeRead,
+              slot({ global: name }, "beforeRead"),
               "docs",
               [(await loadGlobal(s, name)) ?? {}],
               base,
@@ -563,7 +590,7 @@ export function defineCms<
   }
 
   const cms = {
-    schema: schema as T,
+    schema: schema as unknown as T,
     auth,
     /** The `populate` config with defaults. */
     populate: defaults as { depth: D; maxDepth: number },
@@ -578,11 +605,13 @@ export function defineCms<
   const app = createApp(
     cms as unknown as Cms<Schema>,
     (user) => ({ ...cms, ...bind({ user, context: {}, nested: false }) }) as unknown as Cms<Schema>,
+    plugins,
   );
   return cms;
 }
 
 type Name = { collection?: string; global?: string };
+type Stage = keyof RootHooks;
 type WriteOptions = { id?: string; effect?: boolean };
 
 // The stored data of a document, without `id`, `createdAt` and `updatedAt`.

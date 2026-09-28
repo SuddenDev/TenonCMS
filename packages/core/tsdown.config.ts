@@ -1,6 +1,20 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { defineConfig } from "tsdown";
 
+// Rolldown has no `?raw` imports. This inlines the file as a string, as Vite does, for plugin CSS.
+const raw = {
+  name: "raw",
+  resolveId: (id: string, importer?: string) =>
+    id.endsWith("?raw") && importer ? resolve(dirname(importer), id) : undefined,
+  load: (id: string) =>
+    id.endsWith("?raw")
+      ? `export default ${JSON.stringify(readFileSync(id.slice(0, -4), "utf8"))}`
+      : undefined,
+};
+
 export default defineConfig({
+  plugins: [raw],
   entry: [
     "src/index.ts",
     "src/client.ts",
@@ -10,6 +24,8 @@ export default defineConfig({
     "src/admin/react.ts",
     "src/vite/index.ts",
     "src/presets/index.ts",
+    "src/plugins/redirects/index.ts",
+    "src/plugins/redirects/admin.ts",
   ],
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.

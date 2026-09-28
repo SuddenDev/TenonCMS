@@ -1,5 +1,6 @@
 import { defineAdmin, type PageContext } from "integral-cms/admin";
 import { createClient } from "integral-cms/client";
+import { redirectsAdmin } from "integral-cms/plugins/redirects/admin";
 
 const client = createClient();
 
@@ -8,6 +9,7 @@ const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.ch
 
 // Plain DOM. Any framework can mount into `el` the same way.
 export default defineAdmin({
+  plugins: [redirectsAdmin()],
   fields: {
     color(el, { value, onChange }) {
       const input = Object.assign(document.createElement("input"), {
@@ -21,7 +23,7 @@ export default defineAdmin({
   },
   pages: {
     stats: {
-      label: "Stats",
+      menu: { label: "Stats", icon: "chart-bar" },
       mount(el, { integral }) {
         client.find("posts").then((posts) => {
           el.innerHTML = `<h1 class="text-2xl font-semibold">Stats</h1>
@@ -49,7 +51,7 @@ export default defineAdmin({
         return () => (el.innerHTML = "");
       },
     },
-    // No label: reachable from the Stats page, not the sidebar.
+    // No menu: reachable from the Stats page, not the sidebar.
     // `update` runs on every route change, so the page refetches when `:id` or `?tab` changes.
     post: {
       mount(el, ctx) {

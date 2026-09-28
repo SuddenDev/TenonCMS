@@ -11,7 +11,7 @@ const client = createClient();
 const post = ref<Doc<typeof posts.fields> | null>(null);
 watch(
   () => props.params.id,
-  async (id) => (post.value = await client.findById("posts", String(id))),
+  async (id) => (post.value = await client.findById("posts", String(id), { populate: false })),
   { immediate: true },
 );
 </script>

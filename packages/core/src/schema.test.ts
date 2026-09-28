@@ -387,8 +387,8 @@ function writeTypes() {
   d.posts;
   // @ts-expect-error a relation is written as ids
   const bad: Data<typeof fields> = { author: { id: "a" } };
-  // @ts-expect-error `required` does not apply to joins
   defineCollection({
+    // @ts-expect-error `required` does not apply to joins
     fields: { p: { type: "join", collection: "posts", on: "author", required: true } },
   });
 }
@@ -630,9 +630,9 @@ describe("hook types", () => {
     defineCollection({ fields: posts.fields, hooks: { afterRead: rest } });
     expect(defineCollection({ fields: {} }).hooks).toEqual({});
     expect(defineGlobal({ fields: {} }).hooks).toEqual({});
-    // @ts-expect-error field hook value is a number
     defineCollection({
       fields: {
+        // @ts-expect-error field hook value is a number
         n: { type: "number", hooks: { beforeChange: [({ value }) => value?.toUpperCase()] } },
       },
     });

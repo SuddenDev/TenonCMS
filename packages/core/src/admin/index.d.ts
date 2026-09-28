@@ -79,10 +79,22 @@ export type PageContext = {
   integral: IntegralContext;
 };
 
+/** A sidebar entry. */
+export type Menu = {
+  label: string;
+  /** Lucide icon name, e.g. `arrow-right-left`. See https://lucide.dev/icons. */
+  icon?: string;
+  /**
+   * Position in the sidebar, lowest first. Collections sit at 10, globals at 20, pages default to 30.
+   * Equal orders keep their definition order: host pages after plugin pages.
+   */
+  order?: number;
+};
+
 /** A custom admin page. */
 export type Page = {
-  /** Sidebar label. Pages without one stay out of the sidebar, e.g. detail routes with params. */
-  label?: string;
+  /** Sidebar entry. Pages without one stay out of the sidebar, e.g. detail routes with params. */
+  menu?: Menu;
   /**
    * Path under the admin path. Defaults to `/<key>`. `/` is the start page. Params work: `/reports/:id`.
    *
@@ -91,6 +103,16 @@ export type Page = {
   route?: `/${string}`;
   /** Renders the page. */
   mount: Mount<PageContext>;
+};
+
+/** Pass it to `defineAdmin({ plugins })`. */
+export type AdminPlugin = {
+  /** Name of the plugin, for error messages. */
+  name: string;
+  /** Inputs by custom field type. A key the host or another plugin uses throws when the admin mounts. */
+  fields?: Record<string, Mount<FieldContext>>;
+  /** Pages by key. A key the host or another plugin uses throws when the admin mounts. */
+  pages?: Record<string, Page>;
 };
 
 /** Admin customization. Default export of `integral.admin.ts`. */
@@ -104,9 +126,11 @@ export type AdminOptions = {
   /**
    * Extra pages by key.
    * @example
-   * pages: { stats: { label: 'Stats', mount: renderVue(Stats) } }
+   * pages: { stats: { menu: { label: 'Stats', icon: 'chart-bar' }, mount: renderVue(Stats) } }
    */
   pages?: Record<string, Page>;
+  /** Admin halves of plugins, from `defineAdminPlugin()`. Their fields and pages merge in, before the host's. */
+  plugins?: AdminPlugin[];
 };
 
 /**
@@ -114,10 +138,14 @@ export type AdminOptions = {
  * @example
  * export default defineAdmin({
  *   fields: { color: renderVue(ColorInput) },
- *   pages: { stats: { label: 'Stats', mount: renderVue(Stats) } },
+ *   pages: { stats: { menu: { label: 'Stats' }, mount: renderVue(Stats) } },
+ *   plugins: [redirectsAdmin()],
  * })
  */
 export function defineAdmin(options: AdminOptions): AdminOptions;
+
+/** Types the admin half of a plugin. Use it as the return value of the plugin's admin factory. */
+export function defineAdminPlugin(plugin: AdminPlugin): AdminPlugin;
 
 /**
  * Mounts the admin into `el` and returns an unmount function.
