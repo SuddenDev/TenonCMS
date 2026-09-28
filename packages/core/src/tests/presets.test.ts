@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { CmsError } from "../client.ts";
+import { CmsError } from "../client/index.ts";
 import { defineCms } from "../index.ts";
 import { nestedPaths, page, seo } from "../presets/index.ts";
 import { admin, fresh, origin, setup, status, type Env } from "./setup.ts";

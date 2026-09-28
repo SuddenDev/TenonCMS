@@ -1,5 +1,5 @@
 import { defineCollection, definePlugin } from "../../index.ts";
-import type { LocalApi } from "../../schema.ts";
+import type { LocalApi } from "../../schema/index.ts";
 
 export type RedirectsOptions = {
   /** Collections whose documents get a redirect from their old path when it changes. Default `['pages']`. */

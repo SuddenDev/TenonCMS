@@ -82,6 +82,42 @@ describe("plugins", () => {
     expect(await status(client.request("/stats/fail", { method: "POST" }))).toBe(400);
   });
 
+  it("run publicMiddleware on every request and middleware behind the session", async () => {
+    const seen: string[] = [];
+    const guard = definePlugin({
+      name: "guard",
+      publicMiddleware: async (c, next) => {
+        if (c.req.header("x-block")) return c.json({ message: "Blocked" }, 429);
+        seen.push(`public ${c.req.method} ${new URL(c.req.url).pathname}`);
+        await c.var.cms.find("posts");
+        await next();
+        c.header("x-guard", "1");
+      },
+      middleware: async (c, next) => {
+        seen.push(`session ${c.var.user.email}`);
+        await next();
+      },
+    });
+    const { client, fetch } = setup(defineCms({ ...base, plugins: [guard] }));
+    const get = (init?: RequestInit) => fetch(`${origin}/api/cms/collections/posts`, init);
+
+    const res = await get();
+    expect(res.headers.get("x-guard")).toBe("1");
+    expect((await get({ headers: { "x-block": "1" } })).status).toBe(429);
+    expect(seen).toEqual(["public GET /api/cms/collections/posts"]);
+
+    // Unauthorized writes stop at the session check, before `middleware`.
+    expect(await status(client.create("posts", { title: "a" }))).toBe(401);
+    await client.signUp(admin);
+    await client.create("posts", { title: "a" });
+    expect(seen.slice(1)).toEqual([
+      "public POST /api/cms/collections/posts",
+      "public POST /api/cms/auth/sign-up/email",
+      "public POST /api/cms/collections/posts",
+      `session ${admin.email}`,
+    ]);
+  });
+
   it("reject duplicate and invalid names", () => {
     const posts = { fields: { title: { type: "text" } } } as const;
     const withPlugins =

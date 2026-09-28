@@ -775,16 +775,18 @@ export default defineAdmin({ plugins: [redirectsAdmin()] });
 
 The server half, from `definePlugin()`:
 
-| Key            | What it adds                                                                                                                                                    |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`         | Unique, lowercase, e.g. `redirects`. Prefix of the plugin's routes                                                                                              |
-| `collections`  | Collections, typed like the host's: `cms.find('redirects')` works. A name the host or another plugin uses throws at startup                                     |
-| `globals`      | Globals, the same way. The admin renders them, so a global doubles as the plugin's settings page                                                                |
-| `hooks`        | Root hooks for every collection and global, run after the collection's own hooks and before the host's root hooks                                               |
-| `routes`       | `(api) => api.get(…)` on a Hono sub-app at `/api/cms/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, `c.var.user` is that user |
-| `publicRoutes` | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                               |
+| Key                | What it adds                                                                                                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`             | Unique, lowercase, e.g. `redirects`. Prefix of the plugin's routes                                                                                                            |
+| `collections`      | Collections, typed like the host's: `cms.find('redirects')` works. A name the host or another plugin uses throws at startup                                                   |
+| `globals`          | Globals, the same way. The admin renders them, so a global doubles as the plugin's settings page                                                                              |
+| `hooks`            | Root hooks for every collection and global, run after the collection's own hooks and before the host's root hooks                                                             |
+| `routes`           | `(api) => api.get(…)` on a Hono sub-app at `/api/cms/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, `c.var.user` is that user               |
+| `publicRoutes`     | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                                             |
+| `publicMiddleware` | Hono middleware for every `/api/cms` request, auth included, before any route. `c.var.cms` has no user. Return a response to stop the request (rate limits, logging, headers) |
+| `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set                                          |
 
-Route errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `auth`, `collections`, `globals` and `schema` are reserved names.
+Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `auth`, `collections`, `globals` and `schema` are reserved names.
 
 The admin half, from `defineAdminPlugin()`, has `name`, `fields` and `pages`, exactly as `integral.admin.ts` does. Pages call plugin routes with `client.request()`.
 

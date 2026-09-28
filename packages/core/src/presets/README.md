@@ -1,0 +1,11 @@
+# presets
+
+`integral-cms/presets`: plain field objects and named hooks that a host spreads into its own collections. Each file is meant to be read as documentation of what you get.
+
+| File              | What it gives you                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `page.ts`         | `page`: fields for pages with nested URLs (title, slug, parent, path) and the `nestedPaths()` hooks. |
+| `seo.ts`          | `seo`: one optional group with title, description and noindex.                                       |
+| `nested-paths.ts` | `nestedPaths()`: hooks that store `path` from the parent chain and update children when it changes.  |
+
+They import only `errors.ts`, `slugify.ts` and types. No zod gets in, so presets are safe in browser bundles.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createClient } from "../../client.ts";
+import { createClient } from "../../client/index.ts";
 import { defineCms, defineCollection } from "../../index.ts";
 import { page } from "../../presets/index.ts";
 import { redirects, resolveRedirect } from "./index.ts";

@@ -21,7 +21,7 @@ it("seoMeta falls back to the title", () => {
 });
 
 it("helpers come from the main and the browser-safe client entry", async () => {
-  for (const entry of [await import("../index.ts"), await import("../client.ts")]) {
+  for (const entry of [await import("../index.ts"), await import("../client/index.ts")]) {
     expect(entry).toMatchObject({
       seoMeta,
       breadcrumbs: expect.any(Function),

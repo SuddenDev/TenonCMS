@@ -1,5 +1,5 @@
 import type { AdminPlugin, Mount, PageContext } from "../../admin/index.d.ts";
-import { CmsError, createClient } from "../../client.ts";
+import { CmsError, createClient } from "../../client/index.ts";
 import css from "./admin.css?raw";
 import type { Redirect } from "./index.ts";
 

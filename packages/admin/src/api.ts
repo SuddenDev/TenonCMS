@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import { createClient } from "../../core/src/client";
-import { matchCondition } from "../../core/src/condition";
+import { matchCondition } from "../../core/src/schema/condition";
 
 export { SLUG_PATTERN, slugify } from "../../core/src/helpers/slugify";
 

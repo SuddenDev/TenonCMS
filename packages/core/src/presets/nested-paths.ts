@@ -1,6 +1,6 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
 import { ValidationError } from "../errors.ts";
-import type { LocalApi } from "../schema.ts";
+import type { LocalApi } from "../schema/index.ts";
 
 /** Field names the `nestedPaths()` hooks read and write. Each defaults to the name in `page.fields`. */
 export type NestedPathsOptions = {

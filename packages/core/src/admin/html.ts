@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { API_BASE } from "../client.ts";
+import { API_BASE } from "../client/index.ts";
 
 /** Adapter option for the admin: `true` serves it at `/admin`, a path like `/cms` serves it there, `false` serves none. */
 export type AdminOption = boolean | `/${string}`;

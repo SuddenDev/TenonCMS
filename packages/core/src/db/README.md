@@ -1,0 +1,15 @@
+# db
+
+The database layer: libsql (SQLite or Turso) through Kysely. All SQL lives here.
+
+| File           | What it does                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`     | `createDb()`, the table types, a small libsql dialect for Kysely, and `migrate()` (core tables, then better-auth's). |
+| `documents.ts` | Every query on the two tables: find, load, insert, update, delete, globals, and the scans for references and joins.  |
+
+Two tables hold all content:
+
+- `cms_documents`: one row per document, the fields as JSON in `data`. Filters use `json_extract`.
+- `cms_globals`: one row per global.
+
+A schema change needs no migration. Field names MUST be checked against the schema before they reach a query.

@@ -17,12 +17,12 @@ export default defineConfig({
   plugins: [raw],
   entry: [
     "src/index.ts",
-    "src/client.ts",
-    "src/astro/index.ts",
-    "src/nuxt/index.ts",
+    "src/client/index.ts",
+    "src/integrations/astro/index.ts",
+    "src/integrations/nuxt/index.ts",
     "src/admin/vue.ts",
     "src/admin/react.ts",
-    "src/vite/index.ts",
+    "src/integrations/vite/index.ts",
     "src/presets/index.ts",
     "src/plugins/redirects/index.ts",
     "src/plugins/redirects/admin.ts",
@@ -30,11 +30,11 @@ export default defineConfig({
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.
   copy: [
-    { from: "src/astro/route.ts", to: "dist/astro" },
-    { from: "src/astro/middleware.ts", to: "dist/astro" },
-    { from: "src/astro/admin.astro", to: "dist/astro" },
-    { from: "src/nuxt/runtime", to: "dist/nuxt" },
-    { from: "src/register.d.ts", to: "dist" },
+    { from: "src/integrations/astro/route.ts", to: "dist/integrations/astro" },
+    { from: "src/integrations/astro/middleware.ts", to: "dist/integrations/astro" },
+    { from: "src/integrations/astro/admin.astro", to: "dist/integrations/astro" },
+    { from: "src/integrations/nuxt/runtime", to: "dist/integrations/nuxt" },
+    { from: "src/client/register.d.ts", to: "dist/client" },
     // The admin's Vite build writes index.js next to these.
     { from: "src/admin/index.d.ts", to: "dist/admin" },
     { from: "src/admin/default.ts", to: "dist/admin" },

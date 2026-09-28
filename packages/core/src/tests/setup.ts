@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient as createLibsql } from "@libsql/client";
-import { CmsError, createClient } from "../client.ts";
+import { CmsError, createClient } from "../client/index.ts";
 import { defineCms, type PopulateConfig, type Schema } from "../index.ts";
 
 export const origin = "http://localhost";

@@ -1,5 +1,5 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
-import type { Fields } from "../schema.ts";
+import type { Fields } from "../schema/index.ts";
 import { nestedPaths } from "./nested-paths.ts";
 
 /**

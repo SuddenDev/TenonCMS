@@ -1,0 +1,177 @@
+import type { User } from "better-auth";
+import { Hono } from "hono";
+import { csrf } from "hono/csrf";
+import { HTTPException } from "hono/http-exception";
+import { API_BASE } from "../client/index.ts";
+import type { Cms } from "../index.ts";
+import { ConflictError, ValidationError } from "../errors.ts";
+import type { Plugin, PublicRouteEnv, RouteEnv } from "../plugins/index.ts";
+import { innerFields, mapValue } from "../schema/walk.ts";
+import { badSelectPath, type SelectSpec } from "../cms/populate.ts";
+import type { Fields, Schema } from "../schema/index.ts";
+import { type Env, pluginMiddleware, session, withCms } from "./middleware.ts";
+import { type Level, parsePopulate, parseSelect, visible, whereFromQuery } from "./query.ts";
+
+/** `asUser(user)` returns the local API with the session user set for hooks. */
+export function createApp(
+  cms: Cms<Schema>,
+  asUser: (user: User) => Cms<Schema>,
+  plugins: readonly Plugin[] = [],
+) {
+  const { schema } = cms;
+  const collections = schema.collections ?? {};
+  // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
+  // A field MAY be named `hooks`; it has a `type`. `JSON.stringify` drops other functions, like `validate`, itself.
+  const publicSchema = JSON.parse(
+    JSON.stringify(schema, (key, value) =>
+      key === "hooks" && typeof value?.type !== "string" ? undefined : value,
+    ),
+  );
+
+  // Removes fields the caller cannot see, also in groups, populated relations and joins.
+  function strip(fields: Fields, doc: unknown, level: Level): unknown {
+    return mapValue(doc, (d) => {
+      const out = { ...d };
+      for (const [key, f] of Object.entries(fields)) {
+        const inner = innerFields(collections, f);
+        if (!visible(f, level)) delete out[key];
+        else if (inner) out[key] = strip(inner, out[key], level);
+      }
+      return out;
+    });
+  }
+
+  // Reads are public. Only a request with a cookie MAY see private fields, so others cost no session lookup.
+  // A failed lookup, e.g. with a bad `secret`, counts as no session.
+  async function readLevel(request: Request): Promise<Level> {
+    if (!request.headers.get("cookie")) return "public";
+    const session = await cms
+      .auth()
+      .then((auth) => auth.api.getSession({ headers: request.headers }))
+      .catch(() => null);
+    return session ? "admin" : "public";
+  }
+
+  const notFound = () => new HTTPException(404, { message: "Not Found" });
+  // A collection or global named in the URL, or a 404.
+  const collectionOf = (name: string) => {
+    if (!Object.hasOwn(collections, name)) throw notFound();
+    return { name, fields: collections[name].fields };
+  };
+  const globalOf = (name: string) => {
+    const globals = schema.globals ?? {};
+    if (!Object.hasOwn(globals, name)) throw notFound();
+    return { name, fields: globals[name].fields };
+  };
+  // Mounts each plugin's routes of one kind under its name.
+  const mount = (into: Hono<Env>, kind: "routes" | "publicRoutes") => {
+    for (const plugin of plugins) {
+      // Both kinds get a sub-app that satisfies their environment.
+      const add = plugin[kind] as ((api: Hono<RouteEnv & PublicRouteEnv>) => void) | undefined;
+      if (!add) continue;
+      const sub = new Hono<RouteEnv & PublicRouteEnv>();
+      add(sub);
+      into.route(`/${plugin.name}`, sub);
+    }
+  };
+
+  // Public: the site renders this content anyway. Reads use `cms` (no user). Query params are equality filters,
+  // except `limit`, `populate`, `depth` and `select`, so fields with these names cannot be filtered over HTTP.
+  const reads = new Hono<Env>();
+  mount(reads, "publicRoutes");
+  reads.get("/collections/:name", async (c) => {
+    const { name, fields } = collectionOf(c.req.param("name"));
+    const { limit, populate, depth, select, ...query } = c.req.query();
+    const level = await readLevel(c.req.raw);
+    const where = whereFromQuery(fields, query, level);
+    if (!where) return c.json({ message: "Invalid filter" }, 400);
+    if (limit !== undefined && !/^[1-9]\d*$/.test(limit))
+      return c.json({ message: "Invalid limit" }, 400);
+    const read = readOptions(fields, { populate, depth, select });
+    if (typeof read === "string") return c.json({ message: read }, 400);
+    const docs = await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read });
+    return c.json(strip(fields, docs, level));
+  });
+  reads.get("/collections/:name/:id", async (c) => {
+    const { name, fields } = collectionOf(c.req.param("name"));
+    const read = readOptions(fields, c.req.query());
+    if (typeof read === "string") return c.json({ message: read }, 400);
+    const doc = await cms.findById(name, c.req.param("id"), read);
+    if (!doc) throw notFound();
+    return c.json(strip(fields, doc, await readLevel(c.req.raw)));
+  });
+  reads.get("/globals/:name", async (c) => {
+    const { name, fields } = globalOf(c.req.param("name"));
+    const read = readOptions(fields, c.req.query(), false);
+    if (typeof read === "string") return c.json({ message: read }, 400);
+    return c.json(strip(fields, await cms.getGlobal(name, read), await readLevel(c.req.raw)));
+  });
+
+  // Behind CSRF and a session. Writes use `c.var.cms`, which carries the session user.
+  const writes = new Hono<Env>();
+  writes.get("/schema", (c) => c.json(publicSchema));
+  mount(writes, "routes");
+  writes.post("/collections/:name", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    return c.json(await c.var.cms.create(name, await body(c.req)), 201);
+  });
+  writes.put("/collections/:name/:id", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    const doc = await c.var.cms.update(name, c.req.param("id"), await body(c.req));
+    if (!doc) throw notFound();
+    return c.json(doc);
+  });
+  writes.delete("/collections/:name/:id", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    await c.var.cms.delete(name, c.req.param("id"));
+    return c.body(null, 204);
+  });
+  writes.put("/globals/:name", async (c) => {
+    const { name } = globalOf(c.req.param("name"));
+    return c.json(await c.var.cms.setGlobal(name, await body(c.req)));
+  });
+
+  const api = new Hono<Env>().basePath(API_BASE);
+  // Every error body has `message`, like better-auth's. Only expected errors send their own; others MAY hold internals.
+  api.onError((err, c) => {
+    if (err instanceof ValidationError)
+      return c.json({ message: err.message, errors: err.errors }, 400);
+    if (err instanceof ConflictError)
+      return c.json({ message: err.message, references: err.references }, 409);
+    if (err instanceof HTTPException) return c.json({ message: err.message }, err.status);
+    console.error(err);
+    return c.json({ message: "Internal Server Error" }, 500);
+  });
+  api.notFound((c) => c.json({ message: "Not Found" }, 404));
+  api.use(withCms(cms), ...pluginMiddleware(plugins, "publicMiddleware"));
+  api.on(["GET", "POST"], "/auth/*", async (c) => (await cms.auth()).handler(c.req.raw));
+  api.route("/", reads);
+  api.use(csrf(), session(cms, asUser), ...pluginMiddleware(plugins, "middleware"));
+  api.route("/", writes);
+  return api;
+
+  // The read options, or the message of a 400.
+  // `doc`: false for globals, which have no `id`, `createdAt` or `updatedAt`.
+  function readOptions(
+    fields: Fields,
+    query: { populate?: string; depth?: string; select?: string },
+    doc = true,
+  ): ReadOpts | string {
+    const spec = parsePopulate(collections, fields, query, cms.populate);
+    if (typeof spec === "string") return spec;
+    const read: ReadOpts = typeof spec === "number" ? { depth: spec } : { populate: spec };
+    if (query.select === undefined) return read;
+    const select = parseSelect(query.select);
+    const error = badSelectPath(collections, fields, select, spec, "", doc);
+    return error ? `Invalid select: ${error}` : { ...read, select };
+  }
+}
+
+type ReadOpts = {
+  populate?: boolean | Record<string, unknown>;
+  depth?: number;
+  select?: SelectSpec;
+};
+
+// A malformed body reads as `undefined`, which fails validation with 400.
+const body = (req: { json(): Promise<any> }) => req.json().catch(() => undefined);

@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+
+const base = Astro.routePattern.replace("/[...path]", "");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Integral CMS - Admin</title>
+  </head>
+  <body>
+    <div id="admin" data-base={base}></div>
+    <script>
+      import "../../admin/entry.ts";
+    </script>
+  </body>
+</html>

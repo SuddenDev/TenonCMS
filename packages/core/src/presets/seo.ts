@@ -1,4 +1,4 @@
-import type { Fields } from "../schema.ts";
+import type { Fields } from "../schema/index.ts";
 
 /** SEO fields in one optional group. Read them with `seoMeta()` from `integral-cms` or `integral-cms/client`. */
 export const seo = {
