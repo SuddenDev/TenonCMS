@@ -10,12 +10,12 @@ const pages = Object.entries(inject(optionsKey, {}).pages ?? {});
 // One list for collections, globals and pages, by `order`. Equal orders keep their definition order.
 const menu = computed(() =>
   [
-    ...Object.entries(schema.value.collections ?? {}).map(([name, c]) => ({
-      label: c.label ?? name,
-      icon: "folder",
-      order: 10,
-      to: `/collections/${name}`,
-    })),
+    // `media` is the media library, with a page of its own.
+    ...Object.entries(schema.value.collections ?? {}).map(([name, c]) =>
+      name === "media"
+        ? { label: c.label ?? "Media", icon: "image", order: 15, to: "/media" }
+        : { label: c.label ?? name, icon: "folder", order: 10, to: `/collections/${name}` },
+    ),
     ...Object.entries(schema.value.globals ?? {}).map(([name, g]) => ({
       label: g.label ?? name,
       icon: "settings",

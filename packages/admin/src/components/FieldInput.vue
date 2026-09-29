@@ -12,6 +12,7 @@ import {
   titleField,
 } from "../api";
 import { optionsKey } from "../options";
+import MediaField from "./MediaField.vue";
 import Mount from "./Mount.vue";
 
 // `loose`: the field sits in an optional group that is empty, so `required` does not apply yet.
@@ -126,6 +127,19 @@ if (slug?.parent && relation?.type === "relation") {
     </template>
     <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
   </fieldset>
+  <!-- Not a <label>: a click on its list would activate its first button. -->
+  <div
+    v-else-if="field.type === 'image' || field.type === 'file'"
+    class="flex flex-col gap-1 text-sm"
+  >
+    <span>
+      {{ field.label ?? name }}
+      <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
+    </span>
+    <MediaField v-model="model" :field="field" :invalid="invalid" />
+    <small v-if="field.description" class="text-xs text-zinc-500">{{ field.description }}</small>
+    <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
+  </div>
   <label v-else-if="field.type === 'boolean'" class="flex flex-wrap items-center gap-2 text-sm">
     <input v-model="model" type="checkbox" :disabled="field.readOnly" :aria-invalid="invalid" />
     {{ field.label ?? name }}

@@ -14,6 +14,8 @@ import CollectionList from "./pages/CollectionList.vue";
 import DocEdit from "./pages/DocEdit.vue";
 import GlobalEdit from "./pages/GlobalEdit.vue";
 import Home from "./pages/Home.vue";
+import Media from "./pages/Media.vue";
+import MediaFile from "./pages/MediaFile.vue";
 import { integralKey, optionsKey, pagePath } from "./options";
 import css from "./style.css?inline";
 
@@ -66,6 +68,11 @@ export function mountAdmin(el: string | Element, raw: AdminOptions = {}, base = 
         component: page(p),
       })),
       { path: "/", component: Home },
+      { path: "/media/:folder(.*)?", component: Media },
+      { path: "/media-file/:id", component: MediaFile },
+      // The media library is written only through the media API, so its generic views redirect.
+      { path: "/collections/media", redirect: "/media" },
+      { path: "/collections/media/:id", redirect: (to) => `/media-file/${String(to.params.id)}` },
       { path: "/collections/:name", component: CollectionList },
       { path: "/collections/:name/:id", component: DocEdit },
       { path: "/globals/:name", component: GlobalEdit },

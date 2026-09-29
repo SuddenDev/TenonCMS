@@ -34,7 +34,8 @@ function normalize(
         return [[k, save && !f.required && isEmpty(g) ? null : g]];
       }
       if (f.type === "boolean") return [[k, v ?? false]];
-      if (f.type === "relation" && f.many) return [[k, v ?? []]];
+      if ((f.type === "relation" || f.type === "image" || f.type === "file") && f.many)
+        return [[k, v ?? []]];
       return [[k, v === "" || v === undefined ? null : v]];
     }),
   );
