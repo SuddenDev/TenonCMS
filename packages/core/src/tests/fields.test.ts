@@ -14,7 +14,7 @@ describe("condition", () => {
   const make = (hooks = {}) =>
     defineCms({
       collections: {
-        media: {
+        videos: {
           fields: {
             mediaType: { type: "select", options: ["image", "youtube"] },
             url: { type: "text", required: true, condition: { mediaType: "youtube" } },
@@ -27,18 +27,18 @@ describe("condition", () => {
     });
 
   it("lets a required field be missing while its condition is false", async () => {
-    await expect(make().create("media", { mediaType: "image" })).resolves.toMatchObject({
+    await expect(make().create("videos", { mediaType: "image" })).resolves.toMatchObject({
       mediaType: "image",
     });
-    await expect(make().create("media", { mediaType: "youtube" })).rejects.toMatchObject({
+    await expect(make().create("videos", { mediaType: "youtube" })).rejects.toMatchObject({
       errors: { url: expect.any(String) },
     });
   });
 
   it("keeps values of fields whose condition is false", async () => {
     const cms = make();
-    const doc = await cms.create("media", { mediaType: "image", url: "x" });
-    expect(await cms.findById("media", doc.id)).toMatchObject({ url: "x" });
+    const doc = await cms.create("videos", { mediaType: "image", url: "x" });
+    expect(await cms.findById("videos", doc.id)).toMatchObject({ url: "x" });
   });
 
   it("checks the field again after beforeChange", async () => {
@@ -47,13 +47,13 @@ describe("condition", () => {
         ({ data }: { data: Record<string, unknown> }) => ({ mediaType: "youtube", url: data.url }),
       ],
     });
-    await expect(cms.create("media", { mediaType: "image" })).rejects.toMatchObject({
+    await expect(cms.create("videos", { mediaType: "image" })).rejects.toMatchObject({
       errors: { url: expect.any(String) },
     });
   });
 
   it("keeps the type check while the condition is false", async () => {
-    await expect(make().create("media", { mediaType: "image", url: 5 })).rejects.toMatchObject({
+    await expect(make().create("videos", { mediaType: "image", url: 5 })).rejects.toMatchObject({
       errors: { url: expect.any(String) },
     });
   });

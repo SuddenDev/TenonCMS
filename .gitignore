@@ -6,3 +6,5 @@ dist
 !.env.example
 .nuxt
 .output
+uploads
+.uploads

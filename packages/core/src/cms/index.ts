@@ -2,8 +2,11 @@ import type { User } from "better-auth";
 import { consola } from "consola";
 import { createDb, migrate } from "../db/index.ts";
 import { createApp } from "../http/index.ts";
+import { defaultMedia } from "integral-cms/media/default";
+import { mediaRoutes } from "../media/http.ts";
+import { createMediaCore, mediaCollection, type MediaOptions } from "../media/index.ts";
 import { mergePlugins, type Plugin } from "../plugins/index.ts";
-import type { Collection, Global, Schema } from "../schema/index.ts";
+import type { Collection, Global, MediaApi, Schema } from "../schema/index.ts";
 import { checkSchema } from "../schema/validate.ts";
 import { type Api, bind } from "./api.ts";
 import { type AuthOptions, authOptions, createAuth } from "./auth.ts";
@@ -29,6 +32,7 @@ export function defineCms<
   const A extends AuthOptions = {},
   const P extends PopulateConfig = {},
   const PL extends readonly Plugin[] = [],
+  const M extends MediaOptions | boolean | undefined = undefined,
 >({
   database,
   secret,
@@ -36,13 +40,25 @@ export function defineCms<
   populate: config = {} as P,
   hooks: rootHooks = {},
   plugins = [] as unknown as PL,
+  media: mediaOption,
   ...own
-}: CmsOptions<C, G, A, P, PL>) {
-  type T = { collections?: C & PluginCollections<PL>; globals?: G & PluginGlobals<PL> };
+}: CmsOptions<C, G, A, P, PL, M>) {
+  type T = {
+    collections?: C & PluginCollections<PL> & MediaCollections<M>;
+    globals?: G & PluginGlobals<PL>;
+  };
   type D = DefaultDepth<P>;
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 };
   const schema = mergePlugins(plugins, own);
+  const mediaOptions =
+    typeof mediaOption === "object"
+      ? mediaOption
+      : mediaOption !== false
+        ? defaultMedia(!!mediaOption)
+        : undefined;
+  if (mediaOptions) schema.collections.media = mediaCollection;
   checkSchema(schema, defaults);
+  const media = mediaOptions && createMediaCore(mediaOptions, schema);
   const count = (o: object) => Object.keys(o).length;
   consola
     .withTag("integral")
@@ -76,6 +92,7 @@ export function defineCms<
     defaults,
     db: async () => (await connect()).db,
     bind: (scope) => bind(core, scope),
+    media,
   };
   const api = (user: User | null) =>
     bind(core, { user, context: {}, nested: false }) as unknown as Api<T, D>;
@@ -96,9 +113,23 @@ export function defineCms<
     cms as unknown as Cms<Schema>,
     (user) => ({ ...cms, ...api(user) }) as unknown as Cms<Schema>,
     plugins,
+    media && mediaRoutes(core),
   );
-  return cms;
+  return cms as typeof cms & MediaOf<M>;
 }
+
+// The `media` collection and `cms.media` exist unless `media: false`.
+// Not distributive, and `M = never` (options cast `as never`) counts as no media: otherwise TS2589.
+type MediaCollections<M> = [M] extends [false] ? unknown : { media: MediaCollection };
+// Type only: reads compute `url`, and `src` and `srcset` for images. They are not stored and not filterable.
+type MediaCollection = {
+  fields: (typeof mediaCollection)["fields"] & {
+    url: { type: "text"; required: true };
+    src: { type: "text" };
+    srcset: { type: "text" };
+  };
+};
+type MediaOf<M> = [M] extends [false] ? {} : { media: MediaApi };
 
 export type Cms<T extends Schema> = ReturnType<
   typeof defineCms<NonNullable<T["collections"]>, NonNullable<T["globals"]>>

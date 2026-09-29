@@ -42,7 +42,7 @@ describe("plugins", () => {
     // The host's relation points to the plugin's collection.
     const post = await cms.create("posts", { title: "a", log: log.id });
     expect((await cms.findById("posts", post.id))?.log).toMatchObject({ message: "hi" });
-    expect(Object.keys(cms.schema.collections!)).toEqual(["posts", "logs"]);
+    expect(Object.keys(cms.schema.collections!)).toEqual(["posts", "logs", "media"]);
     // @ts-expect-error unknown collection
     await expect(cms.find("nope")).rejects.toThrow();
   });

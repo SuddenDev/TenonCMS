@@ -20,6 +20,18 @@ const holds = (path: string, many: boolean | undefined, id: string) =>
 const docs = (db: Db, collection: string) =>
   db.selectFrom("cms_documents").selectAll().where("collection", "=", collection);
 
+/** The media document stored at `key`. Literal SQL, so SQLite uses `cms_media_key_idx`. */
+export const mediaKeyQuery = (db: Db, key: string) =>
+  db
+    .selectFrom("cms_documents")
+    .selectAll()
+    .where(sql<boolean>`collection = 'media' AND json_extract(data, '$.key') = ${key}`);
+
+export async function mediaByKey(db: Db, key: string) {
+  const row = await mediaKeyQuery(db, key).executeTakeFirst();
+  return row && toDoc(row);
+}
+
 /**
  * Documents of a collection, newest first. `where` holds equality filters on top-level keys; `null` means `IS NULL`.
  * The keys MUST be checked against the schema before they get here.
@@ -196,4 +208,14 @@ export async function joinedDocs(
         WHERE d.collection = ${collection} AND json_extract(d.data, ${path}) IN (SELECT value FROM json_each(${list}))
         ORDER BY d.created_at DESC, d.rowid DESC`;
   return (await query.execute(db)).rows;
+}
+
+/** The distinct values of a top-level key in `collection`, e.g. the folders of `media`. */
+export async function distinct(db: Db, collection: string, key: string) {
+  const rows = await db
+    .selectFrom("cms_documents")
+    .select(sql<unknown>`DISTINCT ${json(key)}`.as("value"))
+    .where("collection", "=", collection)
+    .execute();
+  return rows.map((r) => r.value);
 }

@@ -11,10 +11,19 @@ import type {
   Schema,
   SelectOf,
 } from "../schema/index.ts";
+import { mediaApi } from "../media/index.ts";
 import { read, readGlobal } from "./read.ts";
 import { run } from "./run.ts";
+import { ValidationError } from "../errors.ts";
 import { col, type Core, glob, known, type Scope } from "./scope.ts";
 import { remove, setGlobal, update, write } from "./write.ts";
+
+// Media documents change only through `cms.media`.
+function writable(core: Core, collection: string) {
+  known(core, "collection", collection);
+  if (collection === "media")
+    throw new ValidationError({ "": "Media documents change only through the media API" });
+}
 
 /** The local API of one scope. The implementation is untyped; `Api` types it for the host. */
 export function bind(core: Core, scope: Scope): LocalApi {
@@ -48,7 +57,7 @@ export function bind(core: Core, scope: Scope): LocalApi {
       );
     },
     async create(collection, data) {
-      known(core, "collection", collection);
+      writable(core, collection);
       const doc = await run(
         core,
         scope,
@@ -60,11 +69,11 @@ export function bind(core: Core, scope: Scope): LocalApi {
       return doc!;
     },
     async update(collection, id, data) {
-      known(core, "collection", collection);
+      writable(core, collection);
       return update(core, scope, collection, id, data);
     },
     async delete(collection, id) {
-      known(core, "collection", collection);
+      writable(core, collection);
       await run(core, scope, "delete", col(collection), { collection, id }, (s, args) =>
         remove(core, s, collection, args.id),
       );
@@ -79,6 +88,7 @@ export function bind(core: Core, scope: Scope): LocalApi {
       known(core, "global", name);
       return (await setGlobal(core, scope, name, data))!;
     },
+    media: core.media && mediaApi(core, scope),
   };
 }
 

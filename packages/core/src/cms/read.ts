@@ -2,8 +2,20 @@ import { findDocs, loadGlobal } from "../db/documents.ts";
 import { runHooks } from "../schema/hooks/run.ts";
 import type { Fields, LocalApi, Operation } from "../schema/index.ts";
 import { fieldHooks, filterable } from "../schema/walk.ts";
+import { decorate } from "../media/images.ts";
 import { badSelectPath, pick, populate, type SelectSpec, type Spec, toSpec } from "./populate.ts";
-import { col, type Core, glob, hookArgs, type Inner, type Name, q, slot, target } from "./scope.ts";
+import {
+  col,
+  type Core,
+  glob,
+  hookArgs,
+  type Inner,
+  isMedia,
+  type Name,
+  q,
+  slot,
+  target,
+} from "./scope.ts";
 
 export type ReadOpts = NonNullable<Parameters<LocalApi["find"]>[1]> & { id?: string };
 
@@ -48,7 +60,7 @@ const beforeRead = (
   operation: Operation,
 ) => runHooks(slot(core, name, "beforeRead"), "docs", docs, hookArgs(s, name, { operation }));
 
-// `beforeRead` on the loaded documents, then relations, then `afterRead`, then `select`.
+// `beforeRead` on the loaded documents, then relations, then `afterRead`, then media URLs, then `select`.
 async function readDocs(
   core: Core,
   s: Inner,
@@ -59,14 +71,19 @@ async function readDocs(
 ) {
   const { collections } = core.schema;
   const { fields } = target(core, name);
+  const { media } = core;
   const operation = name.kind === "collection" ? "read" : "getGlobal";
   const before = await beforeRead(core, s, name, docs, operation);
   await populate(await q(core, s), collections, fields, before, spec, {
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
     before: (collection, docs) => beforeRead(core, s, col(collection), docs, "read"),
     after: (collection, docs) => afterRead(core, s, col(collection), docs, "read"),
+    media:
+      media &&
+      ((doc, field) => decorate(media, doc, field.type === "image" ? field.image : undefined)),
   });
-  const result = await afterRead(core, s, name, before, operation);
+  let result = await afterRead(core, s, name, before, operation);
+  if (media && isMedia(name)) result = result.map((d) => decorate(media, d));
   return select ? result.map((d) => pick(collections, fields, d, select)) : result;
 }
 

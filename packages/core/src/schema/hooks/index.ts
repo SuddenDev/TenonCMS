@@ -3,6 +3,15 @@ import type { User } from "better-auth";
 export type { CollectionHooks } from "./collection.ts";
 export type { FieldArgs, FieldHooks, Validate } from "./field.ts";
 export type { GlobalHooks } from "./global.ts";
+export type {
+  MediaApi,
+  MediaDoc,
+  MediaHooks,
+  MediaRead,
+  MediaUpdate,
+  UploadInfo,
+} from "./media.ts";
+import type { MediaApi } from "./media.ts";
 export type { RootHooks } from "./root.ts";
 
 export type Awaitable<T> = T | Promise<T>;
@@ -39,6 +48,8 @@ export type LocalApi = {
   delete(collection: string, id: string): Promise<void>;
   getGlobal(name: string, options?: Options): Promise<Row>;
   setGlobal(name: string, data: Record<string, unknown>): Promise<Row>;
+  /** The media library. Missing without `defineCms({ media })`. */
+  media?: MediaApi;
 };
 
 /** Arguments every hook gets. */

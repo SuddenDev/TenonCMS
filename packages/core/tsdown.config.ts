@@ -26,7 +26,17 @@ export default defineConfig({
     "src/presets/index.ts",
     "src/plugins/redirects/index.ts",
     "src/plugins/redirects/admin.ts",
+    // Own entries, so `node:fs`, `ipx` and `aws4fetch` stay out of bundles that do not use them.
+    "src/media/storage/local.ts",
+    "src/media/storage/s3.ts",
+    "src/media/images/ipx.ts",
+    "src/media/images/cloudflare.ts",
+    "src/media/default.ts",
+    // Cloudflare Workers resolve `local`, `ipx` and `default` here, by the `workerd` export condition.
+    "src/media/workerd.ts",
   ],
+  // Core imports its default media through the package exports, so Workers builds get `workerd.ts` instead.
+  external: ["integral-cms/media/default"],
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.
   copy: [

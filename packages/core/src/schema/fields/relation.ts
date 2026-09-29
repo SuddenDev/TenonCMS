@@ -19,7 +19,11 @@ export type RelationField = Base<unknown, string | string[]> & {
   onDelete?: "set-null" | "restrict" | "cascade";
 };
 
-export function relationSchema(field: RelationField, on: boolean): z.ZodType {
+// Also the validator of `image` and `file`, which store media ids.
+export function relationSchema(
+  field: { many?: boolean; required?: boolean },
+  on: boolean,
+): z.ZodType {
   const id = z.string().min(1);
   if (!field.many) return id;
   const ids = z.array(id).refine((a) => new Set(a).size === a.length, "Duplicate id");

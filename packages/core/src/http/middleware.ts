@@ -1,10 +1,13 @@
 import type { User } from "better-auth";
 import type { MiddlewareHandler } from "hono";
+import { HTTPException } from "hono/http-exception";
 import type { Cms } from "../index.ts";
 import type { Plugin } from "../plugins/index.ts";
 import type { Schema } from "../schema/index.ts";
 
 export type Env = { Variables: { cms: Cms<Schema>; user: User } };
+
+export const notFound = () => new HTTPException(404, { message: "Not Found" });
 
 /** Sets `c.var.cms` to the local API without a user. */
 export const withCms =

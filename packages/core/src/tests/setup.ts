@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient as createLibsql } from "@libsql/client";
 import { CmsError, createClient } from "../client/index.ts";
-import { defineCms, type PopulateConfig, type Schema } from "../index.ts";
+import { defineCms, type MediaOptions, type PopulateConfig, type Schema } from "../index.ts";
+import { local } from "../media/storage/local.ts";
 
 export const origin = "http://localhost";
 export const base = {
@@ -81,7 +82,7 @@ export async function status(promise: Promise<unknown>) {
 export const relational = (url = ":memory:", populate: PopulateConfig = {}) =>
   defineCms({
     collections: {
-      media: {
+      assets: {
         fields: {
           url: { type: "text", required: true },
           usedIn: { type: "join", collection: "posts", on: "seo.image" },
@@ -91,7 +92,7 @@ export const relational = (url = ":memory:", populate: PopulateConfig = {}) =>
         titleField: "name",
         fields: {
           name: { type: "text", required: true },
-          avatar: { type: "relation", collection: "media" },
+          avatar: { type: "relation", collection: "assets" },
           posts: { type: "join", collection: "posts", on: "author" },
         },
       },
@@ -106,7 +107,7 @@ export const relational = (url = ":memory:", populate: PopulateConfig = {}) =>
           title: { type: "text", required: true },
           author: { type: "relation", collection: "authors" },
           tags: { type: "relation", collection: "tags", many: true },
-          seo: { type: "group", fields: { image: { type: "relation", collection: "media" } } },
+          seo: { type: "group", fields: { image: { type: "relation", collection: "assets" } } },
         },
       },
       notes: {
@@ -125,7 +126,7 @@ export const relational = (url = ":memory:", populate: PopulateConfig = {}) =>
     globals: {
       site: {
         fields: {
-          logo: { type: "relation", collection: "media" },
+          logo: { type: "relation", collection: "assets" },
           featured: { type: "relation", collection: "posts", many: true },
         },
       },
@@ -137,7 +138,7 @@ export const relational = (url = ":memory:", populate: PopulateConfig = {}) =>
 
 // Seeds one graph through the local API and returns the ids.
 export async function seed(cms: ReturnType<typeof relational>) {
-  const m = await cms.create("media", { url: "/a.png" });
+  const m = await cms.create("assets", { url: "/a.png" });
   const a = await cms.create("authors", { name: "Ann", avatar: m.id });
   const [t1, t2] = [
     await cms.create("tags", { name: "one" }),
@@ -150,4 +151,35 @@ export async function seed(cms: ReturnType<typeof relational>) {
     seo: { image: m.id },
   });
   return { m, a, t1, t2, p };
+}
+
+/** A temp directory for `local()`. */
+export const tmpDir = () => mkdtempSync(join(tmpdir(), "integral-media-"));
+
+/**
+ * An instance with `media` on `local()` in a temp dir with 1 KB parts, `posts` with image and file fields, a client and a
+ * raw fetch under `/api/cms`. `extra` goes into `defineCms()`.
+ */
+export function withMedia(media: Partial<MediaOptions> = {}, extra: object = {}) {
+  const dir = tmpDir();
+  const cms = defineCms({
+    ...base,
+    collections: {
+      posts: {
+        fields: {
+          title: { type: "text" },
+          hero: { type: "image" },
+          og: { type: "image", onDelete: "set-null", image: { sizes: [150], quality: 50 } },
+          gallery: { type: "image", many: true, onDelete: "set-null" },
+          attachment: { type: "file", accept: ["application/pdf"], maxSize: 2048 },
+        },
+      },
+    },
+    media: { storage: local({ dir, partSize: 1024 }), ...media },
+    ...extra,
+  });
+  const s = setup(cms);
+  const fetchWithSession = (path: string, init?: RequestInit) =>
+    s.fetch(`${origin}/api/cms${path}`, init);
+  return { ...s, dir, fetchWithSession };
 }

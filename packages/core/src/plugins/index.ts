@@ -1,6 +1,13 @@
 import type { User } from "better-auth";
 import type { Hono, MiddlewareHandler } from "hono";
-import type { Collection, Global, LocalApi, RootHooks, Schema } from "../schema/index.ts";
+import type {
+  Collection,
+  Global,
+  LocalApi,
+  MediaHooks,
+  RootHooks,
+  Schema,
+} from "../schema/index.ts";
 
 /** Hono environment of a plugin's {@link Plugin.routes}: the local API bound to the session user, and the user. */
 export type RouteEnv = { Variables: { cms: LocalApi; user: User } };
@@ -26,6 +33,8 @@ export type Plugin<
   globals?: G;
   /** Hooks for every collection and global. See {@link RootHooks}. */
   hooks?: RootHooks;
+  /** Hooks of the media library. They run after the host's `media.hooks`. See {@link MediaHooks}. */
+  mediaHooks?: MediaHooks;
   /**
    * Routes that need a session, for admin pages. Mounted at `/api/cms/<name>`, after CSRF and session checks.
    * `c.var.cms` runs hooks with the session user; `c.var.user` is that user.
@@ -61,7 +70,7 @@ export function definePlugin<
 }
 
 // Route prefixes core uses under `/api/cms`.
-const reserved = ["auth", "collections", "globals", "schema"];
+const reserved = ["auth", "collections", "globals", "schema", "media"];
 
 /** The host's schema with every plugin's collections and globals. Throws for duplicate or invalid names. */
 export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Required<Schema> {
@@ -71,12 +80,17 @@ export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Requir
   const collections = { ...schema.collections };
   const globals = { ...schema.globals };
   const names = new Set<string>();
+  const own = (name: string) => {
+    if (name === "media") fail(`collection name "media" is reserved for the media library`);
+  };
+  Object.keys(collections).forEach(own);
   for (const plugin of plugins) {
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(plugin.name) || reserved.includes(plugin.name))
       fail(`invalid plugin name "${plugin.name}"`);
     if (names.has(plugin.name)) fail(`duplicate plugin "${plugin.name}"`);
     names.add(plugin.name);
     for (const [name, collection] of Object.entries(plugin.collections ?? {})) {
+      own(name);
       if (Object.hasOwn(collections, name)) fail(`duplicate collection "${name}"`);
       collections[name] = collection;
     }

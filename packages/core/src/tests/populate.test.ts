@@ -113,7 +113,7 @@ describe("populate", () => {
       (await cms.findById("tags", t2.id, { populate: { posts: true } }))?.posts.map((x) => x.id),
     ).toEqual([p.id]);
     expect(
-      (await cms.findById("media", m.id, { populate: { usedIn: true } }))?.usedIn.map((x) => x.id),
+      (await cms.findById("assets", m.id, { populate: { usedIn: true } }))?.usedIn.map((x) => x.id),
     ).toEqual([p.id]);
     const b = await cms.create("authors", { name: "Bo" });
     expect((await cms.findById("authors", b.id, { populate: { posts: true } }))?.posts).toEqual([]);

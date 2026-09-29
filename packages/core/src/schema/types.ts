@@ -29,7 +29,7 @@ type FieldValue<F extends Field> = F extends { type: "group"; fields: infer G ex
   ? Data<G>
   : F extends { type: "select"; options: readonly (infer O)[] }
     ? O
-    : F extends { type: "relation" }
+    : F extends { type: "relation" | "image" | "file" }
       ? Ids<F>
       : F extends { type: keyof Scalar }
         ? Scalar[F["type"]]
@@ -46,6 +46,34 @@ export type Data<F extends Fields> = {
 
 type Meta = { id: string; createdAt: string; updatedAt: string };
 export type Doc<F extends Fields> = Data<F> & Meta;
+
+/** A populated `file` field: a document of the media library. */
+export type File = Meta & {
+  /** URL of the original. Computed on read. */
+  url: string;
+  /** Folder path, `''` at the root, e.g. `blog/2026`. */
+  folder: string;
+  filename: string;
+  /** Storage key: `folder/filename`, or `filename` at the root. */
+  key: string;
+  mimeType: string;
+  /** Size in bytes. */
+  size: number;
+  alt?: string | null;
+};
+
+/** A populated `image` field: a `File` with dimensions, and `src` and `srcset` built from the field's `image` options. */
+export type Image = File & {
+  /** URL of the default variant, or of the original without an image provider. */
+  src: string;
+  /** Variants for `<img srcset>`. Empty without an image provider. */
+  srcset: string;
+  width: number;
+  height: number;
+};
+
+// A populated `image` or `file`, or several with `many`.
+type MediaValue<F, T> = F extends { many: true } ? T[] : T;
 
 /** Field keys that `where` accepts. Groups, joins and `many` relations are not filterable. */
 export type FilterKey<F extends Fields> = Exclude<
@@ -158,11 +186,15 @@ type Value<Cs, F, S> = F extends { type: "group"; fields: infer G extends Fields
     ? Off<S> extends true
       ? Ids<F>
       : Targets<Cs, C, Next<S>, F>
-    : F extends { type: "join"; collection: infer C }
-      ? Target<Cs, C, Next<S>>[]
-      : F extends Field
-        ? FieldValue<F>
-        : never;
+    : F extends { type: "image" | "file" }
+      ? Off<S> extends true
+        ? Ids<F>
+        : MediaValue<F, F extends { type: "image" } ? Image : File>
+      : F extends { type: "join"; collection: infer C }
+        ? Target<Cs, C, Next<S>>[]
+        : F extends Field
+          ? FieldValue<F>
+          : never;
 
 /** Data of `fields` as a read returns it, with relations resolved as `P` says. Joins are required, unnamed joins absent. */
 export type Resolve<Cs, F extends Fields, P> = Simplify<
@@ -212,16 +244,16 @@ export type PopulateOf<O, D extends number> = O extends { populate: false }
       : D;
 export type SelectOf<O> = O extends { select: infer S extends object } ? S : true;
 
-/** Paths a `populate` object may name: groups, relations and joins, nested along their targets. */
+/** Paths a `populate` object may name: groups, relations and joins, nested along their targets. Images and files are leaves. */
 export type Populate<Cs, F extends Fields> = {
-  [K in Keys<F, { type: "group" | "relation" | "join" }>]?: F[K] extends {
+  [K in Keys<F, { type: "group" | "relation" | "join" | "image" | "file" }>]?: F[K] extends {
     type: "group";
     fields: infer G extends Fields;
   }
     ? true | Populate<Cs, G>
     : F[K] extends { collection: infer C }
       ? true | Populate<Cs, FieldsOf<Cs, C>>
-      : never;
+      : true;
 };
 export type PopulateArg<Cs, F extends Fields> =
   Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>;

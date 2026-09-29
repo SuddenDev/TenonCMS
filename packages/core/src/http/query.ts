@@ -1,5 +1,5 @@
 import { isObject } from "../schema/condition.ts";
-import { filterable, innerFields } from "../schema/walk.ts";
+import { filterable, innerFields, isRef } from "../schema/walk.ts";
 import type { SelectSpec, Spec } from "../cms/populate.ts";
 import type { Collection, Field, Fields } from "../schema/index.ts";
 
@@ -34,8 +34,10 @@ function badPopulatePath(
     const field = Object.hasOwn(fields, key) ? fields[key] : undefined;
     const inner = field && innerFields(collections, field);
     if (field?.type !== "group") hops++;
-    if (!inner || hops > maxDepth) return keys.slice(0, i + 1).join(".");
-    fields = inner;
+    // `image` and `file` resolve but end the path.
+    const leaf = field && isRef(field) && i === keys.length - 1;
+    if ((!inner && !leaf) || hops > maxDepth) return keys.slice(0, i + 1).join(".");
+    if (inner) fields = inner;
   }
 }
 

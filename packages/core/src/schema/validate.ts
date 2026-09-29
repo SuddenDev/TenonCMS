@@ -2,12 +2,22 @@ import { z } from "zod";
 import { type Condition, isObject, matchCondition } from "./condition.ts";
 import { ValidationError } from "../errors.ts";
 import { fieldSchema } from "./fields/index.ts";
-import { fieldAt, relationPaths } from "./walk.ts";
+import { fieldAt, isRef, relationPaths, targetOf } from "./walk.ts";
 import type { Fields, Schema } from "./index.ts";
 
 // Startup checks.
 
-const uniqueTypes = ["text", "textarea", "number", "date", "select", "slug", "relation"];
+const uniqueTypes = [
+  "text",
+  "textarea",
+  "number",
+  "date",
+  "select",
+  "slug",
+  "relation",
+  "image",
+  "file",
+];
 
 function fail(message: string): never {
   throw new Error(`integral-cms: ${message}`);
@@ -37,9 +47,15 @@ export function checkSchema(schema: Schema, populate: { depth: number; maxDepth:
     fail(`populate.depth (${populate.depth}) is above populate.maxDepth (${populate.maxDepth})`);
   for (const { name, fields, global } of owners(schema)) {
     for (const { path, field } of relationPaths(fields)) {
-      const at = `relation "${name}.${path.join(".")}"`;
-      if (!Object.hasOwn(collections, field.collection))
-        fail(`${at} targets unknown collection "${field.collection}"`);
+      const at = `${field.type} "${name}.${path.join(".")}"`;
+      const to = targetOf(field);
+      if (field.type === "relation" && to === "media")
+        fail(`${at} cannot point to "media"; use an image or file field`);
+      if (field.type !== "relation" && !Object.hasOwn(collections, "media"))
+        fail(`${at} needs the \`media\` option`);
+      if (!Object.hasOwn(collections, to)) fail(`${at} targets unknown collection "${to}"`);
+      if (field.type !== "relation" && (field.onDelete as string) === "cascade")
+        fail(`${at} cannot use onDelete: 'cascade'`);
       if (field.required && field.onDelete === "set-null")
         fail(`${at} is required and cannot use onDelete: 'set-null'`);
       if (global && field.onDelete === "cascade")
@@ -53,7 +69,7 @@ export function checkSchema(schema: Schema, populate: { depth: number; maxDepth:
         ? collections[f.collection].fields
         : undefined;
       const target = source && relationPaths(source).find((r) => r.path.join(".") === f.on);
-      if (target?.field.collection !== name)
+      if (!target || targetOf(target.field) !== name)
         fail(
           `join "${name}.${key}" needs "${f.on}" to be a relation to "${name}" in "${f.collection}"`,
         );
@@ -77,7 +93,7 @@ function checkFields(fields: Fields, root: Fields, where: string, top: boolean) 
     if (
       "unique" in f &&
       f.unique &&
-      (!top || !uniqueTypes.includes(f.type) || (f.type === "relation" && f.many))
+      (!top || !uniqueTypes.includes(f.type) || (isRef(f) && f.many))
     )
       fail(`"${at}" cannot be unique`);
     for (const path of conditionPaths(f.condition ?? {})) {

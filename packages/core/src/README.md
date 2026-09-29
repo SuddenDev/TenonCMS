@@ -11,6 +11,7 @@ The source of the `integral-cms` package. Each folder is one area and has its ow
 | `db/`           | Every SQL query. One JSON documents table for all collections.                               |
 | `http/`         | The `/api/cms` HTTP API (Hono), a thin layer over the local API.                             |
 | `client/`       | `createClient()`, the typed HTTP client for the browser.                                     |
+| `media/`        | The media library: uploads, storage adapters (`local`, `s3`), image providers, media routes. |
 | `plugins/`      | The plugin contract and the bundled plugins.                                                 |
 | `presets/`      | Ready-made fields and hooks a host spreads into its collections.                             |
 | `helpers/`      | Small render helpers without imports (`slugify`, `seoMeta`, `breadcrumbs`).                  |

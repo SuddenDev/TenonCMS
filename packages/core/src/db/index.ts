@@ -22,6 +22,18 @@ export interface Database {
     updated_at: number;
   };
   cms_globals: { name: string; data: string; created_at: number; updated_at: number };
+  cms_uploads: {
+    id: string;
+    key: string;
+    folder: string;
+    filename: string;
+    mime_type: string;
+    size: number;
+    part_size: number;
+    adapter_upload_id: string;
+    user_id: string | null;
+    created_at: number;
+  };
 }
 
 export type Row = Selectable<Database["cms_documents"]>;
@@ -59,6 +71,31 @@ const cmsMigrations: Record<string, Migration> = {
         created_at integer NOT NULL,
         updated_at integer NOT NULL
       )`.execute(db);
+    },
+  },
+  // Uploads in progress. A row reserves its key and binds the upload to its user.
+  "002_cms_uploads": {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_uploads (
+        id text PRIMARY KEY NOT NULL,
+        key text NOT NULL,
+        folder text NOT NULL,
+        filename text NOT NULL,
+        mime_type text NOT NULL,
+        size integer NOT NULL,
+        part_size integer NOT NULL,
+        adapter_upload_id text NOT NULL,
+        user_id text,
+        created_at integer NOT NULL
+      )`.execute(db);
+    },
+  },
+  // `/files` and `/img` look up media by key. Queries MUST repeat this expression and the `collection` filter as literals,
+  // or SQLite does not use the index.
+  "003_cms_media_key": {
+    async up(db) {
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS cms_media_key_idx ON cms_documents (json_extract(data, '$.key'))
+        WHERE collection = 'media'`.execute(db);
     },
   },
 };

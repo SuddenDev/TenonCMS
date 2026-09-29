@@ -57,6 +57,29 @@
     "./plugins/redirects/admin": {
       "types": "./dist/plugins/redirects/admin.d.mts",
       "default": "./dist/plugins/redirects/admin.mjs"
+    },
+    "./media/local": {
+      "types": "./dist/media/storage/local.d.mts",
+      "workerd": "./dist/media/workerd.mjs",
+      "default": "./dist/media/storage/local.mjs"
+    },
+    "./media/s3": {
+      "types": "./dist/media/storage/s3.d.mts",
+      "default": "./dist/media/storage/s3.mjs"
+    },
+    "./media/ipx": {
+      "types": "./dist/media/images/ipx.d.mts",
+      "workerd": "./dist/media/workerd.mjs",
+      "default": "./dist/media/images/ipx.mjs"
+    },
+    "./media/cloudflare": {
+      "types": "./dist/media/images/cloudflare.d.mts",
+      "default": "./dist/media/images/cloudflare.mjs"
+    },
+    "./media/default": {
+      "types": "./dist/media/default.d.mts",
+      "workerd": "./dist/media/workerd.mjs",
+      "default": "./dist/media/default.mjs"
     }
   },
   "scripts": {
@@ -71,6 +94,8 @@
     "better-auth": "^1.7.5",
     "consola": "^3.4.2",
     "hono": "^4.13.8",
+    "image-size": "^2.0.4",
+    "ipx": "4.0.0-beta.1",
     "kysely": "^0.29.0",
     "zod": "^4.6.5"
   },
@@ -82,6 +107,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "astro": "^7.3.4",
+    "aws4fetch": "^1.0.20",
     "h3": "^1.15.11",
     "nuxt": "^4.5.2",
     "react": "^19.3.0",
@@ -96,6 +122,7 @@
     "@nuxt/kit": ">=3",
     "@nuxt/schema": ">=3",
     "astro": ">=5",
+    "aws4fetch": ">=1.0.20",
     "h3": ">=1.15",
     "react": ">=18",
     "react-dom": ">=18",
@@ -110,6 +137,9 @@
       "optional": true
     },
     "astro": {
+      "optional": true
+    },
+    "aws4fetch": {
       "optional": true
     },
     "h3": {

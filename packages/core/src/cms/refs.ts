@@ -1,13 +1,17 @@
 import { type Kysely } from "kysely";
-import { existingIds, referencingDocs, referencingGlobal, taken } from "../db/documents.ts";
+import { byIds, existingIds, referencingDocs, referencingGlobal, taken } from "../db/documents.ts";
+import { accepts } from "../media/names.ts";
 import type { Database } from "../db/index.ts";
 import { ConflictError, ValidationError } from "../errors.ts";
-import type { Fields, RelationField, Schema } from "../schema/index.ts";
-import { relationPaths } from "../schema/walk.ts";
+import type { Fields, RefField, Schema } from "../schema/index.ts";
+import { relationPaths, targetOf } from "../schema/walk.ts";
 
 // The integrity rules of the document graph: ids MUST exist, unique values MUST NOT collide, and a delete applies `onDelete`.
 
-/** Every id MUST exist in its target collection. One query per relation field. */
+/**
+ * Every id MUST exist in its target collection. One query per relation field.
+ * Files of `image` and `file` fields MUST also fit the field's `accept` and `maxSize`; an `image` only takes `image/*`.
+ */
 export async function checkRefs(
   db: Kysely<Database>,
   fields: Fields,
@@ -20,11 +24,23 @@ export async function checkRefs(
     const fail = (message: string) => {
       throw new ValidationError({ [path.join(".")]: message });
     };
-    if (self && field.collection === self.collection && ids.includes(self.id))
+    const to = targetOf(field);
+    if (self && to === self.collection && ids.includes(self.id))
       fail("A document cannot reference itself");
     if (!ids.length) continue;
-    const found = await existingIds(db, field.collection, ids);
-    if (found.length !== new Set(ids).size) fail(`Unknown id in "${field.collection}"`);
+    if (field.type === "relation") {
+      const found = await existingIds(db, to, ids);
+      if (found.length !== new Set(ids).size) fail(`Unknown id in "${to}"`);
+      continue;
+    }
+    const files = await byIds(db, to, ids);
+    if (files.length !== new Set(ids).size) fail(`Unknown id in "${to}"`);
+    for (const f of files) {
+      if (field.type === "image" && !accepts(["image/*"], f.mimeType)) fail("Not an image");
+      if (!accepts(field.accept, f.mimeType)) fail(`Type "${f.mimeType}" is not accepted`);
+      if (field.maxSize !== undefined && f.size > field.maxSize)
+        fail(`Larger than ${field.maxSize} bytes`);
+    }
   }
 }
 
@@ -50,7 +66,7 @@ type Ref = {
   global?: string;
   data: Record<string, any>;
   path: string[];
-  field: RelationField;
+  field: RefField;
 };
 
 const owner = (r: Ref) => (r.global ? `global:${r.global}` : `${r.collection}:${r.id}`);
@@ -64,7 +80,7 @@ async function references(db: Kysely<Database>, schema: Schema, collection: stri
     parsed.get(key) ?? parsed.set(key, JSON.parse(json)).get(key)!;
   for (const [name, c] of Object.entries(schema.collections ?? {})) {
     for (const { path, field } of relationPaths(c.fields)) {
-      if (field.collection !== collection) continue;
+      if (targetOf(field) !== collection) continue;
       const rows = await referencingDocs(db, name, path.join("."), field.many, id);
       for (const row of rows)
         refs.push({
@@ -78,7 +94,7 @@ async function references(db: Kysely<Database>, schema: Schema, collection: stri
   }
   for (const [name, g] of Object.entries(schema.globals ?? {})) {
     for (const { path, field } of relationPaths(g.fields)) {
-      if (field.collection !== collection) continue;
+      if (targetOf(field) !== collection) continue;
       const json = await referencingGlobal(db, name, path.join("."), field.many, id);
       if (json) refs.push({ global: name, data: data(`global:${name}`, json), path, field });
     }
@@ -105,7 +121,9 @@ export async function onDelete(
   effects: Effects,
 ) {
   const refs = await references(db, schema, collection, id);
-  const rule = (r: Ref) => r.field.onDelete ?? (r.field.required ? "restrict" : "set-null");
+  // `image` and `file` restrict by default; relations only when required.
+  const rule = (r: Ref) =>
+    r.field.onDelete ?? (r.field.required || r.field.type !== "relation" ? "restrict" : "set-null");
   const blocking = refs.filter((r) => rule(r) === "restrict");
   if (blocking.length) {
     const owners = new Map(blocking.map((r) => [owner(r), r])).values();

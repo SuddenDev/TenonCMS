@@ -264,7 +264,7 @@ function writeTypes() {
 const database = { url: ":memory:" };
 const cms = defineCms({
   collections: {
-    media: {
+    assets: {
       fields: {
         url: { type: "text", required: true },
         usedIn: { type: "join", collection: "posts", on: "seo.image" },
@@ -273,7 +273,7 @@ const cms = defineCms({
     authors: {
       fields: {
         name: { type: "text", required: true },
-        avatar: { type: "relation", collection: "media" },
+        avatar: { type: "relation", collection: "assets" },
         posts: { type: "join", collection: "posts", on: "author" },
       },
     },
@@ -288,7 +288,7 @@ const cms = defineCms({
         title: { type: "text", required: true },
         author: { type: "relation", collection: "authors" },
         tags: { type: "relation", collection: "tags", many: true },
-        seo: { type: "group", fields: { image: { type: "relation", collection: "media" } } },
+        seo: { type: "group", fields: { image: { type: "relation", collection: "assets" } } },
       },
     },
     pages: {
@@ -301,7 +301,7 @@ const cms = defineCms({
   globals: {
     site: {
       fields: {
-        logo: { type: "relation", collection: "media" },
+        logo: { type: "relation", collection: "assets" },
         featured: { type: "relation", collection: "posts", many: true },
       },
     },

@@ -10,8 +10,14 @@ import {
   defineGlobal,
   type Doc,
   type Fields,
+  type File,
+  type Image,
+  type Populate,
+  type Resolve,
+  type Select,
 } from "./index.ts";
-import { dataSchema } from "./validate.ts";
+import { checkSchema, dataSchema } from "./validate.ts";
+import { relationPaths, targetOf } from "./walk.ts";
 describe("group types", () => {
   const fields = {
     seo: { type: "group", fields: { title: { type: "text" }, noindex: { type: "boolean" } } },
@@ -104,6 +110,97 @@ function optionTypes() {
   }) satisfies Fields;
 }
 
+describe("media fields", () => {
+  const fields = {
+    hero: { type: "image", required: true, image: { preset: "og", width: 800 } },
+    gallery: { type: "image", many: true },
+    doc: { type: "file", accept: ["application/pdf"], maxSize: 1024, folder: "docs" },
+    seo: { type: "group", fields: { og: { type: "image" } } },
+  } as const satisfies Fields;
+
+  it("stores ids like a relation", () => {
+    const s = dataSchema(fields);
+    expect(s.parse({ hero: "a", gallery: ["b", "c"], doc: "d" })).toEqual({
+      hero: "a",
+      gallery: ["b", "c"],
+      doc: "d",
+    });
+    expect(s.safeParse({ gallery: ["b"] }).success).toBe(false);
+    expect(s.safeParse({ hero: "a", gallery: ["b", "b"] }).success).toBe(false);
+  });
+
+  it("finds image and file fields with target media", () => {
+    expect(relationPaths(fields).map((r) => [r.path.join("."), targetOf(r.field)])).toEqual([
+      ["hero", "media"],
+      ["gallery", "media"],
+      ["doc", "media"],
+      ["seo.og", "media"],
+    ]);
+  });
+
+  it("types stored ids and populated images and files", () => {
+    // Type-level only. The functions never run.
+    (d: Data<typeof fields>) => {
+      const hero: string = d.hero;
+      const gallery: string[] | null | undefined = d.gallery;
+    };
+    (r: Resolve<{}, typeof fields, 2>) => {
+      const hero: Image = r.hero;
+      const gallery: Image[] | null | undefined = r.gallery;
+      const doc: File | null | undefined = r.doc;
+      const og: Image | null | undefined = r.seo?.og;
+      const srcset: string = r.hero.srcset;
+      // @ts-expect-error a file has no srcset
+      r.doc?.srcset;
+    };
+    (r: Resolve<{}, typeof fields, false>) => {
+      const hero: string = r.hero;
+    };
+  });
+
+  it("accepts true for populate and select, nothing deeper", () => {
+    const populate: Populate<{}, typeof fields> = { hero: true, seo: { og: true } };
+    // @ts-expect-error an image does not populate deeper
+    const deep: Populate<{}, typeof fields> = { hero: { alt: true } };
+    const select: Select<{}, typeof fields, 2> = { hero: true, doc: true };
+    // @ts-expect-error an image selects whole
+    const deepSelect: Select<{}, typeof fields, 2> = { hero: { alt: true } };
+  });
+
+  it("rejects image options on a file field", () => {
+    // @ts-expect-error `image` is only on image fields
+    ({ f: { type: "file", image: { preset: "x" } } }) satisfies Fields;
+  });
+});
+
+describe("media field checks", () => {
+  const check =
+    (fields: Fields, collections = { media: { fields: {} } }) =>
+    () =>
+      checkSchema({ collections: { ...collections, c: { fields } } }, { depth: 2, maxDepth: 5 });
+
+  it("needs the media option", () => {
+    expect(check({ i: { type: "image" } }, {} as never)).toThrow(/needs the `media` option/);
+    expect(check({ g: { type: "group", fields: { f: { type: "file" } } } }, {} as never)).toThrow(
+      /"c.g.f" needs the `media` option/,
+    );
+    expect(check({ i: { type: "image" } })).not.toThrow();
+  });
+
+  it("rejects relations to media and cascade", () => {
+    expect(check({ r: { type: "relation", collection: "media" } })).toThrow(/image or file field/);
+    expect(check({ i: { type: "image", onDelete: "cascade" } as never })).toThrow(/cascade/);
+    expect(check({ i: { type: "image", onDelete: "set-null" } })).not.toThrow();
+  });
+
+  it("allows unique on a single image or file", () => {
+    expect(
+      check({ i: { type: "image", unique: true }, f: { type: "file", unique: true } }),
+    ).not.toThrow();
+    expect(check({ i: { type: "image", many: true, unique: true } })).toThrow(/cannot be unique/);
+  });
+});
+
 describe("hook types", () => {
   it("infers arguments from the fields of the same defineCollection call", () => {
     const posts = defineCollection({
@@ -154,5 +251,26 @@ describe("hook types", () => {
       database: { url: ":memory:" },
       secret: "",
     });
+  });
+});
+
+describe("media reads", () => {
+  it("types the computed fields of find('media')", async () => {
+    const cms = defineCms({ database: { url: ":memory:" }, secret: "", media: false });
+    const typed = defineCms({ database: { url: ":memory:" }, secret: "", media: true });
+    const read = async () => {
+      const [doc] = await typed.find("media");
+      const url: string = doc.url;
+      const src: string | null | undefined = doc.src;
+      const srcset: string | null | undefined = doc.srcset;
+      const one = await typed.findById("media", "x");
+      const u: string | undefined = one?.url;
+      // @ts-expect-error media: false has no media collection
+      await cms.find("media");
+      // @ts-expect-error media: false has no cms.media
+      cms.media;
+      typed.media.upload;
+    };
+    expect(read).toBeTypeOf("function");
   });
 });

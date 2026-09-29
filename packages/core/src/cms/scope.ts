@@ -1,6 +1,7 @@
 import type { User } from "better-auth";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/index.ts";
+import type { MediaCore } from "../media/index.ts";
 import type { Plugin } from "../plugins/index.ts";
 import { list } from "../schema/hooks/run.ts";
 import type { LocalApi, RootHooks, Schema } from "../schema/index.ts";
@@ -17,6 +18,8 @@ export type Core = {
   db: () => Promise<Kysely<Database>>;
   /** The local API of a scope. */
   bind: (scope: Scope) => LocalApi;
+  /** The resolved `media` option. Missing without it. */
+  media?: MediaCore;
 };
 
 /** The target of an operation. Hooks get it as `collection` or `global`. */
@@ -50,12 +53,20 @@ export function known({ schema }: Core, kind: Name["kind"], name: string) {
   if (!Object.hasOwn(owners, name)) throw new Error(`Unknown ${kind} "${name}"`);
 }
 
-/** The hooks of a stage: the collection's or global's, then the plugins', then the host's root hooks. */
-export const slot = (core: Core, name: Name, stage: Stage): ((args: any) => unknown)[] => [
-  ...list<(args: any) => unknown>((target(core, name).hooks as RootHooks | undefined)?.[stage]),
-  ...core.plugins.flatMap((p) => list<(args: any) => unknown>(p.hooks?.[stage])),
-  ...list<(args: any) => unknown>(core.rootHooks[stage]),
-];
+/** Whether `name` is the media library, which runs media hooks instead of collection and root hooks. */
+export const isMedia = (name: Name) => name.kind === "collection" && name.name === "media";
+
+/** The hooks of a stage: the collection's or global's, then the plugins', then the host's root hooks. None for `media`. */
+export const slot = (core: Core, name: Name, stage: Stage): ((args: any) => unknown)[] =>
+  isMedia(name)
+    ? []
+    : [
+        ...list<(args: any) => unknown>(
+          (target(core, name).hooks as RootHooks | undefined)?.[stage],
+        ),
+        ...core.plugins.flatMap((p) => list<(args: any) => unknown>(p.hooks?.[stage])),
+        ...list<(args: any) => unknown>(core.rootHooks[stage]),
+      ];
 
 /** The arguments every hook gets, plus `extra`. */
 export const hookArgs = <E extends object>(s: Inner, name: Name, extra: E) => ({

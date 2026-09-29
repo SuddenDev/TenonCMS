@@ -8,18 +8,22 @@ import { ConflictError, ValidationError } from "../errors.ts";
 import type { Plugin, PublicRouteEnv, RouteEnv } from "../plugins/index.ts";
 import { innerFields, mapValue } from "../schema/walk.ts";
 import { badSelectPath, type SelectSpec } from "../cms/populate.ts";
-import type { Fields, Schema } from "../schema/index.ts";
-import { type Env, pluginMiddleware, session, withCms } from "./middleware.ts";
+import type { Collection, Fields, Schema } from "../schema/index.ts";
+import { type Env, notFound, pluginMiddleware, session, withCms } from "./middleware.ts";
 import { type Level, parsePopulate, parseSelect, visible, whereFromQuery } from "./query.ts";
 
-/** `asUser(user)` returns the local API with the session user set for hooks. */
+/**
+ * `asUser(user)` returns the local API with the session user set for hooks. `media` holds the media routes, mounted at
+ * `/media` when the `media` option is set.
+ */
 export function createApp(
   cms: Cms<Schema>,
   asUser: (user: User) => Cms<Schema>,
   plugins: readonly Plugin[] = [],
+  media?: { reads: Hono<Env>; writes: Hono<Env>; regenerate: boolean },
 ) {
   const { schema } = cms;
-  const collections = schema.collections ?? {};
+  const collections: Record<string, Collection> = schema.collections ?? {};
   // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
   // A field MAY be named `hooks`; it has a `type`. `JSON.stringify` drops other functions, like `validate`, itself.
   const publicSchema = JSON.parse(
@@ -27,6 +31,8 @@ export function createApp(
       key === "hooks" && typeof value?.type !== "string" ? undefined : value,
     ),
   );
+  // What the admin needs to know of the media options.
+  if (media) publicSchema.media = { regenerate: media.regenerate };
 
   // Removes fields the caller cannot see, also in groups, populated relations and joins.
   function strip(fields: Fields, doc: unknown, level: Level): unknown {
@@ -52,7 +58,6 @@ export function createApp(
     return session ? "admin" : "public";
   }
 
-  const notFound = () => new HTTPException(404, { message: "Not Found" });
   // A collection or global named in the URL, or a 404.
   const collectionOf = (name: string) => {
     if (!Object.hasOwn(collections, name)) throw notFound();
@@ -79,6 +84,7 @@ export function createApp(
   // except `limit`, `populate`, `depth` and `select`, so fields with these names cannot be filtered over HTTP.
   const reads = new Hono<Env>();
   mount(reads, "publicRoutes");
+  if (media) reads.route("/media", media.reads);
   reads.get("/collections/:name", async (c) => {
     const { name, fields } = collectionOf(c.req.param("name"));
     const { limit, populate, depth, select, ...query } = c.req.query();
@@ -111,6 +117,7 @@ export function createApp(
   const writes = new Hono<Env>();
   writes.get("/schema", (c) => c.json(publicSchema));
   mount(writes, "routes");
+  if (media) writes.route("/media", media.writes);
   writes.post("/collections/:name", async (c) => {
     const { name } = collectionOf(c.req.param("name"));
     return c.json(await c.var.cms.create(name, await body(c.req)), 201);

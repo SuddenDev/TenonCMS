@@ -23,7 +23,7 @@ describe("onDelete", () => {
   it("set-null clears single, many, grouped and global references", async () => {
     const { m, a, p, t1, t2 } = ids;
     await cms.setGlobal("site", { logo: m.id, featured: [p.id] });
-    await cms.delete("media", m.id);
+    await cms.delete("assets", m.id);
     expect((await cms.findById("posts", p.id, ids0))?.seo).toEqual({ image: null });
     expect((await cms.findById("authors", a.id, ids0))?.avatar).toBeNull();
     expect((await cms.getGlobal("site", ids0)).logo).toBeNull();

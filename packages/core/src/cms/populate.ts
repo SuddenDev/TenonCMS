@@ -2,8 +2,8 @@ import type { Kysely } from "kysely";
 import { isObject } from "../schema/condition.ts";
 import { byIds, joinedDocs } from "../db/documents.ts";
 import { type Database, toDoc } from "../db/index.ts";
-import { innerFields, mapValue, relationPaths } from "../schema/walk.ts";
-import type { Collection, Field, Fields } from "../schema/index.ts";
+import { innerFields, isRef, mapValue, relationPaths, targetOf } from "../schema/walk.ts";
+import type { Collection, Field, Fields, FileField, ImageField } from "../schema/index.ts";
 
 /** `false`: ids. Number: hops left. Object: listed paths only; `true` inside means one hop. */
 export type Spec = false | number | { [key: string]: true | Spec };
@@ -48,6 +48,8 @@ export function step(
 export type ReadHooks = {
   before(collection: string, docs: Docs): Promise<Docs>;
   after(collection: string, docs: Docs): Promise<Docs>;
+  /** Adds the computed URLs of a media document, with the options of the field that holds it. */
+  media?(doc: Record<string, any>, field: ImageField | FileField): Record<string, any>;
 };
 
 /** Resolves relation ids in `docs` in place. One query per relation or join field per hop. */
@@ -66,14 +68,17 @@ export async function populate(
     if (field.type === "group") {
       const values = docs.map((d) => d[key]).filter(Boolean);
       await populate(db, collections, field.fields, values, child, read);
-    } else if (field.type === "relation") {
+    } else if (isRef(field)) {
+      const to = targetOf(field);
       const ids = [...new Set(docs.flatMap((d) => d[key] ?? []))];
-      const found = await hop(field.collection, await byIds(db, field.collection, ids));
+      const found = await hop(to, await byIds(db, to, ids));
+      const value = (id: string) => {
+        const doc = found.get(id);
+        return doc && field.type !== "relation" && read.media ? read.media(doc, field) : doc;
+      };
       for (const d of docs) {
         if (d[key] == null) continue;
-        d[key] = field.many
-          ? d[key].map((id: string) => found.get(id)).filter(Boolean)
-          : (found.get(d[key]) ?? null);
+        d[key] = field.many ? d[key].map(value).filter(Boolean) : (value(d[key]) ?? null);
       }
     } else if (field.type === "join") {
       const target = collections[field.collection].fields;

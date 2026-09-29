@@ -8,7 +8,7 @@ import type {
   FieldHooks,
   Fields,
   HookArgs,
-  RelationField,
+  RefField,
   StoredField,
 } from "./index.ts";
 
@@ -38,13 +38,20 @@ export async function eachField(
   }
 }
 
-/** Every `relation` at the top level and inside groups, with its key path. */
+/** Whether a field stores ids: `relation`, `image` or `file`. */
+export const isRef = (f: Field): f is RefField =>
+  f.type === "relation" || f.type === "image" || f.type === "file";
+
+/** The collection a field's ids point to. `image` and `file` point to `media`. */
+export const targetOf = (f: RefField) => (f.type === "relation" ? f.collection : "media");
+
+/** Every `relation`, `image` and `file` at the top level and inside groups, with its key path. */
 export function relationPaths(
   fields: Fields,
   prefix: string[] = [],
-): { path: string[]; field: RelationField }[] {
+): { path: string[]; field: RefField }[] {
   return Object.entries(fields).flatMap(([key, f]) =>
-    f.type === "relation"
+    isRef(f)
       ? [{ path: [...prefix, key], field: f }]
       : f.type === "group"
         ? relationPaths(f.fields, [...prefix, key])
@@ -52,7 +59,7 @@ export function relationPaths(
   );
 }
 
-/** The fields a value continues with: a group's own, or the target collection's for a relation or join. */
+/** The fields a value continues with: a group's own, or the target collection's for a relation or join. `image` and `file` are leaves. */
 export function innerFields(collections: Record<string, Collection>, f: Field) {
   if (f.type === "group") return f.fields;
   if (f.type === "relation" || f.type === "join") return collections[f.collection].fields;
@@ -73,13 +80,11 @@ export function fieldAt(fields: Fields, path: string): Field | undefined {
   return f.type === "group" ? fieldAt(f.fields, rest.join(".")) : undefined;
 }
 
-/** Whether `where` accepts `key`. Groups, joins and `many` relations are not filterable. */
+/** Whether `where` accepts `key`. Groups, joins and `many` relations, images and files are not filterable. */
 export function filterable(fields: Fields, key: string) {
   if (!Object.hasOwn(fields, key)) return false;
   const field = fields[key];
-  return (
-    field.type !== "group" && field.type !== "join" && !(field.type === "relation" && field.many)
-  );
+  return field.type !== "group" && field.type !== "join" && !(isRef(field) && field.many);
 }
 
 /** Fills each empty slug from its `from` field, in place. Runs before `beforeValidate`, like the admin's fill. */

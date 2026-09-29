@@ -4,7 +4,7 @@ The `/api/cms` API, built with Hono. `cms.fetch(request)` calls it. It does not 
 
 | File            | What it does                                                                                                                                                                  |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`      | `createApp()`: auth routes, public read routes, then CSRF + session, then write routes and plugin routes. Maps errors to status codes.                                        |
+| `index.ts`      | `createApp()`: auth routes, public read routes, then CSRF + session, then write routes and plugin routes. Mounts `media/http.ts` at `/media`. Maps errors to status codes.    |
 | `middleware.ts` | Core's Hono middleware: `withCms()` sets `c.var.cms`, `session()` answers 401 without a session and sets `c.var.user`. `pluginMiddleware()` collects the plugins' middleware. |
 | `query.ts`      | Turns query strings into read options: `?populate=`, `?depth=`, `?select=`, and field filters (`?featured=true`).                                                             |
 

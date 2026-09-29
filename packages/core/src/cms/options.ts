@@ -1,4 +1,5 @@
 import type { AuthOptions } from "./auth.ts";
+import type { MediaOptions } from "../media/index.ts";
 import type { Plugin } from "../plugins/index.ts";
 import type { CheckRefs, Collection, Global, RootHooks } from "../schema/index.ts";
 
@@ -29,6 +30,7 @@ export type CmsOptions<
   A extends AuthOptions = {},
   P extends PopulateConfig = {},
   PL extends readonly Plugin[] = [],
+  M extends MediaOptions | boolean | undefined = undefined,
 > = {
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
   collections?: C & NoInfer<CheckRefs<C, C & PluginCollections<PL>> & Record<string, Collection>>;
@@ -45,4 +47,12 @@ export type CmsOptions<
   auth?: A & AuthOptions;
   /** Hooks for every collection and global. */
   hooks?: RootHooks;
+  /**
+   * The media library: uploads, the `media` collection, and `image` and `file` fields.
+   * - omitted or `true`: files in `./uploads`, WebP variants at quality 85 rendered at upload (`local()` and `ipx()`).
+   *   On Cloudflare Workers, omitted means no media library and `true` throws.
+   * - `false`: no media library. Core adds no routes, and `image` and `file` fields throw at startup.
+   * - an object: your own storage, limits, images and hooks.
+   */
+  media?: M;
 };

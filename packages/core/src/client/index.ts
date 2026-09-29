@@ -4,6 +4,8 @@ import type {
   Doc,
   Fields as FieldsOf,
   FilterKey,
+  MediaRead,
+  MediaUpdate,
   PopulateOf,
   Read,
   ReadDoc,
@@ -159,6 +161,59 @@ export class CmsError extends Error {
 
 type Global<C extends { schema: Schema }, K extends keyof Globals<C>> = Globals<C>[K]["fields"];
 
+/** Options of `client.media.upload()`. */
+export type UploadOptions = {
+  /** Folder to upload into, e.g. `blog/2026`. Default: the root. */
+  folder?: string;
+  /** Name of the file. Default: `file.name`. */
+  filename?: string;
+  /** Called after each finished part with the bytes uploaded so far. */
+  onProgress?(progress: { loaded: number; total: number }): void;
+  /** Aborts the upload. Parts in storage are dropped. */
+  signal?: AbortSignal;
+};
+
+/** The media library over HTTP. Needs `defineCms({ media })`. Writes need a session. */
+export type MediaClient = {
+  /**
+   * Uploads a file in parts, 4 at a time, retrying a failed part 3 times. Returns the media document.
+   * `POST /api/cms/media/uploads`, then one `PUT` per part, then `POST /api/cms/media/uploads/:id/complete`.
+   */
+  upload(file: Blob & { name?: string }, options?: UploadOptions): Promise<MediaRead>;
+  /**
+   * Changes `alt`, or moves the file with a new `filename` or `folder`.
+   * `PATCH /api/cms/media/:id`
+   */
+  update(id: string, data: MediaUpdate): Promise<MediaRead>;
+  /**
+   * Moves every file under `from` to `to`. `failed` lists files that did not move; call it again to finish.
+   * `POST /api/cms/media/folders/rename`
+   */
+  renameFolder(
+    from: string,
+    to: string,
+  ): Promise<{ moved: number; failed: { id: string; message: string }[] }>;
+  /**
+   * Deletes a file. Throws a `CmsError` with status `409` and `references` while a `restrict` field uses it.
+   * `DELETE /api/cms/media/:id`
+   */
+  delete(id: string): Promise<null>;
+  /**
+   * Brings the stored variants of one file in line with the current image options. `force` re-renders all of them.
+   * Throws a `CmsError` with status `404` for a missing file, or when the image provider stores no variants.
+   * `POST /api/cms/media/:id/regenerate`
+   */
+  regenerate(
+    id: string,
+    options?: { force?: boolean },
+  ): Promise<{ rendered: number; removed: number }>;
+  /**
+   * Lists every folder with its parents, sorted. The root is left out.
+   * `GET /api/cms/media/folders`
+   */
+  folders(): Promise<string[]>;
+};
+
 /** The HTTP client. Names and document types come from `C`, the registered `cms`. See {@link Register}. */
 export type Client<C extends { schema: Schema } = RegisteredCms> = {
   /**
@@ -239,7 +294,12 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    * Returns the collections and globals with their fields. Needs a session.
    * `GET /api/cms/schema`
    */
-  getSchema(): Promise<{ collections?: Collections<C>; globals?: Globals<C> }>;
+  getSchema(): Promise<{
+    collections?: Collections<C>;
+    globals?: Globals<C>;
+    /** Set when the media library is on. `regenerate`: the image provider stores variants, see `media.regenerate()`. */
+    media?: { regenerate: boolean };
+  }>;
 
   /**
    * Creates the first admin and signs them in. Throws a `CmsError` with status `403` once an admin exists.
@@ -279,6 +339,9 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     path: `/${string}`,
     options?: { method?: string; body?: unknown; query?: object },
   ): Promise<T>;
+
+  /** The media library. See {@link MediaClient}. */
+  media: MediaClient;
 };
 
 type ReadQuery = { populate?: boolean | object; depth?: number; select?: object };
@@ -369,7 +432,72 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       path: string,
       { method = "GET", body, query } = {} as NonNullable<Parameters<Client["request"]>[1]>,
     ) => request(method, path, body, query),
+
+    media: {
+      upload,
+      update: (id: string, data: unknown) => request("PATCH", `/media/${enc(id)}`, data),
+      renameFolder: (from: string, to: string) =>
+        request("POST", "/media/folders/rename", { from, to }),
+      delete: (id: string) => request("DELETE", `/media/${enc(id)}`),
+      regenerate: (id: string, options: { force?: boolean } = {}) =>
+        request("POST", `/media/${enc(id)}/regenerate`, options),
+      folders: () => request("GET", "/media/folders"),
+    },
   };
+
+  // Sends one part. Proxied parts answer `{ etag }`; direct ones (S3) send the `ETag` header.
+  // A 4xx other than 408 and 429 is final; anything else is retried 3 times with backoff.
+  async function putPart(url: string, blob: Blob, signal?: AbortSignal) {
+    for (let attempt = 0; ; attempt++) {
+      signal?.throwIfAborted();
+      const res = await fetchFn(url.startsWith("/") ? `${baseUrl}${url}` : url, {
+        method: "PUT",
+        body: blob,
+        signal,
+      }).catch((error) => {
+        if (signal?.aborted || attempt >= 3) throw error;
+      });
+      if (res?.ok)
+        return url.startsWith("/") ? (await res.json()).etag : (res.headers.get("etag") ?? "");
+      const final = res && res.status < 500 && res.status !== 408 && res.status !== 429;
+      if (res && (final || attempt >= 3))
+        throw new CmsError(res.status, await res.json().catch(() => null));
+      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+    }
+  }
+
+  async function upload(
+    file: Blob & { name?: string },
+    { folder, filename, onProgress, signal }: UploadOptions = {},
+  ) {
+    signal?.throwIfAborted();
+    const plan = await request("POST", "/media/uploads", {
+      folder,
+      filename: filename ?? file.name ?? "file",
+      mimeType: file.type || "application/octet-stream",
+      size: file.size,
+    });
+    const id = `/media/uploads/${enc(plan.id)}`;
+    try {
+      const queue = [...plan.parts] as { n: number; url: string }[];
+      const parts: { n: number; etag: string }[] = [];
+      let loaded = 0;
+      const worker = async () => {
+        for (let part = queue.shift(); part; part = queue.shift()) {
+          const blob = file.slice((part.n - 1) * plan.partSize, part.n * plan.partSize);
+          parts.push({ n: part.n, etag: await putPart(part.url, blob, signal) });
+          loaded += blob.size;
+          onProgress?.({ loaded, total: file.size });
+        }
+      };
+      await Promise.all([1, 2, 3, 4].map(worker));
+      signal?.throwIfAborted();
+      return await request("POST", `${id}/complete`, { parts });
+    } catch (error) {
+      await request("DELETE", id).catch(() => {});
+      throw error;
+    }
+  }
 
   return client as unknown as Client<C>;
 }
