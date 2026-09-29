@@ -86,7 +86,6 @@ import { posts } from "./collections/posts";
 
 export default defineCms({
   collections: { posts, authors },
-  globals: { site: { fields: { title: { type: "text", required: true } } } },
   database: { url: "file:/absolute/path/cms.db" }, // or libsql://…, plus authToken
   secret: process.env.CMS_SECRET!, // at least 32 characters
   // Optional, see Auth below.
@@ -204,13 +203,13 @@ await cms.find("posts", { where: { category: "news" } }); // equality filters
 await cms.find("posts", { limit: 5 }); // the 5 newest
 await cms.findOne("posts", { where: { slug: "hello" } });
 await cms.findById("posts", id);
-await cms.getGlobal("site");
+await cms.getGlobal("general"); // a default settings global, see Settings
 ```
 
 Everything is typed from the schema. Unknown collections or fields are type errors.
 
 Reads are also available over HTTP without a session, because the site renders that content anyway.
-Query params are equality filters, and `limit` caps the result: `GET /api/cms/collections/posts?slug=hello&limit=1`, `GET /api/cms/globals/site`. `?category=null` matches an empty or missing field, like `null` in `where`; an empty value (`?category=`) adds no filter.
+Query params are equality filters, and `limit` caps the result: `GET /api/cms/collections/posts?slug=hello&limit=1`, `GET /api/cms/globals/general`. `?category=null` matches an empty or missing field, like `null` in `where`; an empty value (`?category=`) adds no filter.
 `populate` and `depth` control [relations](#relations), `select` the fields that come back. Because of that, fields named `limit`, `populate`, `depth` or `select` cannot be filtered over HTTP.
 Writes and the schema endpoint need an admin session.
 
@@ -469,7 +468,7 @@ export const pages = defineCollection({
 | `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }`                 |
 | `path`   | `{ type: 'text', readOnly: true }`                                                |
 
-`seo.fields` is one optional group `seo` with `title`, `description` and `noindex`.
+`seo.fields` is one optional group `seo` with `title`, `description`, `image` (the social image) and `noindex`. Without [media](#media), leave `image` out (see below).
 
 Paths are stored, so reads never compute them:
 
@@ -493,7 +492,7 @@ All run in the write's transaction: a failing child update rolls back the rename
 Customize with plain JavaScript:
 
 ```ts
-const { noindex, ...seoRest } = seo.fields.seo.fields
+const { image, ...seoRest } = seo.fields.seo.fields
 const { uniquePath, ...beforeChange } = page.hooks.beforeChange
 
 fields: {
@@ -523,13 +522,26 @@ Read a page by its path like any other field, and build `<head>` with `seoMeta()
 ```ts
 import { seoMeta } from "integral-cms";
 
-const doc = await cms.findOne("pages", { where: { path: "/about/team" } });
-const { title, description, noindex } = seoMeta(doc);
+const [general, seo] = await Promise.all([cms.getGlobal("general"), cms.getGlobal("seo")]);
+const doc = await cms.findOne("pages", {
+  where: { path: "/about/team" },
+  populate: { seo: { image: true } },
+});
+const { title, description, noindex, canonical, image, verification } = seoMeta(doc, {
+  general,
+  seo,
+});
 // HTTP: GET /api/cms/collections/pages?path=/about/team
 ```
 
-- `title` is `seo.title`, or the page's `title` when it is empty. Nothing is stored, so the fallback follows title changes.
-- `description` is `seo.description` or `undefined`. `noindex` is `true` only when `seo.noindex` is.
+The second argument is optional. It takes the [settings](#settings) globals `general` and `seo`:
+
+- `title` is `seo.title`, or the page's `title` when it is empty, then the separator (default `·`) and the site title. Nothing is stored, so the fallback follows title changes. Without a site title, it is only the page title.
+- `description` is `seo.description` or `undefined`. There is no fallback, so pages do not share one description.
+- `noindex` is `true` when the page's or the site's `seo.noindex` is.
+- `canonical` is the site `url` plus the page's `path`. `undefined` unless both exist.
+- `image` is the page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Only a populated image counts, so populate it.
+- `verification` is a list of `{ name, content }` meta tags for the filled `google` and `bing` codes.
 - `seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `integral-cms`. In browser code, import them from `integral-cms/client`, which pulls no server code.
 
 `breadcrumbs()` builds the trail from a page read with its parents resolved. Read only what the trail needs with [`select`](#2-read-content):
@@ -564,6 +576,39 @@ Each example has a catch-all route that reads by `path`. Static routes win over 
 - Astro: `src/pages/[...path].astro` with `Astro.locals.integral.findOne`, `select` and breadcrumbs
 - Nuxt: `app/pages/[...path].vue` with `useIntegral().findOne` and `useSeoMeta`
 - TanStack Start: `src/routes/$.tsx` with a server function and `head`
+
+### Settings
+
+Most sites need a title, a URL and SEO defaults. `defineCms()` adds two globals for that, `general` and `seo`, without any config:
+
+| Global    | Fields                                                                                        |
+| --------- | --------------------------------------------------------------------------------------------- |
+| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                         |
+| `seo`     | `separator` (default `·`), `image` (social image), `verification.google` / `.bing`, `noindex` |
+
+They appear on the admin's Settings page, not in the sidebar, and read like any global: `await cms.getGlobal("general")`. An unsaved global reads as `{}`, so handle a missing `title`. Without [media](#media), `favicon` and `image` are left out.
+
+The `settings` option drops or replaces them:
+
+```ts
+import { settings } from "integral-cms/presets";
+
+defineCms({
+  settings: {
+    // Extend the default.
+    general: {
+      ...settings.general,
+      fields: { ...settings.general.fields, analyticsId: { type: "text" } },
+    },
+    // Drop one. `settings: false` drops both.
+    seo: false,
+  },
+});
+```
+
+- An omitted key is the default, `false` drops it, a global replaces it and is stored under the same name. Other keys are type errors: add your own settings pages as globals with `nav: { display: "settings" }` (see [Customize the admin](#customize-the-admin)).
+- A host or plugin global named `general` or `seo` throws at startup while that default is on.
+- A replacement is taken as is: an `image` field in it needs media.
 
 ### Media
 
@@ -834,11 +879,12 @@ export default defineAdmin({
   name: "Acme",
   logo: { light: "/logo-light.svg", dark: "/logo-dark.svg" },
   icon: "/icon.svg",
-  media: { group: "Assets", icon: "images" },
+  media: { nav: { group: "Assets", icon: "images" } },
   fields: { color: mountColorInput },
   pages: {
     home: { route: "/", mount: mountHome },
-    stats: { menu: { label: "Stats", icon: "chart-bar", order: 5 }, mount: mountStats },
+    stats: { label: "Stats", nav: { icon: "chart-bar", order: 5 }, mount: mountStats },
+    report: { route: "/reports/:id", nav: { display: "none" }, mount: mountReport },
   },
   plugins: [redirectsAdmin()],
 });
@@ -846,8 +892,12 @@ export default defineAdmin({
 
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
 - `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`.
-- `menu` puts a page in the sidebar: `label`, an optional `group`, an optional `icon` ([Lucide](https://lucide.dev/icons) name, type-checked) and `order`. Pages without `menu` are reachable by URL only.
-- The sidebar has sections by `group`, which defaults to `Content`. Collections and globals take `group`, `icon` and `order` in their own config, next to `label`. Items sort by `order` (collections 10, media 15, globals 20, pages 30; equal orders keep their definition order), and sections appear in the order of their first item. `media` moves the media library: `label`, `group`, `icon`, `order`.
+- A page has an optional `label` (default: its key), `description` and `nav`. `nav` is the same for collections, globals, pages and media:
+  - `display`: `menu` (default) shows it in the sidebar, `settings` as a card on the Settings page, `none` nowhere. A `none` page like `/reports/:id` still works by URL.
+  - `group`: the section. The default is `Content` in the sidebar and `Site` on the Settings page.
+  - `icon`: a [Lucide](https://lucide.dev/icons) name, type-checked. `order`: lowest first.
+- Collections and globals take `description` and `nav` in their own config, next to `label`. Items sort by `order` (collections 10, media 15, globals 20, pages 30; equal orders keep their definition order), and sections appear in the order of their first item. `media` takes `{ label, nav }` to move the media library.
+- Settings: the sidebar has a "Settings" entry under "Admin" when any item has `display: "settings"`. It opens `/settings`, a page with one section of cards per `group`, and each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", group: "Site", order: 3 }, fields })`.
 - `name` shows in the sidebar header, on the login and in the page title (default `integral-cms`). `logo` (sidebar header and login) and `icon` (collapsed sidebar) are URLs, or `{ light, dark }` pairs that follow the admin's theme. The admin links the files and does not bundle them: put them in the host's `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
 - The favicon is `favicon` if set, else `icon`, else the host's `favicon.svg`, `.ico` or `.png` in its public folder. `favicon` takes a URL or a `{ light, dark }` pair.
 - A page on a built-in path replaces that view: `route: '/'` replaces the start page, `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.

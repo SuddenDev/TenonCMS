@@ -13,7 +13,7 @@ The source of the `integral-cms` package. Each folder is one area and has its ow
 | `client/`       | `createClient()`, the typed HTTP client for the browser.                                     |
 | `media/`        | The media library: uploads, storage adapters (`local`, `s3`), image providers, media routes. |
 | `plugins/`      | The plugin contract and the bundled plugins.                                                 |
-| `presets/`      | Ready-made fields and hooks a host spreads into its collections.                             |
+| `presets/`      | Ready-made fields, hooks and settings globals (`general`, `seo`) a host spreads or gets.     |
 | `helpers/`      | Small render helpers without imports (`slugify`, `seoMeta`, `breadcrumbs`).                  |
 | `admin/`        | Glue to serve the admin UI on its own page. The UI itself is `packages/admin`.               |
 | `integrations/` | Framework integrations: Astro, Nuxt, plain Vite.                                             |
