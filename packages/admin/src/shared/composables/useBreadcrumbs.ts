@@ -5,8 +5,11 @@ declare module "vue-router" {
   interface RouteMeta {
     /** Label in the breadcrumbs. Routes without one are skipped. */
     breadcrumb?: string | ((route: RouteLocation) => string);
-    /** Path of the parent crumb when it is not the parent path, e.g. `/media` for `/media-file/:id`. */
-    parent?: string;
+    /**
+     * Path of the parent crumb when it is not the parent path, e.g. `/media` for `/media-file/:id`. A
+     * function gets the resolved route and MAY return nothing to keep the parent path.
+     */
+    parent?: string | ((route: RouteLocation) => string | undefined);
   }
 }
 
@@ -25,7 +28,10 @@ export function useBreadcrumbs() {
 
   function trail(path: string): Crumb[] {
     const r = router.resolve(path);
-    const up = r.meta.parent ?? (path.slice(0, path.lastIndexOf("/")) || "/");
+    const { parent } = r.meta;
+    const up =
+      (typeof parent === "function" ? parent(r) : parent) ??
+      (path.slice(0, path.lastIndexOf("/")) || "/");
     const parents = path === "/" ? [] : trail(up);
     const { breadcrumb } = r.meta;
     if (!r.matched.length || !breadcrumb) return parents;

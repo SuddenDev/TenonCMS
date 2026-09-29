@@ -1,5 +1,6 @@
 import { computed, inject } from "vue";
 import { groupMenu } from "../../../../core/src/admin/menu";
+import type { Nav } from "../../../../core/src/admin/index.d.ts";
 import { schema } from "@/shared/api";
 import { optionsKey, pagePath } from "@/shared/options";
 
@@ -9,40 +10,103 @@ export type MenuItem = {
   to: string;
   order: number;
   group?: string;
+  description?: string;
+  /** Extra paths that mark the item active, besides `to`. */
+  also?: string[];
   children?: MenuItem[];
 };
 
-/**
- * The sidebar sections: collections, the media library, globals and the host pages, each with its own
- * `group` (default `Content`). Sorted by `order`; equal orders keep their definition order.
- */
-export function useMenu() {
+type Entry = MenuItem & { display: NonNullable<Nav["display"]> };
+
+function entry(
+  base: { label: string; description?: string; icon: string; order: number; to: string },
+  nav: Nav = {},
+): Entry {
+  const { display = "menu", icon, order, group } = nav;
+  return { ...base, icon: icon ?? base.icon, order: order ?? base.order, group, display };
+}
+
+// Every collection, global and page with its `nav` defaults, wherever it is shown.
+function useEntries() {
   const options = inject(optionsKey, {});
   const pages = Object.entries(options.pages ?? {});
-  return computed(() =>
-    groupMenu<MenuItem>([
-      ...Object.entries(schema.value.collections ?? {}).map(([name, c]) =>
-        // `media` is the media library, with a page of its own.
-        name === "media"
-          ? { label: "Media", icon: "image", order: 15, ...options.media, to: "/media" }
-          : {
+  return computed<Entry[]>(() => [
+    ...Object.entries(schema.value.collections ?? {}).map(([name, c]) =>
+      // `media` is the media library, with a page of its own.
+      name === "media"
+        ? entry(
+            { label: options.media?.label ?? "Media", icon: "image", order: 15, to: "/media" },
+            options.media?.nav,
+          )
+        : entry(
+            {
               label: c.label ?? name,
-              icon: c.icon ?? "folder",
-              order: c.order ?? 10,
-              group: c.group,
+              description: c.description,
+              icon: "folder",
+              order: 10,
               to: `/collections/${name}`,
             },
+            c.nav,
+          ),
+    ),
+    ...Object.entries(schema.value.globals ?? {}).map(([name, g]) =>
+      entry(
+        {
+          label: g.label ?? name,
+          description: g.description,
+          icon: "settings",
+          order: 20,
+          to: `/globals/${name}`,
+        },
+        g.nav,
       ),
-      ...Object.entries(schema.value.globals ?? {}).map(([name, g]) => ({
-        label: g.label ?? name,
-        icon: g.icon ?? "settings",
-        order: g.order ?? 20,
-        group: g.group,
-        to: `/globals/${name}`,
-      })),
-      ...pages.flatMap(([key, p]) =>
-        p.menu ? [{ icon: "file", order: 30, ...p.menu, to: pagePath(key, p) }] : [],
+    ),
+    ...pages.map(([key, p]) =>
+      entry(
+        {
+          label: p.label ?? key,
+          description: p.description,
+          icon: "file",
+          order: 30,
+          to: pagePath(key, p),
+        },
+        p.nav,
       ),
-    ]),
+    ),
+  ]);
+}
+
+/** The items with `nav.display: "settings"`, in sections (default `Site`), for the Settings page. */
+export function useSettings() {
+  const entries = useEntries();
+  return computed(() =>
+    groupMenu<MenuItem>(
+      entries.value.filter((e) => e.display === "settings"),
+      "Site",
+    ),
   );
+}
+
+/**
+ * The sidebar sections: items with `nav.display` `menu` or unset, each in its `group` (default
+ * `Content`). Sorted by `order`; equal orders keep their definition order. A Settings entry under
+ * `Admin` is added when any item is shown on the Settings page.
+ */
+export function useMenu() {
+  const entries = useEntries();
+  const settings = useSettings();
+  return computed(() => {
+    const items: MenuItem[] = entries.value.filter((e) => e.display === "menu");
+    const targets = settings.value.flatMap((g) => g.items.map((i) => i.to));
+    if (targets.length)
+      items.push({
+        label: "Settings",
+        icon: "settings",
+        group: "Admin",
+        order: 100,
+        to: "/settings",
+        also: targets,
+      });
+    return groupMenu(items);
+  });
 }

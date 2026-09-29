@@ -21,8 +21,9 @@ import {
 defineProps<{ label: string; items: MenuItem[] }>();
 
 const route = useRoute();
-const active = (to: string) => route.path === to || route.path.startsWith(`${to}/`);
-const open = (item: MenuItem) => active(item.to) || !!item.children?.some((c) => active(c.to));
+const at = (to: string) => route.path === to || route.path.startsWith(`${to}/`);
+const active = (item: MenuItem) => [item.to, ...(item.also ?? [])].some(at);
+const open = (item: MenuItem) => active(item) || !!item.children?.some(active);
 </script>
 
 <template>
@@ -38,7 +39,7 @@ const open = (item: MenuItem) => active(item.to) || !!item.children?.some((c) =>
         >
           <SidebarMenuItem>
             <CollapsibleTrigger as-child>
-              <SidebarMenuButton :tooltip="item.label" :is-active="active(item.to)">
+              <SidebarMenuButton :tooltip="item.label" :is-active="active(item)">
                 <Icon :name="item.icon" />
                 <span>{{ item.label }}</span>
                 <Icon
@@ -50,7 +51,7 @@ const open = (item: MenuItem) => active(item.to) || !!item.children?.some((c) =>
             <CollapsibleContent>
               <SidebarMenuSub>
                 <SidebarMenuSubItem v-for="child in item.children" :key="child.to">
-                  <SidebarMenuSubButton as-child :is-active="active(child.to)">
+                  <SidebarMenuSubButton as-child :is-active="active(child)">
                     <RouterLink :to="child.to">
                       <span>{{ child.label }}</span>
                     </RouterLink>
@@ -61,7 +62,7 @@ const open = (item: MenuItem) => active(item.to) || !!item.children?.some((c) =>
           </SidebarMenuItem>
         </Collapsible>
         <SidebarMenuItem v-else>
-          <SidebarMenuButton as-child :tooltip="item.label" :is-active="active(item.to)">
+          <SidebarMenuButton as-child :tooltip="item.label" :is-active="active(item)">
             <RouterLink :to="item.to">
               <Icon :name="item.icon" />
               <span>{{ item.label }}</span>
