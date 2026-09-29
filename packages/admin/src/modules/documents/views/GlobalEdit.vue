@@ -4,10 +4,15 @@ import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import DocForm from "@/modules/documents/components/DocForm.vue";
+import FormHeader from "@/modules/documents/components/FormHeader.vue";
+import { Button } from "@/shared/components/ui/button";
+import { useBreadcrumbs } from "@/shared/composables/useBreadcrumbs";
 
 const name = useRoute().params.name as string;
 const global = computed(() => schema.value.globals?.[name]);
 const data = ref<Record<string, unknown> | null>(null);
+const crumbs = useBreadcrumbs();
+const back = computed(() => crumbs.value.at(-2)?.to ?? "/");
 
 useHead({ title: () => global.value?.label ?? name });
 
@@ -20,7 +25,9 @@ async function save(body: Data<Fields>) {
 
 <template>
   <template v-if="global && data">
-    <h1 class="mb-6 text-2xl font-semibold">{{ global.label ?? name }}</h1>
-    <DocForm :fields="global.fields" :initial="data" :save="save" />
+    <FormHeader :to="back" :title="global.label ?? name" :description="global.description">
+      <Button type="submit" form="global-form">Save</Button>
+    </FormHeader>
+    <DocForm id="global-form" :fields="global.fields" :initial="data" :save="save" />
   </template>
 </template>

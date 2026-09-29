@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, inject, ref, watch } from "vue";
+import { computed, inject, ref, useId, watch } from "vue";
 import { client, type Field, type Fields, SLUG_PATTERN, schema, slugify } from "@/shared/api";
 import { active, isEmpty, titleField } from "@/modules/documents/fields";
 import { optionsKey } from "@/shared/options";
 import MediaField from "@/modules/media/components/MediaField.vue";
 import Mount from "@/shared/components/Mount.vue";
+import {
+  Field as FieldBox,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from "@/shared/components/ui/field";
 
 // `loose`: the field sits in an optional group that is empty, so `required` does not apply yet.
 // `path`: dot path of the field, the key of its message in `errors`. Defaults to `name`.
@@ -22,6 +32,7 @@ const props = defineProps<{
   errors?: Record<string, string>;
 }>();
 const model = defineModel<any>();
+const id = useId();
 const path = computed(() => props.path ?? props.name);
 const message = computed(() => props.errors?.[path.value]);
 const invalid = computed(() => (message.value ? true : undefined));
@@ -90,18 +101,18 @@ if (slug?.parent && relation?.type === "relation") {
 
 <template>
   <template v-if="field.type === 'join'" />
-  <fieldset
+  <FieldSet
     v-else-if="field.type === 'group'"
     :disabled="field.readOnly"
-    class="flex flex-col gap-4 rounded border border-gray-200 p-4"
+    class="border-border gap-4 rounded-md border p-4"
   >
-    <legend class="px-1 text-sm font-medium">
+    <FieldLegend variant="label" class="mb-0 px-1">
       {{ field.label ?? name }}
-      <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
-    </legend>
-    <small v-if="field.description" class="text-muted-foreground -mt-2 text-xs">{{
+      <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+    </FieldLegend>
+    <FieldDescription v-if="field.description" class="-mt-2">{{
       field.description
-    }}</small>
+    }}</FieldDescription>
     <template v-for="(child, key) in field.fields" :key="key">
       <FieldInput
         v-if="active(child, root, model)"
@@ -116,36 +127,38 @@ if (slug?.parent && relation?.type === "relation") {
         :errors="errors"
       />
     </template>
-    <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
-  </fieldset>
+    <FieldError v-if="message">{{ message }}</FieldError>
+  </FieldSet>
   <!-- Not a <label>: a click on its list would activate its first button. -->
-  <div
-    v-else-if="field.type === 'image' || field.type === 'file'"
-    class="flex flex-col gap-1 text-sm"
-  >
-    <span>
+  <FieldBox v-else-if="field.type === 'image' || field.type === 'file'" :data-invalid="invalid">
+    <FieldTitle>
       {{ field.label ?? name }}
-      <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
-    </span>
+      <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+    </FieldTitle>
     <MediaField v-model="model" :field="field" :invalid="invalid" />
-    <small v-if="field.description" class="text-muted-foreground text-xs">{{
-      field.description
-    }}</small>
-    <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
-  </div>
-  <label v-else-if="field.type === 'boolean'" class="flex flex-wrap items-center gap-2 text-sm">
-    <input v-model="model" type="checkbox" :disabled="field.readOnly" :aria-invalid="invalid" />
-    {{ field.label ?? name }}
-    <small v-if="field.description" class="text-muted-foreground basis-full text-xs">{{
-      field.description
-    }}</small>
-    <span v-if="message" class="basis-full text-xs text-red-600" role="alert">{{ message }}</span>
-  </label>
-  <label v-else class="flex flex-col gap-1 text-sm">
-    <span>
+    <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
+    <FieldError v-if="message">{{ message }}</FieldError>
+  </FieldBox>
+  <FieldBox v-else-if="field.type === 'boolean'" orientation="horizontal" :data-invalid="invalid">
+    <input
+      :id="id"
+      v-model="model"
+      type="checkbox"
+      class="mt-0.5"
+      :disabled="field.readOnly"
+      :aria-invalid="invalid"
+    />
+    <FieldContent>
+      <FieldLabel :for="id">{{ field.label ?? name }}</FieldLabel>
+      <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
+      <FieldError v-if="message">{{ message }}</FieldError>
+    </FieldContent>
+  </FieldBox>
+  <FieldBox v-else :data-invalid="invalid">
+    <component :is="custom ? FieldTitle : FieldLabel" :for="custom ? undefined : id">
       {{ field.label ?? name }}
-      <span v-if="required" class="text-red-600" aria-hidden="true">*</span>
-    </span>
+      <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+    </component>
     <Mount
       v-if="custom"
       :mount="custom"
@@ -153,6 +166,7 @@ if (slug?.parent && relation?.type === "relation") {
     />
     <textarea
       v-else-if="field.type === 'textarea'"
+      :id="id"
       v-model="model"
       class="input min-h-40"
       v-bind="attrs"
@@ -160,6 +174,7 @@ if (slug?.parent && relation?.type === "relation") {
     />
     <select
       v-else-if="field.type === 'relation' && field.many"
+      :id="id"
       v-model="model"
       multiple
       class="input"
@@ -171,6 +186,7 @@ if (slug?.parent && relation?.type === "relation") {
     </select>
     <select
       v-else-if="field.type === 'relation'"
+      :id="id"
       v-model="model"
       class="input"
       :required="required"
@@ -182,6 +198,7 @@ if (slug?.parent && relation?.type === "relation") {
     </select>
     <select
       v-else-if="field.type === 'select'"
+      :id="id"
       v-model="model"
       class="input"
       :required="required"
@@ -192,8 +209,9 @@ if (slug?.parent && relation?.type === "relation") {
       <option v-for="o in field.options" :key="o" :value="o">{{ o }}</option>
     </select>
     <span v-else-if="field.type === 'slug'" class="flex items-center gap-1">
-      <span class="text-muted-foreground">{{ prefix }}</span>
+      <span class="text-muted-foreground text-sm">{{ prefix }}</span>
       <input
+        :id="id"
         v-model="model"
         class="input"
         v-bind="attrs"
@@ -204,6 +222,7 @@ if (slug?.parent && relation?.type === "relation") {
     </span>
     <input
       v-else-if="field.type === 'number'"
+      :id="id"
       v-model.number="model"
       type="number"
       class="input"
@@ -212,15 +231,14 @@ if (slug?.parent && relation?.type === "relation") {
     />
     <input
       v-else
+      :id="id"
       v-model="model"
       :type="field.type === 'date' ? 'date' : 'text'"
       class="input"
       v-bind="attrs"
       :aria-invalid="invalid"
     />
-    <small v-if="field.description" class="text-muted-foreground text-xs">{{
-      field.description
-    }}</small>
-    <span v-if="message" class="text-xs text-red-600" role="alert">{{ message }}</span>
-  </label>
+    <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
+    <FieldError v-if="message">{{ message }}</FieldError>
+  </FieldBox>
 </template>

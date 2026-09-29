@@ -16,8 +16,13 @@ client.find(name, { populate: false }).then((d) => (docs.value = d));
 
 <template>
   <template v-if="collection">
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">{{ collection.label ?? name }}</h1>
+    <div class="mb-6 flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-semibold">{{ collection.label ?? name }}</h1>
+        <p v-if="collection.description" class="text-muted-foreground mt-1 text-sm">
+          {{ collection.description }}
+        </p>
+      </div>
       <RouterLink :to="`/collections/${name}/new`" class="btn">New</RouterLink>
     </div>
     <ul class="divide-border border-border bg-card divide-y rounded-lg border">

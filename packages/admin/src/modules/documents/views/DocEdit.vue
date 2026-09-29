@@ -5,6 +5,8 @@ import { useRoute, useRouter } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import { titleField } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
+import FormHeader from "@/modules/documents/components/FormHeader.vue";
+import { Button } from "@/shared/components/ui/button";
 import { useBreadcrumb } from "@/shared/composables/useBreadcrumbs";
 
 const route = useRoute();
@@ -68,15 +70,16 @@ async function remove() {
 
 <template>
   <template v-if="collection && doc">
-    <RouterLink :to="`/collections/${name}`" class="text-muted-foreground text-sm"
-      >← {{ collection.label ?? name }}</RouterLink
+    <FormHeader
+      :to="`/collections/${name}`"
+      :title="isNew ? 'New entry' : 'Edit entry'"
+      :description="collection.description"
     >
-    <h1 class="mt-1 mb-6 text-2xl font-semibold">{{ isNew ? "New entry" : "Edit entry" }}</h1>
-    <DocForm :fields="collection.fields" :initial="doc" :save="save" :is-new="isNew">
-      <button v-if="!isNew" type="button" class="btn-ghost text-red-600" @click="remove">
-        Delete
-      </button>
-      <span v-if="error" class="text-sm text-red-600" role="alert">{{ error }}</span>
+      <Button type="submit" form="doc-form">Save</Button>
+    </FormHeader>
+    <DocForm id="doc-form" :fields="collection.fields" :initial="doc" :save="save" :is-new="isNew">
+      <Button v-if="!isNew" type="button" variant="destructive" @click="remove">Delete</Button>
+      <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
     </DocForm>
     <template v-if="!isNew">
       <section v-for="j in joins" :key="j.key" class="mt-8 max-w-2xl">
