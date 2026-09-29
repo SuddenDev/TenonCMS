@@ -5,7 +5,8 @@
 | File              | What it gives you                                                                                    |
 | ----------------- | ---------------------------------------------------------------------------------------------------- |
 | `page.ts`         | `page`: fields for pages with nested URLs (title, slug, parent, path) and the `nestedPaths()` hooks. |
-| `seo.ts`          | `seo`: one optional group with title, description and noindex.                                       |
+| `seo.ts`          | `seo`: one optional group with title, description, image and noindex.                                |
+| `settings.ts`     | `settings`: the `general` and `seo` globals that `defineCms()` adds as site settings.                |
 | `nested-paths.ts` | `nestedPaths()`: hooks that store `path` from the parent chain and update children when it changes.  |
 
 They import only `errors.ts`, `slugify.ts` and types. No zod gets in, so presets are safe in browser bundles.

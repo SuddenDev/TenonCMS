@@ -9,6 +9,7 @@ export const seo = {
       fields: {
         title: { type: "text" },
         description: { type: "textarea" },
+        image: { type: "image" },
         noindex: { type: "boolean", label: "Hide from search engines" },
       },
     },
