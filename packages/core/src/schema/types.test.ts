@@ -307,3 +307,82 @@ describe("nav option", () => {
     expect(true).toBe(true);
   });
 });
+
+describe("settings", () => {
+  const base = { database: { url: ":memory:" }, secret: "" };
+
+  it("types both defaults when omitted", async () => {
+    const cms = defineCms(base);
+    const read = async () => {
+      const general = await cms.getGlobal("general");
+      const title: string | null | undefined = general.title;
+      const google: string | null | undefined = (await cms.getGlobal("seo")).verification?.google;
+      // @ts-expect-error a default has no `other`
+      general.other;
+    };
+    expect(read).toBeTypeOf("function");
+  });
+
+  it("removes a dropped default", async () => {
+    const one = defineCms({ ...base, settings: { general: false } });
+    const none = defineCms({ ...base, settings: false });
+    const read = async () => {
+      // @ts-expect-error general is dropped
+      await one.getGlobal("general");
+      await one.getGlobal("seo");
+      // @ts-expect-error general is dropped
+      await none.getGlobal("general");
+      // @ts-expect-error seo is dropped
+      await none.getGlobal("seo");
+    };
+    expect(read).toBeTypeOf("function");
+  });
+
+  it("types a replacement by its own fields", async () => {
+    const cms = defineCms({
+      ...base,
+      settings: { general: { fields: { name: { type: "text", required: true } } } },
+    });
+    const read = async () => {
+      const general = await cms.getGlobal("general");
+      const name: string | null | undefined = general.name;
+      // @ts-expect-error the default's field is gone
+      general.tagline;
+      await cms.getGlobal("seo");
+    };
+    expect(read).toBeTypeOf("function");
+  });
+
+  it("rejects an unknown settings key", () => {
+    defineCms({
+      ...base,
+      settings: {
+        // @ts-expect-error only `general` and `seo` exist
+        other: { fields: {} },
+      },
+    });
+    defineCms({
+      ...base,
+      settings: {
+        seo: false,
+        // @ts-expect-error only `general` and `seo` exist
+        other: { fields: {} },
+      },
+    });
+  });
+
+  it("accepts options cast as never", () => {
+    defineCms({ ...base } as never);
+  });
+
+  it("types the client", async () => {
+    const cms = defineCms(base);
+    const client = createClient<typeof cms>();
+    const read = async () => {
+      const title: string | null | undefined = (await client.getGlobal("general")).title;
+      // @ts-expect-error not a global
+      await client.getGlobal("other");
+    };
+    expect(read).toBeTypeOf("function");
+  });
+});

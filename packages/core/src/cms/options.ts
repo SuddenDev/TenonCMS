@@ -1,6 +1,7 @@
 import type { AuthOptions } from "./auth.ts";
 import type { MediaOptions } from "../media/index.ts";
 import type { Plugin } from "../plugins/index.ts";
+import type { settings } from "../presets/settings.ts";
 import type { CheckRefs, Collection, Global, RootHooks } from "../schema/index.ts";
 
 export type PopulateConfig = {
@@ -33,6 +34,29 @@ export type SettingsOption = {
   /** Search and social defaults. `false` drops it, a `Global` replaces it. Stored as `seo`. */
   seo?: Global | false;
 };
+
+type Defaults = typeof settings;
+type SettingsGlobal<S, K extends keyof Defaults> = K extends keyof S
+  ? [S[K]] extends [false]
+    ? unknown
+    : { [P in K]: S[K] }
+  : { [P in K]: Defaults[K] };
+
+// The settings globals of the instance type. Not distributive, and `S = never` (options cast `as never`) counts as omitted: otherwise TS2589.
+export type SettingsGlobals<S> = [S] extends [never]
+  ? Defaults
+  : [S] extends [false]
+    ? unknown
+    : [S] extends [undefined]
+      ? Defaults
+      : SettingsGlobal<S, "general"> & SettingsGlobal<S, "seo">;
+
+// Generic inference skips excess property checks, so an unknown key maps to `never`.
+type ExactSettings<S> = [S] extends [never]
+  ? unknown
+  : [S] extends [object]
+    ? { [K in Exclude<keyof S, keyof SettingsOption>]: never }
+    : unknown;
 
 export type CmsOptions<
   C extends Record<string, Collection>,
@@ -73,5 +97,5 @@ export type CmsOptions<
    *
    * A collection or global named `general` or `seo` throws while that default is on.
    */;
-  settings?: S;
+  settings?: S & NoInfer<ExactSettings<S>>;
 };

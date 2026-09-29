@@ -18,6 +18,7 @@ import type {
   PluginCollections,
   PluginGlobals,
   PopulateConfig,
+  SettingsGlobals,
   SettingsOption,
 } from "./options.ts";
 import type { Core } from "./scope.ts";
@@ -50,7 +51,7 @@ export function defineCms<
 }: CmsOptions<C, G, A, P, PL, M, S>) {
   type T = {
     collections?: C & PluginCollections<PL> & MediaCollections<M>;
-    globals?: G & PluginGlobals<PL>;
+    globals?: G & PluginGlobals<PL> & SettingsGlobals<S>;
   };
   type D = DefaultDepth<P>;
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 };
@@ -159,6 +160,15 @@ type MediaCollection = {
 };
 type MediaOf<M> = [M] extends [false] ? {} : { media: MediaApi };
 
+// `T` already holds the settings globals, so `S` is `false`.
 export type Cms<T extends Schema> = ReturnType<
-  typeof defineCms<NonNullable<T["collections"]>, NonNullable<T["globals"]>>
+  typeof defineCms<
+    NonNullable<T["collections"]>,
+    NonNullable<T["globals"]>,
+    {},
+    {},
+    [],
+    undefined,
+    false
+  >
 >;

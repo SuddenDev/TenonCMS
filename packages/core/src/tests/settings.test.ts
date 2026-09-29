@@ -3,9 +3,6 @@ import { defineCms, definePlugin } from "../index.ts";
 import { settings } from "../presets/index.ts";
 import { setup } from "./setup.ts";
 
-// Task 5 types these globals; until then the calls are untyped.
-const loose = (cms: unknown) => cms as any;
-
 describe("presets", () => {
   it("general has title, tagline, url and favicon", () => {
     const { fields } = settings.general;
@@ -41,13 +38,11 @@ describe("presets", () => {
   });
 
   it("checks the url pattern", async () => {
-    const cms = loose(
-      defineCms({
-        settings: { general: settings.general },
-        database: { url: ":memory:" },
-        secret: "x".repeat(32),
-      }),
-    );
+    const cms = defineCms({
+      settings: { general: settings.general },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+    });
     await expect(cms.setGlobal("general", { title: "S", url: "a.b" })).rejects.toMatchObject({
       errors: { url: expect.any(String) },
     });
@@ -60,7 +55,7 @@ const gen = (fields = {}) => ({ fields: { name: { type: "text" }, ...fields } })
 
 describe("defineCms", () => {
   it("adds general and seo by default", async () => {
-    const cms = loose(defineCms(opts));
+    const cms = defineCms(opts);
     expect(await cms.getGlobal("general")).toEqual({});
     expect(await cms.getGlobal("seo")).toEqual({});
     await expect(cms.setGlobal("general", { tagline: "x" })).rejects.toMatchObject({
@@ -71,24 +66,25 @@ describe("defineCms", () => {
   });
 
   it("drops one default or both", async () => {
-    const one = loose(defineCms({ ...opts, settings: { seo: false } }));
+    const one = defineCms({ ...opts, settings: { seo: false } });
+    // @ts-expect-error seo is dropped
     await expect(one.getGlobal("seo")).rejects.toThrow();
     expect(await one.getGlobal("general")).toEqual({});
-    const none = loose(defineCms({ ...opts, settings: false }));
+    const none = defineCms({ ...opts, settings: false });
+    // @ts-expect-error general is dropped
     await expect(none.getGlobal("general")).rejects.toThrow();
+    // @ts-expect-error seo is dropped
     await expect(none.getGlobal("seo")).rejects.toThrow();
   });
 
   it("replaces a default with a host global", async () => {
-    const cms = loose(
-      defineCms({
-        ...opts,
-        settings: { general: { label: "Mine", fields: { name: { type: "text" } } } },
-      }),
-    );
+    const cms = defineCms({
+      ...opts,
+      settings: { general: { label: "Mine", fields: { name: { type: "text" } } } },
+    });
     await cms.setGlobal("general", { name: "x" });
     expect(await cms.getGlobal("general")).toEqual({ name: "x" });
-    expect(cms.schema.globals.general.label).toBe("Mine");
+    expect(cms.schema.globals!.general.label).toBe("Mine");
   });
 
   it("rejects a host or plugin global that shadows an active default", () => {
@@ -105,8 +101,8 @@ describe("defineCms", () => {
   });
 
   it("leaves out favicon and image without media", async () => {
-    const cms = loose(defineCms({ ...opts, media: false }));
-    const { general, seo } = cms.schema.globals;
+    const cms = defineCms({ ...opts, media: false });
+    const { general, seo } = cms.schema.globals!;
     expect(Object.keys(general.fields)).toEqual(["title", "tagline", "url"]);
     expect(Object.keys(seo.fields)).toEqual(["separator", "verification", "noindex"]);
     await cms.setGlobal("general", { title: "Site" });
