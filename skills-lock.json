@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "clean-code": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "skillPath": "cli-tool/components/skills/development/clean-code/SKILL.md",
+      "computedHash": "723e4955a7f12526cc4a182f085e41495bcbb8fae232e491e82e10926597624b"
+    }
+  }
+}
