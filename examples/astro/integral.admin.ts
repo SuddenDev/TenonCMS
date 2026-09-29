@@ -39,6 +39,8 @@ export default defineAdmin({
       },
     },
     dashboard: {
+      label: "Dashboard",
+      nav: { display: "none" },
       route: "/",
       mount: (el, { integral }) => {
         const render = async () => {
