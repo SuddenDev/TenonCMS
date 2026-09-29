@@ -6,11 +6,15 @@ export default defineAdmin({
   fields: { color: renderReact(ColorInput) },
   pages: {
     stats: {
-      menu: { label: "Stats", icon: "chart-bar" },
+      label: "Stats",
+      nav: { icon: "chart-bar" },
       route: "/reports/stats",
       mount: renderReact(Stats),
     },
-    // No menu: reachable from the Stats page, not the sidebar.
-    post: { route: "/reports/posts/:id", mount: renderReact(PostReport) },
+    post: {
+      route: "/reports/posts/:id",
+      nav: { display: "none" },
+      mount: renderReact(PostReport),
+    },
   },
 });

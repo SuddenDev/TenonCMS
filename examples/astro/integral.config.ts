@@ -1,5 +1,5 @@
 import { CMS_SECRET, DATABASE_URL } from "astro:env/server";
-import { defineCms } from "integral-cms";
+import { defineCms, defineGlobal } from "integral-cms";
 import { redirects } from "integral-cms/plugins/redirects";
 import { authors } from "./collections/authors";
 import { pages } from "./collections/pages";
@@ -8,13 +8,12 @@ import { posts } from "./collections/posts";
 export default defineCms({
   collections: { posts, authors, pages },
   globals: {
-    site: {
-      label: "Site settings",
-      fields: {
-        title: { type: "text", required: true },
-        tagline: { type: "text" },
-      },
-    },
+    footer: defineGlobal({
+      label: "Footer",
+      description: "Links and copyright line",
+      nav: { display: "settings", group: "Site", icon: "panel-bottom", order: 3 },
+      fields: { copyright: { type: "text" } },
+    }),
   },
   plugins: [redirects()],
   database: { url: DATABASE_URL },

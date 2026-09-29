@@ -10,7 +10,7 @@ const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.ch
 // Plain DOM. Any framework can mount into `el` the same way.
 export default defineAdmin({
   name: "Example site",
-  media: { group: "Blog", icon: "images" },
+  media: { nav: { group: "Blog", icon: "images" } },
   plugins: [redirectsAdmin()],
   fields: {
     color(el, { value, onChange }) {
@@ -25,7 +25,8 @@ export default defineAdmin({
   },
   pages: {
     stats: {
-      menu: { label: "Stats", icon: "chart-bar" },
+      label: "Stats",
+      nav: { icon: "chart-bar" },
       mount(el, { integral }) {
         client.find("posts").then((posts) => {
           el.innerHTML = `<h1 class="text-2xl font-semibold">Stats</h1>
@@ -53,9 +54,9 @@ export default defineAdmin({
         return () => (el.innerHTML = "");
       },
     },
-    // No menu: reachable from the Stats page, not the sidebar.
     // `update` runs on every route change, so the page refetches when `:id` or `?tab` changes.
     post: {
+      nav: { display: "none" },
       mount(el, ctx) {
         const render = async ({ params, query }: PageContext) => {
           const post = await client.findById("posts", String(params.id));

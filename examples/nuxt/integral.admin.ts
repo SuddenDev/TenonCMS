@@ -8,11 +8,15 @@ import DashboardTest from "./app/components/DashboardTest.vue";
 export default defineAdmin({
   fields: { color: renderVue(ColorInput) },
   pages: {
-    stats: { menu: { label: "Stats", icon: "chart-bar" }, mount: renderVue(Stats) },
-    // No menu: reachable from the Stats page, not the sidebar.
-    post: { route: "/reports/posts/:id", mount: renderVue(PostReport) },
+    stats: { label: "Stats", nav: { icon: "chart-bar" }, mount: renderVue(Stats) },
+    post: {
+      route: "/reports/posts/:id",
+      nav: { display: "none" },
+      mount: renderVue(PostReport),
+    },
     dashboard: {
-      menu: { label: "Dashboard", icon: "layout-dashboard", order: 0 },
+      label: "Dashboard",
+      nav: { icon: "layout-dashboard", order: 0 },
       route: "/",
       mount: renderVue(DashboardTest),
     },

@@ -4,15 +4,28 @@ import { seoMeta } from "integral-cms/client";
 // `index.vue` and `posts/[slug].vue` win over this route, so a CMS page at `/` never shows.
 const route = useRoute();
 const path = `/${[route.params.path ?? []].flat().join("/")}`;
-const { data: page } = await useIntegral().findOne("pages", { where: { path }, populate: false });
+const cms = useIntegral();
+const { data: page } = await cms.findOne("pages", {
+  where: { path },
+  populate: { seo: { image: true } },
+});
 if (!page.value)
   throw createError({ statusCode: 404, statusMessage: "Page not found", fatal: true });
 
-const meta = seoMeta(page.value);
+const [{ data: general }, { data: seo }] = await Promise.all([
+  cms.getGlobal("general"),
+  cms.getGlobal("seo"),
+]);
+const meta = seoMeta(page.value, { general: general.value, seo: seo.value });
 useSeoMeta({
   title: meta.title,
   description: meta.description,
   robots: meta.noindex ? "noindex" : undefined,
+  ogImage: meta.image,
+});
+useHead({
+  link: meta.canonical ? [{ rel: "canonical", href: meta.canonical }] : [],
+  meta: meta.verification,
 });
 </script>
 

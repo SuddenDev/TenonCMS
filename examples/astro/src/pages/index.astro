@@ -2,18 +2,18 @@
 export const prerender = false;
 
 const { integral: cms } = Astro.locals;
-const site = await cms.getGlobal("site");
+const general = await cms.getGlobal("general");
 const posts = await cms.find("posts");
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>{site.title ?? 'My site'}</title>
+    <title>{general.title ?? "My site"}</title>
   </head>
   <body>
-    <h1>{site.title ?? "My site"}</h1>
-    {site.tagline && <p>{site.tagline}</p>}
+    <h1>{general.title ?? "My site"}</h1>
+    {general.tagline && <p>{general.tagline}</p>}
     <ul>
       {posts.map((post) => (
         <li>

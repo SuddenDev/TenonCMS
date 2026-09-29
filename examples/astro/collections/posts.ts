@@ -2,8 +2,7 @@ import { defineCollection, ValidationError } from "integral-cms";
 
 export const posts = defineCollection({
   label: "Posts",
-  group: "Blog",
-  icon: "newspaper",
+  nav: { group: "Blog", icon: "newspaper" },
   titleField: "title",
   fields: {
     title: {

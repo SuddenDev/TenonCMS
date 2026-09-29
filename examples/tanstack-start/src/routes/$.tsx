@@ -6,22 +6,29 @@ import cms from "../../integral.config";
 const getPage = createServerFn()
   .validator((path: string) => path)
   .handler(async ({ data: path }) => {
-    const page = await cms.findOne("pages", { where: { path }, populate: false });
+    const page = await cms.findOne("pages", {
+      where: { path },
+      populate: { seo: { image: true } },
+    });
     if (!page) throw notFound();
-    return page;
+    const [general, seo] = await Promise.all([cms.getGlobal("general"), cms.getGlobal("seo")]);
+    return { page, general, seo };
   });
 
 // `/`, `/posts/$slug`, `/admin/$` and `/api/cms/$` win over this route, so a CMS page at `/` never shows.
 export const Route = createFileRoute("/$")({
   loader: ({ params }) => getPage({ data: `/${params._splat ?? ""}` }),
   head: ({ loaderData }) => {
-    const meta = loaderData && seoMeta(loaderData);
+    const meta = loaderData && seoMeta(loaderData.page, loaderData);
     return {
       meta: [
         { title: meta?.title },
         ...(meta?.description ? [{ name: "description", content: meta.description }] : []),
         ...(meta?.noindex ? [{ name: "robots", content: "noindex" }] : []),
+        ...(meta?.image ? [{ property: "og:image", content: meta.image }] : []),
+        ...(meta?.verification ?? []),
       ],
+      links: meta?.canonical ? [{ rel: "canonical", href: meta.canonical }] : [],
     };
   },
   component: Page,
@@ -29,7 +36,7 @@ export const Route = createFileRoute("/$")({
 });
 
 function Page() {
-  const page = Route.useLoaderData();
+  const { page } = Route.useLoaderData();
   return (
     <main>
       <Link to="/">← Home</Link>

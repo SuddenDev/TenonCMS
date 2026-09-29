@@ -9,15 +9,6 @@ const { cmsSecret, databaseUrl, uploadsDir } = useRuntimeConfig();
 
 export default defineCms({
   collections: { authors, posts, pages },
-  globals: {
-    site: {
-      label: "Site settings",
-      fields: {
-        title: { type: "text", required: true },
-        tagline: { type: "text" },
-      },
-    },
-  },
   // The default media, with an absolute directory: `nuxt preview` runs from inside .output/.
   media: { storage: local({ dir: uploadsDir }), images: { provider: ipx({ prerender: true }) } },
   database: { url: databaseUrl },

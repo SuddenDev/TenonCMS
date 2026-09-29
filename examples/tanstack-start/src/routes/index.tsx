@@ -3,22 +3,22 @@ import { createServerFn } from "@tanstack/react-start";
 import cms from "../../integral.config";
 
 const getHome = createServerFn().handler(async () => ({
-  site: await cms.getGlobal("site"),
+  general: await cms.getGlobal("general"),
   posts: await cms.find("posts"),
 }));
 
 export const Route = createFileRoute("/")({
   loader: () => getHome(),
-  head: ({ loaderData }) => ({ meta: [{ title: loaderData?.site.title ?? "My site" }] }),
+  head: ({ loaderData }) => ({ meta: [{ title: loaderData?.general.title ?? "My site" }] }),
   component: Home,
 });
 
 function Home() {
-  const { site, posts } = Route.useLoaderData();
+  const { general, posts } = Route.useLoaderData();
   return (
     <main>
-      <h1>{site.title ?? "My site"}</h1>
-      {site.tagline && <p>{site.tagline}</p>}
+      <h1>{general.title ?? "My site"}</h1>
+      {general.tagline && <p>{general.tagline}</p>}
       <ul>
         {posts.map((post) => (
           <li key={post.id}>

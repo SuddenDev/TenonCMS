@@ -7,15 +7,6 @@ import { posts } from "./collections/posts";
 
 export default defineCms({
   collections: { posts, pages },
-  globals: {
-    site: {
-      label: "Site settings",
-      fields: {
-        title: { type: "text", required: true },
-        tagline: { type: "text" },
-      },
-    },
-  },
   media: {
     storage: local({ dir: resolve(".uploads") }),
     maxSize: 5 * 1024 ** 3,
