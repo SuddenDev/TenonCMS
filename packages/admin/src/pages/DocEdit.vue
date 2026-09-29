@@ -2,7 +2,8 @@
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { client, schema, titleField, type Data, type Fields } from "../api";
+import { client, schema, type Data, type Fields } from "../api";
+import { titleField } from "../lib/fields";
 import DocForm from "../components/DocForm.vue";
 
 const route = useRoute();

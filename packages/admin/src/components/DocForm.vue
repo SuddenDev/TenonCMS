@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { active, CmsError, type Data, type Fields, isEmpty } from "../api";
+import { CmsError, type Data, type Fields } from "../api";
+import { active, isEmpty } from "../lib/fields";
 import FieldInput from "./FieldInput.vue";
 
 // `isNew`: plain `default` values pre-fill the form, and slugs follow their `from` field. Function defaults are not in the schema; the server fills them.

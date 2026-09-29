@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { fileIcon, type MediaRead } from "../api";
+import type { MediaRead } from "../api";
+import { fileIcon } from "../lib/media";
 import Icon from "./Icon.vue";
 
 defineProps<{ doc?: MediaRead | null; sizes: string }>();

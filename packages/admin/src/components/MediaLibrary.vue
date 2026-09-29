@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { client, fits, formatSize, type MediaRead, type MediaRules } from "../api";
+import { client, type MediaRead } from "../api";
+import { fits, formatSize, type MediaRules } from "../lib/media";
 import Icon from "./Icon.vue";
 import MediaThumb from "./MediaThumb.vue";
 import {

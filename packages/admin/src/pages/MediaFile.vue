@@ -2,7 +2,8 @@
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { client, CmsError, formatSize, type MediaRead } from "../api";
+import { client, CmsError, type MediaRead } from "../api";
+import { formatSize } from "../lib/media";
 import {
   AlertDialog,
   AlertDialogAction,

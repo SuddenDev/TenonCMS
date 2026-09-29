@@ -1,17 +1,8 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from "vue";
-import {
-  active,
-  client,
-  type Field,
-  type Fields,
-  isEmpty,
-  SLUG_PATTERN,
-  schema,
-  slugify,
-  titleField,
-} from "../api";
-import { optionsKey } from "../options";
+import { client, type Field, type Fields, SLUG_PATTERN, schema, slugify } from "../api";
+import { active, isEmpty, titleField } from "../lib/fields";
+import { optionsKey } from "../lib/options";
 import MediaField from "./MediaField.vue";
 import Mount from "./Mount.vue";
 

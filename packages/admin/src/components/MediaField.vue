@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { client, type Field, fits, type MediaRead } from "../api";
+import { client, type Field, type MediaRead } from "../api";
+import { fits } from "../lib/media";
 import MediaLibrary from "./MediaLibrary.vue";
 import MediaThumb from "./MediaThumb.vue";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";

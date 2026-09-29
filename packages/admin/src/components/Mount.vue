@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, useTemplateRef, watch } from "vue";
 import type { Mount, MountHandle } from "../../../core/src/admin/index.d.ts";
-import { integralKey } from "../options";
+import { integralKey } from "../lib/options";
 
 const props = defineProps<{ mount: Mount<any>; ctx: Record<string, unknown> }>();
 const el = useTemplateRef("el");

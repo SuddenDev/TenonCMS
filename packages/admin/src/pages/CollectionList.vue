@@ -2,7 +2,8 @@
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
-import { client, schema, titleField } from "../api";
+import { client, schema } from "../api";
+import { titleField } from "../lib/fields";
 
 const name = useRoute().params.name as string;
 const collection = computed(() => schema.value.collections?.[name]);
