@@ -12,7 +12,7 @@ Two tables hold all content:
 - `cms_documents`: one row per document, the fields as JSON in `data`. Filters use `json_extract`.
 - `cms_globals`: one row per global.
 
-`cms_uploads` holds media uploads in progress; `media/upload.ts` owns its queries.
+`cms_uploads` holds media uploads in progress; `media/upload.ts` and `media/library.ts` (`namesIn()`) own its queries.
 
 `cms_media_key_idx` is a partial unique index on `json_extract(data, '$.key')` for `collection = 'media'`. SQLite uses an
 expression index only when the query has the same expression and filter as literals, not as bound parameters, so

@@ -1,7 +1,7 @@
 import type { User } from "better-auth";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/index.ts";
-import type { MediaCore } from "../media/index.ts";
+import type { MediaCore } from "../media/core.ts";
 import type { Plugin } from "../plugins/index.ts";
 import { list } from "../schema/hooks/run.ts";
 import type { LocalApi, RootHooks, Schema } from "../schema/index.ts";
@@ -76,6 +76,20 @@ export const hookArgs = <E extends object>(s: Inner, name: Name, extra: E) => ({
   [name.kind]: name.name,
   ...extra,
 });
+
+/** The `context` of a call: a nested call keeps its caller's, an outer call starts empty. */
+export const contextOf = (scope: Scope) => (scope.nested ? scope.context : {});
+
+/** Runs `fn` in the scope's transaction, or in a new one. Hooks inside share it. */
+export async function transaction<R>(
+  core: Core,
+  scope: Scope,
+  fn: (s: Inner) => Promise<R>,
+): Promise<R> {
+  const context = contextOf(scope);
+  if (scope.trx) return fn(inner(core, scope, scope.trx, context));
+  return (await core.db()).transaction().execute((trx) => fn(inner(core, scope, trx, context)));
+}
 
 /** A scope for hooks and nested calls: shares `trx` and `context`, and gets its own bound API. */
 export function inner(

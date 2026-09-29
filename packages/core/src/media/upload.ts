@@ -1,18 +1,21 @@
 import { consola } from "consola";
 import type { Kysely, Selectable } from "kysely";
 import { API_BASE } from "../client/index.ts";
-import { col, type Core, hookArgs, type Inner, inner, q, type Scope } from "../cms/scope.ts";
+import { col, type Core, type Inner, q, type Scope, transaction } from "../cms/scope.ts";
 import { write } from "../cms/write.ts";
-import { findDocs, loadDoc } from "../db/documents.ts";
 import type { Database } from "../db/index.ts";
 import { ValidationError } from "../errors.ts";
-import { runHooks } from "../schema/hooks/run.ts";
-import type { MediaDoc, Modifiers, UploadInfo } from "../schema/index.ts";
+import type { UploadInfo } from "../schema/index.ts";
+import { type MediaCore, mediaOf, read, runMediaHooks } from "./core.ts";
 import { dimensions } from "./dimensions.ts";
-import { decorate, hasVariants } from "./images.ts";
-import { type MediaCore, mediaSlot } from "./index.ts";
-import type { Storage } from "./storage/types.ts";
+import { hasVariants } from "./images.ts";
+import { namesIn } from "./library.ts";
 import { accepts, cleanFolder, cleanName, freeName, keyOf } from "./names.ts";
+import type { Storage } from "./storage/types.ts";
+import { renderAll } from "./variants.ts";
+
+// An upload takes four steps, each its own request: `create`, `putPart` per part (proxied storage only), then
+// `complete` or `abort`. `upload()` runs them in one call for the local API.
 
 type Row = Selectable<Database["cms_uploads"]>;
 
@@ -28,42 +31,8 @@ export const effectivePartSize = (size: number, partSize: number) =>
 const partsOf = (row: Pick<Row, "size" | "part_size">) =>
   Math.max(1, Math.ceil(row.size / row.part_size));
 
-/** The media core, or an error for an instance without `media`. */
-export function mediaOf(core: Core): MediaCore {
-  if (!core.media) throw new Error("integral-cms: the `media` option is not set");
-  return core.media;
-}
-
-/** Runs `fn` in the scope's transaction, or in a new one. Hooks inside share it, like other writes. */
-export async function tx<R>(core: Core, scope: Scope, fn: (s: Inner) => Promise<R>): Promise<R> {
-  const context = scope.nested ? scope.context : {};
-  if (scope.trx) return fn(inner(core, scope, scope.trx, context));
-  return (await core.db()).transaction().execute((trx) => fn(inner(core, scope, trx, context)));
-}
-
-/** Args of a media hook. */
-export const mediaArgs = <E extends object>(s: Inner, extra: E) => hookArgs(s, col("media"), extra);
-
-/** A media document with `url`, and `src` / `srcset` for images, with the global image options. */
-export const read = (core: Core, doc: Record<string, any>) =>
-  decorate(mediaOf(core), doc) as MediaDoc & { url: string };
-
-const VARIANTS = ".variants/";
-
-/** Where the variant `id` (a modifier id) of the file `key` lives. */
-export const variantKey = (key: string, id: string) => `${VARIANTS}${key}/${id}`;
-
-/** The modifier ids of the stored variants of `key`. Deeper keys belong to files in a folder named like `key`. */
-export async function variantsOf(storage: Storage, key: string) {
-  const prefix = `${VARIANTS}${key}/`;
-  return (await storage.list(prefix))
-    .map((k) => k.slice(prefix.length))
-    .filter((id) => !id.includes("/"));
-}
-
 // Aborts uploads older than a day and deletes their rows. A failed abort is logged; the row goes anyway.
-async function cleanup(core: Core, db: Kysely<Database>) {
-  const { storage } = mediaOf(core);
+async function cleanup(storage: Storage, db: Kysely<Database>) {
   const old = await db
     .selectFrom("cms_uploads")
     .selectAll()
@@ -75,25 +44,8 @@ async function cleanup(core: Core, db: Kysely<Database>) {
   }
 }
 
-/** Filenames used in `folder`, by media documents and by uploads in progress. */
-export async function namesIn(db: Kysely<Database>, folder: string) {
-  // ponytail: loads every document of the folder. Add a SQL filter on filename if folders grow large.
-  const docs = await findDocs(db, "media", { where: { folder } });
-  const uploads = await db
-    .selectFrom("cms_uploads")
-    .select("filename")
-    .where("folder", "=", folder)
-    .execute();
-  return [...docs.map((d) => String(d.filename)), ...uploads.map((u) => u.filename)];
-}
-
-/**
- * Step 1: checks the file, runs `beforeUpload`, reserves a free key and starts the upload in storage.
- * Returns the upload id, the part size and one URL per part.
- */
-export async function create(core: Core, scope: Scope, input: Partial<UploadInfo>) {
-  const media = mediaOf(core);
-  const { size, mimeType } = input;
+// Throws a `ValidationError` for a size or type the options reject.
+function checkFile(media: MediaCore, { size, mimeType }: Partial<UploadInfo>) {
   if (!Number.isSafeInteger(size) || size! < 1)
     throw new ValidationError({ size: "MUST be a positive number of bytes" });
   if (size! > media.maxSize)
@@ -101,22 +53,48 @@ export async function create(core: Core, scope: Scope, input: Partial<UploadInfo
   if (typeof mimeType !== "string" || !/^[\w.+-]+\/[\w.+-]+$/.test(mimeType))
     throw new ValidationError({ mimeType: "Invalid type" });
   if (!accepts(media.accept, mimeType)) throw new ValidationError({ mimeType: "Type not allowed" });
-  const clean = (info: Partial<UploadInfo>) => ({
-    folder: cleanFolder(String(info.folder ?? "")),
-    filename: cleanName(String(info.filename ?? "")),
-  });
+  return { size: size!, mimeType };
+}
 
-  return tx(core, scope, async (s) => {
+const cleanPlace = (info: Partial<UploadInfo>) => ({
+  folder: cleanFolder(String(info.folder ?? "")),
+  filename: cleanName(String(info.filename ?? "")),
+});
+
+// Runs `beforeUpload` and returns the folder and a filename no other file in it uses.
+async function placeFile(core: Core, s: Inner, info: UploadInfo) {
+  const hooked = await runMediaHooks(core, s, "beforeUpload", "data", info);
+  const { folder, filename } = cleanPlace(hooked);
+  return { folder, filename: freeName(await namesIn(s.trx!, folder), filename) };
+}
+
+// One URL per part: presigned for direct storage, the part route for proxied storage.
+const partUrls = (storage: Storage, id: string, key: string, uploadId: string, parts: number) =>
+  Promise.all(
+    Array.from({ length: parts }, async (_, i) => ({
+      n: i + 1,
+      url: storage.partUrl
+        ? await storage.partUrl(key, uploadId, i + 1, DAY / 1000)
+        : `${API_BASE}/media/uploads/${id}/parts/${i + 1}`,
+    })),
+  );
+
+/**
+ * Step 1: checks the file, runs `beforeUpload`, reserves a free key and starts the upload in storage.
+ * Returns the upload id, the part size and one URL per part.
+ */
+export async function create(core: Core, scope: Scope, input: Partial<UploadInfo>) {
+  const media = mediaOf(core);
+  const { storage } = media;
+  const { size, mimeType } = checkFile(media, input);
+  return transaction(core, scope, async (s) => {
     const db = s.trx!;
-    await cleanup(core, db);
-    const info = { ...clean(input), mimeType, size: size! };
-    const hooked = await runHooks(mediaSlot(core, "beforeUpload"), "data", info, mediaArgs(s, {}));
-    const { folder, filename: wanted } = clean(hooked);
-    const filename = freeName(await namesIn(db, folder), wanted);
+    await cleanup(storage, db);
+    const { folder, filename } = await placeFile(core, s, { ...cleanPlace(input), mimeType, size });
     const key = keyOf(folder, filename);
-    const partSize = effectivePartSize(size!, media.storage.partSize);
-    const parts = partsOf({ size: size!, part_size: partSize });
-    const { uploadId } = await media.storage.createUpload(key, { size: size!, mimeType, parts });
+    const partSize = effectivePartSize(size, storage.partSize);
+    const parts = partsOf({ size, part_size: partSize });
+    const { uploadId } = await storage.createUpload(key, { size, mimeType, parts });
     const id = crypto.randomUUID();
     await db
       .insertInto("cms_uploads")
@@ -126,22 +104,14 @@ export async function create(core: Core, scope: Scope, input: Partial<UploadInfo
         folder,
         filename,
         mime_type: mimeType,
-        size: size!,
+        size,
         part_size: partSize,
         adapter_upload_id: uploadId,
         user_id: scope.user?.id ?? null,
         created_at: Date.now(),
       })
       .execute();
-    const urls = await Promise.all(
-      Array.from({ length: parts }, async (_, i) => ({
-        n: i + 1,
-        url: media.storage.partUrl
-          ? await media.storage.partUrl(key, uploadId, i + 1, DAY / 1000)
-          : `${API_BASE}/media/uploads/${id}/parts/${i + 1}`,
-      })),
-    );
-    return { id, partSize, parts: urls };
+    return { id, partSize, parts: await partUrls(storage, id, key, uploadId, parts) };
   });
 }
 
@@ -198,9 +168,38 @@ async function discard(core: Core, scope: Scope, row: Row) {
   await (await q(core, scope)).deleteFrom("cms_uploads").where("id", "=", row.id).execute();
 }
 
+// The document data of a stored upload. Throws when the size is off or an image has no readable header.
+async function fileData(storage: Storage, row: Row, size: number) {
+  if (size !== row.size)
+    throw new ValidationError({ size: `Received ${size} bytes, expected ${row.size}` });
+  const data = {
+    folder: row.folder,
+    filename: row.filename,
+    key: row.key,
+    mimeType: row.mime_type,
+    size,
+  };
+  if (!row.mime_type.startsWith("image/")) return data;
+  const head = await storage.get(row.key, { start: 0, end: Math.min(size, HEADER) - 1 });
+  const found = head && dimensions(await new Response(head.body).bytes());
+  if (!found) throw new ValidationError({ "": "Not a valid image" });
+  return { ...data, ...found };
+}
+
+// Creates the document, runs `afterUpload` and deletes the upload row.
+async function createDoc(core: Core, s: Inner, row: Row, data: Record<string, unknown>) {
+  const { storage } = mediaOf(core);
+  const doc = (await write(core, s, col("media"), "create", data))!;
+  const readFile = async () => (await storage.get(row.key))!.body;
+  await runMediaHooks(core, s, "afterUpload", "doc", doc, { read: readFile });
+  await s.trx!.deleteFrom("cms_uploads").where("id", "=", row.id).execute();
+  return doc;
+}
+
 /**
  * Step 3: assembles the file, checks its size and image header, then creates the document, runs `afterUpload` and deletes
- * the upload row in one transaction. Renders variants after commit when the provider prerenders.
+ * the upload row in one transaction. On failure the file and the row go. Renders variants after commit when the
+ * provider prerenders; a failed variant is logged and renders on first request instead.
  */
 export async function complete(
   core: Core,
@@ -210,122 +209,17 @@ export async function complete(
 ) {
   const media = mediaOf(core);
   const { size } = await media.storage.complete(row.key, row.adapter_upload_id, parts);
-  if (size !== row.size) {
-    await discard(core, scope, row);
-    throw new ValidationError({ size: `Received ${size} bytes, expected ${row.size}` });
-  }
-  const data: Record<string, unknown> = {
-    folder: row.folder,
-    filename: row.filename,
-    key: row.key,
-    mimeType: row.mime_type,
-    size,
-  };
-  if (row.mime_type.startsWith("image/")) {
-    const head = await media.storage.get(row.key, { start: 0, end: Math.min(size, HEADER) - 1 });
-    const found = head && dimensions(await new Response(head.body).bytes());
-    if (!found) {
-      await discard(core, scope, row);
-      throw new ValidationError({ "": "Not a valid image" });
-    }
-    Object.assign(data, found);
-  }
-
   let doc: Record<string, any>;
   try {
-    doc = await tx(core, scope, async (s) => {
-      const created = (await write(core, s, col("media"), "create", data))!;
-      const readFile = async () => (await media.storage.get(row.key))!.body;
-      await runHooks(
-        mediaSlot(core, "afterUpload"),
-        "doc",
-        created,
-        mediaArgs(s, { read: readFile }),
-      );
-      await s.trx!.deleteFrom("cms_uploads").where("id", "=", row.id).execute();
-      return created;
-    });
+    const data = await fileData(media.storage, row, size);
+    doc = await transaction(core, scope, (s) => createDoc(core, s, row, data));
   } catch (error) {
     await discard(core, scope, row);
     throw error;
   }
-  // A failed variant is logged and renders on first request instead.
   if (media.images?.provider.prerender && hasVariants(media.images, doc))
-    await renderAll(media, doc, media.allowlist.keys());
+    await renderAll(media, doc.key, media.allowlist.keys());
   return read(core, doc);
-}
-
-// Renders the variants `ids` of `doc` and returns how many succeeded. A failure is logged.
-async function renderAll(media: MediaCore, doc: Record<string, any>, ids: Iterable<string>) {
-  const { images, storage, allowlist } = media;
-  let rendered = 0;
-  for (const id of ids) {
-    try {
-      const { data, mimeType } = await images!.provider.render!(
-        doc.key,
-        allowlist.get(id)!,
-        storage,
-      );
-      await storage.put(variantKey(doc.key, id), data, mimeType);
-      rendered++;
-    } catch (error) {
-      log.error(`Rendering ${id} of ${doc.key} failed`, error);
-    }
-  }
-  return rendered;
-}
-
-/**
- * `cms.media.regenerate()`: brings stored variants in line with the current image options. Deletes variants the options no
- * longer produce and, with `prerender`, renders missing ones. `force` re-renders every variant, or deletes them all without
- * `prerender`. Without `id`, runs for every file and deletes the variants of files that no longer exist.
- * Returns `undefined` for a missing document. Throws when the provider has no `render`, because nothing is stored.
- */
-export async function regenerate(core: Core, scope: Scope, id?: string, { force = false } = {}) {
-  const media = mediaOf(core);
-  if (!media.images?.provider.render)
-    throw new Error("integral-cms: regenerate needs an image provider with `render`");
-  const db = await q(core, scope);
-  let docs: Record<string, any>[];
-  if (id) {
-    const doc = await loadDoc(db, "media", id);
-    if (!doc) return undefined;
-    docs = [doc];
-  } else docs = await findDocs(db, "media", {});
-  const total = { rendered: 0, removed: 0 };
-  for (const doc of docs) {
-    const { rendered, removed } = await regenerateDoc(media, doc, force);
-    total.rendered += rendered;
-    total.removed += removed;
-  }
-  if (!id) {
-    // ponytail: lists every variant in one go. Page through storage if a library outgrows memory.
-    const keys = new Set(docs.map((d) => d.key));
-    for (const variant of await media.storage.list(VARIANTS)) {
-      const key = variant.slice(VARIANTS.length, variant.lastIndexOf("/"));
-      if (keys.has(key)) continue;
-      await media.storage.delete(variant);
-      total.removed++;
-    }
-  }
-  return total;
-}
-
-async function regenerateDoc(media: MediaCore, doc: Record<string, any>, force: boolean) {
-  const { images, storage, allowlist } = media;
-  const wanted = hasVariants(images!, doc) ? allowlist : new Map<string, Modifiers>();
-  const prerendering = Boolean(images!.provider.prerender);
-  const existing = await variantsOf(storage, doc.key);
-  let removed = 0;
-  for (const id of existing)
-    if (!wanted.has(id) || (force && !prerendering)) {
-      await storage.delete(variantKey(doc.key, id));
-      removed++;
-    }
-  const ids = [...wanted.keys()];
-  const missing = force ? ids : ids.filter((id) => !existing.includes(id));
-  const rendered = prerendering ? await renderAll(media, doc, missing) : 0;
-  return { rendered, removed };
 }
 
 /** Step 4: drops an unfinished upload. */

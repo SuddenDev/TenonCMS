@@ -1,28 +1,39 @@
 import { consola } from "consola";
-import { col, type Core, inner, q, type Scope } from "../cms/scope.ts";
+import type { Kysely } from "kysely";
+import { col, contextOf, type Core, inner, q, type Scope, transaction } from "../cms/scope.ts";
 import { remove, write } from "../cms/write.ts";
-import { findDocs, loadDoc } from "../db/documents.ts";
+import { distinct, findDocs, loadDoc } from "../db/documents.ts";
+import type { Database } from "../db/index.ts";
 import { ValidationError } from "../errors.ts";
-import { runHooks } from "../schema/hooks/run.ts";
 import type { MediaDoc, MediaUpdate } from "../schema/index.ts";
-import { mediaSlot } from "./index.ts";
+import { mediaOf, read, runMediaHooks } from "./core.ts";
 import { cleanFolder, cleanName, keyOf } from "./names.ts";
-import { mediaArgs, mediaOf, namesIn, read, tx, variantKey, variantsOf } from "./upload.ts";
+import { deleteWithVariants, moveWithVariants } from "./variants.ts";
 
 const log = consola.withTag("integral");
 
 // Order for every operation: storage first, then the database, then storage cleanup. A failure leaves at most a
 // stray object in storage, never a document that points to a missing file.
 
-// Moves a file and its variants. A variant that fails to move is logged; it renders again on request.
-async function moveFiles(core: Core, from: string, to: string) {
-  const { storage } = mediaOf(core);
-  await storage.move(from, to);
-  await Promise.all(
-    (await variantsOf(storage, from)).map((id) =>
-      storage.move(variantKey(from, id), variantKey(to, id)).catch((e) => log.error(e)),
-    ),
+/** Filenames used in `folder`, by media documents and by uploads in progress. */
+export async function namesIn(db: Kysely<Database>, folder: string) {
+  // ponytail: loads every document of the folder. Add a SQL filter on filename if folders grow large.
+  const docs = await findDocs(db, "media", { where: { folder } });
+  const uploads = await db
+    .selectFrom("cms_uploads")
+    .select("filename")
+    .where("folder", "=", folder)
+    .execute();
+  return [...docs.map((d) => String(d.filename)), ...uploads.map((u) => u.filename)];
+}
+
+// Throws `Already used` when another file in `folder` has `filename`, case-insensitive.
+async function checkFree(db: Kysely<Database>, folder: string, filename: string, self: MediaDoc) {
+  const taken = (await namesIn(db, folder)).filter(
+    (n) => !(folder === self.folder && n === self.filename),
   );
+  if (taken.some((n) => n.toLowerCase() === filename.toLowerCase()))
+    throw new ValidationError({ filename: "Already used" });
 }
 
 /**
@@ -30,49 +41,49 @@ async function moveFiles(core: Core, from: string, to: string) {
  * A move never renames on a collision: a taken name is 400 `Already used`.
  */
 export async function update(core: Core, scope: Scope, id: string, input: MediaUpdate) {
+  const { storage } = mediaOf(core);
   const original = (await loadDoc(await q(core, scope), "media", id)) as MediaDoc | undefined;
   if (!original) return undefined;
   const folder = input.folder === undefined ? original.folder : cleanFolder(input.folder);
   const filename = input.filename === undefined ? original.filename : cleanName(input.filename);
   const from = original.key;
   const to = keyOf(folder, filename);
+  const altChanged = input.alt !== undefined;
   let moved = false;
 
   // ponytail: two concurrent moves of the same file are not locked. Add a per-document lock if editors collide.
   try {
-    const doc = await tx(core, scope, async (s) => {
-      const slot = (stage: Parameters<typeof mediaSlot>[1]) => mediaSlot(core, stage);
+    const doc = await transaction(core, scope, async (s) => {
       const data: Record<string, unknown> = { ...original };
-      if (input.alt !== undefined) {
-        const changed = await runHooks(
-          slot("beforeChange"),
+      if (altChanged) {
+        const extra = { originalDoc: original };
+        const changed = await runMediaHooks(
+          core,
+          s,
+          "beforeChange",
           "data",
           { alt: input.alt },
-          mediaArgs(s, { originalDoc: original }),
+          extra,
         );
         data.alt = changed.alt;
       }
       if (to !== from) {
-        const taken = (await namesIn(s.trx!, folder)).filter(
-          (n) => !(folder === original.folder && n === original.filename),
-        );
-        if (taken.some((n) => n.toLowerCase() === filename.toLowerCase()))
-          throw new ValidationError({ filename: "Already used" });
-        await runHooks(slot("beforeMove"), "doc", original, mediaArgs(s, { from, to }));
-        await moveFiles(core, from, to);
+        await checkFree(s.trx!, folder, filename, original);
+        await runMediaHooks(core, s, "beforeMove", "doc", original, { from, to });
+        await moveWithVariants(storage, from, to);
         moved = true;
         Object.assign(data, { folder, filename, key: to });
       }
       const doc = (await write(core, s, col("media"), "update", data, { id }))!;
-      if (moved) await runHooks(slot("afterMove"), "doc", doc, mediaArgs(s, { from, to }));
-      if (input.alt !== undefined)
-        await runHooks(slot("afterChange"), "doc", doc, mediaArgs(s, { previousDoc: original }));
+      if (moved) await runMediaHooks(core, s, "afterMove", "doc", doc, { from, to });
+      if (altChanged)
+        await runMediaHooks(core, s, "afterChange", "doc", doc, { previousDoc: original });
       return doc;
     });
     return read(core, doc);
   } catch (error) {
     if (moved)
-      await moveFiles(core, to, from).catch((e) =>
+      await moveWithVariants(storage, to, from).catch((e) =>
         log.error(`Moving "${to}" back to "${from}" failed. The document points to "${from}".`, e),
       );
     throw error;
@@ -107,24 +118,24 @@ export async function renameFolder(core: Core, scope: Scope, fromInput: string, 
  * and its variants, then `afterDelete`. A failed storage delete is logged; the delete still succeeds.
  */
 export async function removeMedia(core: Core, scope: Scope, id: string) {
-  const media = mediaOf(core);
   const doc = (await loadDoc(await q(core, scope), "media", id)) as MediaDoc | undefined;
   if (!doc) return;
-  await tx(core, scope, async (s) => {
-    await runHooks(mediaSlot(core, "beforeDelete"), "doc", doc, mediaArgs(s, {}));
+  await transaction(core, scope, async (s) => {
+    await runMediaHooks(core, s, "beforeDelete", "doc", doc);
     await remove(core, s, "media", id);
   });
-  const variants = await variantsOf(media.storage, doc.key).catch(() => []);
-  await Promise.all(
-    [doc.key, ...variants.map((id) => variantKey(doc.key, id))].map((key) =>
-      media.storage.delete(key).catch((e) => log.error(`Deleting "${key}" failed`, e)),
-    ),
-  );
-  const context = scope.nested ? scope.context : {};
-  await runHooks(
-    mediaSlot(core, "afterDelete"),
-    "doc",
-    doc,
-    mediaArgs(inner(core, scope, scope.trx, context), {}),
-  );
+  await deleteWithVariants(mediaOf(core).storage, doc.key);
+  const outside = inner(core, scope, scope.trx, contextOf(scope));
+  await runMediaHooks(core, outside, "afterDelete", "doc", doc);
+}
+
+/** All folders of the library with their parents, sorted. The root `''` is left out. */
+export async function folders(core: Core) {
+  const set = new Set<string>();
+  for (const folder of await distinct(await core.db(), "media", "folder")) {
+    const parts = String(folder ?? "").split("/");
+    for (let i = 1; i <= parts.length; i++) set.add(parts.slice(0, i).join("/"));
+  }
+  set.delete("");
+  return [...set].sort();
 }

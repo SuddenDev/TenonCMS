@@ -1,33 +1,16 @@
 import { type Context, Hono } from "hono";
 import type { Core } from "../cms/scope.ts";
-import { distinct, mediaByKey } from "../db/documents.ts";
+import { mediaByKey } from "../db/documents.ts";
 import { type Env, notFound } from "../http/middleware.ts";
+import { mediaOf } from "./core.ts";
 import { hasVariants, parseImgPath } from "./images.ts";
-import { removeMedia, renameFolder, update } from "./move.ts";
-import {
-  abort,
-  complete,
-  create,
-  mediaOf,
-  putPart,
-  regenerate,
-  uploadOf,
-  variantKey,
-} from "./upload.ts";
+import { folders, removeMedia, renameFolder, update } from "./library.ts";
+import type { Storage } from "./storage/types.ts";
+import { abort, complete, create, putPart, uploadOf } from "./upload.ts";
+import { regenerate, renderVariant, variantKey } from "./variants.ts";
 
 // A malformed body reads as `{}`, which fails the checks with 400.
 const body = (req: { json(): Promise<any> }) => req.json().catch(() => ({}));
-
-/** All folders of the library with their parents, sorted. The root `''` is left out. */
-export async function folders(core: Core) {
-  const set = new Set<string>();
-  for (const folder of await distinct(await core.db(), "media", "folder")) {
-    const parts = String(folder ?? "").split("/");
-    for (let i = 1; i <= parts.length; i++) set.add(parts.slice(0, i).join("/"));
-  }
-  set.delete("");
-  return [...set].sort();
-}
 
 // User files MAY be HTML or SVG. They MUST NOT run scripts on the host's origin.
 const SAFE = {
@@ -44,9 +27,38 @@ function parseRange(header: string, size: number) {
   return start <= end && start < size ? { start, end } : null;
 }
 
+/** The whole file, or the part `range` asks for. `undefined` for a missing file. */
+async function serveFile(storage: Storage, doc: Record<string, any>, range?: string) {
+  // With a range, one byte is enough to learn the size.
+  const file = await storage.get(doc.key, range ? { start: 0, end: 0 } : undefined);
+  if (!file) return undefined;
+  const headers = { ...SAFE, "content-type": doc.mimeType, "accept-ranges": "bytes" };
+  if (!range)
+    return new Response(file.body, {
+      headers: { ...headers, "content-length": String(file.size) },
+    });
+  await file.body.cancel();
+  const bytes = parseRange(range, file.size);
+  if (!bytes)
+    return new Response(null, {
+      status: 416,
+      headers: { "content-range": `bytes */${file.size}` },
+    });
+  const part = (await storage.get(doc.key, bytes))!;
+  return new Response(part.body, {
+    status: 206,
+    headers: {
+      ...headers,
+      "content-length": String(bytes.end - bytes.start + 1),
+      "content-range": `bytes ${bytes.start}-${bytes.end}/${file.size}`,
+    },
+  });
+}
+
 /** The media routes under `/api/cms/media`: `reads` are public, `writes` need a session. */
 export function mediaRoutes(core: Core) {
-  const { storage, images, allowlist } = mediaOf(core);
+  const media = mediaOf(core);
+  const { storage, images, allowlist } = media;
   const docOf = async (key: string) =>
     key.startsWith(".") ? undefined : mediaByKey(await core.db(), key);
 
@@ -56,31 +68,9 @@ export function mediaRoutes(core: Core) {
   // No `immutable` caching: keys change when a file moves.
   reads.get("/files/:key{.+}", async (c) => {
     const doc = await docOf(c.req.param("key"));
-    const header = c.req.header("range");
-    // With a range, one byte is enough to learn the size.
-    const file = doc && (await storage.get(doc.key, header ? { start: 0, end: 0 } : undefined));
-    if (!file) throw notFound();
-    const headers = { ...SAFE, "content-type": doc.mimeType, "accept-ranges": "bytes" };
-    if (!header)
-      return new Response(file.body, {
-        headers: { ...headers, "content-length": String(file.size) },
-      });
-    await file.body.cancel();
-    const range = parseRange(header, file.size);
-    if (!range)
-      return new Response(null, {
-        status: 416,
-        headers: { "content-range": `bytes */${file.size}` },
-      });
-    const part = (await storage.get(doc.key, range))!;
-    return new Response(part.body, {
-      status: 206,
-      headers: {
-        ...headers,
-        "content-length": String(range.end - range.start + 1),
-        "content-range": `bytes ${range.start}-${range.end}/${file.size}`,
-      },
-    });
+    const response = doc && (await serveFile(storage, doc, c.req.header("range")));
+    if (!response) throw notFound();
+    return response;
   });
 
   const render = images?.provider.render;
@@ -98,8 +88,7 @@ export function mediaRoutes(core: Core) {
         return new Response(stored.body, {
           headers: { ...SAFE, "content-type": type, "content-length": String(stored.size) },
         });
-      const { data, mimeType } = await render(doc.key, parsed.modifiers, storage);
-      await storage.put(variant, data, mimeType);
+      const { data, mimeType } = await renderVariant(media, doc.key, parsed.modifiers, parsed.id);
       return new Response(data as BodyInit, {
         headers: { ...SAFE, "content-type": mimeType, "content-length": String(data.length) },
       });

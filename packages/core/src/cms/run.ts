@@ -3,6 +3,7 @@ import { ConflictError, ValidationError } from "../errors.ts";
 import { runHooks } from "../schema/hooks/run.ts";
 import type { Operation } from "../schema/index.ts";
 import {
+  contextOf,
   type Core,
   hookArgs,
   type Inner,
@@ -25,7 +26,7 @@ export async function run<R>(
   args: Record<string, any>,
   fn: (s: Inner, args: Record<string, any>) => Promise<R>,
 ): Promise<R> {
-  const context = scope.nested ? scope.context : {};
+  const context = contextOf(scope);
   // Globals have no `beforeOperation` and `afterOperation`, root ones included.
   const of = (stage: Stage) => (name.kind === "collection" ? slot(core, name, stage) : undefined);
   const body = async (trx = scope.trx) => {
