@@ -7,6 +7,7 @@ export const posts = defineCollection({
     title: { type: "text", required: true },
     slug: { type: "slug", from: "title", required: true, unique: true },
     publishedAt: { type: "date", label: "Published at" },
+    hero: { type: "image", folder: "posts" },
     body: { type: "textarea" },
   },
 });

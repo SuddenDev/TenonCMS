@@ -1,8 +1,16 @@
 ---
-export const prerender = false;
+import type { InferGetStaticPropsType } from "astro";
+import cms from "../../../integral.config";
 
-const post = await Astro.locals.integral.findOne("posts", { where: { slug: Astro.params.slug! } });
-if (!post) return new Response("Not found", { status: 404 });
+// Built once per post. Edits show after the next build; images stay live, served by /api/cms/media.
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const posts = await cms.find("posts");
+  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props as InferGetStaticPropsType<typeof getStaticPaths>;
 ---
 
 <html lang="en">
@@ -17,6 +25,17 @@ if (!post) return new Response("Not found", { status: 404 });
     </h1>
     {post.author && <p style="color:blue">{post.author.name}</p>}
     {post.publishedAt && <time datetime={post.publishedAt}>{post.publishedAt}</time>}
+    {post.hero && (
+      <img
+        src={post.hero.src}
+        srcset={post.hero.srcset}
+        sizes="(min-width: 720px) 720px, 100vw"
+        width={post.hero.width}
+        height={post.hero.height}
+        alt={post.hero.alt ?? ""}
+        style="max-width: 100%; height: auto"
+      />
+    )}
     <p style="white-space: pre-wrap">{post.body}</p>
   </body>
 </html>

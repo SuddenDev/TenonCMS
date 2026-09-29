@@ -8,12 +8,13 @@ const path = `/${Astro.params.path ?? ""}`;
 // Two parent levels resolved, so the trail covers three levels of pages.
 const page = await Astro.locals.integral.findOne("pages", {
   where: { path },
-  populate: { parent: { parent: true } },
+  populate: { parent: { parent: true }, hero: true },
   select: {
     title: true,
     path: true,
     body: true,
     seo: true,
+    hero: true,
     parent: { title: true, path: true, parent: { title: true, path: true } },
   },
 });
@@ -45,6 +46,17 @@ const trail = breadcrumbs(page);
       </ol>
     </nav>
     <h1>{page.title}</h1>
+    {page.hero && (
+      <img
+        src={page.hero.src}
+        srcset={page.hero.srcset}
+        sizes="(min-width: 720px) 720px, 100vw"
+        width={page.hero.width}
+        height={page.hero.height}
+        alt={page.hero.alt ?? ""}
+        style="max-width: 100%; height: auto"
+      />
+    )}
     <p style="white-space: pre-wrap">{page.body}</p>
   </body>
 </html>

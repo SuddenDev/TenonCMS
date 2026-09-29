@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "integral-cms": "workspace:*"
+    "integral-cms": "workspace:*",
+    "ipx": "4.0.0-beta.1"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -29,6 +29,7 @@ export const posts = defineCollection({
       condition: { featured: true },
     },
     color: { type: "custom:color", label: "Accent color" },
+    hero: { type: "image", folder: "posts", image: { sizes: [480, 960, 1440] } },
     body: { type: "textarea" },
   },
   hooks: {
