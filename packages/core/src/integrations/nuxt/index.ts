@@ -14,6 +14,7 @@ import {
   adminHtml,
   adminInput,
   adminPath,
+  faviconDefine,
   type Options,
 } from "../../admin/html.ts";
 import { API_BASE } from "../../client/index.ts";
@@ -40,7 +41,13 @@ const integralCms: NuxtModule<Options> = defineNuxtModule<Options>({
       const assets = nuxt.options.app.baseURL.replace(/\/$/, "") + nuxt.options.app.buildAssetsDir;
       let html = adminHtml(path, [`${assets}@vite/client`, `${assets}@fs${entry}`]);
       addVitePlugin(
-        { name: "integral-cms:admin", configEnvironment: adminInput(entry) },
+        {
+          name: "integral-cms:admin",
+          configEnvironment: adminInput(entry),
+          config: () => ({
+            define: faviconDefine(resolve(nuxt.options.rootDir, nuxt.options.dir.public)),
+          }),
+        },
         { server: false },
       );
       nuxt.hook("build:manifest", (manifest) => {

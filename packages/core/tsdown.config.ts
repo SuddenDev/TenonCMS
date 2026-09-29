@@ -47,6 +47,7 @@ export default defineConfig({
     { from: "src/client/register.d.ts", to: "dist/client" },
     // The admin's Vite build writes index.js next to these.
     { from: "src/admin/index.d.ts", to: "dist/admin" },
+    { from: "src/admin/icons.d.ts", to: "dist/admin" },
     { from: "src/admin/default.ts", to: "dist/admin" },
     { from: "src/admin/entry.ts", to: "dist/admin" },
     { from: "src/admin/virtual.d.ts", to: "dist/admin" },

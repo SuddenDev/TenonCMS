@@ -1,3 +1,5 @@
+import type { IconName } from "./icons";
+
 /**
  * Anything the host plugs into the admin: a field input or a page.
  *
@@ -82,11 +84,14 @@ export type PageContext = {
 /** A sidebar entry. */
 export type Menu = {
   label: string;
+  /** Sidebar section. Defaults to `Content`. */
+  group?: string;
   /** Lucide icon name, e.g. `arrow-right-left`. See https://lucide.dev/icons. */
-  icon?: string;
+  icon?: IconName;
   /**
-   * Position in the sidebar, lowest first. Collections sit at 10, globals at 20, pages default to 30.
+   * Position in the sidebar, lowest first. Collections sit at 10, media at 15, globals at 20, pages default to 30.
    * Equal orders keep their definition order: host pages after plugin pages.
+   * Sections appear in the order of their first entry.
    */
   order?: number;
 };
@@ -115,8 +120,32 @@ export type AdminPlugin = {
   pages?: Record<string, Page>;
 };
 
+/**
+ * An image URL, or one per color scheme. Files MUST be served by the host, e.g. from `public/`: `/logo.svg`.
+ * The admin links them and does not bundle them.
+ */
+export type Themed = string | { light: string; dark: string };
+
 /** Admin customization. Default export of `integral.admin.ts`. */
 export type AdminOptions = {
+  /** Name of the CMS in the sidebar, the login and the page title. Defaults to `integral-cms`. */
+  name?: string;
+  /** Wide logo for the sidebar header and the login. Defaults to the icon, then to a placeholder. */
+  logo?: Themed;
+  /** Square icon for the collapsed sidebar. Also the favicon unless `favicon` is set. */
+  icon?: Themed;
+  /**
+   * Favicon of the admin page. Defaults to `icon`, then to the host's `favicon.svg`, `.ico` or `.png`
+   * in its public folder, if there is one.
+   */
+  favicon?: Themed;
+  /**
+   * Sidebar entry of the media library. `label`, `group`, `icon` and `order` replace its defaults
+   * (`Media`, `Content`, `image`, 15).
+   * @example
+   * media: { group: 'Assets', icon: 'images' }
+   */
+  media?: Partial<Menu>;
   /**
    * Inputs by custom field type. The key `color` handles fields with `type: 'custom:color'`.
    * @example
@@ -155,5 +184,11 @@ export function defineAdminPlugin(plugin: AdminPlugin): AdminPlugin;
  * @param el Element or CSS selector.
  * @param options Usually the default export of `integral.admin.ts`.
  * @param base Path the admin is served at. Defaults to `/admin`.
+ * @param favicon URL of the host's own favicon, used when `options` sets neither `favicon` nor `icon`.
  */
-export function mountAdmin(el: string | Element, options?: AdminOptions, base?: string): () => void;
+export function mountAdmin(
+  el: string | Element,
+  options?: AdminOptions,
+  base?: string,
+  favicon?: string | null,
+): () => void;

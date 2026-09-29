@@ -15,7 +15,11 @@ export function pagePath(key: string, page: Page) {
 
 // The plugins' fields and pages, then the host's. A key used twice throws.
 export function mergeOptions({ plugins = [], ...host }: AdminOptions): AdminOptions {
-  const out: Required<Pick<AdminOptions, "fields" | "pages">> = { fields: {}, pages: {} };
+  const out: AdminOptions & Required<Pick<AdminOptions, "fields" | "pages">> = {
+    ...host,
+    fields: {},
+    pages: {},
+  };
   for (const { name, ...plugin } of [...plugins, { name: "integral.admin.ts", ...host }]) {
     for (const kind of ["fields", "pages"] as const) {
       for (const [key, value] of Object.entries(plugin[kind] ?? {})) {

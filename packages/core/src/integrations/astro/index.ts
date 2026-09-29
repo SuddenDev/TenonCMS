@@ -1,6 +1,6 @@
 import type { AstroIntegration } from "astro";
 import { fileURLToPath } from "node:url";
-import { adminAlias, adminPath, type Options } from "../../admin/html.ts";
+import { adminAlias, adminPath, faviconDefine, type Options } from "../../admin/html.ts";
 import { API_BASE } from "../../client/index.ts";
 
 export type { Options };
@@ -37,6 +37,7 @@ export default function integralCms({
         updateConfig({
           vite: {
             resolve: { alias },
+            define: faviconDefine(fileURLToPath(config.publicDir)),
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.
             // Dev does not bundle. Keeping core internal there lets Vite reload it when `dist/` changes.
             ssr: command === "dev" ? {} : { external: ["integral-cms"] },

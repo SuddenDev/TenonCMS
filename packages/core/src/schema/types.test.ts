@@ -274,3 +274,16 @@ describe("media reads", () => {
     expect(read).toBeTypeOf("function");
   });
 });
+
+describe("admin navigation options", () => {
+  it("accept a group, an icon name and an order", () => {
+    defineCollection({ group: "Blog", icon: "newspaper", order: 5, fields: {} });
+    defineGlobal({ group: "Site", icon: "settings", fields: {} });
+  });
+
+  it("reject an unknown icon name", () => {
+    // @ts-expect-error not a Lucide icon
+    defineCollection({ icon: "not-an-icon", fields: {} });
+    expect(true).toBe(true);
+  });
+});

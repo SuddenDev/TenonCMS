@@ -9,6 +9,8 @@ const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.ch
 
 // Plain DOM. Any framework can mount into `el` the same way.
 export default defineAdmin({
+  name: "Example site",
+  media: { group: "Blog", icon: "images" },
   plugins: [redirectsAdmin()],
   fields: {
     color(el, { value, onChange }) {

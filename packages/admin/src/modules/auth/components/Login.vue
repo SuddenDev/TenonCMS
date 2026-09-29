@@ -2,8 +2,11 @@
 import { useHead } from "@unhead/vue";
 import { ref } from "vue";
 import { client } from "@/shared/api";
+import Themed from "@/shared/components/Themed.vue";
 import { Button } from "@/shared/components/ui/button";
+import { useBrand } from "@/shared/composables/useBrand";
 
+const { name, logo, icon } = useBrand();
 const emit = defineEmits<{ done: [] }>();
 const signUp = ref(false);
 const form = ref({ name: "", email: "", password: "" });
@@ -32,6 +35,12 @@ async function submit() {
       class="border-border bg-card flex w-full max-w-sm flex-col gap-3 rounded-lg border p-6"
       @submit.prevent="submit"
     >
+      <Themed
+        v-if="logo ?? icon"
+        :src="(logo ?? icon)!"
+        :alt="name"
+        class="h-10 self-start object-contain"
+      />
       <h1 class="text-lg font-semibold">
         {{ signUp ? "Create the first admin" : "Sign in" }}
       </h1>

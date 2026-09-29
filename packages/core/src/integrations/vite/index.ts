@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ViteDevServer } from "vite";
 import {
@@ -6,6 +7,7 @@ import {
   adminHtml,
   adminInput,
   adminPath,
+  faviconDefine,
   type AdminOption,
 } from "../../admin/html.ts";
 
@@ -35,6 +37,7 @@ export function integralAdmin({
     name: "integral-cms:admin",
     config: (config, { command }) => ({
       resolve: { alias: { "#integral/admin": adminAlias(config.root ?? process.cwd(), adminDir) } },
+      define: faviconDefine(resolve(config.root ?? process.cwd(), config.publicDir || "public")),
       // Bundling core breaks libsql's native binding. Dev does not bundle, so Vite reloads core when `dist/` changes.
       ssr: command === "build" ? { external: ["integral-cms"] } : {},
     }),

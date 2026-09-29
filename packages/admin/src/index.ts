@@ -14,8 +14,14 @@ export function defineAdminPlugin(plugin: AdminPlugin): AdminPlugin {
   return plugin;
 }
 
-export function mountAdmin(el: string | Element, raw: AdminOptions = {}, base = "/admin") {
+export function mountAdmin(
+  el: string | Element,
+  raw: AdminOptions = {},
+  base = "/admin",
+  hostFavicon?: string | null,
+) {
   const options = mergeOptions(raw);
+  options.favicon ??= options.icon ?? hostFavicon ?? undefined;
   // The styles are global. The admin runs on a page of its own, so they never reach the host's pages.
   document.head.append(Object.assign(document.createElement("style"), { textContent: css }));
   const router = createAdminRouter(base, options.pages);

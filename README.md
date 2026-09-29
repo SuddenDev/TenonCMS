@@ -831,6 +831,10 @@ import { defineAdmin } from "integral-cms/admin";
 import { redirectsAdmin } from "integral-cms/plugins/redirects/admin";
 
 export default defineAdmin({
+  name: "Acme",
+  logo: { light: "/logo-light.svg", dark: "/logo-dark.svg" },
+  icon: "/icon.svg",
+  media: { group: "Assets", icon: "images" },
   fields: { color: mountColorInput },
   pages: {
     home: { route: "/", mount: mountHome },
@@ -842,7 +846,10 @@ export default defineAdmin({
 
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
 - `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`.
-- `menu` puts a page in the sidebar: `label`, an optional `icon` ([Lucide](https://lucide.dev/icons) name) and `order`. The sidebar is one list sorted by `order`: collections sit at 10, globals at 20, pages default to 30. Equal orders keep their definition order. Pages without `menu` are reachable by URL only.
+- `menu` puts a page in the sidebar: `label`, an optional `group`, an optional `icon` ([Lucide](https://lucide.dev/icons) name, type-checked) and `order`. Pages without `menu` are reachable by URL only.
+- The sidebar has sections by `group`, which defaults to `Content`. Collections and globals take `group`, `icon` and `order` in their own config, next to `label`. Items sort by `order` (collections 10, media 15, globals 20, pages 30; equal orders keep their definition order), and sections appear in the order of their first item. `media` moves the media library: `label`, `group`, `icon`, `order`.
+- `name` shows in the sidebar header, on the login and in the page title (default `integral-cms`). `logo` (sidebar header and login) and `icon` (collapsed sidebar) are URLs, or `{ light, dark }` pairs that follow the admin's theme. The admin links the files and does not bundle them: put them in the host's `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
+- The favicon is `favicon` if set, else `icon`, else the host's `favicon.svg`, `.ico` or `.png` in its public folder. `favicon` takes a URL or a `{ light, dark }` pair.
 - A page on a built-in path replaces that view: `route: '/'` replaces the start page, `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
 - `plugins` takes the admin halves of [plugins](#plugins). Their fields and pages merge in before yours; a key used twice throws when the admin mounts.
 
