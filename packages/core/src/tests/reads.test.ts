@@ -140,6 +140,25 @@ describe("errors", () => {
     ]);
   });
 
+  it("send nav and description in /schema", async () => {
+    const nav = { display: "settings", group: "Blog", icon: "newspaper", order: 5 } as const;
+    const inst = defineCms({
+      collections: {
+        posts: { description: "All posts", nav, fields: { title: { type: "text" } } },
+      },
+      globals: { footer: { description: "Footer", nav, fields: { text: { type: "text" } } } },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+      media: false,
+    });
+    const s = setup(inst);
+    await s.client.signUp(admin);
+    const res = await s.fetch(`${origin}/api/cms/schema`);
+    const body = await res.json();
+    expect(body.collections.posts).toMatchObject({ description: "All posts", nav });
+    expect(body.globals.footer).toMatchObject({ description: "Footer", nav });
+  });
+
   it("reject a malformed JSON body with 400", async () => {
     await client.signUp(admin);
     const res = await fetchWithSession("/collections/posts", {

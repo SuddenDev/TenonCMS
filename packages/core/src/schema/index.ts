@@ -1,4 +1,4 @@
-import type { IconName } from "../admin/icons";
+import type { Nav } from "../admin/index.d.ts";
 import type { Fields } from "./fields/index.ts";
 import type { CollectionHooks, GlobalHooks } from "./hooks/index.ts";
 
@@ -28,12 +28,10 @@ export type {
 export type Collection<F extends Fields = Fields> = {
   /** Name in the admin. Defaults to the collection key. */
   label?: string;
-  /** Sidebar section. Defaults to `Content`. */
-  group?: string;
-  /** Lucide icon in the sidebar, e.g. `newspaper`. See https://lucide.dev/icons. */
-  icon?: IconName;
-  /** Position in the sidebar, lowest first. Collections default to 10, globals to 20. */
-  order?: number;
+  /** Short text under the name, e.g. on the Settings page and above the form. */
+  description?: string;
+  /** Placement in the admin navigation. Defaults to the sidebar. */
+  nav?: Nav;
   fields: F;
   /** Field shown in the admin list view. Defaults to the first field. */
   titleField?: string;
@@ -44,12 +42,10 @@ export type Collection<F extends Fields = Fields> = {
 export type Global<F extends Fields = Fields> = {
   /** Name in the admin. Defaults to the global key. */
   label?: string;
-  /** Sidebar section. Defaults to `Content`. */
-  group?: string;
-  /** Lucide icon in the sidebar, e.g. `newspaper`. See https://lucide.dev/icons. */
-  icon?: IconName;
-  /** Position in the sidebar, lowest first. Collections default to 10, globals to 20. */
-  order?: number;
+  /** Short text under the name, e.g. on the Settings page and above the form. */
+  description?: string;
+  /** Placement in the admin navigation. Defaults to the sidebar. */
+  nav?: Nav;
   fields: F;
   /** Functions that run on every read and write of this global. Typed only through `defineGlobal()`. */
   hooks?: GlobalHooks<F>;

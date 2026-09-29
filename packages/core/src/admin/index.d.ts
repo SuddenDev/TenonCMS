@@ -81,31 +81,43 @@ export type PageContext = {
   integral: IntegralContext;
 };
 
-/** A sidebar entry. */
-export type Menu = {
-  label: string;
-  /** Sidebar section. Defaults to `Content`. */
+/** Where and how an entry shows up in the admin navigation. */
+export type Nav = {
+  /**
+   * Where the entry is listed.
+   * - `menu`: in the sidebar (default).
+   * - `settings`: on the Settings page, not in the sidebar.
+   * - `none`: nowhere. The route still opens, e.g. a detail page.
+   */
+  display?: "menu" | "settings" | "none";
+  /**
+   * Section of the sidebar or the Settings page. Defaults to `Content` in the sidebar and `Site` on the
+   * Settings page. Sections appear in the order of their first entry.
+   */
   group?: string;
   /** Lucide icon name, e.g. `arrow-right-left`. See https://lucide.dev/icons. */
   icon?: IconName;
   /**
-   * Position in the sidebar, lowest first. Collections sit at 10, media at 15, globals at 20, pages default to 30.
+   * Position, lowest first. Collections sit at 10, media at 15, globals at 20, pages default to 30.
    * Equal orders keep their definition order: host pages after plugin pages.
-   * Sections appear in the order of their first entry.
    */
   order?: number;
 };
 
 /** A custom admin page. */
 export type Page = {
-  /** Sidebar entry. Pages without one stay out of the sidebar, e.g. detail routes with params. */
-  menu?: Menu;
+  /** Name in the navigation, the page title and the breadcrumbs. Defaults to the page key. */
+  label?: string;
+  /** Short text under the name on the Settings page. */
+  description?: string;
   /**
    * Path under the admin path. Defaults to `/<key>`. `/` is the start page. Params work: `/reports/:id`.
    *
    * A page on a built-in path, e.g. `/collections/posts`, replaces the built-in view.
    */
   route?: `/${string}`;
+  /** Placement in the navigation. Defaults to the sidebar. Use `{ display: 'none' }` for detail routes with params. */
+  nav?: Nav;
   /** Renders the page. */
   mount: Mount<PageContext>;
 };
@@ -140,12 +152,12 @@ export type AdminOptions = {
    */
   favicon?: Themed;
   /**
-   * Sidebar entry of the media library. `label`, `group`, `icon` and `order` replace its defaults
+   * Navigation entry of the media library. `label` and the `nav` keys replace its defaults
    * (`Media`, `Content`, `image`, 15).
    * @example
-   * media: { group: 'Assets', icon: 'images' }
+   * media: { nav: { group: 'Assets', icon: 'images' } }
    */
-  media?: Partial<Menu>;
+  media?: { label?: string; nav?: Nav };
   /**
    * Inputs by custom field type. The key `color` handles fields with `type: 'custom:color'`.
    * @example
@@ -155,7 +167,7 @@ export type AdminOptions = {
   /**
    * Extra pages by key.
    * @example
-   * pages: { stats: { menu: { label: 'Stats', icon: 'chart-bar' }, mount: renderVue(Stats) } }
+   * pages: { stats: { label: 'Stats', nav: { icon: 'chart-bar' }, mount: renderVue(Stats) } }
    */
   pages?: Record<string, Page>;
   /** Admin halves of plugins, from `defineAdminPlugin()`. Their fields and pages merge in, before the host's. */
@@ -167,7 +179,7 @@ export type AdminOptions = {
  * @example
  * export default defineAdmin({
  *   fields: { color: renderVue(ColorInput) },
- *   pages: { stats: { menu: { label: 'Stats' }, mount: renderVue(Stats) } },
+ *   pages: { stats: { label: 'Stats', mount: renderVue(Stats) } },
  *   plugins: [redirectsAdmin()],
  * })
  */

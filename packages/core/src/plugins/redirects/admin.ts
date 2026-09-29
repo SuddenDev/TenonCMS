@@ -14,7 +14,8 @@ export function redirectsAdmin(): AdminPlugin {
     name: "redirects",
     pages: {
       "redirects-tools": {
-        menu: { label: "Redirect tools", icon: "arrow-right-left", order: 11 },
+        label: "Redirect tools",
+        nav: { icon: "arrow-right-left", order: 11 },
         mount: mountTools,
       },
     },

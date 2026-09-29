@@ -275,15 +275,35 @@ describe("media reads", () => {
   });
 });
 
-describe("admin navigation options", () => {
-  it("accept a group, an icon name and an order", () => {
-    defineCollection({ group: "Blog", icon: "newspaper", order: 5, fields: {} });
-    defineGlobal({ group: "Site", icon: "settings", fields: {} });
+describe("nav option", () => {
+  it("accepts display, group, icon and order", () => {
+    defineCollection({
+      description: "d",
+      nav: { display: "settings", group: "Blog", icon: "newspaper", order: 5 },
+      fields: {},
+    });
+    defineGlobal({
+      description: "d",
+      nav: { display: "settings", group: "Blog", icon: "newspaper", order: 5 },
+      fields: {},
+    });
   });
 
-  it("reject an unknown icon name", () => {
+  it("rejects an unknown display", () => {
+    // @ts-expect-error not a display value
+    defineCollection({ nav: { display: "sidebar" }, fields: {} });
+    expect(true).toBe(true);
+  });
+
+  it("rejects an unknown icon name", () => {
     // @ts-expect-error not a Lucide icon
-    defineCollection({ icon: "not-an-icon", fields: {} });
+    defineCollection({ nav: { icon: "not-an-icon" }, fields: {} });
+    expect(true).toBe(true);
+  });
+
+  it("has no top-level group", () => {
+    // @ts-expect-error the key moved to nav
+    ({ group: "Blog", fields: {} }) satisfies Collection;
     expect(true).toBe(true);
   });
 });
