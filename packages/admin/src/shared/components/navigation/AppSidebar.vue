@@ -86,7 +86,7 @@ const projects: MenuItem[] = [
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-      <SidebarSeparator />
+      <SidebarSeparator class="my-2" />
       <NavUser />
     </SidebarFooter>
     <SidebarRail />
