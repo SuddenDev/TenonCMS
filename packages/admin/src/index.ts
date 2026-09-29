@@ -2,7 +2,7 @@ import { createHead } from "@unhead/vue/client";
 import { createApp } from "vue";
 import type { AdminOptions, AdminPlugin, IntegralContext } from "../../core/src/admin/index.d.ts";
 import App from "./App.vue";
-import { integralKey, mergeOptions, optionsKey } from "./lib/options";
+import { integralKey, mergeOptions, optionsKey } from "@/shared/options";
 import { createAdminRouter } from "./router";
 import css from "./style.css?inline";
 
