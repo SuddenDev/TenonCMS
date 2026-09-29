@@ -1,11 +1,11 @@
-/** Group of items without one. */
-const fallback = "Content";
-
 /**
- * Sorts items by `order` and groups them by `group`. Groups appear in the order of their first item, and
- * equal orders keep their definition order.
+ * Sorts items by `order` and groups them by `group`. Items without a group go into `fallback`. Groups
+ * appear in the order of their first item, and equal orders keep their definition order.
  */
-export function groupMenu<T extends { order: number; group?: string }>(items: T[]) {
+export function groupMenu<T extends { order: number; group?: string }>(
+  items: T[],
+  fallback = "Content",
+) {
   const groups = new Map<string, T[]>();
   for (const item of [...items].sort((a, b) => a.order - b.order)) {
     const label = item.group ?? fallback;

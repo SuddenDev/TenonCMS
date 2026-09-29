@@ -10,6 +10,13 @@ describe("groupMenu", () => {
     ]);
   });
 
+  it("puts items without a group into the given fallback", () => {
+    expect(groupMenu([item("a", 10), item("b", 20, "Tools")], "Site")).toEqual([
+      { label: "Site", items: [item("a", 10)] },
+      { label: "Tools", items: [item("b", 20, "Tools")] },
+    ]);
+  });
+
   it("orders groups by their first item and items by order", () => {
     const groups = groupMenu([
       item("tools", 30, "Tools"),
