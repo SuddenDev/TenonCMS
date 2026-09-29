@@ -7,6 +7,7 @@ import { mediaRoutes } from "../media/http.ts";
 import { createMediaCore } from "../media/core.ts";
 import { mediaCollection, type MediaOptions } from "../media/index.ts";
 import { mergePlugins, type Plugin } from "../plugins/index.ts";
+import { settings as defaults } from "../presets/index.ts";
 import type { Collection, Global, MediaApi, Schema } from "../schema/index.ts";
 import { checkSchema } from "../schema/validate.ts";
 import { type Api, bind } from "./api.ts";
@@ -17,6 +18,7 @@ import type {
   PluginCollections,
   PluginGlobals,
   PopulateConfig,
+  SettingsOption,
 } from "./options.ts";
 import type { Core } from "./scope.ts";
 
@@ -34,6 +36,7 @@ export function defineCms<
   const P extends PopulateConfig = {},
   const PL extends readonly Plugin[] = [],
   const M extends MediaOptions | boolean | undefined = undefined,
+  const S extends false | SettingsOption | undefined = undefined,
 >({
   database,
   secret,
@@ -42,21 +45,22 @@ export function defineCms<
   hooks: rootHooks = {},
   plugins = [] as unknown as PL,
   media: mediaOption,
+  settings: settingsOption,
   ...own
-}: CmsOptions<C, G, A, P, PL, M>) {
+}: CmsOptions<C, G, A, P, PL, M, S>) {
   type T = {
     collections?: C & PluginCollections<PL> & MediaCollections<M>;
     globals?: G & PluginGlobals<PL>;
   };
   type D = DefaultDepth<P>;
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 };
-  const schema = mergePlugins(plugins, own);
   const mediaOptions =
     typeof mediaOption === "object"
       ? mediaOption
       : mediaOption !== false
         ? defaultMedia(!!mediaOption)
         : undefined;
+  const schema = addSettings(mergePlugins(plugins, own), settingsOption, !!mediaOptions);
   if (mediaOptions) schema.collections.media = mediaCollection;
   checkSchema(schema, defaults);
   const media = mediaOptions && createMediaCore(mediaOptions, schema);
@@ -117,6 +121,29 @@ export function defineCms<
     media && mediaRoutes(core),
   );
   return cms as typeof cms & MediaOf<M>;
+}
+
+// Adds the settings globals. Without media, the defaults leave out their media fields.
+function addSettings(
+  schema: Required<Schema>,
+  option: false | SettingsOption | undefined,
+  hasMedia: boolean,
+) {
+  if (option === false) return schema;
+  const { favicon, ...general } = defaults.general.fields;
+  const { image, ...seo } = defaults.seo.fields;
+  const globals: Record<string, Global> = {
+    general: hasMedia ? defaults.general : { ...defaults.general, fields: general },
+    seo: hasMedia ? defaults.seo : { ...defaults.seo, fields: seo },
+  };
+  for (const name of Object.keys(globals)) {
+    const chosen = option?.[name as keyof SettingsOption];
+    if (chosen === false) continue;
+    if (Object.hasOwn(schema.globals, name))
+      throw new Error(`integral-cms: duplicate global "${name}"`);
+    schema.globals[name] = chosen ?? globals[name]!;
+  }
+  return schema;
 }
 
 // The `media` collection and `cms.media` exist unless `media: false`.

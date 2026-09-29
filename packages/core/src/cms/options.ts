@@ -24,6 +24,16 @@ export type PluginGlobals<PL extends readonly Plugin[]> = UnionToIntersection<
   NonNullable<PL[number]["globals"]>
 >;
 
+/**
+ * Which settings globals `defineCms()` adds. An omitted key is the default from `settings` in `integral-cms/presets`.
+ */
+export type SettingsOption = {
+  /** Site title, tagline, URL and favicon. `false` drops it, a `Global` replaces it. Stored as `general`. */
+  general?: Global | false;
+  /** Search and social defaults. `false` drops it, a `Global` replaces it. Stored as `seo`. */
+  seo?: Global | false;
+};
+
 export type CmsOptions<
   C extends Record<string, Collection>,
   G extends Record<string, Global>,
@@ -31,6 +41,7 @@ export type CmsOptions<
   P extends PopulateConfig = {},
   PL extends readonly Plugin[] = [],
   M extends MediaOptions | boolean | undefined = undefined,
+  S extends false | SettingsOption | undefined = undefined,
 > = {
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
   collections?: C & NoInfer<CheckRefs<C, C & PluginCollections<PL>> & Record<string, Collection>>;
@@ -54,5 +65,13 @@ export type CmsOptions<
    * - `false`: no media library. Core adds no routes, and `image` and `file` fields throw at startup.
    * - an object: your own storage, limits, images and hooks.
    */
-  media?: M;
+  media?: M /**
+   * The settings globals `general` and `seo`, shown on the admin's Settings page.
+   * - omitted: both defaults. Without a media library, they leave out `favicon` and `image`.
+   * - `false`: neither.
+   * - an object: `{ seo: false }` drops one, `{ general: myGlobal }` replaces one (stored under the same name).
+   *
+   * A collection or global named `general` or `seo` throws while that default is on.
+   */;
+  settings?: S;
 };
