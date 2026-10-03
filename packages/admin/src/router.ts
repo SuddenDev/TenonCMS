@@ -1,9 +1,8 @@
 import { useHead } from "@unhead/vue";
 import { h } from "vue";
-import { createRouter, createWebHistory, type RouteLocation, useRoute } from "vue-router";
+import { createRouter, createWebHistory, useRoute } from "vue-router";
 import type { Page } from "../../core/src/admin/index.d.ts";
 import Mount from "@/shared/components/Mount.vue";
-import { schema } from "@/shared/api";
 import { pagePath } from "@/shared/options";
 import CollectionList from "@/modules/documents/views/CollectionList.vue";
 import DocEdit from "@/modules/documents/views/DocEdit.vue";
@@ -23,18 +22,6 @@ function hostPage({ mount, label }: Page, key: string) {
   };
 }
 
-function label(kind: "collections" | "globals", name: unknown) {
-  return schema.value[kind]?.[String(name)]?.label ?? String(name);
-}
-
-// Items shown on the Settings page have it as their parent crumb.
-function parent(kind: "collections" | "globals") {
-  return (r: RouteLocation) =>
-    schema.value[kind]?.[String(r.params.name)]?.nav?.display === "settings"
-      ? "/settings"
-      : undefined;
-}
-
 export function createAdminRouter(base: string, pages: Record<string, Page> = {}) {
   return createRouter({
     history: createWebHistory(`${base}/`),
@@ -48,7 +35,12 @@ export function createAdminRouter(base: string, pages: Record<string, Page> = {}
           parent: p.nav?.display === "settings" ? "/settings" : undefined,
         },
       })),
-      { path: "/settings", component: Settings, meta: { breadcrumb: "Settings" } },
+      {
+        path: "/settings",
+        component: Settings,
+        meta: { breadcrumb: "Settings", panes: true },
+        children: [{ path: "globals/:name", component: GlobalEdit, meta: { panes: true } }],
+      },
       { path: "/", component: Dashboard, meta: { breadcrumb: "Dashboard" } },
       {
         path: "/media/:folder(.*)?",
@@ -71,24 +63,11 @@ export function createAdminRouter(base: string, pages: Record<string, Page> = {}
       {
         path: "/collections/:name",
         component: CollectionList,
-        meta: {
-          breadcrumb: (r) => label("collections", r.params.name),
-          parent: parent("collections"),
-        },
+        meta: { panes: true },
+        // The list stays mounted next to the open document.
+        children: [{ path: ":id", component: DocEdit, meta: { panes: true } }],
       },
-      {
-        path: "/collections/:name/:id",
-        component: DocEdit,
-        meta: { breadcrumb: (r) => (r.params.id === "new" ? "New" : "Untitled") },
-      },
-      {
-        path: "/globals/:name",
-        component: GlobalEdit,
-        meta: {
-          breadcrumb: (r) => label("globals", r.params.name),
-          parent: parent("globals"),
-        },
-      },
+      { path: "/globals/:name", component: GlobalEdit, meta: { panes: true } },
     ],
   });
 }

@@ -1,3 +1,4 @@
+import type { InjectionKey } from "vue";
 import { matchCondition } from "../../../../core/src/schema/condition";
 import type { Collection, Field } from "../../../../core/src/schema";
 
@@ -22,3 +23,9 @@ export function isEmpty(value: unknown): boolean {
 export function active(field: Field, root: unknown, sibling: unknown) {
   return !field.condition || matchCondition(field.condition, root, sibling);
 }
+
+/** Reloads what the view around a document shows: the list. Document panes call it after a save or delete. */
+export const reloadKey: InjectionKey<() => void> = Symbol("reload");
+
+/** Opens a referenced document in a pane to the right. Provided only in the pane layout. */
+export const openRefKey: InjectionKey<(collection: string, id: string) => void> = Symbol("openRef");

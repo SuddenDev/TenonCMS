@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, inject, ref, useId, watch } from "vue";
 import { client, type Field, type Fields, SLUG_PATTERN, schema, slugify } from "@/shared/api";
-import { active, isEmpty, titleField } from "@/modules/documents/fields";
+import { active, isEmpty, openRefKey, titleField } from "@/modules/documents/fields";
 import { optionsKey } from "@/shared/options";
 import MediaField from "@/modules/media/components/MediaField.vue";
+import Icon from "@/shared/components/Icon.vue";
 import Mount from "@/shared/components/Mount.vue";
+import { Button } from "@/shared/components/ui/button";
 import {
   Field as FieldBox,
   FieldContent,
@@ -57,6 +59,8 @@ const custom = props.field.type.startsWith("custom:")
 
 // ponytail: loads every document of the target collection; add search and paging when collections grow.
 const options = ref<{ id: string; label: string }[]>([]);
+const openRef = inject(openRefKey, undefined);
+const optionLabel = (v: string) => options.value.find((o) => o.id === v)?.label ?? v;
 if (props.field.type === "relation") {
   const target = props.field.collection;
   client.find(target, { populate: false }).then((docs) => {
@@ -172,30 +176,54 @@ if (slug?.parent && relation?.type === "relation") {
       v-bind="attrs"
       :aria-invalid="invalid"
     />
-    <select
-      v-else-if="field.type === 'relation' && field.many"
-      :id="id"
-      v-model="model"
-      multiple
-      class="input"
-      :required="required"
-      :disabled="field.readOnly"
-      :aria-invalid="invalid"
-    >
-      <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
-    </select>
-    <select
-      v-else-if="field.type === 'relation'"
-      :id="id"
-      v-model="model"
-      class="input"
-      :required="required"
-      :disabled="field.readOnly"
-      :aria-invalid="invalid"
-    >
-      <option :value="null" />
-      <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
-    </select>
+    <div v-else-if="field.type === 'relation' && field.many" class="flex flex-col gap-2">
+      <select
+        :id="id"
+        v-model="model"
+        multiple
+        class="input"
+        :required="required"
+        :disabled="field.readOnly"
+        :aria-invalid="invalid"
+      >
+        <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
+      </select>
+      <div v-if="openRef && model?.length" class="flex flex-wrap gap-1">
+        <Button
+          v-for="v in model"
+          :key="v"
+          type="button"
+          variant="outline"
+          size="xs"
+          @click="openRef(field.collection, v)"
+        >
+          {{ optionLabel(v) }}<Icon name="arrow-up-right" />
+        </Button>
+      </div>
+    </div>
+    <div v-else-if="field.type === 'relation'" class="flex gap-2">
+      <select
+        :id="id"
+        v-model="model"
+        class="input flex-1"
+        :required="required"
+        :disabled="field.readOnly"
+        :aria-invalid="invalid"
+      >
+        <option :value="null" />
+        <option v-for="o in options" :key="o.id" :value="o.id">{{ o.label }}</option>
+      </select>
+      <Button
+        v-if="openRef && model"
+        type="button"
+        variant="outline"
+        size="icon"
+        aria-label="Open"
+        @click="openRef(field.collection, model)"
+      >
+        <Icon name="arrow-up-right" />
+      </Button>
+    </div>
     <select
       v-else-if="field.type === 'select'"
       :id="id"

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { CmsError, type Data, type Fields } from "@/shared/api";
 import { active, isEmpty } from "@/modules/documents/fields";
+import { ago } from "@/shared/utils";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -15,6 +16,7 @@ import FieldInput from "./FieldInput.vue";
 
 // `isNew`: plain `default` values pre-fill the form, and slugs follow their `from` field. Function defaults are not in the schema; the server fills them.
 // `id`: the form's id, so a button outside of it can submit it with `form`.
+// The form fills its pane: fields in a centered column, the status bar stuck to the bottom.
 const props = defineProps<{
   id?: string;
   fields: Fields;
@@ -95,60 +97,67 @@ async function submit() {
 </script>
 
 <template>
-  <form :id="id" class="flex max-w-3xl flex-col gap-6" @submit.prevent="submit">
-    <Card v-if="plain.some(([, f]) => active(f, data, data))" class="gap-0 py-0">
-      <CardContent class="divide-border flex flex-col divide-y *:py-4">
-        <template v-for="[name, field] in plain" :key="name">
-          <FieldInput
-            v-if="active(field, data, data)"
-            v-model="data[name]"
-            :name="name"
-            :field="field"
-            :root="data"
-            :siblings="{ fields, data }"
-            :is-new="isNew"
-            :errors="errors"
-          />
-        </template>
-      </CardContent>
-    </Card>
-    <template v-for="{ name, field } in groups" :key="name">
-      <Card v-if="active(field, data, data)" class="gap-0 py-0">
-        <fieldset :disabled="field.readOnly" class="contents">
-          <CardHeader class="py-4">
-            <CardTitle>
-              {{ field.label ?? name }}
-              <span v-if="field.required" class="text-destructive" aria-hidden="true">*</span>
-            </CardTitle>
-            <CardDescription v-if="field.description">{{ field.description }}</CardDescription>
-            <FieldError v-if="errors[name]">{{ errors[name] }}</FieldError>
-          </CardHeader>
-          <CardContent class="divide-border border-border flex flex-col divide-y border-t *:py-4">
-            <template v-for="(child, key) in field.fields" :key="key">
-              <FieldInput
-                v-if="active(child, data, data[name] as Record<string, unknown>)"
-                v-model="(data[name] as Record<string, unknown>)[key]"
-                :name="String(key)"
-                :field="child"
-                :root="data"
-                :siblings="{ fields: field.fields, data: data[name] as Record<string, unknown> }"
-                :is-new="isNew"
-                :loose="!field.required && isEmpty(data[name] as Record<string, unknown>)"
-                :path="`${name}.${key}`"
-                :errors="errors"
-              />
-            </template>
-          </CardContent>
-        </fieldset>
+  <form :id="id" class="flex min-h-full flex-col" @submit.prevent="submit">
+    <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-6">
+      <Card v-if="plain.some(([, f]) => active(f, data, data))" class="gap-0 py-0">
+        <CardContent class="divide-border flex flex-col divide-y *:py-4">
+          <template v-for="[name, field] in plain" :key="name">
+            <FieldInput
+              v-if="active(field, data, data)"
+              v-model="data[name]"
+              :name="name"
+              :field="field"
+              :root="data"
+              :siblings="{ fields, data }"
+              :is-new="isNew"
+              :errors="errors"
+            />
+          </template>
+        </CardContent>
       </Card>
-    </template>
-    <div class="flex items-center gap-3">
-      <span v-if="saved" class="text-muted-foreground text-sm" role="status">Saved</span>
-      <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
-      <div class="ml-auto flex items-center gap-3">
-        <slot />
-        <Button type="submit" :disabled="busy">Save</Button>
-      </div>
+      <template v-for="{ name, field } in groups" :key="name">
+        <Card v-if="active(field, data, data)" class="gap-0 py-0">
+          <fieldset :disabled="field.readOnly" class="contents">
+            <CardHeader class="py-4">
+              <CardTitle>
+                {{ field.label ?? name }}
+                <span v-if="field.required" class="text-destructive" aria-hidden="true">*</span>
+              </CardTitle>
+              <CardDescription v-if="field.description">{{ field.description }}</CardDescription>
+              <FieldError v-if="errors[name]">{{ errors[name] }}</FieldError>
+            </CardHeader>
+            <CardContent class="divide-border border-border flex flex-col divide-y border-t *:py-4">
+              <template v-for="(child, key) in field.fields" :key="key">
+                <FieldInput
+                  v-if="active(child, data, data[name] as Record<string, unknown>)"
+                  v-model="(data[name] as Record<string, unknown>)[key]"
+                  :name="String(key)"
+                  :field="child"
+                  :root="data"
+                  :siblings="{ fields: field.fields, data: data[name] as Record<string, unknown> }"
+                  :is-new="isNew"
+                  :loose="!field.required && isEmpty(data[name] as Record<string, unknown>)"
+                  :path="`${name}.${key}`"
+                  :errors="errors"
+                />
+              </template>
+            </CardContent>
+          </fieldset>
+        </Card>
+      </template>
     </div>
+    <footer
+      class="bg-background border-border sticky bottom-0 mt-auto flex items-center gap-3 border-t px-4 py-2"
+    >
+      <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
+      <span v-else-if="saved" class="text-muted-foreground text-sm" role="status">Saved</span>
+      <span v-else-if="initial.updatedAt" class="text-muted-foreground text-sm">
+        Edited {{ ago(initial.updatedAt as string) }}
+      </span>
+      <div class="ml-auto flex items-center gap-2">
+        <slot />
+        <Button type="submit" size="sm" :disabled="busy">Save</Button>
+      </div>
+    </footer>
   </form>
 </template>
