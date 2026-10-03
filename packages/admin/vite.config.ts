@@ -6,7 +6,7 @@ import path from "path";
 // The example dev server serves the API. `pnpm dev:<example>` sets CMS_URL.
 const target = process.env.CMS_URL ?? "http://localhost:4321";
 
-export default defineConfig({
+export default defineConfig(() => ({
   plugins: [vue(), tailwindcss()],
   build: {
     // Vue is bundled in. Hosts plug in through `mount(el)`, so no shared runtime is needed.
@@ -27,4 +27,4 @@ export default defineConfig({
       "/api/cms": { target, changeOrigin: true, headers: { origin: target } },
     },
   },
-});
+}));
