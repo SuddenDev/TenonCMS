@@ -56,7 +56,8 @@ function useEntries() {
           description: g.description,
           icon: "settings",
           order: 20,
-          to: `/globals/${name}`,
+          // Settings globals open next to the Settings list.
+          to: g.nav?.display === "settings" ? `/settings/globals/${name}` : `/globals/${name}`,
         },
         g.nav,
       ),

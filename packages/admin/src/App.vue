@@ -20,6 +20,14 @@ useTheme();
 // The same layout component is patched, not remounted, so it survives navigation.
 const layout = computed(() => layouts[route.meta.layout ?? "default"]);
 
+// A view with child routes stays mounted while its children change, e.g. the list next to a document.
+// A query change never remounts: views and host pages follow it themselves.
+const viewKey = computed(() =>
+  route.matched.length > 1
+    ? route.matched[0]!.path.replace(/:(\w+)/g, (_, k: string) => String(route.params[k]))
+    : route.path,
+);
+
 const { name } = useBrand();
 const favicon = inject(optionsKey, {}).favicon;
 
@@ -40,6 +48,6 @@ useHead({
   <div v-if="loading" />
   <Login v-else-if="!user" @done="load" />
   <component :is="layout" v-else>
-    <RouterView :key="$route.fullPath" />
+    <RouterView :key="viewKey" />
   </component>
 </template>

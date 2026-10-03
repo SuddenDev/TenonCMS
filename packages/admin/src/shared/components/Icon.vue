@@ -13,5 +13,5 @@ const icon = defineAsyncComponent(async () => {
 </script>
 
 <template>
-  <component :is="icon" class="size-4 shrink-0" />
+  <component :is="icon" class="size-[1.2em]! shrink-0 leading-tight text-current" />
 </template>
