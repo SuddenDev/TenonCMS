@@ -1,6 +1,7 @@
 import { consola } from "consola";
-import { type Core, q, type Scope } from "../cms/scope.ts";
-import { findDocs } from "../db/documents.ts";
+import { type Core, type Scope } from "../cms/runtime/types.ts";
+import { q } from "../cms/runtime/transaction.ts";
+import { findDocs } from "../db/queries/documents/find-documents.query.ts";
 import type { Modifiers } from "../schema/index.ts";
 import { type MediaCore, mediaOf } from "./core.ts";
 import { hasVariants } from "./images.ts";

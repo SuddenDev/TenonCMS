@@ -1,7 +1,7 @@
 # preview
 
 Live preview. The admin shows the site next to the form and pushes unsaved form state into it with `postMessage`.
-Nothing here touches the database except `url.ts`.
+Nothing here touches the database except `server/resolve-url.ts`.
 
 The admin resolves relative preview URLs against the `site` option of `defineCms()` (default: its own origin). The
 page talks only to its `parent` (the admin's iframe) or `opener` (a tab the admin opened), and only after that window
@@ -10,14 +10,20 @@ sent a first message from the origin of the `admin` option (a path for the site'
 On another origin, drafts reach the page through messages, but the drafts perspective needs the preview cookie, so a
 server render shows drafts only when the site shares the admin's cookies (same site).
 
-| File              | What it does                                                                                                                                              |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config/types.ts` | Preview URL configuration, runtime options, draft snapshots and message contracts.                                                                        |
-| `template.ts`     | `placeholders()` and `resolve()` for `preview` templates like `'/{category.slug}/{slug}'`. No imports.                                                    |
-| `url.ts`          | `previewUrl()`: the URL of a document or global from its form state. Reads one relation hop with `findById`, or calls the host's function.                |
-| `index.ts`        | `integral-cms/preview`, the browser runtime: `edit()`, `preview()` (with the bars), `subscribe()`, `getDrafts()`, `merge()`. No code runs at import time. |
-| `vue.ts`          | `integral-cms/preview/vue`: `useDraft(collection, doc)`, a shallow ref with the draft merged in.                                                          |
-| `react.ts`        | `integral-cms/preview/react`: `useDraft(collection, doc)` on `useSyncExternalStore`.                                                                      |
+| File                            | What it does                                                                                                            |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`                      | Browser-safe public exports.                                                                                            |
+| `config/types.ts`               | Preview configuration, messages, drafts, and runtime options.                                                           |
+| `templates/placeholders.ts`     | Lists template paths, with no imports.                                                                                  |
+| `templates/resolve-template.ts` | Fills template values, with no imports.                                                                                 |
+| `server/resolve-url.ts`         | Resolves form-state preview URLs, reading one relation hop or calling the host's function.                              |
+| `runtime/preview.ts`            | Starts and stops the runtime, checks message origin/source, observes document changes, and handles saved-page morphing. |
+| `runtime/store.ts`              | The singleton draft snapshot and subscriptions.                                                                         |
+| `runtime/merge-draft.ts`        | Merges drafts while preserving populated values whose IDs match.                                                        |
+| `runtime/bind-elements.ts`      | Field bindings, DOM patches, and document discovery.                                                                    |
+| `runtime/bars.ts`               | Preview/admin bars and perspective controls.                                                                            |
+| `vue.ts`                        | `useDraft()` using a Vue shallow ref.                                                                                   |
+| `react.ts`                      | `useDraft()` using React's external store.                                                                              |
 
 `index.ts`, `vue.ts` and `react.ts` run in the browser and in server bundles. They MUST NOT import zod or core
 runtime code.

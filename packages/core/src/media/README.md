@@ -28,7 +28,7 @@ The storage and provider files are their own package entries, so `node:fs`, `ipx
 
 Rules:
 
-- Media documents change only through the media API. The local API's `create`, `update` and `delete` reject `media`, so the generic routes and `cms.create('media')` answer 400. Media code calls `write()` and `remove()` directly.
+- Media documents change only through the media API. The local API's `create`, `update` and `delete` reject `media`, so the generic routes and `cms.create('media')` answer 400. Media code calls `content/writes/write-document.ts` and `content/writes/remove-document.ts` directly.
 - Every operation writes storage first, then the database, then cleans storage up. A failure leaves at most a stray object, never a document without its file.
 - `cms_uploads` holds uploads in progress: it reserves the key and binds the upload to its user.
 - Media documents live in `cms_documents`. `cms_media_key_idx` keeps `key` unique; `/files` and `/img` look documents up with `mediaByKey()`, which uses it.

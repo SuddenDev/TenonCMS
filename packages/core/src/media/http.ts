@@ -1,6 +1,6 @@
 import { type Context, Hono } from "hono";
-import type { Core } from "../cms/scope.ts";
-import { mediaByKey } from "../db/documents.ts";
+import type { Core } from "../cms/runtime/types.ts";
+import { mediaByKey } from "../db/queries/media/media-by-key.query.ts";
 import { type Env, notFound } from "../http/middleware.ts";
 import { mediaOf } from "./core.ts";
 import { hasVariants, parseImgPath } from "./images.ts";

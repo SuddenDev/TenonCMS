@@ -3,7 +3,7 @@ import { type Condition, isObject, matchCondition } from "./condition.ts";
 import { ValidationError } from "../errors.ts";
 import { fieldSchema } from "./fields/index.ts";
 import { fieldAt, isRef, relationPaths, targetOf } from "./walk.ts";
-import { placeholders } from "../preview/template.ts";
+import { placeholders } from "../preview/templates/placeholders.ts";
 import type { Collection, Fields, Schema } from "./index.ts";
 
 // Startup checks.

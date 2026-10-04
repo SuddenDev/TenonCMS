@@ -1,7 +1,7 @@
 import { APIError, type BetterAuthOptions } from "better-auth";
 import { type Kysely, sql } from "kysely";
 import { API_BASE } from "../../client/index.ts";
-import type { Database } from "../../db/index.ts";
+import type { Database } from "../../db/types.ts";
 import type { AuthOptions } from "./options.ts";
 
 type UserCreate = NonNullable<

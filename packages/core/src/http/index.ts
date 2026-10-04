@@ -8,9 +8,10 @@ import type { Cms } from "../index.ts";
 import { ConflictError, ValidationError } from "../errors.ts";
 import type { Plugin, PublicRouteEnv, RouteEnv } from "../plugins/index.ts";
 import { innerFields, mapValue } from "../schema/walk.ts";
-import { badSelectPath, type SelectSpec } from "../cms/populate.ts";
+import { badSelectPath } from "../content/population/validate-select.ts";
+import { type SelectSpec } from "../content/population/select-fields.ts";
 import type { Collection, Fields, Global, LocalApi, Schema } from "../schema/index.ts";
-import { previewUrl } from "../preview/url.ts";
+import { previewUrl } from "../preview/server/resolve-url.ts";
 import {
   caller,
   type Env,

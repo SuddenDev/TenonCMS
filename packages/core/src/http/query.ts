@@ -1,6 +1,7 @@
 import { isObject } from "../schema/condition.ts";
 import { filterable, innerFields, isRef } from "../schema/walk.ts";
-import type { SelectSpec, Spec } from "../cms/populate.ts";
+import type { SelectSpec } from "../content/population/select-fields.ts";
+import type { Spec } from "../content/population/population-spec.ts";
 import type { Collection, Field, Fields } from "../schema/index.ts";
 
 /** `public`: a read without a session. `admin`: a request with a session. */

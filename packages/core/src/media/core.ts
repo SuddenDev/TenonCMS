@@ -1,4 +1,6 @@
-import { col, type Core, hookArgs, type Inner } from "../cms/scope.ts";
+import { col } from "../content/targets.ts";
+import { type Core, type Inner } from "../cms/runtime/types.ts";
+import { hookArgs } from "../content/lifecycle/hook-args.ts";
 import { list, runHooks } from "../schema/hooks/run.ts";
 import type { MediaDoc, MediaHooks, Modifiers, Schema } from "../schema/index.ts";
 import { relationPaths } from "../schema/walk.ts";

@@ -2,10 +2,16 @@
 
 `integral-cms/client`: a typed HTTP client for `/api/cms`, with the same method names as the local API. It runs in the browser and imports types only.
 
-| File            | What it does                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------ |
-| `index.ts`      | `createClient()`, `CmsError`, `API_BASE`, and the types that map the schema to what HTTP returns.      |
-| `register.d.ts` | Fills the `Register` interface with the host's `cms` type, so `createClient()` needs no type argument. |
+| File                  | What it does                                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`            | Public exports and the augmentable `Register` interface.                                                               |
+| `types.ts`            | Schema-derived document types, client contracts, and registration resolution.                                          |
+| `create-client.ts`    | Binds content, auth, preview, and media methods to an instance. Upload retries and progress stay within that instance. |
+| `create-request.ts`   | Binds the configured origin and fetch function; serializes requests and parses responses.                              |
+| `query/read-query.ts` | Serializes populate, depth, and select options.                                                                        |
+| `errors.ts`           | `CmsError`, including status and parsed error body.                                                                    |
+| `constants.ts`        | The shared HTTP API path.                                                                                              |
+| `register.d.ts`       | Fills `Register` with the host's CMS type.                                                                             |
 
 The admin uses this client too, so there is only one HTTP client.
 

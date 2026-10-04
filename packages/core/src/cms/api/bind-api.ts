@@ -1,10 +1,17 @@
 import type { LocalApi } from "../../schema/hooks/index.ts";
 import { mediaApi } from "../../media/api.ts";
-import { read, readGlobal } from "../read.ts";
-import { run } from "../run.ts";
+import { read } from "../../content/reads/read-documents.ts";
+import { readGlobal } from "../../content/reads/read-global.ts";
+import { run } from "../../content/lifecycle/run-operation.ts";
 import { ValidationError } from "../../errors.ts";
-import { col, type Core, draftable, glob, known, type Scope } from "../scope.ts";
-import { create, discard, publish, remove, setGlobal, update } from "../write.ts";
+import { col, draftable, glob, known } from "../../content/targets.ts";
+import { type Core, type Scope } from "../runtime/types.ts";
+import { create } from "../../collections/operations/create.operation.ts";
+import { discard } from "../../content/writes/discard-draft.ts";
+import { publish } from "../../content/writes/publish-document.ts";
+import { remove } from "../../content/writes/remove-document.ts";
+import { setGlobal } from "../../globals/operations/set.operation.ts";
+import { update } from "../../collections/operations/update.operation.ts";
 
 // Media documents change only through `cms.media`.
 function writable(core: Core, collection: string) {

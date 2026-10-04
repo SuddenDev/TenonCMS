@@ -1,4 +1,4 @@
-import type { Core, Scope } from "../cms/scope.ts";
+import type { Core, Scope } from "../cms/runtime/types.ts";
 import type { MediaApi } from "../schema/hooks/media.ts";
 import { removeMedia, renameFolder, update } from "./library.ts";
 import { upload } from "./upload.ts";

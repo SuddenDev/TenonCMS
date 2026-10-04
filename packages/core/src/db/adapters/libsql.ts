@@ -1,0 +1,56 @@
+import type { Client, Transaction } from "@libsql/client";
+import {
+  type DatabaseConnection,
+  type Dialect,
+  SqliteAdapter,
+  SqliteIntrospector,
+  SqliteQueryCompiler,
+} from "kysely";
+
+type Connection = DatabaseConnection & { tx?: Transaction };
+
+// Same shape as `@libsql/kysely-libsql`, over our own `@libsql/client`. That package pulls a second client and native binary.
+export function libsqlDialect(client: Client): Dialect {
+  return {
+    createAdapter: () => new SqliteAdapter(),
+    createIntrospector: (db) => new SqliteIntrospector(db),
+    createQueryCompiler: () => new SqliteQueryCompiler(),
+    createDriver: () => ({
+      async init() {},
+      async acquireConnection() {
+        const connection: Connection = {
+          async executeQuery(query) {
+            const result = await (connection.tx ?? client).execute({
+              sql: query.sql,
+              args: query.parameters as any[],
+            });
+            return {
+              rows: result.rows as any[],
+              numAffectedRows: BigInt(result.rowsAffected),
+              insertId: result.lastInsertRowid,
+            };
+          },
+          streamQuery() {
+            throw new Error("libsql dialect does not support streaming");
+          },
+        };
+        return connection;
+      },
+      async beginTransaction(connection: Connection) {
+        connection.tx = await client.transaction("write");
+      },
+      async commitTransaction(connection: Connection) {
+        await connection.tx!.commit();
+        connection.tx = undefined;
+      },
+      async rollbackTransaction(connection: Connection) {
+        await connection.tx!.rollback();
+        connection.tx = undefined;
+      },
+      async releaseConnection() {},
+      async destroy() {
+        client.close();
+      },
+    }),
+  };
+}

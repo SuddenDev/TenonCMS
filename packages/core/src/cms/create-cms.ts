@@ -1,6 +1,7 @@
 import type { User } from "better-auth";
 import { consola } from "consola";
-import { createDb, migrate } from "../db/index.ts";
+import { createDb } from "../db/create-db.ts";
+import { migrate } from "../db/migrations/migrate.ts";
 import { createApp } from "../http/index.ts";
 import { caller } from "../http/middleware.ts";
 import { defaultMedia } from "integral-cms/media/default";
@@ -26,7 +27,7 @@ import type {
   SettingsGlobals,
   SettingsOption,
 } from "./config/options.ts";
-import type { Core } from "./scope.ts";
+import type { Core } from "./runtime/types.ts";
 
 /**
  * Creates a CMS instance. Export it as the default export of `integral.config.ts`.

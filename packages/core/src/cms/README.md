@@ -1,46 +1,18 @@
 # cms
 
-`index.ts` exports `defineCms()` and the local API types. Auth configuration lives in `../auth/`. All reads and writes run through here, whether they come from server code, HTTP or a hook.
+Instance construction and local API assembly. `index.ts` exports `defineCms()` and public types. Feature actions live in `collections/` and `globals/`; their shared pipelines live in `content/`.
 
-| File                     | What it does                                                                                                                                                          |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create-cms.ts`          | `defineCms()` adds the settings globals (`addSettings()`), checks the schema, connects lazily, builds `Core` and the `cms` object with `drafts()` and `forRequest()`. |
-| `config/options.ts`      | `CmsOptions`, the options type of `defineCms()`, and the plugin and settings type math (`SettingsGlobals`).                                                           |
-| `scope.ts`               | `Core` (what every file below needs from the instance), `Scope` (one call: user, transaction, context, perspective) and small shared helpers.                         |
-| `api/bind-api.ts`        | `bind()`: the local API methods. `api/types.ts` carries their typed interface and docs.                                                                               |
-| `run.ts`                 | `run()`: wraps every call with `beforeOperation` / `afterOperation`, the transaction and `afterError`.                                                                |
-| `read.ts`                | `find`, `findOne`, `findById`, `getGlobal`: load, read hooks, populate, `select`.                                                                                     |
-| `write.ts`               | `create`, `update`, `setGlobal`, `delete`, `publish`, `discard`: the write pipeline.                                                                                  |
-| `populate.ts`            | Resolves relations and joins on read, and applies `select`.                                                                                                           |
-| `refs.ts`                | Integrity rules: ids must exist, `unique`, and `onDelete` (`restrict`, `set-null`, `cascade`).                                                                        |
-| `config/add-settings.ts` | Adds default or replacement settings globals, preserving duplicate-name checks.                                                                                       |
+| Path                           | Responsibility                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `create-cms.ts`                | Assemble schema and defaults, connect lazily, build the core and expose `drafts()`/`forRequest()`. |
+| `config/options.ts`            | CMS options and plugin/settings type inference.                                                    |
+| `config/add-settings.ts`       | Add default or replacement settings globals with duplicate-name checks.                            |
+| `api/bind-api.ts`              | Bind local methods and optional media API to one scope.                                            |
+| `api/types.ts`                 | Public typed local API and method documentation.                                                   |
+| `runtime/types.ts`             | `Core`, `Scope` and the bound `Inner` scope used by hooks.                                         |
+| `runtime/operation-context.ts` | Keep nested call context and bind the API hooks receive.                                           |
+| `runtime/transaction.ts`       | Reuse a scope's transaction or open one for media operations.                                      |
 
-## One write
+The API routes collection writes through their operations and `content/lifecycle/run-operation.ts`. `content/writes/write-document.ts` owns the shared write stage order and draft behavior. `content/reads/read-results.ts` owns read hooks, population, media decoration and selection. Database queries live in `db/`; auth configuration lives in `auth/`.
 
-```
-api/bind-api.ts  create()
-  └ run.ts  run()            beforeOperation, open transaction
-      └ write.ts  write()    defaults, slugs, beforeValidate, validate, beforeChange,
-                             validate again, unique, refs, save, afterChange, afterRead
-      afterOperation, commit (or afterError on failure)
-```
-
-A draft save (`{ draft: true }`) stops after `beforeChange`: it checks types only (`parseData(…, loose)`), skips `validate`,
-`unique`, ids and `afterChange`, and stores the draft column. `publish()` runs the full pipeline as an `update` (or `setGlobal`)
-on the draft and clears it. `discard()` clears the draft, or deletes a document that was never published through `remove()`.
-Hooks get `draft` in their args. A collection or global with `drafts: false` rejects draft saves and `discard()`.
-
-## One read
-
-```
-api/bind-api.ts  find() → run.ts run() → read.ts read()
-  check where / select → db → beforeRead → populate → afterRead → select
-```
-
-Hooks get their own `cms` (built by `inner()` in `scope.ts`). Calls through it share the transaction, `context` and the perspective.
-
-## Perspective
-
-A read sees published documents (default) or drafts (`Scope.drafts`). `cms.drafts()` returns the instance in the drafts
-perspective. `cms.forRequest(request)` returns it with the session user, in the drafts perspective when the request
-carries the preview cookie (`PREVIEW_COOKIE` in `http/middleware.ts`) set to `drafts` and a valid session. Read options never carry it.
+Nested calls inherit transaction, user, context and perspective. Reads use the published perspective unless `Scope.drafts` is set. `cms.drafts()` enables drafts; `cms.forRequest(request)` enables them only with the preview cookie and a valid session. Read options do not set the perspective.

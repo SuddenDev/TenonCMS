@@ -97,3 +97,11 @@ Extract CMS construction/options/API declarations, collection/global definitions
 Review: all 285 baseline top-level function bodies match after ignoring whitespace/comments. Auth retains its first-user guard, forced email/password login, and fixed model names. Configuration assembly order, lazy initialization, media scope binding, and browser type-only imports remain intact. No new behavior requires RED–GREEN tests.
 
 Proof: 114 focused tests pass; core type/declaration checks pass; root `pnpm typecheck` passes all six workspaces and both package builds; `pnpm lint` passes. No unresolved review findings.
+
+### Round 2: Shared content, persistence, client, and preview
+
+Extract the shared engine and named database queries. Split client requests/types/query serialization and preview store/DOM/runtime/templates/server resolution. Existing unit assertions move beside their owners.
+
+Review: engine/query/migration bodies preserve their behavior. Three action functions inline the same draft-flag expression. Client requests keep per-instance state; `Register` remains at the public entry for module augmentation. Preview preserves its singleton state, message source/origin checks, observer cleanup, and server-safe entry. Internal deletion effects retain their existing validation exemptions.
+
+Proof: root `pnpm test` passes 520 tests across 46 files, with the same two live-S3 skips; `pnpm typecheck`, `pnpm lint`, and `pnpm fmt:check` pass. Runtime import tracing finds no external client dependencies, only `idiomorph` for preview, and the expected Vue/React peers for framework entries. No unresolved review findings.

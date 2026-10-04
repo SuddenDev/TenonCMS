@@ -11,7 +11,8 @@ The source of the `integral-cms` package. Each folder is one area and has its ow
 | `globals/`      | Global configuration and typed definition helpers.                                           |
 | `auth/`         | better-auth configuration and provider creation.                                             |
 | `schema/`       | How content is described: collections, fields, hooks, the types built from them, validation. |
-| `db/`           | Every SQL query. One JSON documents table for all collections.                               |
+| `content/`      | Shared lifecycle, read/write pipelines, population and content integrity.                    |
+| `db/`           | Content queries and migrations. One JSON documents table for all collections.                |
 | `http/`         | The `/api/cms` HTTP API (Hono), a thin layer over the local API.                             |
 | `client/`       | `createClient()`, the typed HTTP client for the browser.                                     |
 | `media/`        | The media library: uploads, storage adapters (`local`, `s3`), image providers, media routes. |
@@ -26,7 +27,7 @@ The source of the `integral-cms` package. Each folder is one area and has its ow
 ## How a request flows
 
 ```
-browser ── client/ ──▶ http/ ──▶ cms/ (local API) ──▶ schema/ (validate, hooks) ──▶ db/
+browser ── client/ ──▶ http/ ──▶ cms/ (local API) ──▶ collections/globals ──▶ content/ ──▶ db/
 server code ─────────────────────▲
 ```
 
