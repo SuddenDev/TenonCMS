@@ -1,5 +1,7 @@
 # Core source refactor progress
 
+Status: structural migration complete on `refactor/core-src-structure`. All source rounds are reviewed and committed. The architectural add-ons remain separate follow-up work.
+
 ## Baseline: 2026-10-04
 
 The structural migration follows `2026-10-04-core-src-structure-plan.md`. The add-ons remain separate follow-up work. Baseline work changes no source behavior.
@@ -67,7 +69,7 @@ Admin source directly imports core internals. Check these consumers in every aff
 
 Framework adapters reference copied runtime paths and virtual config modules. Preserve source copies and their relative resolution when updating build entries.
 
-### Test ownership and remaining proof
+### Test ownership and remaining proof at baseline
 
 Existing integration suites exercise auth/session forgery, CSRF, protected and public plugins, malformed content bodies, visibility, drafts, preview URLs, hooks/nested calls, rollback, references, settings, population, and media lifecycle behavior. Existing media tests cover storage move compensation, partial folder rename recovery, file sandbox headers/ranges, modifier allowlists, upload lifecycle, and regeneration. Unit tests cover schema/type inference, conditions, population, query parsing, browser preview runtime/templates, media helpers/providers/adapters, admin helpers, and presets.
 
@@ -88,9 +90,13 @@ Remaining proof for the completed migration:
 
 Branch: `refactor/core-src-structure`, based on `af8a7c8`.
 
+Commit: `33ed4ab`.
+
 The baseline confirms existing tests, declarations, and workspace types pass. The user stops the core watcher; the root agent confirms PID 22927 is absent before subsequent clean builds. The route, packaging, and security inventory above guides each round's review.
 
 ### Round 1: Configuration and public contracts
+
+Commit: `116b604`.
 
 Extract CMS construction/options/API declarations, collection/global definitions, auth configuration, media configuration/API binding, and preview types. Public entry names and generic signatures remain compatible.
 
@@ -100,6 +106,8 @@ Proof: 114 focused tests pass; core type/declaration checks pass; root `pnpm typ
 
 ### Round 2: Shared content, persistence, client, and preview
 
+Commit: `d310d02`.
+
 Extract the shared engine and named database queries. Split client requests/types/query serialization and preview store/DOM/runtime/templates/server resolution. Existing unit assertions move beside their owners.
 
 Review: engine/query/migration bodies preserve their behavior. Three action functions inline the same draft-flag expression. Client requests keep per-instance state; `Register` remains at the public entry for module augmentation. Preview preserves its singleton state, message source/origin checks, observer cleanup, and server-safe entry. Internal deletion effects retain their existing validation exemptions.
@@ -107,6 +115,8 @@ Review: engine/query/migration bodies preserve their behavior. Three action func
 Proof: root `pnpm test` passes 520 tests across 46 files, with the same two live-S3 skips; `pnpm typecheck`, `pnpm lint`, and `pnpm fmt:check` pass. Runtime import tracing finds no external client dependencies, only `idiomorph` for preview, and the expected Vue/React peers for framework entries. No unresolved review findings.
 
 ### Round 3: Feature entry points, media, schema, and adapter helpers
+
+Commit: `ab14e25`.
 
 Extract collection/global operations and scoped local wrappers, feature Hono endpoints, auth/request middleware, HTTP query/visibility/error helpers, and plugin contracts. Restructure media capabilities, schema validation/traversal/runtime/inference, and admin HTML/path/favicon/input helpers. Existing unit assertions remain colocated with their owners.
 
@@ -118,3 +128,25 @@ Review finds and resolves two issues:
 The root review matches all 31 route definitions and preserves middleware order. All 284 non-assembly function bodies from round 2 match after ignoring whitespace/comments; the three changed assemblers bind extracted owners. Additional cross-review covers media compensation and transaction timing, upload ownership, private/query visibility, data-dependent validation, client instance state, and preview origin/source checks. No unresolved security or behavior findings.
 
 Proof: root `pnpm test` passes 521 tests across 52 files, with the same two live-S3 skips; `pnpm typecheck` and `pnpm lint` pass. Browser runtime dependency tracing remains unchanged. Final example builds and runtime smoke checks follow in round 4.
+
+### Round 4: Navigation, packaging, and production verification
+
+The source overview maps all 17 modules and walks through a collection write, global read, upload completion, and preview URL. Module READMEs and `CLAUDE.md` describe the current paths, responsibility rules, and preserved runtime invariants. Static audits confirm every module README, source overview link, copied runtime file, and direct admin import resolves. Historical plans and specifications remain historical records.
+
+Final proof:
+
+| Check                          | Outcome                                                                                                                                                                                                                                                     |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test`                    | PASS: 521 tests across 52 files; two existing live-S3 tests skip without their configured environment.                                                                                                                                                      |
+| `pnpm typecheck`               | PASS: package declarations, admin build, and all six workspace type checks.                                                                                                                                                                                 |
+| `pnpm lint`                    | PASS.                                                                                                                                                                                                                                                       |
+| `pnpm fmt:check`               | PASS, including Astro formatting.                                                                                                                                                                                                                           |
+| `pnpm build`                   | PASS: core, admin, and all four examples.                                                                                                                                                                                                                   |
+| Public package surface         | All 20 specifiers and 42 emitted targets exist; 18 runtime entries import successfully. The type-only register entry passes type checks; the admin SPA passes build and HTTP serving checks. Export mappings and optional peer metadata match the baseline. |
+| Browser and Workerd boundaries | Emitted client/preview dependencies contain no server imports. Local, IPX, and default-media entries retain their expected Workerd behavior.                                                                                                                |
+| Production example smoke tests | All four examples pass with isolated temporary databases/storage: first-user signup, protected anonymous 401, content create/public read, admin HTML/assets, preview cookie, and draft visibility. Dynamic framework pages render draft content.            |
+| Production media smoke         | Standalone PNG upload/part/completion, dimensions, original bytes, 206 range, sandbox/nosniff headers, and WebP variant pass.                                                                                                                               |
+
+The smoke servers stop after verification. Smoke tests leave existing example data and development processes untouched. TanStack's build regenerates its route tree using its own formatting; applying the repository formatter restores the tracked file with no diff.
+
+No unresolved correctness, security, or architecture findings remain from the refactor reviews. Live S3 verification is the only environment-dependent test omission. The five architectural add-ons are intentionally outside this structural migration.

@@ -2,7 +2,7 @@
 
 Date: 2026-10-04. Scope: `packages/core/src/` and the imports, build settings, tests, and documentation affected by its restructuring.
 
-Status: planned. Source implementation is a follow-up task.
+Status: structural migration complete. Verification and round reviews are recorded in [the progress report](2026-10-04-core-src-refactor-progress.md). The architectural add-ons remain separate follow-up work.
 
 ## Overview
 
