@@ -70,7 +70,7 @@ export function definePlugin<
 }
 
 // Route prefixes core uses under `/api/cms`.
-const reserved = ["auth", "collections", "globals", "schema", "media"];
+const reserved = ["auth", "collections", "globals", "schema", "media", "preview"];
 
 /** The host's schema with every plugin's collections and globals. Throws for duplicate or invalid names. */
 export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Required<Schema> {

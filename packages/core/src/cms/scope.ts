@@ -36,6 +36,8 @@ export type Scope = {
   context: Record<string, unknown>;
   // True inside a hook: the call keeps `context` and runs no `afterError` of its own.
   nested: boolean;
+  /** Reads use the drafts perspective. Default: published. */
+  drafts?: boolean;
 };
 /** The scope hooks and nested calls get, with its bound API. */
 export type Inner = Scope & { cms: LocalApi };

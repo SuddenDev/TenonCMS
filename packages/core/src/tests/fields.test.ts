@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, origin, setup, status, type Env } from "./setup.ts";
+import { admin, fresh, origin, published, setup, status, type Env } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -330,11 +330,12 @@ describe("private", () => {
         id: p.id,
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
+        ...published,
       });
-    expect(await client.getGlobal("site")).toEqual({ name: "S" });
+    expect(await client.getGlobal("site")).toEqual({ name: "S", ...published });
     await client.signUp(admin);
     for (const read of await reads()) expect(read).toMatchObject(person);
-    expect(await client.getGlobal("site")).toEqual({ name: "S", key: "k" });
+    expect(await client.getGlobal("site")).toEqual({ name: "S", key: "k", ...published });
   });
 
   it("cannot be filtered without a session", async () => {
@@ -368,6 +369,7 @@ describe("private", () => {
       id: p.id,
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
+      ...published,
     });
   });
 });

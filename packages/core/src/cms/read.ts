@@ -27,14 +27,17 @@ export async function read(core: Core, s: Inner, collection: string, options: Re
     if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`);
     if (!filterable(fields, key)) throw new Error(`Field "${key}" is not filterable`);
   }
-  const docs = await findDocs(await q(core, s), collection, options);
+  const docs = await findDocs(await q(core, s), collection, { ...options, drafts: s.drafts });
   return readDocs(core, s, col(collection), docs, spec, select);
 }
 
 /** `getGlobal`. Fields that were never saved are missing. */
 export async function readGlobal(core: Core, s: Inner, name: string, options: ReadOpts) {
   const { spec, select } = readSpec(core, core.schema.globals[name].fields, options, false);
-  const data = (await loadGlobal(await q(core, s), name)) ?? {};
+  const data = (await loadGlobal(await q(core, s), name, s.drafts)) ?? {
+    publishedAt: null,
+    hasDraft: false,
+  };
   return (await readDocs(core, s, glob(name), [data], spec, select))[0];
 }
 
@@ -75,6 +78,7 @@ async function readDocs(
   const operation = name.kind === "collection" ? "read" : "getGlobal";
   const before = await beforeRead(core, s, name, docs, operation);
   await populate(await q(core, s), collections, fields, before, spec, {
+    drafts: !!s.drafts,
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
     before: (collection, docs) => beforeRead(core, s, col(collection), docs, "read"),
     after: (collection, docs) => afterRead(core, s, col(collection), docs, "read"),

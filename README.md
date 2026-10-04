@@ -627,7 +627,7 @@ notes: {
 },
 ```
 
-The pages preset sets `preview: "{path}"`. A placeholder that names no stored field throws at startup.
+The pages preset has `page.preview` (`"{path}"`): add `preview: page.preview` to the collection. A placeholder that names no stored field throws at startup.
 
 On the site, mark what a field renders with `edit()` and start the runtime with `preview()`. It does nothing outside the admin's preview, so it is safe on every page.
 
@@ -648,6 +648,42 @@ Vue and React pages can re-render from the unsaved state too, so lists and condi
 import { useDraft } from "integral-cms/preview/vue"; // or integral-cms/preview/react
 const post = useDraft("posts", data); // Vue: a ref; React: the merged value
 ```
+
+Per framework:
+
+- **Astro**: the integration injects `preview()` into every page. `integralCms({ preview: false })` leaves it out. Astro pages render on the server, so only bound elements update.
+- **Nuxt**: the module starts the runtime in a client plugin, and `useIntegral()` merges the unsaved state into the `data` of `find`, `findOne`, `findById` and `getGlobal`. Pages only add `edit()`.
+- **TanStack Start and other Vite hosts**: call `preview()` once in the root component, in a `useEffect`, and pass loader data through `useDraft()`:
+
+```tsx
+// src/routes/__root.tsx
+useEffect(() => preview(), []);
+// src/routes/posts/$slug.tsx
+const post = useDraft("posts", Route.useLoaderData());
+```
+
+### Drafts
+
+Every document and global has a published version and MAY have a pending draft. Reads return the meta with them: `publishedAt` (`null` if never published) and `hasDraft`.
+
+Reads run in one of two perspectives:
+
+- **published** (default): only published documents, with their published data.
+- **drafts**: every document, with its draft where one is pending. Filters, relations and joins use the draft data too.
+
+```ts
+await cms.find("posts"); // published
+await cms.drafts().find("posts"); // drafts
+```
+
+Server-rendered pages get the perspective of the visitor with `forRequest()`. It returns the instance with the session user, and in the drafts perspective when the request carries the preview cookie and a valid session:
+
+```ts
+const integral = await cms.forRequest(request);
+const posts = await integral.find("posts");
+```
+
+The preview cookie (`integral-preview`, `HttpOnly`) is set by `POST /api/cms/preview` and cleared by `DELETE /api/cms/preview`; both need a session. In the browser, call `client.preview.enter()` and `client.preview.exit()`. HTTP reads follow the same rule: drafts only with the cookie and a session, so the cookie alone shows nothing.
 
 ### Media
 

@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient as createLibsql } from "@libsql/client";
+import { expect } from "vitest";
 import { CmsError, createClient } from "../client/index.ts";
 import { defineCms, type MediaOptions, type PopulateConfig, type Schema } from "../index.ts";
 import { local } from "../media/storage/local.ts";
@@ -33,15 +34,18 @@ export function setup<
     typeof define
   >,
 >(cms: C = define(base.secret) as never) {
-  let cookie = "";
-  // Keeps the session cookie between requests, like a browser.
+  const jar = new Map<string, string>();
+  // Keeps cookies between requests, like a browser. An empty value clears one.
   const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const headers = new Headers(init?.headers);
     headers.set("origin", origin);
-    if (cookie) headers.set("cookie", cookie);
+    if (jar.size) headers.set("cookie", [...jar].map(([k, v]) => `${k}=${v}`).join("; "));
     const res = await cms.fetch(new Request(input, { ...init, headers }));
-    const set = res.headers.getSetCookie().map((c) => c.split(";")[0]);
-    if (set.length) cookie = set.join("; ");
+    for (const c of res.headers.getSetCookie()) {
+      const [name, value] = c.split(";")[0].split(/=(.*)/);
+      if (value) jar.set(name, value);
+      else jar.delete(name);
+    }
     return res;
   };
   return { cms, fetch, client: createClient<typeof cms>({ baseUrl: origin, fetch }) };
@@ -55,6 +59,11 @@ export function fresh() {
   return { cms: s.cms, client: s.client, fetchWithSession };
 }
 export type Env = ReturnType<typeof fresh>;
+
+/** The meta of a global that was never published. */
+export const unpublished = { publishedAt: null, hasDraft: false };
+/** The meta of a published document or global without a draft. */
+export const published = { publishedAt: expect.any(String), hasDraft: false };
 
 export const admin = { name: "Admin", email: "a@b.co", password: "password123" };
 

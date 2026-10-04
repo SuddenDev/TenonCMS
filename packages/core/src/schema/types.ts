@@ -44,8 +44,18 @@ export type Data<F extends Fields> = {
   [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: FieldValue<F[K]> | null;
 };
 
-type Meta = { id: string; createdAt: string; updatedAt: string };
+type Meta = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  /** When the document was last published. `null`: never published. */
+  publishedAt: string | null;
+  /** Whether a draft is pending. */
+  hasDraft: boolean;
+};
 export type Doc<F extends Fields> = Data<F> & Meta;
+/** The meta of a global read. A `select` leaves it out. */
+export type GlobalMeta<S = true> = [S] extends [true] ? Pick<Meta, "publishedAt" | "hasDraft"> : {};
 
 /** A populated `file` field: a document of the media library. */
 export type File = Meta & {
@@ -209,7 +219,7 @@ export type Resolve<Cs, F extends Fields, P> = Simplify<
 type Wide<Cs> = string extends keyof Cs ? true : false;
 export type Read<Cs, F extends Fields, P, S = true> =
   Wide<Cs> extends true ? Record<string, any> : Selected<Resolve<Cs, F, P>, S>;
-// `createdAt` and `updatedAt` only when `S` lists them.
+// The meta keys other than `id` only when `S` lists them.
 type SelectedMeta<S> = [S] extends [true] ? Meta : Pick<Meta, "id" | Extract<keyof S, keyof Meta>>;
 export type ReadDoc<Cs, F extends Fields, P, S = true> = Simplify<
   Read<Cs, F, P, S> & SelectedMeta<S>
@@ -272,7 +282,7 @@ type SelectJoin<Cs, C, P, K, S> = P extends object
     : true;
 
 /**
- * Keys a `select` object may name: fields, and on a document (`Doc`) `id`, `createdAt` and `updatedAt`.
+ * Keys a `select` object may name: fields, and on a document (`Doc`) the meta keys.
  * An object is allowed under a group, and under a relation or join that `P` resolves.
  */
 export type Select<Cs, F extends Fields, P, Doc extends boolean = true> = {
@@ -283,7 +293,9 @@ export type Select<Cs, F extends Fields, P, Doc extends boolean = true> = {
       : F[K] extends { type: "join"; collection: infer C }
         ? SelectJoin<Cs, C, P, K, Sub<P, K>>
         : true;
-} & (Doc extends true ? { id?: true; createdAt?: true; updatedAt?: true } : {});
+} & (Doc extends true
+  ? { id?: true; createdAt?: true; updatedAt?: true; publishedAt?: true; hasDraft?: true }
+  : {});
 export type SelectArg<Cs, F extends Fields, P, Doc extends boolean = true> =
   Wide<Cs> extends true ? Record<string, any> : Select<Cs, F, P, Doc>;
 
@@ -302,7 +314,7 @@ export type ReadOptions<Cs, F extends Fields, Doc extends boolean = true> = {
   /** Hops resolved when `populate` is not an object. */
   depth?: number;
   /**
-   * The fields a read returns. `id` always comes back; `createdAt` and `updatedAt` only when listed. `true` keeps a value as
+   * The fields a read returns. `id` always comes back; the other meta keys only when listed. `true` keeps a value as
    * `populate` leaves it: an id, ids, a document or documents. An object lists the keys inside a group, or inside a relation or
    * join that `populate` resolves. `{}` returns only `id`. Hooks see the full documents; `afterOperation` sees the result.
    * Default: every field.

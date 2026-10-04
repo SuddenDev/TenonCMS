@@ -9,4 +9,6 @@
 
 The admin uses this client too, so there is only one HTTP client.
 
+`preview.enter()` and `preview.exit()` set and clear the preview cookie, so reads of the signed-in user see drafts.
+
 `previewUrl()` and `previewGlobalUrl()` ask the server for a live preview URL. The browser runtime of the preview is not part of the client; it is `integral-cms/preview` (`src/preview/`).

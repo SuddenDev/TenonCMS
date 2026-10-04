@@ -361,6 +361,17 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
 
   /** The media library. See {@link MediaClient}. */
   media: MediaClient;
+
+  /**
+   * The preview cookie. While it is set, reads of the signed-in user see drafts, also on the site's pages.
+   * Both need a session.
+   */
+  preview: {
+    /** Sets the cookie. `POST /api/cms/preview` */
+    enter(): Promise<void>;
+    /** Clears the cookie. `DELETE /api/cms/preview` */
+    exit(): Promise<void>;
+  };
 };
 
 type ReadQuery = { populate?: boolean | object; depth?: number; select?: object };
@@ -467,6 +478,15 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       regenerate: (id: string, options: { force?: boolean } = {}) =>
         request("POST", `/media/${enc(id)}/regenerate`, options),
       folders: () => request("GET", "/media/folders"),
+    },
+
+    preview: {
+      enter: async () => {
+        await request("POST", "/preview");
+      },
+      exit: async () => {
+        await request("DELETE", "/preview");
+      },
     },
   };
 

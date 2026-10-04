@@ -48,6 +48,8 @@ export type LocalApi = {
   delete(collection: string, id: string): Promise<void>;
   getGlobal(name: string, options?: Options): Promise<Row>;
   setGlobal(name: string, data: Record<string, unknown>): Promise<Row>;
+  /** The same API in the drafts perspective. Reads see unpublished documents and pending drafts. */
+  drafts(): LocalApi;
   /** The media library. Missing without `defineCms({ media })`. */
   media?: MediaApi;
 };

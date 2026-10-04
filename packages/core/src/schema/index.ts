@@ -12,6 +12,7 @@ export type {
   Exact,
   File,
   FilterKey,
+  GlobalMeta,
   Image,
   Populate,
   PopulateArg,

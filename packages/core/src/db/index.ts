@@ -18,10 +18,21 @@ export interface Database {
     id: string;
     collection: string;
     data: string;
+    /** The pending version, or `NULL` when nothing is pending. */
+    draft: string | null;
     created_at: number;
     updated_at: number;
+    /** `NULL` for a document that was never published. */
+    published_at: number | null;
   };
-  cms_globals: { name: string; data: string; created_at: number; updated_at: number };
+  cms_globals: {
+    name: string;
+    data: string;
+    draft: string | null;
+    created_at: number;
+    updated_at: number;
+    published_at: number | null;
+  };
   cms_uploads: {
     id: string;
     key: string;
@@ -36,14 +47,27 @@ export interface Database {
   };
 }
 
-export type Row = Selectable<Database["cms_documents"]>;
+/** A document as `documents.ts` reads it: `data` holds the perspective's data, `has_draft` whether a draft is pending. */
+export type Row = Pick<
+  Selectable<Database["cms_documents"]>,
+  "id" | "data" | "created_at" | "updated_at" | "published_at"
+> & { has_draft: number };
+
+const iso = (time: number) => new Date(time).toISOString();
+
+/** The data of a row with its meta. */
+export const withMeta = (row: Pick<Row, "data" | "published_at" | "has_draft">) => ({
+  ...JSON.parse(row.data),
+  publishedAt: row.published_at == null ? null : iso(row.published_at),
+  hasDraft: Boolean(row.has_draft),
+});
 
 export function toDoc(row: Row): Record<string, any> & { id: string } {
   return {
-    ...JSON.parse(row.data),
+    ...withMeta(row),
     id: row.id,
-    createdAt: new Date(row.created_at).toISOString(),
-    updatedAt: new Date(row.updated_at).toISOString(),
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
   };
 }
 
@@ -98,17 +122,31 @@ const cmsMigrations: Record<string, Migration> = {
         WHERE collection = 'media'`.execute(db);
     },
   },
+  // Drafts and publish state. Every row so far was published on save.
+  "004_cms_drafts": {
+    async up(db) {
+      for (const table of ["cms_documents", "cms_globals"]) {
+        await sql`ALTER TABLE ${sql.table(table)} ADD COLUMN draft text`.execute(db);
+        await sql`ALTER TABLE ${sql.table(table)} ADD COLUMN published_at integer`.execute(db);
+        await sql`UPDATE ${sql.table(table)} SET published_at = updated_at`.execute(db);
+      }
+    },
+  },
 };
 
-// ponytail: no locking between processes; Kysely's migration lock is a no-op on SQLite. Run one instance per database until D1/Postgres.
-// Auth tables come from better-auth after the CMS tables, plugin tables included.
-export async function migrate(db: Kysely<Database>, authOptions: BetterAuthOptions) {
-  const { error } = await new Migrator({
+/** Runs the CMS migrations. */
+export const migrator = (db: Kysely<Database>) =>
+  new Migrator({
     db,
     provider: { getMigrations: async () => cmsMigrations },
     migrationTableName: "cms_kysely_migration",
     migrationLockTableName: "cms_kysely_migration_lock",
-  }).migrateToLatest();
+  });
+
+// ponytail: no locking between processes; Kysely's migration lock is a no-op on SQLite. Run one instance per database until D1/Postgres.
+// Auth tables come from better-auth after the CMS tables, plugin tables included.
+export async function migrate(db: Kysely<Database>, authOptions: BetterAuthOptions) {
+  const { error } = await migrator(db).migrateToLatest();
   if (error) throw error;
   await (await getMigrations(authOptions)).runMigrations();
 }

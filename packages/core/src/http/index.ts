@@ -1,5 +1,6 @@
 import type { User } from "better-auth";
 import { type Context, Hono } from "hono";
+import { deleteCookie, setCookie } from "hono/cookie";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { API_BASE } from "../client/index.ts";
@@ -10,7 +11,15 @@ import { innerFields, mapValue } from "../schema/walk.ts";
 import { badSelectPath, type SelectSpec } from "../cms/populate.ts";
 import type { Collection, Fields, Global, LocalApi, Schema } from "../schema/index.ts";
 import { previewUrl } from "../preview/url.ts";
-import { type Env, notFound, pluginMiddleware, session, withCms } from "./middleware.ts";
+import {
+  caller,
+  type Env,
+  notFound,
+  PREVIEW_COOKIE,
+  pluginMiddleware,
+  session,
+  withCms,
+} from "./middleware.ts";
 import { type Level, parsePopulate, parseSelect, visible, whereFromQuery } from "./query.ts";
 
 /**
@@ -55,15 +64,16 @@ export function createApp(
     });
   }
 
-  // Reads are public. Only a request with a cookie MAY see private fields, so others cost no session lookup.
-  // A failed lookup, e.g. with a bad `secret`, counts as no session.
-  async function readLevel(request: Request): Promise<Level> {
-    if (!request.headers.get("cookie")) return "public";
-    const session = await cms
-      .auth()
-      .then((auth) => auth.api.getSession({ headers: request.headers }))
-      .catch(() => null);
-    return session ? "admin" : "public";
+  // Reads are public. A session sees private fields, and with the preview cookie reads drafts.
+  async function reader(request: Request): Promise<{ level: Level; api: Cms<Schema> }> {
+    const { user, drafts } = await caller(
+      async (headers) => (await cms.auth()).api.getSession({ headers }),
+      request,
+    );
+    return {
+      level: user ? "admin" : "public",
+      api: drafts ? cms.drafts() : cms,
+    };
   }
 
   // A collection or global named in the URL, or a 404.
@@ -101,34 +111,45 @@ export function createApp(
   reads.get("/collections/:name", async (c) => {
     const { name, fields } = collectionOf(c.req.param("name"));
     const { limit, populate, depth, select, ...query } = c.req.query();
-    const level = await readLevel(c.req.raw);
+    const { level, api } = await reader(c.req.raw);
     const where = whereFromQuery(fields, query, level);
     if (!where) return c.json({ message: "Invalid filter" }, 400);
     if (limit !== undefined && !/^[1-9]\d*$/.test(limit))
       return c.json({ message: "Invalid limit" }, 400);
     const read = readOptions(fields, { populate, depth, select });
     if (typeof read === "string") return c.json({ message: read }, 400);
-    const docs = await cms.find(name, { where, limit: limit ? Number(limit) : undefined, ...read });
+    const docs = await api.find(name, { where, limit: limit ? Number(limit) : undefined, ...read });
     return c.json(strip(fields, docs, level));
   });
   reads.get("/collections/:name/:id", async (c) => {
     const { name, fields } = collectionOf(c.req.param("name"));
     const read = readOptions(fields, c.req.query());
     if (typeof read === "string") return c.json({ message: read }, 400);
-    const doc = await cms.findById(name, c.req.param("id"), read);
+    const { level, api } = await reader(c.req.raw);
+    const doc = await api.findById(name, c.req.param("id"), read);
     if (!doc) throw notFound();
-    return c.json(strip(fields, doc, await readLevel(c.req.raw)));
+    return c.json(strip(fields, doc, level));
   });
   reads.get("/globals/:name", async (c) => {
     const { name, fields } = globalOf(c.req.param("name"));
     const read = readOptions(fields, c.req.query(), false);
     if (typeof read === "string") return c.json({ message: read }, 400);
-    return c.json(strip(fields, await cms.getGlobal(name, read), await readLevel(c.req.raw)));
+    const { level, api } = await reader(c.req.raw);
+    return c.json(strip(fields, await api.getGlobal(name, read), level));
   });
 
   // Behind CSRF and a session. Writes use `c.var.cms`, which carries the session user.
   const writes = new Hono<Env>();
   writes.get("/schema", (c) => c.json(publicSchema));
+  // The preview cookie. Reads of a signed-in user that carry it use the drafts perspective.
+  writes.post("/preview", (c) => {
+    setCookie(c, PREVIEW_COOKIE, "1", { httpOnly: true, sameSite: "Lax", path: "/" });
+    return c.body(null, 204);
+  });
+  writes.delete("/preview", (c) => {
+    deleteCookie(c, PREVIEW_COOKIE, { path: "/" });
+    return c.body(null, 204);
+  });
   mount(writes, "routes");
   if (media) writes.route("/media", media.writes);
   writes.post("/collections/:name", async (c) => {

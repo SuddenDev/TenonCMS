@@ -2,7 +2,17 @@ import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { fresh, origin, relational, seed, setup, status, tmpDb, type Env } from "./setup.ts";
+import {
+  fresh,
+  origin,
+  published,
+  relational,
+  seed,
+  setup,
+  status,
+  tmpDb,
+  type Env,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -135,6 +145,7 @@ describe("populate", () => {
     expect(await cms.getGlobal("site", { populate: false })).toEqual({
       logo: m.id,
       featured: [p.id],
+      ...published,
     });
   });
 
@@ -225,7 +236,7 @@ describe("select", () => {
     await cms.create("posts", { title: "a", body: "b" });
     await cms.find("posts", { select: { title: true } });
     expect(seen).toEqual([
-      ["body", "createdAt", "id", "title", "updatedAt"],
+      ["body", "createdAt", "hasDraft", "id", "publishedAt", "title", "updatedAt"],
       ["id", "title"],
     ]);
   });
@@ -258,7 +269,7 @@ describe("populate over HTTP", () => {
     }
     expect((await get(`/collections/authors/${a.id}?populate=posts`)).body.posts[0].id).toBe(p.id);
     await r.cms.setGlobal("site", { logo: m.id });
-    expect((await get("/globals/site?populate=false")).body).toEqual({ logo: m.id });
+    expect((await get("/globals/site?populate=false")).body).toEqual({ logo: m.id, ...published });
     expect((await get("/collections/posts?populate=false&title=Hi")).body).toHaveLength(1);
     expect((await get("/collections/posts?populate=false&title=No")).body).toHaveLength(0);
   });

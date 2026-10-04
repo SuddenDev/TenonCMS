@@ -27,8 +27,15 @@ import {
   target,
 } from "./scope.ts";
 
-// The stored data of a document, without `id`, `createdAt` and `updatedAt`.
-const stripMeta = ({ id, createdAt, updatedAt, ...data }: Record<string, unknown>) => data;
+// The stored data of a document, without its meta.
+const stripMeta = ({
+  id,
+  createdAt,
+  updatedAt,
+  publishedAt,
+  hasDraft,
+  ...data
+}: Record<string, unknown>) => data;
 
 // `effect`: an `onDelete` effect. It skips id checks, because other relations of the document MAY point to
 // documents that the same delete removes.
@@ -62,9 +69,9 @@ export async function write(
   const db = await q(core, s);
   const originalDoc =
     name.kind === "global"
-      ? await loadGlobal(db, name.name)
+      ? await loadGlobal(db, name.name, s.drafts)
       : id
-        ? await loadDoc(db, name.name, id)
+        ? await loadDoc(db, name.name, id, s.drafts)
         : undefined;
   if (id && !originalDoc) return undefined;
   const args = hookArgs(s, name, { operation, id, originalDoc });
@@ -119,7 +126,8 @@ export async function write(
 /** `delete`: the hooks around the row delete, then `onDelete` for every reference. */
 export async function remove(core: Core, s: Inner, collection: string, id: string) {
   const db = await q(core, s);
-  const doc = await loadDoc(db, collection, id);
+  // A delete removes the row whether it was published or not.
+  const doc = await loadDoc(db, collection, id, true);
   if (!doc) return;
   const base = hookArgs(s, col(collection), { id, doc });
   await runHooks(slot(core, col(collection), "beforeDelete"), "doc", doc, base);

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms, ValidationError } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, base, fresh, origin, status, type Env } from "./setup.ts";
+import { admin, base, fresh, origin, published, status, unpublished, type Env } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -73,9 +73,9 @@ describe("writes", () => {
 
   it("set a global", async () => {
     await client.signUp(admin);
-    expect(await client.getGlobal("site")).toEqual({});
+    expect(await client.getGlobal("site")).toEqual(unpublished);
     await client.setGlobal("site", { name: "Site" });
-    expect(await client.getGlobal("site")).toEqual({ name: "Site" });
+    expect(await client.getGlobal("site")).toEqual({ name: "Site", ...published });
   });
 
   it("update only the top-level keys that are sent", async () => {
@@ -96,7 +96,7 @@ describe("writes", () => {
     });
     await cms.setGlobal("site", { name: "Site", tagline: "T" });
     await cms.setGlobal("site", { tagline: "U" });
-    expect(await cms.getGlobal("site")).toEqual({ name: "Site", tagline: "U" });
+    expect(await cms.getGlobal("site")).toEqual({ name: "Site", tagline: "U", ...published });
   });
 });
 

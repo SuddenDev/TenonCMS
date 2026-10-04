@@ -46,6 +46,8 @@ export function step(
 
 /** Read hooks of the target collection. They get the loaded documents per field per hop, and MAY replace them. */
 export type ReadHooks = {
+  /** Loads targets in the drafts perspective. */
+  drafts: boolean;
   before(collection: string, docs: Docs): Promise<Docs>;
   after(collection: string, docs: Docs): Promise<Docs>;
   /** Adds the computed URLs of a media document, with the options of the field that holds it. */
@@ -71,7 +73,7 @@ export async function populate(
     } else if (isRef(field)) {
       const to = targetOf(field);
       const ids = [...new Set(docs.flatMap((d) => d[key] ?? []))];
-      const found = await hop(to, await byIds(db, to, ids));
+      const found = await hop(to, await byIds(db, to, ids, read.drafts));
       const value = (id: string) => {
         const doc = found.get(id);
         return doc && field.type !== "relation" && read.media ? read.media(doc, field) : doc;
@@ -84,7 +86,7 @@ export async function populate(
       const target = collections[field.collection].fields;
       const source = relationPaths(target).find((r) => r.path.join(".") === field.on)!.field;
       const ids = docs.map((d) => d.id);
-      const rows = await joinedDocs(db, field.collection, field.on, source.many, ids);
+      const rows = await joinedDocs(db, field.collection, field.on, source.many, ids, read.drafts);
       const unique = [...new Map(rows.map((r) => [r.id, toDoc(r)])).values()];
       const found = await hop(field.collection, unique);
       for (const d of docs)
@@ -120,7 +122,7 @@ export function pick(
   return out;
 }
 
-const META = ["id", "createdAt", "updatedAt"];
+const META = ["id", "createdAt", "updatedAt", "publishedAt", "hasDraft"];
 
 /**
  * The first path in `select` that does not fit `fields` and the populate `spec`, or `undefined`. Same resolution rules as `populate()`.

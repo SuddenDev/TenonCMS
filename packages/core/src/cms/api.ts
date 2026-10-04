@@ -9,6 +9,7 @@ import type {
   ReadDoc,
   ReadOptions,
   Schema,
+  GlobalMeta,
   SelectOf,
 } from "../schema/index.ts";
 import { mediaApi } from "../media/index.ts";
@@ -88,6 +89,7 @@ export function bind(core: Core, scope: Scope): LocalApi {
       known(core, "global", name);
       return (await setGlobal(core, scope, name, data))!;
     },
+    drafts: () => core.bind({ ...scope, drafts: true }),
     media: core.media && mediaApi(core, scope),
   };
 }
@@ -115,7 +117,8 @@ type ReadCollection<
 > = ReadDoc<Collections<T>, Collections<T>[K]["fields"], PopulateOf<O, D>, SelectOf<O>>;
 type ReadGlobal<T extends Schema, K extends keyof Globals<T>, O, D extends number> = Partial<
   Read<Collections<T>, Globals<T>[K]["fields"], PopulateOf<O, D>, SelectOf<O>>
->;
+> &
+  GlobalMeta<SelectOf<O>>;
 
 /** The typed local API of `defineCms()`. `D` is the default populate depth. */
 export type Api<T extends Schema, D extends number> = {
@@ -173,4 +176,9 @@ export type Api<T extends Schema, D extends number> = {
     name: K,
     data: Record<string, unknown>,
   ): Promise<GlobalData<T, K>>;
+  /**
+   * The same API in the drafts perspective: reads see documents that were never published, and pending drafts
+   * instead of the published data. Without it, reads see published documents only.
+   */
+  drafts<S>(this: S): S;
 };

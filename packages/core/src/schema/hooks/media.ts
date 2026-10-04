@@ -5,6 +5,9 @@ export type MediaDoc = {
   id: string;
   createdAt: string;
   updatedAt: string;
+  /** Media is published on upload. */
+  publishedAt: string | null;
+  hasDraft: boolean;
   /** Folder path, `''` at the root, e.g. `blog/2026`. */
   folder: string;
   /** Unique within its folder, case-insensitive. */

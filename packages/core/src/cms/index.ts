@@ -2,6 +2,7 @@ import type { User } from "better-auth";
 import { consola } from "consola";
 import { createDb, migrate } from "../db/index.ts";
 import { createApp } from "../http/index.ts";
+import { caller } from "../http/middleware.ts";
 import { defaultMedia } from "integral-cms/media/default";
 import { mediaRoutes } from "../media/http.ts";
 import { createMediaCore } from "../media/core.ts";
@@ -91,6 +92,10 @@ export function defineCms<
     return (authInstance ??= createAuth((await connect()).options));
   };
 
+  // The session of a request. `A` hides `getSession` from the type checker, so it is typed here.
+  const getSession = async (headers: Headers) =>
+    ((await auth()).api as unknown as Session).getSession({ headers });
+
   const core: Core = {
     schema,
     plugins,
@@ -100,14 +105,36 @@ export function defineCms<
     bind: (scope) => bind(core, scope),
     media,
   };
-  const api = (user: User | null) =>
-    bind(core, { user, context: {}, nested: false }) as unknown as Api<T, D>;
+  const api = (user: User | null, drafts = false) =>
+    bind(core, { user, context: {}, nested: false, drafts }) as unknown as Api<T, D>;
+  // The instance with the local API of `user` in one perspective. Its `drafts()` keeps the user.
+  const scoped = (user: User | null, drafts: boolean): typeof cms =>
+    ({ ...cms, ...api(user, drafts), drafts: () => scoped(user, true) }) as typeof cms;
   const cms = {
     schema: schema as unknown as T,
     auth,
     /** The `populate` config with defaults. */
     populate: defaults as { depth: D; maxDepth: number },
     ...api(null),
+
+    /**
+     * The same instance in the drafts perspective: reads see documents that were never published, and pending drafts
+     * instead of the published data.
+     */
+    drafts<S>(this: S): S {
+      return scoped(null, true) as S;
+    },
+
+    /**
+     * The instance for the user of `request`'s session, for server-rendered pages. Reads use the drafts perspective
+     * when the request carries the preview cookie and a valid session. Looks up the session only when a cookie is sent.
+     * @example
+     * const cms = await integral.forRequest(request)
+     */
+    async forRequest<S>(this: S, request: Request): Promise<S> {
+      const { user, drafts } = await caller(getSession, request);
+      return scoped(user, drafts) as S;
+    },
 
     /** Handles `/api/cms` requests. Mount it in any framework that speaks Request/Response. */
     fetch(request: Request): Promise<Response> {
@@ -117,7 +144,7 @@ export function defineCms<
 
   const app = createApp(
     cms as unknown as Cms<Schema>,
-    (user) => ({ ...cms, ...api(user) }) as unknown as Cms<Schema>,
+    (user) => scoped(user, false) as unknown as Cms<Schema>,
     plugins,
     media && mediaRoutes(core),
   );
@@ -159,6 +186,10 @@ type MediaCollection = {
   };
 };
 type MediaOf<M> = [M] extends [false] ? {} : { media: MediaApi };
+
+type Session = {
+  getSession(context: { headers: Headers }): Promise<{ user: User } | null>;
+};
 
 // `T` already holds the settings globals, so `S` is `false`.
 export type Cms<T extends Schema> = ReturnType<

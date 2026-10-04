@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineCms, definePlugin } from "../index.ts";
 import { settings } from "../presets/index.ts";
-import { setup } from "./setup.ts";
+import { published, setup, unpublished } from "./setup.ts";
 
 describe("presets", () => {
   it("general has title, tagline, url and favicon", () => {
@@ -56,8 +56,8 @@ const gen = (fields = {}) => ({ fields: { name: { type: "text" }, ...fields } })
 describe("defineCms", () => {
   it("adds general and seo by default", async () => {
     const cms = defineCms(opts);
-    expect(await cms.getGlobal("general")).toEqual({});
-    expect(await cms.getGlobal("seo")).toEqual({});
+    expect(await cms.getGlobal("general")).toEqual(unpublished);
+    expect(await cms.getGlobal("seo")).toEqual(unpublished);
     await expect(cms.setGlobal("general", { tagline: "x" })).rejects.toMatchObject({
       errors: { title: expect.any(String) },
     });
@@ -69,7 +69,7 @@ describe("defineCms", () => {
     const one = defineCms({ ...opts, settings: { seo: false } });
     // @ts-expect-error seo is dropped
     await expect(one.getGlobal("seo")).rejects.toThrow();
-    expect(await one.getGlobal("general")).toEqual({});
+    expect(await one.getGlobal("general")).toEqual(unpublished);
     const none = defineCms({ ...opts, settings: false });
     // @ts-expect-error general is dropped
     await expect(none.getGlobal("general")).rejects.toThrow();
@@ -83,7 +83,7 @@ describe("defineCms", () => {
       settings: { general: { label: "Mine", fields: { name: { type: "text" } } } },
     });
     await cms.setGlobal("general", { name: "x" });
-    expect(await cms.getGlobal("general")).toEqual({ name: "x" });
+    expect(await cms.getGlobal("general")).toEqual({ name: "x", ...published });
     expect(cms.schema.globals!.general.label).toBe("Mine");
   });
 
@@ -113,6 +113,6 @@ describe("defineCms", () => {
     const { fetch } = setup(defineCms(opts));
     const res = await fetch("http://localhost/api/cms/globals/general");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({});
+    expect(await res.json()).toEqual(unpublished);
   });
 });

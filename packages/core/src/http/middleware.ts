@@ -17,6 +17,25 @@ export const withCms =
     await next();
   };
 
+/** The cookie that switches reads of a signed-in user to the drafts perspective. */
+export const PREVIEW_COOKIE = "integral-preview";
+
+/**
+ * The session user of a request, and whether its reads use the drafts perspective: only with the preview cookie and
+ * a session. A request without a cookie costs no session lookup. A failed lookup, e.g. with a bad `secret`, counts as none.
+ */
+export async function caller(
+  getSession: (headers: Headers) => Promise<{ user: User } | null>,
+  request: Request,
+): Promise<{ user: User | null; drafts: boolean }> {
+  const cookie = request.headers.get("cookie");
+  if (!cookie) return { user: null, drafts: false };
+  const session = await getSession(request.headers).catch(() => null);
+  if (!session) return { user: null, drafts: false };
+  const drafts = cookie.split(";").some((c) => c.trim() === `${PREVIEW_COOKIE}=1`);
+  return { user: session.user, drafts };
+}
+
 /** Answers 401 without a session. Otherwise sets `c.var.user` and `c.var.cms` with that user for hooks. */
 export const session =
   (cms: Cms<Schema>, asUser: (user: User) => Cms<Schema>): MiddlewareHandler<Env> =>

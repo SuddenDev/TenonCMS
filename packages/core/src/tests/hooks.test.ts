@@ -7,7 +7,7 @@ import {
   ValidationError,
 } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, origin, setup, status, type Env } from "./setup.ts";
+import { admin, fresh, origin, published, setup, status, unpublished, type Env } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -272,7 +272,7 @@ describe("hooks", () => {
     expect(await cms.setGlobal("site", { name: "a" })).toEqual({ name: "a" });
     expect(calls).toEqual(["beforeValidate", "name", "beforeChange", "afterChange", "afterRead"]);
     calls = [];
-    expect(await cms.getGlobal("site")).toEqual({ name: "a" });
+    expect(await cms.getGlobal("site")).toEqual({ name: "a", ...published });
     expect(calls).toEqual(["beforeRead", "afterRead"]);
     expect(seen).toEqual([
       [1, "site", "setGlobal"],
@@ -288,7 +288,7 @@ describe("hooks", () => {
         },
       },
     });
-    expect(await renamed.getGlobal("site")).toEqual({ name: "X" });
+    expect(await renamed.getGlobal("site")).toEqual({ name: "X", ...unpublished });
   });
 
   it("validate the beforeChange result of a global", async () => {
@@ -300,7 +300,7 @@ describe("hooks", () => {
     const { client } = setup(cms);
     await client.signUp(admin);
     expect(await status(client.setGlobal("site", { title: "a" }))).toBe(400);
-    expect(await cms.getGlobal("site")).toEqual({});
+    expect(await cms.getGlobal("site")).toEqual(unpublished);
   });
 
   it("get the session user on HTTP writes", async () => {
