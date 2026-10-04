@@ -1,5 +1,5 @@
 export { type Api, type Cms, defineCms } from "./cms/index.ts";
-export type { CmsOptions, PopulateConfig } from "./cms/options.ts";
+export type { CmsOptions, PopulateConfig } from "./cms/config/options.ts";
 export type { ImageProvider, ImagesOptions, MediaOptions, Storage } from "./media/index.ts";
 export { defineCollection, defineGlobal } from "./schema/index.ts";
 export type {
@@ -21,7 +21,7 @@ export type {
 } from "./schema/index.ts";
 export { definePlugin, type Plugin } from "./plugins/index.ts";
 
-export type { AuthOptions } from "./cms/auth.ts";
+export type { AuthOptions } from "./auth/config/options.ts";
 export { ConflictError, type Reference, ValidationError } from "./errors.ts";
 export {
   type BreadcrumbsOptions,

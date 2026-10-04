@@ -4,7 +4,10 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 
 | Path                   | What it does                                                                                                                                               |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`             | Start here. `MediaOptions`, `mediaCollection`, `mediaApi()`: `cms.media`, one line per method, pointing at the file that runs it.                          |
+| `index.ts`             | Export barrel for configuration, the reserved collection and the scoped API.                                                                               |
+| `config/options.ts`    | Storage, limits, images and hook options.                                                                                                                  |
+| `config/collection.ts` | The reserved media collection definition.                                                                                                                  |
+| `api.ts`               | Binds upload, edit, folder, delete and regeneration methods to one scope.                                                                                  |
 | `core.ts`              | `createMediaCore()` (defaults, preset checks, the `/img` allowlist), `mediaOf()`, `runMediaHooks()` (host hooks, then plugins'), `read()` (adds URLs).     |
 | `upload.ts`            | The upload steps: `create()`, `putPart()`, `complete()`, `abort()`, cleanup of uploads older than a day, and `upload()` for the local API.                 |
 | `library.ts`           | Changes to stored files: `update()` (alt edits and moves), `renameFolder()`, `removeMedia()`, `folders()`, `namesIn()`.                                    |

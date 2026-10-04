@@ -10,13 +10,14 @@ sent a first message from the origin of the `admin` option (a path for the site'
 On another origin, drafts reach the page through messages, but the drafts perspective needs the preview cookie, so a
 server render shows drafts only when the site shares the admin's cookies (same site).
 
-| File          | What it does                                                                                                                                              |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `template.ts` | `placeholders()` and `resolve()` for `preview` templates like `'/{category.slug}/{slug}'`. No imports.                                                    |
-| `url.ts`      | `previewUrl()`: the URL of a document or global from its form state. Reads one relation hop with `findById`, or calls the host's function.                |
-| `index.ts`    | `integral-cms/preview`, the browser runtime: `edit()`, `preview()` (with the bars), `subscribe()`, `getDrafts()`, `merge()`. No code runs at import time. |
-| `vue.ts`      | `integral-cms/preview/vue`: `useDraft(collection, doc)`, a shallow ref with the draft merged in.                                                          |
-| `react.ts`    | `integral-cms/preview/react`: `useDraft(collection, doc)` on `useSyncExternalStore`.                                                                      |
+| File              | What it does                                                                                                                                              |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config/types.ts` | Preview URL configuration, runtime options, draft snapshots and message contracts.                                                                        |
+| `template.ts`     | `placeholders()` and `resolve()` for `preview` templates like `'/{category.slug}/{slug}'`. No imports.                                                    |
+| `url.ts`          | `previewUrl()`: the URL of a document or global from its form state. Reads one relation hop with `findById`, or calls the host's function.                |
+| `index.ts`        | `integral-cms/preview`, the browser runtime: `edit()`, `preview()` (with the bars), `subscribe()`, `getDrafts()`, `merge()`. No code runs at import time. |
+| `vue.ts`          | `integral-cms/preview/vue`: `useDraft(collection, doc)`, a shallow ref with the draft merged in.                                                          |
+| `react.ts`        | `integral-cms/preview/react`: `useDraft(collection, doc)` on `useSyncExternalStore`.                                                                      |
 
 `index.ts`, `vue.ts` and `react.ts` run in the browser and in server bundles. They MUST NOT import zod or core
 runtime code.

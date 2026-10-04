@@ -1,19 +1,13 @@
-import { APIError, betterAuth, type BetterAuthOptions } from "better-auth";
+import { APIError, type BetterAuthOptions } from "better-auth";
 import { type Kysely, sql } from "kysely";
-import { API_BASE } from "../client/index.ts";
-import type { Database } from "../db/index.ts";
+import { API_BASE } from "../../client/index.ts";
+import type { Database } from "../../db/index.ts";
+import type { AuthOptions } from "./options.ts";
 
 type UserCreate = NonNullable<
   NonNullable<NonNullable<BetterAuthOptions["databaseHooks"]>["user"]>["create"]
 >;
 type BeforeCreate = Parameters<NonNullable<UserCreate["before"]>>;
-type Model = "user" | "session" | "account" | "verification";
-
-// Core reads the `user` table by name, so models MUST keep their default names.
-// `never` also rejects `modelName` next to valid keys; generic inference skips excess property checks.
-export type AuthOptions = Omit<BetterAuthOptions, "database" | "basePath" | "secret" | Model> & {
-  [K in Model]?: Omit<NonNullable<BetterAuthOptions[K]>, "modelName"> & { modelName?: never };
-};
 
 export function authOptions<A extends AuthOptions>(db: Kysely<Database>, secret: string, host: A) {
   const create = host.databaseHooks?.user?.create;
@@ -48,8 +42,4 @@ async function firstUserOnly(db: Kysely<Database>, ctx: BeforeCreate[1]) {
   if (ctx.context.session) return;
   const { rows } = await sql<{ n: number }>`SELECT count(*) AS n FROM "user"`.execute(db);
   if (rows[0].n > 0) throw new APIError("FORBIDDEN", { message: "Sign-up is closed" });
-}
-
-export function createAuth<O extends BetterAuthOptions>(options: O) {
-  return betterAuth(options);
 }

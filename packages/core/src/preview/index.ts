@@ -2,20 +2,8 @@
 // It MUST NOT import zod or core runtime code.
 import { Idiomorph } from "idiomorph";
 
-/** Unsaved form state by `<collection>:<id>`. Globals are keyed `<name>:`. */
-export type Drafts = Record<string, Record<string, unknown>>;
-export type Unsubscribe = () => void;
-
-/** Messages between the admin and the site, sent with `postMessage`. */
-export type PreviewMessage =
-  | { type: "ready" }
-  | { type: "draft"; collection: string; id: string; data: Record<string, unknown> }
-  | { type: "mode"; edit: boolean }
-  | { type: "highlight"; collection: string | null; id: string | null }
-  | { type: "edit"; collection: string; id: string; path: string }
-  | { type: "url"; href: string }
-  | { type: "documents"; documents: { collection: string; id: string }[] }
-  | { type: "saved"; collection: string; id: string };
+import type { Drafts, Unsubscribe, PreviewMessage, PreviewOptions } from "./config/types.ts";
+export type { Drafts, Unsubscribe, PreviewMessage } from "./config/types.ts";
 
 // `API_BASE` of the client. Importing it would pull core code into the browser entry.
 const API = "/api/cms";
@@ -267,18 +255,10 @@ function adminBar(admin: string): Unsubscribe {
  *
  * Calling it again returns the same stop function.
  */
-export const preview: (options?: {
-  /**
-   * Re-renders the page on a `saved` message: fetches the current URL and morphs `<body>` and the title.
-   * Server-rendered sites without client data (Astro) need it. Defaults to `false`.
-   */
-  morph?: boolean;
-  /**
-   * The admin path, for the bars' links. Its origin is the only one the live preview trusts, so an admin on another
-   * origin needs a full URL, like `https://cms.example.com/admin`. `false` renders no admin bar. Defaults to `/admin`.
-   */
-  admin?: string | false;
-}) => Unsubscribe = ({ morph = false, admin = "/admin" } = {}) => {
+export const preview: (options?: PreviewOptions) => Unsubscribe = ({
+  morph = false,
+  admin = "/admin",
+} = {}) => {
   if (stop) return stop;
   const name = globalThis.window?.name;
   if (name === undefined) return () => {};

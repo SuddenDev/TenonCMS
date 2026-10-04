@@ -7,6 +7,9 @@ The source of the `integral-cms` package. Each folder is one area and has its ow
 | `index.ts`      | The public barrel. Everything a host imports from `integral-cms` is listed here.             |
 | `errors.ts`     | `ValidationError` (400) and `ConflictError` (409). No imports, so the browser can use it.    |
 | `cms/`          | `defineCms()`: the instance and its local API (`find`, `create`, …). Start here.             |
+| `collections/`  | Collection configuration and typed definition helpers.                                       |
+| `globals/`      | Global configuration and typed definition helpers.                                           |
+| `auth/`         | better-auth configuration and provider creation.                                             |
 | `schema/`       | How content is described: collections, fields, hooks, the types built from them, validation. |
 | `db/`           | Every SQL query. One JSON documents table for all collections.                               |
 | `http/`         | The `/api/cms` HTTP API (Hono), a thin layer over the local API.                             |

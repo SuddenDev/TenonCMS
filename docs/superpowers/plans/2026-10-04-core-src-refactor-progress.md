@@ -90,4 +90,10 @@ Branch: `refactor/core-src-structure`, based on `af8a7c8`.
 
 The baseline confirms existing tests, declarations, and workspace types pass. The user stops the core watcher; the root agent confirms PID 22927 is absent before subsequent clean builds. The route, packaging, and security inventory above guides each round's review.
 
-The root agent records each completed round, review findings, checks, and commit here.
+### Round 1: Configuration and public contracts
+
+Extract CMS construction/options/API declarations, collection/global definitions, auth configuration, media configuration/API binding, and preview types. Public entry names and generic signatures remain compatible.
+
+Review: all 285 baseline top-level function bodies match after ignoring whitespace/comments. Auth retains its first-user guard, forced email/password login, and fixed model names. Configuration assembly order, lazy initialization, media scope binding, and browser type-only imports remain intact. No new behavior requires RED–GREEN tests.
+
+Proof: 114 focused tests pass; core type/declaration checks pass; root `pnpm typecheck` passes all six workspaces and both package builds; `pnpm lint` passes. No unresolved review findings.

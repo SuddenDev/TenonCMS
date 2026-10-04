@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { ipx } from "./images/ipx.ts";
-import type { MediaOptions } from "./index.ts";
+import type { MediaOptions } from "./config/options.ts";
 import { local } from "./storage/local.ts";
 
 /**

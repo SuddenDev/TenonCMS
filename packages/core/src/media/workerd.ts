@@ -1,4 +1,4 @@
-import type { MediaOptions } from "./index.ts";
+import type { MediaOptions } from "./config/options.ts";
 import type { IpxOptions } from "./images/ipx.ts";
 import type { ImageProvider } from "./images.ts";
 import type { LocalOptions } from "./storage/local.ts";

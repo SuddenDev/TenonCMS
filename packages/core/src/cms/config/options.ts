@@ -1,8 +1,8 @@
-import type { AuthOptions } from "./auth.ts";
-import type { MediaOptions } from "../media/index.ts";
-import type { Plugin } from "../plugins/index.ts";
-import type { settings } from "../presets/settings.ts";
-import type { CheckRefs, Collection, Global, RootHooks } from "../schema/index.ts";
+import type { AuthOptions } from "../../auth/config/options.ts";
+import type { MediaOptions } from "../../media/config/options.ts";
+import type { Plugin } from "../../plugins/index.ts";
+import type { settings } from "../../presets/settings.ts";
+import type { CheckRefs, Collection, Global, RootHooks } from "../../schema/index.ts";
 
 export type PopulateConfig = {
   /** Hops resolved by `populate: true`. Default 2. */
@@ -89,14 +89,15 @@ export type CmsOptions<
    * - `false`: no media library. Core adds no routes, and `image` and `file` fields throw at startup.
    * - an object: your own storage, limits, images and hooks.
    */
-  media?: M /**
+  media?: M;
+  /**
    * The settings globals `general` and `seo`, shown on the admin's Settings page.
    * - omitted: both defaults. Without a media library, they leave out `favicon` and `image`.
    * - `false`: neither.
    * - an object: `{ seo: false }` drops one, `{ general: myGlobal }` replaces one (stored under the same name).
    *
    * A collection or global named `general` or `seo` throws while that default is on.
-   */;
+   */
   settings?: S & NoInfer<ExactSettings<S>>;
   /**
    * The URL of the site, like `https://example.com`. The admin's preview resolves relative preview URLs against it.

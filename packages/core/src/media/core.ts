@@ -3,7 +3,7 @@ import { list, runHooks } from "../schema/hooks/run.ts";
 import type { MediaDoc, MediaHooks, Modifiers, Schema } from "../schema/index.ts";
 import { relationPaths } from "../schema/walk.ts";
 import { allowlist, decorate, type Images } from "./images.ts";
-import type { MediaOptions } from "./index.ts";
+import type { MediaOptions } from "./config/options.ts";
 import type { Storage } from "./storage/types.ts";
 
 const MB = 1024 ** 2;
