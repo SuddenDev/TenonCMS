@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -77,7 +78,7 @@ provide(keepPaneKey, (id) => (kept = id));
     <Pane :title="collection.label ?? name">
       <template #actions>
         <Button as-child variant="ghost" size="icon-sm" aria-label="New">
-          <RouterLink :to="`/collections/${name}/new`"><Icon name="plus" /></RouterLink>
+          <RouterLink :to="`${CONTENT}/collections/${name}/new`"><Icon name="plus" /></RouterLink>
         </Button>
         <PaneMenuOptions
           v-model:sort="sort"
@@ -93,7 +94,7 @@ provide(keepPaneKey, (id) => (kept = id));
           <PaneMenuItem
             v-for="doc in rows"
             :key="doc.id"
-            :to="`/collections/${name}/${doc.id}`"
+            :to="`${CONTENT}/collections/${name}/${doc.id}`"
             :icon="collection.nav?.icon ?? 'file-text'"
             :label="doc.title"
             :subtitle="ago(doc.updatedAt)"

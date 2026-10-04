@@ -12,6 +12,7 @@ export * from "./components/pane";
 export { default as Icon } from "./components/Icon.vue";
 export { default as Mount } from "./components/Mount.vue";
 export { default as Themed } from "./components/Themed.vue";
+export { default as PageTitle } from "./components/navigation/PageTitle.vue";
 export { default as AppBreadcrumbs } from "./components/navigation/AppBreadcrumbs.vue";
 export { default as MenuPane } from "./components/navigation/MenuPane.vue";
 export { default as NavUser } from "./components/navigation/NavUser.vue";

@@ -30,7 +30,7 @@ export type MountHandle<Ctx> = {
 /** Helpers from the admin, in every context as `integral`. */
 export type IntegralContext = {
   /**
-   * Path the admin is served at, e.g. `/admin`. Prefix links with it: `${base}/collections/posts`.
+   * Path the admin is served at, e.g. `/admin`. Prefix links with it: `${base}/content/collections/posts`.
    *
    * Same-origin links under it open in the admin without a page reload. Links with `target`, `download`
    * or a modifier key, links elsewhere, and clicks with `preventDefault()` stay normal links.
@@ -85,14 +85,16 @@ export type PageContext = {
 export type Nav = {
   /**
    * Where the entry is listed.
-   * - `menu`: in the sidebar (default).
-   * - `settings`: on the Settings page, not in the sidebar.
-   * - `tool`: as a tool in the top bar, next to Content and Visual Editor, sorted by `order`. Hidden in the
-   *   sidebar. Below the `sm` breakpoint, tools sit in the menu sheet.
-   * - `none`: nowhere. The route still opens, e.g. a detail page.
+   * - `content`: in the content sidebar (default). A page's `route` sits under `/content`.
+   * - `settings`: on the Settings page, not in the sidebar. A page's `route` sits under `/content/settings`.
+   * - `main`: as a tool in the top bar, next to Content and Visual Editor, sorted by `order`. Hidden in the
+   *   sidebar. Below the `sm` breakpoint, tools sit in the menu sheet. A page's `route` is used as is, and it opens full
+   *   width, without the content sidebar.
+   * - `none`: nowhere. The route still opens as is, full width without the content sidebar, e.g. a detail page.
    */
-  display?: "menu" | "settings" | "tool" | "none";
+  display?: "content" | "settings" | "main" | "none";
   /**
+   * Only relevant for display `"content"` and `"settings"`.
    * Section of the sidebar or the Settings page. Defaults to `Content` in the sidebar and `Site` on the
    * Settings page. Sections appear in the order of their first entry.
    */
@@ -100,26 +102,49 @@ export type Nav = {
   /** Lucide icon name, e.g. `arrow-right-left`. See https://lucide.dev/icons. */
   icon?: IconName;
   /**
-   * Position, lowest first. Collections sit at 10, media at 15, globals at 20, pages default to 30.
+   * Position, lowest first.
+   * In display `"content"`, Collections sit at 10, media at 15, globals at 20, pages default to 30.
    * Equal orders keep their definition order: host pages after plugin pages.
    */
   order?: number;
 };
 
+/** One step of the breadcrumbs. `to` is a path relative to {@link IntegralContext.base}. */
+export type Crumb = { label: string; to: string };
+
 /** A custom admin page. */
 export type Page = {
   /** Name in the navigation, the page title and the breadcrumbs. Defaults to the page key. */
-  label?: string;
+  title?: string;
   /** Short text under the name on the Settings page. */
   description?: string;
   /**
-   * Path under the admin path. Defaults to `/<key>`. `/` is the start page. Params work: `/reports/:id`.
+   * Path under the admin path. Defaults to `/<key>`. Params work: `/reports/:id`.
    *
-   * A page on a built-in path, e.g. `/collections/posts`, replaces the built-in view.
+   * With `nav.display` `content` (default) or `settings`, the admin prefixes it: `/stats` opens at
+   * `/content/stats`. With `main` or `none` it is used as is, and `/` is the start page, which redirects to
+   * `/content` unless a page takes it.
+   *
+   * A page on a built-in path, e.g. `/content/collections/posts`, replaces the built-in view.
    */
   route?: `/${string}`;
-  /** Placement in the navigation. Defaults to the sidebar. Use `{ display: 'none' }` for detail routes with params. */
+  /** Placement in the navigation. Defaults to the content sidebar. Use `{ display: 'none' }` for detail routes with params. */
   nav?: Nav;
+  /**
+   * The title bar above the page. It shows the breadcrumbs: for pages with `nav.display` `content` or
+   * `settings` in the header of the page's pane, otherwise in a bar above the page.
+   * - `true`: the breadcrumbs (default).
+   * - `false`: no title.
+   * - `Crumb[]`: these breadcrumbs.
+   * - A function: gets the default breadcrumbs (a copy) and the page context, and returns what the bar
+   *   shows: new breadcrumbs, or an HTML string. Links in the HTML under `integral.base` open without a
+   *   reload. The admin does not escape the string: escape every untrusted value, e.g. `params`.
+   * @example
+   * showPageTitle: [{ label: 'Reports', to: '/content/reports' }]
+   * showPageTitle: (crumbs) => crumbs.slice(-1)
+   * showPageTitle: (crumbs, { params }) => `<strong>Report ${escape(params.id)}</strong>`
+   */
+  showPageTitle?: boolean | Crumb[] | ((crumbs: Crumb[], ctx: PageContext) => string | Crumb[]);
   /** Renders the page. */
   mount: Mount<PageContext>;
 };
@@ -169,7 +194,7 @@ export type AdminOptions = {
   /**
    * Extra pages by key.
    * @example
-   * pages: { stats: { label: 'Stats', nav: { icon: 'chart-bar' }, mount: renderVue(Stats) } }
+   * pages: { stats: { title: 'Stats', nav: { icon: 'chart-bar' }, mount: renderVue(Stats) } }
    */
   pages?: Record<string, Page>;
   /** Admin halves of plugins, from `defineAdminPlugin()`. Their fields and pages merge in, before the host's. */
@@ -181,7 +206,7 @@ export type AdminOptions = {
  * @example
  * export default defineAdmin({
  *   fields: { color: renderVue(ColorInput) },
- *   pages: { stats: { label: 'Stats', mount: renderVue(Stats) } },
+ *   pages: { stats: { title: 'Stats', mount: renderVue(Stats) } },
  *   plugins: [redirectsAdmin()],
  * })
  */

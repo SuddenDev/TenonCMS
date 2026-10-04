@@ -8,15 +8,15 @@ import DashboardTest from "./app/components/DashboardTest.vue";
 export default defineAdmin({
   fields: { color: renderVue(ColorInput) },
   pages: {
-    stats: { label: "Stats", nav: { icon: "chart-bar" }, mount: renderVue(Stats) },
+    stats: { title: "Stats", nav: { icon: "chart-bar" }, mount: renderVue(Stats) },
     post: {
       route: "/reports/posts/:id",
       nav: { display: "none" },
       mount: renderVue(PostReport),
     },
     dashboard: {
-      label: "Dashboard",
-      nav: { icon: "layout-dashboard", order: 0 },
+      title: "Dashboard",
+      nav: { display: "main", order: 1 },
       route: "/",
       mount: renderVue(DashboardTest),
     },

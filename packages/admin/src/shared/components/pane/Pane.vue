@@ -80,17 +80,17 @@ function startResize(e: PointerEvent) {
       <span class="text-sm font-medium [writing-mode:vertical-rl]">{{ title }}</span>
     </button>
     <template v-else>
-      <header class="border-border flex h-12 shrink-0 items-center gap-1 border-b pr-2 pl-3">
-        <button
-          v-if="back"
-          type="button"
-          class="hover:bg-muted -ml-1 flex size-8 shrink-0 items-center justify-center rounded-md"
-          aria-label="Back"
-          @click="back"
-        >
-          <Icon name="chevron-left" />
-        </button>
-        <slot name="header" :toggle="toggle">
+      <slot name="header" :toggle="toggle">
+        <header class="border-border flex h-12 shrink-0 items-center gap-1 border-b pr-2 pl-3">
+          <button
+            v-if="back"
+            type="button"
+            class="hover:bg-muted -ml-1 flex size-8 shrink-0 items-center justify-center rounded-md"
+            aria-label="Back"
+            @click="back"
+          >
+            <Icon name="chevron-left" />
+          </button>
           <h2 v-if="!collapsible" class="w-full min-w-0 truncate text-sm font-medium">
             {{ title }}
           </h2>
@@ -106,8 +106,8 @@ function startResize(e: PointerEvent) {
             </Button>
           </div>
           <slot name="actions" />
-        </slot>
-      </header>
+        </header>
+      </slot>
       <ScrollArea
         class="min-h-0 flex-1 [&>[data-reka-scroll-area-viewport]>div]:block [&>[data-reka-scroll-area-viewport]>div]:h-full"
       >

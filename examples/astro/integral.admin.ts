@@ -25,7 +25,7 @@ export default defineAdmin({
   },
   pages: {
     stats: {
-      label: "Stats",
+      title: "Stats",
       nav: { icon: "chart-bar" },
       mount(el, { integral }) {
         client.find("posts").then((posts) => {
@@ -39,18 +39,25 @@ export default defineAdmin({
       },
     },
     dashboard: {
-      label: "Dashboard",
-      nav: { display: "none" },
+      title: "Dashboard",
+      nav: { display: "main", order: 1 },
+      // A string is HTML: escape untrusted values and prefix links with `integral.base`.
+      showPageTitle: (crumbs, { integral }) =>
+        `<div style="display:flex;align-items:center;gap:8px;font-size:14px">
+          ${crumbs.map((c) => `<a class="underline" href="${integral.base}${esc(c.to)}">${esc(c.label)}</a>`).join(" / ")}
+          <span style="border-radius:4px;padding:2px 8px;font-size:12px;background:#f59e0b33">Beta</span>
+        </div>`,
       route: "/",
       mount: (el, { integral }) => {
         const render = async () => {
           const posts = await client.find("posts");
           const session = await client.getSession();
-          el.innerHTML = `<h1 class="text-2xl font-semibold">Hi, ${session?.user.name ?? "Guest"}</h1>
+          el.style.height = "100%";
+          el.innerHTML = `<div style="height: 100%; padding: 1.5rem;"><h1 class="text-2xl font-semibold">Hi, ${session?.user.name ?? "Guest"}</h1>
             <p class="mt-2 text-sm text-zinc-600">${posts.length} post(s)</p>
             <ul class="mt-4 flex flex-col gap-1 text-sm">
               ${posts.map((p) => `<li><a class="underline" href="${integral.base}/reports/posts/${esc(p.id)}?tab=body">${esc(p.title)}</a></li>`).join("")}
-            </ul>`;
+            </ul></div>`;
         };
         render();
         return () => (el.innerHTML = "");

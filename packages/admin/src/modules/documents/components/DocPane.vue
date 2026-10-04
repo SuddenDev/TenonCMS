@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, inject, provide, ref } from "vue";
 import { useRouter } from "vue-router";
@@ -90,7 +91,7 @@ async function save(data: Data<Fields>) {
     const created = await client.create(props.name, data);
     reload();
     emit("saved");
-    await router.replace(`/collections/${props.name}/${created.id}`);
+    await router.replace(`${CONTENT}/collections/${props.name}/${created.id}`);
   } else {
     show(await client.update(props.name, docId.value, data));
     reload();
@@ -106,7 +107,7 @@ async function saveDraft(data: Data<Fields>) {
     const { params } = router.currentRoute.value;
     if (params.name === props.name && params.id === "new") {
       keepPane(docId.value);
-      await router.replace(`/collections/${props.name}/${docId.value}`);
+      await router.replace(`${CONTENT}/collections/${props.name}/${docId.value}`);
     }
   } else doc.value = await client.updateDraft(props.name, docId.value, data);
   reload();

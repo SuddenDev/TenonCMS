@@ -988,7 +988,7 @@ export default defineAdmin({
   fields: { color: mountColorInput },
   pages: {
     home: { route: "/", mount: mountHome },
-    stats: { label: "Stats", nav: { icon: "chart-bar", order: 5 }, mount: mountStats },
+    stats: { title: "Stats", nav: { icon: "chart-bar", order: 5 }, mount: mountStats },
     report: { route: "/reports/:id", nav: { display: "none" }, mount: mountReport },
   },
   plugins: [redirectsAdmin()],
@@ -996,16 +996,17 @@ export default defineAdmin({
 ```
 
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
-- `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`.
-- A page has an optional `label` (default: its key), `description` and `nav`. `nav` is the same for collections, globals, pages and media:
-  - `display`: `menu` (default) shows it in the sidebar, `settings` as a card on the Settings page, `tool` in the top bar after Content and Visual Editor (on phones, in the menu sheet), `none` nowhere. A `none` page like `/reports/:id` still works by URL.
+- `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`. A page shown in the content sidebar or on the Settings page opens under `/content` (`/stats` becomes `/content/stats`) or `/content/settings`; `main` and `none` pages use the route as is and open full width, without the sidebar, under the top bar.
+- A page has an optional `title` (default: its key), `description` and `nav`. `nav` is the same for collections, globals, pages and media:
+  - `display`: `content` (default) shows it in the sidebar, `settings` as a card on the Settings page, `main` in the top bar next to Content and Visual Editor, sorted by `order` (on phones, in the menu sheet), `none` nowhere. A `none` page like `/reports/:id` still works by URL.
   - `group`: the section. The default is `Content` in the sidebar and `Site` on the Settings page.
   - `icon`: a [Lucide](https://lucide.dev/icons) name, type-checked. `order`: lowest first.
 - Collections and globals take `description` and `nav` in their own config, next to `label`. Items sort by `order` (collections 10, media 15, globals 20, pages 30; equal orders keep their definition order), and sections appear in the order of their first item. `media` takes `{ label, nav }` to move the media library.
-- Settings: the sidebar has a "Settings" entry under "Admin" when any item has `display: "settings"`. It opens `/settings`, a page with one section of cards per `group`, and each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", group: "Site", order: 3 }, fields })`.
+- Settings: the sidebar has a "Settings" entry under "Admin" when any item has `display: "settings"`. It opens `/content/settings`, a page with one section of cards per `group`, and each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", group: "Site", order: 3 }, fields })`.
 - `name` shows in the sidebar header, on the login and in the page title (default `integral-cms`). `logo` (sidebar header and login) and `icon` (collapsed sidebar) are URLs, or `{ light, dark }` pairs that follow the admin's theme. The admin links the files and does not bundle them: put them in the host's `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
 - The favicon is `favicon` if set, else `icon`, else the host's `favicon.svg`, `.ico` or `.png` in its public folder. `favicon` takes a URL or a `{ light, dark }` pair.
-- A page on a built-in path replaces that view: `route: '/'` replaces the start page, `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
+- `showPageTitle` on a page sets its title bar: `true` (default) shows the breadcrumbs, `false` nothing, an array of `{ label, to }` your own breadcrumbs, and a function `(crumbs, { params, query, integral })` returns new breadcrumbs or an HTML string. The string is not escaped, so escape untrusted values like `params`, and prefix links with `integral.base`.
+- A page on a built-in path replaces that view: `route: '/'` with `display: 'main'` replaces the redirect from `/` to `/content` (the admin has no dashboard of its own), and `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
 - `plugins` takes the admin halves of [plugins](#plugins). Their fields and pages merge in before yours; a key used twice throws when the admin mounts.
 
 Every slot is one function, `mount(el, ctx)`, so any framework can plug in. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers:

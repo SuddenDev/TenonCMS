@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CONTENT } from "@/shared/options";
 import { useRoute, useRouter } from "vue-router";
 import DocPane from "@/modules/documents/components/DocPane.vue";
 import { useRefs } from "@/modules/documents/composables/useRefs";
@@ -13,13 +14,18 @@ const { refs, openAt, closeAt } = useRefs();
 </script>
 
 <template>
-  <DocPane :name="name" :id="id" :open="openAt(-1)" @deleted="router.push(`/collections/${name}`)">
+  <DocPane
+    :name="name"
+    :id="id"
+    :open="openAt(-1)"
+    @deleted="router.push(`${CONTENT}/collections/${name}`)"
+  >
     <template #actions>
       <Button
         variant="ghost"
         size="icon-sm"
         aria-label="Close"
-        @click="router.push(`/collections/${name}`)"
+        @click="router.push(`${CONTENT}/collections/${name}`)"
       >
         <Icon name="x" />
       </Button>

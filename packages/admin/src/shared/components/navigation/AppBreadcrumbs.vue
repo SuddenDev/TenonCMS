@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,9 +8,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/shared/components/ui/breadcrumb";
-import { useBreadcrumbs } from "@/shared/composables/useBreadcrumbs";
+import { type Crumb, useBreadcrumbs } from "@/shared/composables/useBreadcrumbs";
 
-const crumbs = useBreadcrumbs();
+const props = defineProps<{ crumbs?: Crumb[] }>();
+const own = useBreadcrumbs();
+const crumbs = computed(() => props.crumbs ?? own.value);
 </script>
 
 <template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CONTENT } from "@/shared/options";
 import { useDebounceFn } from "@vueuse/core";
 import { computed, provide, ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -151,10 +152,10 @@ function close() {
     !name.value
       ? "/"
       : !isGlobal.value
-        ? `/collections/${name.value}/${id.value}`
+        ? `${CONTENT}/collections/${name.value}/${id.value}`
         : schema.value.globals?.[name.value]?.nav?.display === "settings"
-          ? `/settings/globals/${name.value}`
-          : `/globals/${name.value}`,
+          ? `${CONTENT}/settings/globals/${name.value}`
+          : `${CONTENT}/globals/${name.value}`,
   );
 }
 </script>

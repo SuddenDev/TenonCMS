@@ -3,7 +3,7 @@ import { useRoute } from "vue-router";
 import { groupMenu } from "../../../../core/src/admin/menu";
 import type { Nav } from "../../../../core/src/admin/index.d.ts";
 import { schema } from "@/shared/api";
-import { optionsKey, pagePath } from "@/shared/options";
+import { CONTENT, optionsKey, pagePath } from "@/shared/options";
 
 export type MenuItem = {
   label: string;
@@ -23,7 +23,7 @@ function entry(
   base: { label: string; description?: string; icon: string; order: number; to: string },
   nav: Nav = {},
 ): Entry {
-  const { display = "menu", icon, order, group } = nav;
+  const { display = "content", icon, order, group } = nav;
   return { ...base, icon: icon ?? base.icon, order: order ?? base.order, group, display };
 }
 
@@ -36,7 +36,12 @@ function useEntries() {
       // `media` is the media library, with a page of its own.
       name === "media"
         ? entry(
-            { label: options.media?.label ?? "Media", icon: "image", order: 15, to: "/media" },
+            {
+              label: options.media?.label ?? "Media",
+              icon: "image",
+              order: 15,
+              to: `${CONTENT}/media`,
+            },
             options.media?.nav,
           )
         : entry(
@@ -45,7 +50,7 @@ function useEntries() {
               description: c.description,
               icon: "folder",
               order: 10,
-              to: `/collections/${name}`,
+              to: `${CONTENT}/collections/${name}`,
             },
             c.nav,
           ),
@@ -58,7 +63,10 @@ function useEntries() {
           icon: "settings",
           order: 20,
           // Settings globals open next to the Settings list.
-          to: g.nav?.display === "settings" ? `/settings/globals/${name}` : `/globals/${name}`,
+          to:
+            g.nav?.display === "settings"
+              ? `${CONTENT}/settings/globals/${name}`
+              : `${CONTENT}/globals/${name}`,
         },
         g.nav,
       ),
@@ -66,7 +74,7 @@ function useEntries() {
     ...pages.map(([key, p]) =>
       entry(
         {
-          label: p.label ?? key,
+          label: p.title ?? key,
           description: p.description,
           icon: "file",
           order: 30,
@@ -90,7 +98,7 @@ export function useSettings() {
 }
 
 /**
- * The sidebar sections: items with `nav.display` `menu` or unset, each in its `group` (default
+ * The sidebar sections: items with `nav.display` `content` or unset, each in its `group` (default
  * `Content`). Sorted by `order`; equal orders keep their definition order. A Settings entry under
  * `Admin` is added when any item is shown on the Settings page.
  */
@@ -98,15 +106,15 @@ export function useMenu() {
   const entries = useEntries();
   const settings = useSettings();
   return computed(() => {
-    const items: MenuItem[] = entries.value.filter((e) => e.display === "menu");
+    const items: MenuItem[] = entries.value.filter((e) => e.display === "content");
     const targets = settings.value.flatMap((g) => g.items.map((i) => i.to));
     if (targets.length)
       items.push({
         label: "Settings",
         icon: "settings",
-        group: "Admin",
+        group: "Manage",
         order: 100,
-        to: "/settings",
+        to: `${CONTENT}/settings`,
         also: targets,
       });
     return groupMenu(items);
@@ -116,20 +124,21 @@ export function useMenu() {
 export type Tool = MenuItem & { active: boolean };
 
 /**
- * The top bar tools: Content, Visual Editor, then every entry with `nav.display: "tool"`, sorted by
- * `order`. Content is active on every route that no other tool claims.
+ * The top bar tools: Content (order 5), Visual Editor (order 10) and every entry with
+ * `nav.display: "main"`, all sorted by `order`.
  */
-export function useTools() {
+export function useToolbar() {
   const entries = useEntries();
   const route = useRoute();
   return computed<Tool[]>(() => {
     const at = (to: string) => route.path === to || route.path.startsWith(`${to}/`);
     const tools: MenuItem[] = [
-      { label: "Visual Editor", icon: "eye", to: "/presentation", order: 0 },
-      ...entries.value.filter((e) => e.display === "tool").sort((a, b) => a.order - b.order),
+      { label: "Content", icon: "layout-list", to: CONTENT, order: 5 },
+      { label: "Visual Editor", icon: "eye", to: "/presentation", order: 10 },
+      ...entries.value.filter((e) => e.display === "main"),
     ];
-    const others = tools.map((t) => ({ ...t, active: [t.to, ...(t.also ?? [])].some(at) }));
-    const content = { label: "Content", icon: "layout-list", to: "/", order: 0 };
-    return [{ ...content, active: !others.some((t) => t.active) }, ...others];
+    return tools
+      .sort((a, b) => a.order - b.order)
+      .map((t) => ({ ...t, active: [t.to, ...(t.also ?? [])].some(at) }));
   });
 }

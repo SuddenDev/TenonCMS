@@ -6,7 +6,7 @@ export default defineAdmin({
   fields: { color: renderReact(ColorInput) },
   pages: {
     stats: {
-      label: "Stats",
+      title: "Stats",
       nav: { icon: "chart-bar" },
       route: "/reports/stats",
       mount: renderReact(Stats),

@@ -14,7 +14,7 @@ export function redirectsAdmin(): AdminPlugin {
     name: "redirects",
     pages: {
       "redirects-tools": {
-        label: "Redirect tools",
+        title: "Redirect tools",
         nav: { icon: "arrow-right-left", order: 11 },
         mount: mountTools,
       },
@@ -86,7 +86,7 @@ async function runImport(form: HTMLFormElement, base: string) {
       method: "POST",
       body: rows,
     });
-    out.innerHTML = `Imported ${count}. <a href="${base}/collections/redirects">View redirects</a>`;
+    out.innerHTML = `Imported ${count}. <a href="${base}/content/collections/redirects">View redirects</a>`;
   } catch (e) {
     out.textContent = errorMessage(e);
   }

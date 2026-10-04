@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -69,7 +70,9 @@ async function remove() {
   references.value = [];
   try {
     await client.media.delete(id);
-    await router.push(doc.value?.folder ? `/media/${doc.value.folder}` : "/media");
+    await router.push(
+      doc.value?.folder ? `${CONTENT}/media/${doc.value.folder}` : `${CONTENT}/media`,
+    );
   } catch (e) {
     if (e instanceof CmsError && e.status === 409) references.value = e.body.references;
     else error.value = (e as Error).message;
@@ -82,12 +85,14 @@ async function copy() {
 }
 
 const referenceLink = (r: Reference) =>
-  "global" in r ? `/globals/${r.global}` : `/collections/${r.collection}/${r.id}`;
+  "global" in r
+    ? `${CONTENT}/globals/${r.global}`
+    : `${CONTENT}/collections/${r.collection}/${r.id}`;
 </script>
 
 <template>
   <RouterLink
-    :to="doc?.folder ? `/media/${doc.folder}` : '/media'"
+    :to="doc?.folder ? `${CONTENT}/media/${doc.folder}` : `${CONTENT}/media`"
     class="text-muted-foreground text-sm"
   >
     ← Media

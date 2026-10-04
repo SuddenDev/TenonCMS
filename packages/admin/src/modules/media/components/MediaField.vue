@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CONTENT } from "@/shared/options";
 import { computed, ref, watch } from "vue";
 import { client, type Field, type MediaRead } from "@/shared/api";
 import { fits } from "@/modules/media/media";
@@ -82,7 +83,7 @@ async function upload(files: FileList | null) {
         class="border-border bg-card flex items-center gap-3 rounded-md border p-2"
       >
         <MediaThumb :doc="docs[id]" sizes="3rem" class="size-12" />
-        <RouterLink :to="`/media-file/${id}`" class="flex-1 truncate text-sm underline">
+        <RouterLink :to="`${CONTENT}/media-file/${id}`" class="flex-1 truncate text-sm underline">
           {{ docs[id]?.filename ?? (docs[id] === null ? "Missing file" : "…") }}
         </RouterLink>
         <template v-if="field.many">

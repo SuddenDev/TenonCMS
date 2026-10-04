@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -16,7 +17,7 @@ const route = useRoute();
 const router = useRouter();
 const folder = computed({
   get: () => String(route.params.folder ?? ""),
-  set: (f: string) => void router.push(f ? `/media/${f}` : "/media"),
+  set: (f: string) => void router.push(f ? `${CONTENT}/media/${f}` : `${CONTENT}/media`),
 });
 const library = ref<InstanceType<typeof MediaLibrary>>();
 const failed = ref<{ id: string; message: string }[]>([]);
@@ -67,7 +68,7 @@ async function rename() {
       <p>Some files did not move. Rename again to retry.</p>
       <ul class="list-disc pl-5">
         <li v-for="f in failed" :key="f.id">
-          <RouterLink :to="`/media-file/${f.id}`" class="underline">{{ f.id }}</RouterLink
+          <RouterLink :to="`${CONTENT}/media-file/${f.id}`" class="underline">{{ f.id }}</RouterLink
           >:
           {{ f.message }}
         </li>
@@ -87,7 +88,7 @@ async function rename() {
   <MediaLibrary
     ref="library"
     v-model:folder="folder"
-    @open="(id) => router.push(`/media-file/${id}`)"
+    @open="(id) => router.push(`${CONTENT}/media-file/${id}`)"
   >
     <template #actions>
       <DropdownMenu v-if="schema.media?.regenerate">

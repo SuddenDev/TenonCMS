@@ -10,6 +10,8 @@ declare module "vue-router" {
      * function gets the resolved route and MAY return nothing to keep the parent path.
      */
     parent?: string | ((route: RouteLocation) => string | undefined);
+    /** The trail starts at this route, whatever lies above it. */
+    root?: boolean;
   }
 }
 
@@ -32,7 +34,7 @@ export function useBreadcrumbs() {
     const up =
       (typeof parent === "function" ? parent(r) : parent) ??
       (path.slice(0, path.lastIndexOf("/")) || "/");
-    const parents = path === "/" ? [] : trail(up);
+    const parents = path === "/" || r.meta.root ? [] : trail(up);
     const { breadcrumb } = r.meta;
     if (!r.matched.length || !breadcrumb) return parents;
     const label = typeof breadcrumb === "string" ? breadcrumb : breadcrumb(r);

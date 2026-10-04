@@ -9,8 +9,15 @@ export const sessionKey = Symbol() as InjectionKey<{
   signOut: () => Promise<void>;
 }>;
 
-export function pagePath(key: string, page: Page) {
-  return page.route ?? `/${key}`;
+/** Path of the content views: collections, globals, media and settings. */
+export const CONTENT = "/content";
+
+/** Path of a host page. Pages shown in the content menu or on the Settings page sit under `CONTENT`. */
+export function pagePath(key: string, { route = `/${key}`, nav }: Page) {
+  const display = nav?.display ?? "content";
+  const prefix =
+    display === "content" ? CONTENT : display === "settings" ? `${CONTENT}/settings` : "";
+  return `${prefix}${route}`.replace(/(.)\/$/, "$1");
 }
 
 // The plugins' fields and pages, then the host's. A key used twice throws.
