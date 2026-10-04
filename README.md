@@ -610,6 +610,45 @@ defineCms({
 - A host or plugin global named `general` or `seo` throws at startup while that default is on.
 - A replacement is taken as is: an `image` field in it needs media.
 
+### Live preview
+
+`preview` on a collection or global tells the admin where a document renders. The admin opens that page next to the form and pushes every unsaved edit into it.
+
+```ts
+posts: {
+  // Placeholders walk into groups and through one relation. A missing value means no preview.
+  preview: "/{category.slug}/{slug}",
+  fields: { ... },
+},
+notes: {
+  // Or a function of the unsaved form state and the local API. `null`: no preview.
+  preview: async (doc, { cms }) => (doc.slug ? `/notes/${doc.slug}` : null),
+  fields: { ... },
+},
+```
+
+The pages preset sets `preview: "{path}"`. A placeholder that names no stored field throws at startup.
+
+On the site, mark what a field renders with `edit()` and start the runtime with `preview()`. It does nothing outside the admin's preview, so it is safe on every page.
+
+```ts
+import { edit, preview } from "integral-cms/preview";
+
+preview();
+// <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
+// <img data-cms={edit("posts", post.id, "hero")} data-cms-attr="src,srcset,alt" src={post.hero.src} />
+// Globals pass `null` as the id: edit("general", null, "title")
+```
+
+Bound elements get the typed text, or the listed attributes, on every keystroke. With edit mode on, a click on one focuses its field in the admin.
+
+Vue and React pages can re-render from the unsaved state too, so lists and conditions follow. `useDraft()` merges it into the document and starts the runtime:
+
+```ts
+import { useDraft } from "integral-cms/preview/vue"; // or integral-cms/preview/react
+const post = useDraft("posts", data); // Vue: a ref; React: the merged value
+```
+
 ### Media
 
 Every instance has a media library: uploads into folders, `image` and `file` fields, and responsive images. Files live on the local disk or in S3 (any S3-compatible service, R2 included).
@@ -1034,7 +1073,7 @@ Working:
 
 Roadmap, roughly in order:
 
-1. Live preview: `preview: (doc) => url` per collection, iframe in the editor, draft cookie
+1. Live preview: `preview` per collection, iframe in the editor (in progress: core done, see [Live preview](#live-preview))
 2. Drafts and published versions
 3. ~~Media uploads with a storage adapter (local disk, S3/R2)~~ Done, see [Media](#media)
 4. Rich text (format still open: Tiptap JSON or Markdown)

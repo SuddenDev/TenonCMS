@@ -19,3 +19,4 @@ Rules that only exist here:
 
 - Reads are public, writes need a session.
 - Fields marked `private` are removed from public responses and cannot be filtered on.
+- `/schema` sends `preview: true` for a collection or global with `preview`, never the template or function. `POST /collections/:name/preview-url` and `POST /globals/:name/preview-url` resolve it from the form state in the body (`{ url }`, 404 without `preview`).

@@ -10,13 +10,21 @@ import { Button } from "@/shared/components/ui/button";
 
 // `closable`: a reference pane. It shows a close button and leaves the page title alone.
 // `open`: opens a reference of this pane to its right.
-const props = defineProps<{
-  name: string;
-  id: string;
-  closable?: boolean;
-  open?: (collection: string, id: string) => void;
-}>();
-const emit = defineEmits<{ close: []; deleted: [] }>();
+// `previewing`: the pane sits next to the preview, so it shows no preview button.
+const props = withDefaults(
+  defineProps<{
+    name: string;
+    id: string;
+    closable?: boolean;
+    open?: (collection: string, id: string) => void;
+    previewing?: boolean;
+    min?: number;
+    max?: number;
+    grow?: boolean;
+  }>(),
+  { min: 448, grow: true },
+);
+const emit = defineEmits<{ close: []; deleted: []; change: [data: Record<string, unknown>] }>();
 const doc = ref<Record<string, unknown> | null>(null);
 
 const router = useRouter();
@@ -81,8 +89,17 @@ async function remove() {
 </script>
 
 <template>
-  <Pane v-if="collection" :title="title()" :min="448" grow :collapsible="false">
+  <Pane v-if="collection" :title="title()" :min="min" :max="max" :grow="grow" :collapsible="false">
     <template #actions>
+      <Button
+        v-if="collection.preview && !previewing && !isNew"
+        as-child
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Preview"
+      >
+        <RouterLink :to="`/preview/collections/${name}/${id}`"><Icon name="eye" /></RouterLink>
+      </Button>
       <slot name="actions" />
       <Button
         v-if="closable"
@@ -129,6 +146,7 @@ async function remove() {
         :initial="doc"
         :save="save"
         :is-new="isNew"
+        @change="emit('change', $event)"
       >
         <Button v-if="!isNew" type="button" variant="ghost" size="sm" @click="remove">
           Delete

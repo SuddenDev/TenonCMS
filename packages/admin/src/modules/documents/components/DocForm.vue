@@ -24,6 +24,8 @@ const props = defineProps<{
   save: (data: Data<Fields>) => Promise<void>;
   isNew?: boolean;
 }>();
+// `change`: the form state as it would be saved, on every edit and once on load.
+const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
 
 // Groups always render as objects, so their inputs have a model to bind to.
 // On save, an optional group with only empty values becomes null, so its required children do not apply.
@@ -61,6 +63,10 @@ watch(
   () => props.initial,
   (initial) => (data.value = normalize(props.fields, initial, false, props.isNew)),
 );
+watch(data, (value) => emit("change", normalize(props.fields, value, true)), {
+  deep: true,
+  immediate: true,
+});
 // Top-level fields without a group share one card. Each group is its own card.
 const plain = computed(() =>
   Object.entries(props.fields).filter(([, f]) => f.type !== "group" && f.type !== "join"),

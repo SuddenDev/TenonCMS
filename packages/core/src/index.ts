@@ -17,6 +17,7 @@ export type {
   MediaHooks,
   MediaRead,
   Modifiers,
+  Preview,
 } from "./schema/index.ts";
 export { definePlugin, type Plugin } from "./plugins/index.ts";
 

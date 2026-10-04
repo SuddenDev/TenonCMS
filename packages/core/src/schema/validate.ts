@@ -3,7 +3,8 @@ import { type Condition, isObject, matchCondition } from "./condition.ts";
 import { ValidationError } from "../errors.ts";
 import { fieldSchema } from "./fields/index.ts";
 import { fieldAt, isRef, relationPaths, targetOf } from "./walk.ts";
-import type { Fields, Schema } from "./index.ts";
+import { placeholders } from "../preview/template.ts";
+import type { Collection, Fields, Schema } from "./index.ts";
 
 // Startup checks.
 
@@ -28,24 +29,27 @@ const owners = (schema: Schema) => [
   ...Object.entries(schema.collections ?? {}).map(([name, c]) => ({
     name,
     fields: c.fields,
+    preview: c.preview,
     global: false,
   })),
   ...Object.entries(schema.globals ?? {}).map(([name, g]) => ({
     name,
     fields: g.fields,
+    preview: g.preview,
     global: true,
   })),
 ];
 
 /**
  * Throws when the schema cannot work: a relation or join that does not fit, a condition on an unknown field,
- * `unique` where it cannot apply, an invalid `pattern`, or a populate depth above the limit.
+ * `unique` where it cannot apply, an invalid `pattern`, a `preview` placeholder on an unknown field, or a populate depth
+ * above the limit.
  */
 export function checkSchema(schema: Schema, populate: { depth: number; maxDepth: number }) {
   const collections = schema.collections ?? {};
   if (populate.depth > populate.maxDepth)
     fail(`populate.depth (${populate.depth}) is above populate.maxDepth (${populate.maxDepth})`);
-  for (const { name, fields, global } of owners(schema)) {
+  for (const { name, fields, global, preview } of owners(schema)) {
     for (const { path, field } of relationPaths(fields)) {
       const at = `${field.type} "${name}.${path.join(".")}"`;
       const to = targetOf(field);
@@ -75,9 +79,29 @@ export function checkSchema(schema: Schema, populate: { depth: number; maxDepth:
         );
     }
     checkFields(fields, fields, name, !global);
+    if (typeof preview === "string")
+      for (const path of placeholders(preview))
+        if (!previewField(collections, fields, path))
+          fail(`preview of "${name}" names unknown field "${path}"`);
     // Compiles every `pattern`, so an invalid one throws here.
     dataSchema(fields);
   }
+}
+
+// A stored field through groups and at most one relation that is not `many`.
+function previewField(collections: Record<string, Collection>, fields: Fields, path: string) {
+  const keys = path.split(".");
+  for (let i = 1; i < keys.length; i++) {
+    const f = fieldAt(fields, keys.slice(0, i).join("."));
+    if (f?.type === "relation" && !f.many)
+      return stored(collections[f.collection]!.fields, keys.slice(i).join("."));
+  }
+  return stored(fields, path);
+}
+
+function stored(fields: Fields, path: string) {
+  const f = fieldAt(fields, path);
+  return f && f.type !== "group" && f.type !== "join" ? f : undefined;
 }
 
 function hasJoin(fields: Fields): boolean {

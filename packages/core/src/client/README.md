@@ -8,3 +8,5 @@
 | `register.d.ts` | Fills the `Register` interface with the host's `cms` type, so `createClient()` needs no type argument. |
 
 The admin uses this client too, so there is only one HTTP client.
+
+`previewUrl()` and `previewGlobalUrl()` ask the server for a live preview URL. The browser runtime of the preview is not part of the client; it is `integral-cms/preview` (`src/preview/`).

@@ -291,6 +291,25 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   ): Promise<Data<Global<C, K>>>;
 
   /**
+   * The live preview URL of a document from its unsaved form state, relative to the site origin. `null`: no preview
+   * for this document. Throws a `CmsError` with status `404` when the collection has no `preview`. Needs a session.
+   * `POST /api/cms/collections/:collection/preview-url`
+   */
+  previewUrl(
+    collection: keyof Collections<C> & string,
+    data: Record<string, unknown>,
+  ): Promise<string | null>;
+
+  /**
+   * The live preview URL of a global from its unsaved form state. Like {@link Client.previewUrl}.
+   * `POST /api/cms/globals/:name/preview-url`
+   */
+  previewGlobalUrl(
+    name: keyof Globals<C> & string,
+    data: Record<string, unknown>,
+  ): Promise<string | null>;
+
+  /**
    * Returns the collections and globals with their fields. Needs a session.
    * `GET /api/cms/schema`
    */
@@ -415,6 +434,12 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       request("GET", global(name), undefined, readQuery(options)),
 
     setGlobal: (name: string, data: unknown) => request("PUT", global(name), data),
+
+    previewUrl: async (name: string, data: unknown) =>
+      (await request("POST", `${collection(name)}/preview-url`, data)).url,
+
+    previewGlobalUrl: async (name: string, data: unknown) =>
+      (await request("POST", `${global(name)}/preview-url`, data)).url,
 
     getSchema: () => request("GET", "/schema"),
 

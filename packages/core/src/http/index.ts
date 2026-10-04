@@ -1,5 +1,5 @@
 import type { User } from "better-auth";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { API_BASE } from "../client/index.ts";
@@ -8,7 +8,8 @@ import { ConflictError, ValidationError } from "../errors.ts";
 import type { Plugin, PublicRouteEnv, RouteEnv } from "../plugins/index.ts";
 import { innerFields, mapValue } from "../schema/walk.ts";
 import { badSelectPath, type SelectSpec } from "../cms/populate.ts";
-import type { Collection, Fields, Schema } from "../schema/index.ts";
+import type { Collection, Fields, Global, LocalApi, Schema } from "../schema/index.ts";
+import { previewUrl } from "../preview/url.ts";
 import { type Env, notFound, pluginMiddleware, session, withCms } from "./middleware.ts";
 import { type Level, parsePopulate, parseSelect, visible, whereFromQuery } from "./query.ts";
 
@@ -25,10 +26,17 @@ export function createApp(
   const { schema } = cms;
   const collections: Record<string, Collection> = schema.collections ?? {};
   // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
-  // A field MAY be named `hooks`; it has a `type`. `JSON.stringify` drops other functions, like `validate`, itself.
+  // A field MAY be named `hooks` or `preview`; it has a `type`. `JSON.stringify` drops other functions, like `validate`, itself.
+  // The admin only needs to know that a `preview` exists, so either form is sent as `true`.
   const publicSchema = JSON.parse(
     JSON.stringify(schema, (key, value) =>
-      key === "hooks" && typeof value?.type !== "string" ? undefined : value,
+      typeof value?.type === "string"
+        ? value
+        : key === "hooks"
+          ? undefined
+          : key === "preview"
+            ? !!value || undefined
+            : value,
     ),
   );
   // What the admin needs to know of the media options.
@@ -67,6 +75,11 @@ export function createApp(
     const globals = schema.globals ?? {};
     if (!Object.hasOwn(globals, name)) throw notFound();
     return { name, fields: globals[name].fields };
+  };
+  // The preview URL of an entry with `preview`, or a 404.
+  const preview = async (entry: Collection | Global, c: Context<Env>) => {
+    if (!entry.preview) throw notFound();
+    return { url: await previewUrl(entry, await body(c.req), c.var.cms as unknown as LocalApi) };
   };
   // Mounts each plugin's routes of one kind under its name.
   const mount = (into: Hono<Env>, kind: "routes" | "publicRoutes") => {
@@ -122,6 +135,10 @@ export function createApp(
     const { name } = collectionOf(c.req.param("name"));
     return c.json(await c.var.cms.create(name, await body(c.req)), 201);
   });
+  writes.post("/collections/:name/preview-url", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    return c.json(await preview(collections[name]!, c));
+  });
   writes.put("/collections/:name/:id", async (c) => {
     const { name } = collectionOf(c.req.param("name"));
     const doc = await c.var.cms.update(name, c.req.param("id"), await body(c.req));
@@ -132,6 +149,10 @@ export function createApp(
     const { name } = collectionOf(c.req.param("name"));
     await c.var.cms.delete(name, c.req.param("id"));
     return c.body(null, 204);
+  });
+  writes.post("/globals/:name/preview-url", async (c) => {
+    const { name } = globalOf(c.req.param("name"));
+    return c.json(await preview(schema.globals![name]!, c));
   });
   writes.put("/globals/:name", async (c) => {
     const { name } = globalOf(c.req.param("name"));

@@ -11,6 +11,7 @@ import Dashboard from "@/modules/dashboard/views/Dashboard.vue";
 import Settings from "@/modules/settings/views/Settings.vue";
 import Media from "@/modules/media/views/Media.vue";
 import MediaFile from "@/modules/media/views/MediaFile.vue";
+import Preview from "@/modules/preview/views/Preview.vue";
 
 function hostPage({ mount, label }: Page, key: string) {
   return {
@@ -68,6 +69,8 @@ export function createAdminRouter(base: string, pages: Record<string, Page> = {}
         children: [{ path: ":id", component: DocEdit, meta: { panes: true } }],
       },
       { path: "/globals/:name", component: GlobalEdit, meta: { panes: true } },
+      { path: "/preview/collections/:name/:id", component: Preview, meta: { panes: true } },
+      { path: "/preview/globals/:name", component: Preview, meta: { panes: true } },
     ],
   });
 }

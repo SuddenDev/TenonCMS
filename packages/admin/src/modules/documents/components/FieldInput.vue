@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { computed, inject, ref, useId, watch } from "vue";
+import {
+  type ComponentPublicInstance,
+  computed,
+  inject,
+  ref,
+  useId,
+  useTemplateRef,
+  watch,
+} from "vue";
 import { client, type Field, type Fields, SLUG_PATTERN, schema, slugify } from "@/shared/api";
-import { active, isEmpty, openRefKey, titleField } from "@/modules/documents/fields";
+import { active, focusKey, isEmpty, openRefKey, titleField } from "@/modules/documents/fields";
 import { optionsKey } from "@/shared/options";
 import MediaField from "@/modules/media/components/MediaField.vue";
 import Icon from "@/shared/components/Icon.vue";
@@ -53,6 +61,22 @@ const attrs = computed(() => {
     max: f.max,
   };
 });
+// Runs after render, so the field's element exists when it mounts with a matching path.
+const box = useTemplateRef<ComponentPublicInstance>("box");
+const focus = inject(focusKey, undefined);
+watch(
+  () => focus?.value,
+  (target) => {
+    const el = box.value?.$el as HTMLElement | undefined;
+    if (!focus || target !== path.value || !el) return;
+    focus.value = null;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.querySelector<HTMLElement>("input, textarea, select, button")?.focus({
+      preventScroll: true,
+    });
+  },
+  { immediate: true, flush: "post" },
+);
 const custom = props.field.type.startsWith("custom:")
   ? inject(optionsKey, {}).fields?.[props.field.type.slice(7)]
   : undefined;
@@ -107,6 +131,7 @@ if (slug?.parent && relation?.type === "relation") {
   <template v-if="field.type === 'join'" />
   <FieldSet
     v-else-if="field.type === 'group'"
+    ref="box"
     :disabled="field.readOnly"
     class="border-border gap-4 rounded-md border p-4"
   >
@@ -134,7 +159,11 @@ if (slug?.parent && relation?.type === "relation") {
     <FieldError v-if="message">{{ message }}</FieldError>
   </FieldSet>
   <!-- Not a <label>: a click on its list would activate its first button. -->
-  <FieldBox v-else-if="field.type === 'image' || field.type === 'file'" :data-invalid="invalid">
+  <FieldBox
+    v-else-if="field.type === 'image' || field.type === 'file'"
+    ref="box"
+    :data-invalid="invalid"
+  >
     <FieldTitle>
       {{ field.label ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
@@ -143,7 +172,12 @@ if (slug?.parent && relation?.type === "relation") {
     <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
     <FieldError v-if="message">{{ message }}</FieldError>
   </FieldBox>
-  <FieldBox v-else-if="field.type === 'boolean'" orientation="horizontal" :data-invalid="invalid">
+  <FieldBox
+    v-else-if="field.type === 'boolean'"
+    ref="box"
+    orientation="horizontal"
+    :data-invalid="invalid"
+  >
     <input
       :id="id"
       v-model="model"
@@ -158,7 +192,7 @@ if (slug?.parent && relation?.type === "relation") {
       <FieldError v-if="message">{{ message }}</FieldError>
     </FieldContent>
   </FieldBox>
-  <FieldBox v-else :data-invalid="invalid">
+  <FieldBox v-else ref="box" :data-invalid="invalid">
     <component :is="custom ? FieldTitle : FieldLabel" :for="custom ? undefined : id">
       {{ field.label ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>

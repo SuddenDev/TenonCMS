@@ -15,6 +15,7 @@ The source of the `integral-cms` package. Each folder is one area and has its ow
 | `plugins/`      | The plugin contract and the bundled plugins.                                                 |
 | `presets/`      | Ready-made fields, hooks and settings globals (`general`, `seo`) a host spreads or gets.     |
 | `helpers/`      | Small render helpers without imports (`slugify`, `seoMeta`, `breadcrumbs`).                  |
+| `preview/`      | Live preview: `preview` URLs, and the browser runtime that patches pages with unsaved edits. |
 | `admin/`        | Glue to serve the admin UI on its own page. The UI itself is `packages/admin`.               |
 | `integrations/` | Framework integrations: Astro, Nuxt, plain Vite.                                             |
 | `tests/`        | Integration tests against a real in-memory instance.                                         |

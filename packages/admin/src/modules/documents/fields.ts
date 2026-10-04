@@ -1,4 +1,4 @@
-import type { InjectionKey } from "vue";
+import type { InjectionKey, Ref } from "vue";
 import { matchCondition } from "../../../../core/src/schema/condition";
 import type { Collection, Field } from "../../../../core/src/schema";
 
@@ -29,3 +29,6 @@ export const reloadKey: InjectionKey<() => void> = Symbol("reload");
 
 /** Opens a referenced document in a pane to the right. Provided only in the pane layout. */
 export const openRefKey: InjectionKey<(collection: string, id: string) => void> = Symbol("openRef");
+
+/** Dot path of the field to focus. The matching `FieldInput` scrolls to its input, focuses it and clears the path. */
+export const focusKey: InjectionKey<Ref<string | null>> = Symbol("focus");

@@ -4,8 +4,15 @@ import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import DocForm from "@/modules/documents/components/DocForm.vue";
-import { Pane } from "@/shared";
+import { Icon, Pane } from "@/shared";
+import { Button } from "@/shared/components/ui/button";
 
+// `previewing`: the pane sits next to the preview, so it shows no preview button.
+withDefaults(defineProps<{ previewing?: boolean; min?: number; max?: number; grow?: boolean }>(), {
+  min: 448,
+  grow: true,
+});
+const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
 const name = useRoute().params.name as string;
 const global = computed(() => schema.value.globals?.[name]);
 const data = ref<Record<string, unknown> | null>(null);
@@ -20,7 +27,19 @@ async function save(body: Data<Fields>) {
 </script>
 
 <template>
-  <Pane v-if="global" :title="global.label ?? name" :min="448" grow :collapsible="false">
+  <Pane
+    v-if="global"
+    :title="global.label ?? name"
+    :min="min"
+    :max="max"
+    :grow="grow"
+    :collapsible="false"
+  >
+    <template v-if="global.preview && !previewing" #actions>
+      <Button as-child variant="ghost" size="icon-sm" aria-label="Preview">
+        <RouterLink :to="`/preview/globals/${name}`"><Icon name="eye" /></RouterLink>
+      </Button>
+    </template>
     <div v-if="data" class="flex min-h-full flex-col">
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
         <p class="text-muted-foreground text-xs">Global</p>
@@ -35,6 +54,7 @@ async function save(body: Data<Fields>) {
         :fields="global.fields"
         :initial="data"
         :save="save"
+        @change="emit('change', $event)"
       />
     </div>
   </Pane>
