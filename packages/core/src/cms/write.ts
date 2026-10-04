@@ -1,9 +1,14 @@
 import {
   deleteDoc,
+  discardDraft,
+  discardGlobalDraft,
   insertDoc,
+  insertDraft,
   loadDoc,
   loadGlobal,
+  saveDraft,
   saveGlobal,
+  saveGlobalDraft,
   updateDoc,
 } from "../db/documents.ts";
 import { ValidationError } from "../errors.ts";
@@ -37,44 +42,113 @@ const stripMeta = ({
   ...data
 }: Record<string, unknown>) => data;
 
-// `effect`: an `onDelete` effect. It skips id checks, because other relations of the document MAY point to
-// documents that the same delete removes.
+type WriteFlags = {
+  /** An `onDelete` effect. It skips id checks, because other relations of the document MAY point to documents that the same delete removes. */
+  effect?: boolean;
+  /** A draft save. See `write()`. */
+  draft?: boolean;
+};
+
+// Draft saves carry `draft: true` in their args, so `run()` passes it to `beforeOperation` and `afterOperation`.
+const flag = (draft?: boolean) => (draft ? { draft } : {});
+
+export const create = (
+  core: Core,
+  scope: Scope,
+  collection: string,
+  data: unknown,
+  draft = false,
+) =>
+  run(core, scope, "create", col(collection), { collection, data, ...flag(draft) }, (s, args) =>
+    write(core, s, col(collection), "create", args.data, { draft }),
+  );
+
 export const update = (
   core: Core,
   scope: Scope,
   collection: string,
   id: string,
   data: unknown,
-  effect = false,
+  { effect, draft }: WriteFlags = {},
 ) =>
-  run(core, scope, "update", col(collection), { collection, id, data }, (s, args) =>
-    write(core, s, col(collection), "update", args.data, { id: args.id, effect }),
+  run(core, scope, "update", col(collection), { collection, id, data, ...flag(draft) }, (s, args) =>
+    write(core, s, col(collection), "update", args.data, { id: args.id, effect, draft }),
   );
 
-export const setGlobal = (core: Core, scope: Scope, name: string, data: unknown, effect = false) =>
-  run(core, scope, "setGlobal", glob(name), { global: name, data }, (s, args) =>
-    write(core, s, glob(name), "setGlobal", args.data, { effect }),
+export const setGlobal = (
+  core: Core,
+  scope: Scope,
+  name: string,
+  data: unknown,
+  { effect, draft }: WriteFlags = {},
+) =>
+  run(core, scope, "setGlobal", glob(name), { global: name, data, ...flag(draft) }, (s, args) =>
+    write(core, s, glob(name), "setGlobal", args.data, { effect, draft }),
   );
 
-/** Shared by `create`, `update` and `setGlobal`. Returns `undefined` for a missing document. */
+// A publish is an `update` or `setGlobal` of the draft: the whole pipeline runs on `COALESCE(draft, data)`.
+export const publish = (core: Core, scope: Scope, name: Name, id?: string) =>
+  name.kind === "global"
+    ? run(core, scope, "setGlobal", name, { global: name.name }, (s) =>
+        write(core, s, name, "setGlobal", {}, { publish: true }),
+      )
+    : run(core, scope, "update", name, { collection: name.name, id }, (s, args) =>
+        write(core, s, name, "update", {}, { id: args.id, publish: true }),
+      );
+
+/**
+ * Drops the draft. A document that was never published is deleted, with its `onDelete` effects.
+ * Returns the published document, or `undefined` when it is deleted or missing.
+ */
+export const discard = (core: Core, scope: Scope, name: Name, id?: string) =>
+  name.kind === "global"
+    ? run(core, scope, "setGlobal", name, { global: name.name }, async (s) => {
+        const db = await q(core, s);
+        await discardGlobalDraft(db, name.name);
+        const doc = (await loadGlobal(db, name.name)) ?? { publishedAt: null, hasDraft: false };
+        return (await afterRead(core, s, name, [doc], "setGlobal"))[0];
+      })
+    : run(core, scope, "update", name, { collection: name.name, id }, async (s, args) => {
+        const db = await q(core, s);
+        const doc = await loadDoc(db, name.name, args.id, true);
+        if (!doc) return undefined;
+        if (doc.publishedAt === null) {
+          await remove(core, s, name.name, args.id);
+          return undefined;
+        }
+        const stored = await discardDraft(db, name.name, args.id);
+        return (await afterRead(core, s, name, [stored], "update"))[0];
+      });
+
+/**
+ * Shared by `create`, `update`, `setGlobal` and publish. Returns `undefined` for a missing document.
+ * A draft save runs defaults, slugs, `beforeValidate`, a type check and `beforeChange`, then stores the draft.
+ * It skips `validate`, `unique`, id checks and `afterChange`. A publish loads the document with its draft.
+ */
 export async function write(
   core: Core,
   s: Inner,
   name: Name,
   operation: "create" | "update" | "setGlobal",
   input: unknown,
-  { id, effect }: { id?: string; effect?: boolean } = {},
+  {
+    id,
+    effect,
+    draft = false,
+    publish = false,
+  }: WriteFlags & { id?: string; publish?: boolean } = {},
 ) {
   const { fields } = target(core, name);
   const db = await q(core, s);
+  const drafts = draft || publish || s.drafts;
   const originalDoc =
     name.kind === "global"
-      ? await loadGlobal(db, name.name, s.drafts)
+      ? await loadGlobal(db, name.name, drafts)
       : id
-        ? await loadDoc(db, name.name, id, s.drafts)
+        ? await loadDoc(db, name.name, id, drafts)
         : undefined;
   if (id && !originalDoc) return undefined;
-  const args = hookArgs(s, name, { operation, id, originalDoc });
+  const args = hookArgs(s, name, { operation, id, originalDoc, draft });
   const fieldArgs = (data: Record<string, unknown>) => ({ ...args, data });
 
   // `update` and `setGlobal` change only the top-level keys they get. The others keep their stored values.
@@ -90,10 +164,11 @@ export async function write(
   const valid = parseData(
     fields,
     await runHooks(slot(core, name, "beforeValidate"), "data", copy, args),
+    draft,
   );
 
   // `onDelete` effects only clear references, so the document's own rules do not apply.
-  if (!effect) {
+  if (!effect && !draft) {
     const errors = await runValidate(fields, valid, fieldArgs(valid));
     if (Object.keys(errors).length) throw new ValidationError(errors);
   }
@@ -102,15 +177,27 @@ export async function write(
   const data = parseData(
     fields,
     await runHooks(slot(core, name, "beforeChange"), "data", valid, args),
+    draft,
   );
+
+  if (draft) {
+    let stored: Record<string, any>;
+    if (name.kind === "global") {
+      await saveGlobalDraft(db, name.name, data);
+      stored = (await loadGlobal(db, name.name, true))!;
+    } else if (id) stored = await saveDraft(db, name.name, id, data);
+    else stored = await insertDraft(db, name.name, data);
+    return (await afterRead(core, s, name, [stored], operation, true))[0];
+  }
+
   if (name.kind === "collection") await checkUnique(db, name.name, fields, data, id);
   if (!effect) await checkRefs(db, fields, data, id ? { collection: name.name, id } : undefined);
 
   let stored: Record<string, any>;
   if (name.kind === "global") {
-    await saveGlobal(db, name.name, data);
-    stored = data;
-  } else if (id) stored = await updateDoc(db, name.name, id, data);
+    await saveGlobal(db, name.name, data, publish);
+    stored = publish ? (await loadGlobal(db, name.name))! : data;
+  } else if (id) stored = await updateDoc(db, name.name, id, data, publish);
   else stored = await insertDoc(db, name.name, data);
 
   await fieldHooks("afterChange", fields, stored, fieldArgs(stored));
@@ -133,8 +220,8 @@ export async function remove(core: Core, s: Inner, collection: string, id: strin
   await runHooks(slot(core, col(collection), "beforeDelete"), "doc", doc, base);
   await deleteDoc(db, collection, id);
   await onDelete(db, core.schema, collection, id, {
-    update: (collection, id, data) => update(core, s, collection, id, data, true),
-    setGlobal: (name, data) => setGlobal(core, s, name, data, true),
+    update: (collection, id, data) => update(core, s, collection, id, data, { effect: true }),
+    setGlobal: (name, data) => setGlobal(core, s, name, data, { effect: true }),
     delete: (collection, id) => s.cms.delete(collection, id),
   });
   await runHooks(slot(core, col(collection), "afterDelete"), "doc", doc, base);

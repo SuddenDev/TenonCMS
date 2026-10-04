@@ -683,6 +683,24 @@ const integral = await cms.forRequest(request);
 const posts = await integral.find("posts");
 ```
 
+Writes publish by default. A draft save keeps the published data and stores the change as the pending draft:
+
+```ts
+const post = await cms.create("posts", { title: "Soon" }, { draft: true }); // never published
+await cms.update("posts", post.id, { body: "..." }, { draft: true });
+await cms.publish("posts", post.id); // validates, then publishes the draft
+await cms.discard("posts", post.id); // drops the draft; a never-published document is deleted
+await cms.setGlobal("general", { title: "New" }, { draft: true });
+await cms.publishGlobal("general");
+await cms.discardGlobal("general");
+```
+
+A draft save runs defaults, slugs, `beforeValidate` and `beforeChange`, and checks types only: `required`, `pattern`, `min`, `max`, `validate`, `unique` and relation ids wait for the publish. `afterChange` runs only on publish. A publish runs every check and hook of an update on the draft; when one fails, it throws a `ValidationError` and the draft stays. Hooks see `draft: true` on a draft save and `false` otherwise.
+
+`drafts: false` on a collection or global turns this off: `{ draft: true }` and `discard` throw a `ValidationError`. The media library has no drafts.
+
+Over HTTP, with a session: `POST /api/cms/collections/:name/draft`, `PUT /api/cms/collections/:name/:id/draft`, `POST /api/cms/collections/:name/:id/publish`, `DELETE /api/cms/collections/:name/:id/draft` (204 when it deleted), `PUT /api/cms/globals/:name/draft`, `POST /api/cms/globals/:name/publish` and `DELETE /api/cms/globals/:name/draft`. The client has `createDraft`, `updateDraft`, `publish`, `discard`, `setGlobalDraft`, `publishGlobal` and `discardGlobal`.
+
 The preview cookie (`integral-preview`, `HttpOnly`) is set by `POST /api/cms/preview` and cleared by `DELETE /api/cms/preview`; both need a session. In the browser, call `client.preview.enter()` and `client.preview.exit()`. HTTP reads follow the same rule: drafts only with the cookie and a session, so the cookie alone shows nothing.
 
 ### Media

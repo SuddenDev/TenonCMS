@@ -10,7 +10,7 @@
 | `api.ts`      | `bind()`: the local API methods. `Api`: their typed interface with the docs.                                                                                           |
 | `run.ts`      | `run()`: wraps every call with `beforeOperation` / `afterOperation`, the transaction and `afterError`.                                                                 |
 | `read.ts`     | `find`, `findOne`, `findById`, `getGlobal`: load, read hooks, populate, `select`.                                                                                      |
-| `write.ts`    | `create`, `update`, `setGlobal`, `delete`: the write pipeline.                                                                                                         |
+| `write.ts`    | `create`, `update`, `setGlobal`, `delete`, `publish`, `discard`: the write pipeline.                                                                                   |
 | `populate.ts` | Resolves relations and joins on read, and applies `select`.                                                                                                            |
 | `refs.ts`     | Integrity rules: ids must exist, `unique`, and `onDelete` (`restrict`, `set-null`, `cascade`).                                                                         |
 | `auth.ts`     | better-auth setup. Only the first user can sign up without a session.                                                                                                  |
@@ -24,6 +24,11 @@ api.ts  create()
                              validate again, unique, refs, save, afterChange, afterRead
       afterOperation, commit (or afterError on failure)
 ```
+
+A draft save (`{ draft: true }`) stops after `beforeChange`: it checks types only (`parseData(…, loose)`), skips `validate`,
+`unique`, ids and `afterChange`, and stores the draft column. `publish()` runs the full pipeline as an `update` (or `setGlobal`)
+on the draft and clears it. `discard()` clears the draft, or deletes a document that was never published through `remove()`.
+Hooks get `draft` in their args. A collection or global with `drafts: false` rejects draft saves and `discard()`.
 
 ## One read
 

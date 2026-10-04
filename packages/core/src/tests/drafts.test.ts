@@ -1,5 +1,8 @@
 import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
+import { ValidationError } from "../errors.ts";
+import { defineCms } from "../index.ts";
+import { page } from "../presets/index.ts";
 import { admin, origin, relational, seed, setup, tmpDb } from "./setup.ts";
 
 let url: string;
@@ -127,7 +130,7 @@ describe("drafts perspective", () => {
     (hooked.schema.collections!.tags as { hooks?: object }).hooks = {
       afterRead: [
         async ({ docs, cms }: any) => {
-          seen.push((await cms.find("posts")).length);
+          seen.push((await cms.find("posts", { populate: false })).length);
           return docs;
         },
       ],
@@ -235,5 +238,245 @@ describe("forRequest", () => {
     await (await hooked.forRequest(request(cookie))).find("tags");
     await (await hooked.forRequest(request())).find("tags");
     expect(users).toEqual([admin.email, null]);
+  });
+});
+
+describe("draft writes", () => {
+  // `stage:draft` for every write hook call, in order.
+  let calls: string[];
+  const record =
+    (stage: string) =>
+    ({ draft }: { draft: boolean }) => {
+      calls.push(`${stage}:${draft}`);
+    };
+  const make = () =>
+    defineCms({
+      collections: {
+        posts: {
+          fields: {
+            title: { type: "text", required: true },
+            slug: { type: "text", unique: true },
+            views: { type: "number" },
+          },
+          hooks: {
+            beforeValidate: [record("beforeValidate")],
+            beforeChange: [record("beforeChange")],
+            afterChange: [record("afterChange")],
+          },
+        },
+        pages: {
+          fields: page.fields,
+          hooks: { beforeChange: page.hooks.beforeChange },
+        },
+        notes: {
+          fields: { post: { type: "relation", collection: "posts", onDelete: "set-null" } },
+        },
+        logs: { drafts: false, fields: { text: { type: "text" } } },
+      },
+      globals: {
+        site: { fields: { name: { type: "text", required: true } } },
+        flags: { drafts: false, fields: { on: { type: "boolean" } } },
+      },
+      media: false,
+      settings: false,
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+    });
+  let cms: ReturnType<typeof make>;
+  beforeEach(() => {
+    calls = [];
+    cms = make();
+  });
+  const errors = (promise: Promise<unknown>) =>
+    promise.then(
+      () => undefined,
+      (e: unknown) => (e instanceof ValidationError ? e.errors : e),
+    );
+
+  it("creates a draft that only the drafts perspective reads", async () => {
+    const doc = await cms.create("posts", { title: "Draft" }, { draft: true });
+    expect(doc).toMatchObject({ title: "Draft", publishedAt: null, hasDraft: true });
+    expect(await cms.find("posts")).toEqual([]);
+    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({ title: "Draft" });
+  });
+
+  it("keeps the published data on a draft update", async () => {
+    const doc = await cms.create("posts", { title: "Live" });
+    const draft = await cms.update("posts", doc.id, { title: "Next" }, { draft: true });
+    expect(draft).toMatchObject({ title: "Next", hasDraft: true, publishedAt: doc.publishedAt });
+    expect(await cms.findById("posts", doc.id)).toMatchObject({ title: "Live", hasDraft: true });
+  });
+
+  it("updates the draft of a document that was never published", async () => {
+    const doc = await cms.create("posts", { title: "One" }, { draft: true });
+    expect(await cms.update("posts", doc.id, { views: 2 }, { draft: true })).toMatchObject({
+      title: "One",
+      views: 2,
+    });
+  });
+
+  it("skips required and unique, but checks types", async () => {
+    await cms.create("posts", { title: "A", slug: "a" });
+    expect(await cms.create("posts", { slug: "a" }, { draft: true })).toMatchObject({ slug: "a" });
+    expect(await errors(cms.create("posts", { views: "many" }, { draft: true }))).toHaveProperty(
+      "views",
+    );
+  });
+
+  it("passes draft to hooks and runs afterChange only on publish", async () => {
+    const doc = await cms.create("posts", { title: "A" }, { draft: true });
+    expect(calls).toEqual(["beforeValidate:true", "beforeChange:true"]);
+    calls = [];
+    await cms.publish("posts", doc.id);
+    expect(calls).toEqual(["beforeValidate:false", "beforeChange:false", "afterChange:false"]);
+  });
+
+  it("runs beforeChange on drafts", async () => {
+    const doc = await cms.create("pages", { title: "About", slug: "about" }, { draft: true });
+    expect(doc).toMatchObject({ path: "/about" });
+  });
+
+  it("publishes the draft", async () => {
+    const doc = await cms.create("posts", { title: "A" }, { draft: true });
+    const published = await cms.publish("posts", doc.id);
+    expect(published).toMatchObject({
+      title: "A",
+      hasDraft: false,
+      publishedAt: expect.any(String),
+    });
+    expect(await cms.findById("posts", doc.id)).toMatchObject({ title: "A", hasDraft: false });
+  });
+
+  it("publishes without a draft", async () => {
+    const doc = await cms.create("posts", { title: "A" });
+    expect(await cms.publish("posts", doc.id)).toMatchObject({ title: "A", hasDraft: false });
+  });
+
+  it("validates on publish and keeps the draft", async () => {
+    const doc = await cms.create("posts", { views: 1 }, { draft: true });
+    expect(await errors(cms.publish("posts", doc.id))).toHaveProperty("title");
+    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({
+      views: 1,
+      publishedAt: null,
+      hasDraft: true,
+    });
+  });
+
+  it("checks unique on publish", async () => {
+    await cms.create("posts", { title: "A", slug: "a" });
+    const doc = await cms.create("posts", { title: "B", slug: "a" }, { draft: true });
+    expect(await errors(cms.publish("posts", doc.id))).toHaveProperty("slug");
+  });
+
+  it("discards the draft", async () => {
+    const doc = await cms.create("posts", { title: "Live" });
+    await cms.update("posts", doc.id, { title: "Next" }, { draft: true });
+    expect(await cms.discard("posts", doc.id)).toMatchObject({ title: "Live", hasDraft: false });
+    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({ title: "Live" });
+  });
+
+  it("deletes a document that was never published on discard", async () => {
+    const post = await cms.create("posts", { title: "A" }, { draft: true });
+    const note = await cms.create("notes", { post: post.id });
+    expect(await cms.discard("posts", post.id)).toBeUndefined();
+    expect(await cms.drafts().findById("posts", post.id)).toBeUndefined();
+    expect(await cms.findById("notes", note.id, { populate: false })).toMatchObject({
+      post: null,
+    });
+  });
+
+  it("rejects drafts where they are off", async () => {
+    const message = { "": 'Drafts are off for "logs"' };
+    expect(await errors(cms.create("logs", {}, { draft: true }))).toEqual(message);
+    const log = await cms.create("logs", { text: "a" });
+    expect(await errors(cms.update("logs", log.id, {}, { draft: true }))).toEqual(message);
+    expect(await errors(cms.discard("logs", log.id))).toEqual(message);
+    const flags = { "": 'Drafts are off for "flags"' };
+    expect(await errors(cms.setGlobal("flags", {}, { draft: true }))).toEqual(flags);
+    expect(await errors(cms.discardGlobal("flags"))).toEqual(flags);
+  });
+
+  it("drafts, publishes and discards globals", async () => {
+    expect(await cms.setGlobal("site", {}, { draft: true })).toMatchObject({
+      publishedAt: null,
+      hasDraft: true,
+    });
+    expect(await errors(cms.publishGlobal("site"))).toHaveProperty("name");
+    await cms.setGlobal("site", { name: "Next" }, { draft: true });
+    expect(await cms.getGlobal("site")).toEqual({ publishedAt: null, hasDraft: false });
+    expect(await cms.publishGlobal("site")).toMatchObject({ name: "Next" });
+    expect(await cms.getGlobal("site")).toMatchObject({ name: "Next", hasDraft: false });
+    await cms.setGlobal("site", { name: "Later" }, { draft: true });
+    expect(await cms.discardGlobal("site")).toMatchObject({ name: "Next", hasDraft: false });
+    expect(await cms.drafts().getGlobal("site")).toMatchObject({ name: "Next" });
+  });
+
+  it("sends drafts in the schema", async () => {
+    const { client } = setup(cms);
+    await client.signUp(admin);
+    const schema = await client.getSchema();
+    expect(schema.collections?.logs?.drafts).toBe(false);
+  });
+
+  describe("over HTTP", () => {
+    let s: ReturnType<typeof setup<typeof cms>>;
+    const call = (method: string, path: string, body?: object) =>
+      s.fetch(`${origin}/api/cms${path}`, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: body && JSON.stringify(body),
+      });
+    beforeEach(() => {
+      s = setup(cms);
+    });
+
+    it("needs a session", async () => {
+      expect((await call("POST", "/collections/posts/draft", { title: "A" })).status).toBe(401);
+      expect((await call("POST", "/collections/posts/x/publish")).status).toBe(401);
+      expect((await call("PUT", "/globals/site/draft", {})).status).toBe(401);
+    });
+
+    it("has routes for draft, publish and discard", async () => {
+      await s.client.signUp(admin);
+      const created = await call("POST", "/collections/posts/draft", { views: 1 });
+      expect(created.status).toBe(201);
+      const { id } = await created.json();
+      const path = `/collections/posts/${id}`;
+      expect((await call("PUT", `${path}/draft`, { views: "x" })).status).toBe(400);
+      expect((await call("POST", `${path}/publish`)).status).toBe(400);
+      expect((await call("PUT", `${path}/draft`, { title: "A" })).status).toBe(200);
+      expect(await (await call("POST", `${path}/publish`)).json()).toMatchObject({ title: "A" });
+      await call("PUT", `${path}/draft`, { title: "B" });
+      const discarded = await call("DELETE", `${path}/draft`);
+      expect(await discarded.json()).toMatchObject({ title: "A", hasDraft: false });
+      expect((await call("PUT", `/collections/posts/missing/draft`, {})).status).toBe(404);
+      const other = await (await call("POST", "/collections/posts/draft", {})).json();
+      expect((await call("DELETE", `/collections/posts/${other.id}/draft`)).status).toBe(204);
+      expect((await call("PUT", "/globals/site/draft", { name: "S" })).status).toBe(200);
+      expect(await (await call("POST", "/globals/site/publish")).json()).toMatchObject({
+        name: "S",
+      });
+      await call("PUT", "/globals/site/draft", { name: "T" });
+      expect(await (await call("DELETE", "/globals/site/draft")).json()).toMatchObject({
+        name: "S",
+      });
+    });
+
+    it("has client methods", async () => {
+      const { client } = s;
+      await client.signUp(admin);
+      const doc = await client.createDraft("posts", { views: 1 });
+      expect(doc).toMatchObject({ views: 1, hasDraft: true });
+      await client.updateDraft("posts", doc.id, { title: "A" });
+      expect(await client.publish("posts", doc.id)).toMatchObject({ title: "A" });
+      await client.updateDraft("posts", doc.id, { title: "B" });
+      expect(await client.discard("posts", doc.id)).toMatchObject({ title: "A" });
+      const other = await client.createDraft("posts", {});
+      expect(await client.discard("posts", other.id)).toBeNull();
+      await client.setGlobalDraft("site", { name: "S" });
+      expect(await client.publishGlobal("site")).toMatchObject({ name: "S" });
+      await client.setGlobalDraft("site", { name: "T" });
+      expect(await client.discardGlobal("site")).toMatchObject({ name: "S" });
+    });
   });
 });

@@ -31,7 +31,7 @@ export async function run<R>(
   const of = (stage: Stage) => (name.kind === "collection" ? slot(core, name, stage) : undefined);
   const body = async (trx = scope.trx) => {
     const s = inner(core, scope, trx, context);
-    const base = hookArgs(s, name, { operation });
+    const base = hookArgs(s, name, { operation, draft: args.draft === true });
     const input = await runHooks(of("beforeOperation"), "args", args, base);
     const result = await fn(s, input);
     return runHooks(of("afterOperation"), "result", result, { ...base, args: input });

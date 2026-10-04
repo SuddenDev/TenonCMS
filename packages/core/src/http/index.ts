@@ -156,6 +156,10 @@ export function createApp(
     const { name } = collectionOf(c.req.param("name"));
     return c.json(await c.var.cms.create(name, await body(c.req)), 201);
   });
+  writes.post("/collections/:name/draft", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    return c.json(await c.var.cms.create(name, await body(c.req), { draft: true }), 201);
+  });
   writes.post("/collections/:name/preview-url", async (c) => {
     const { name } = collectionOf(c.req.param("name"));
     return c.json(await preview(collections[name]!, c));
@@ -165,6 +169,26 @@ export function createApp(
     const doc = await c.var.cms.update(name, c.req.param("id"), await body(c.req));
     if (!doc) throw notFound();
     return c.json(doc);
+  });
+  writes.put("/collections/:name/:id/draft", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    const doc = await c.var.cms.update(name, c.req.param("id"), await body(c.req), {
+      draft: true,
+    });
+    if (!doc) throw notFound();
+    return c.json(doc);
+  });
+  writes.post("/collections/:name/:id/publish", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    const doc = await c.var.cms.publish(name, c.req.param("id"));
+    if (!doc) throw notFound();
+    return c.json(doc);
+  });
+  // 204 when the document was never published and is deleted.
+  writes.delete("/collections/:name/:id/draft", async (c) => {
+    const { name } = collectionOf(c.req.param("name"));
+    const doc = await c.var.cms.discard(name, c.req.param("id"));
+    return doc ? c.json(doc) : c.body(null, 204);
   });
   writes.delete("/collections/:name/:id", async (c) => {
     const { name } = collectionOf(c.req.param("name"));
@@ -178,6 +202,18 @@ export function createApp(
   writes.put("/globals/:name", async (c) => {
     const { name } = globalOf(c.req.param("name"));
     return c.json(await c.var.cms.setGlobal(name, await body(c.req)));
+  });
+  writes.put("/globals/:name/draft", async (c) => {
+    const { name } = globalOf(c.req.param("name"));
+    return c.json(await c.var.cms.setGlobal(name, await body(c.req), { draft: true }));
+  });
+  writes.post("/globals/:name/publish", async (c) => {
+    const { name } = globalOf(c.req.param("name"));
+    return c.json(await c.var.cms.publishGlobal(name));
+  });
+  writes.delete("/globals/:name/draft", async (c) => {
+    const { name } = globalOf(c.req.param("name"));
+    return c.json(await c.var.cms.discardGlobal(name));
   });
 
   const api = new Hono<Env>().basePath(API_BASE);

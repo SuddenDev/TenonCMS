@@ -45,6 +45,7 @@ export type MediaOptions = {
 export const mediaCollection = {
   label: "Media",
   titleField: "filename",
+  drafts: false,
   fields: {
     folder: { type: "text" },
     filename: { type: "text", required: true },

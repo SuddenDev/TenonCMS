@@ -264,6 +264,46 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   ): Promise<Doc<Fields<C, K>>>;
 
   /**
+   * Creates a document as an unpublished draft. Types are checked, `required` and the other checks wait for
+   * `publish()`. Needs a session.
+   * `POST /api/cms/collections/:collection/draft`
+   */
+  createDraft<K extends keyof Collections<C> & string>(
+    collection: K,
+    data: Partial<Data<Fields<C, K>>>,
+  ): Promise<Doc<Fields<C, K>>>;
+
+  /**
+   * Changes the top-level fields of a document's draft, like `update()`. The published data stays. Needs a session.
+   * `PUT /api/cms/collections/:collection/:id/draft`
+   */
+  updateDraft<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    data: Partial<Data<Fields<C, K>>>,
+  ): Promise<Doc<Fields<C, K>>>;
+
+  /**
+   * Publishes the draft of a document. Throws a `CmsError` with status `400` for invalid data and keeps the draft.
+   * Needs a session.
+   * `POST /api/cms/collections/:collection/:id/publish`
+   */
+  publish<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+  ): Promise<Doc<Fields<C, K>>>;
+
+  /**
+   * Drops the draft of a document and returns the published one. A document that was never published is deleted and
+   * the result is `null`. Needs a session.
+   * `DELETE /api/cms/collections/:collection/:id/draft`
+   */
+  discard<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+  ): Promise<Doc<Fields<C, K>> | null>;
+
+  /**
    * Deletes a document. Needs a session.
    * `DELETE /api/cms/collections/:collection/:id`
    */
@@ -289,6 +329,27 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     name: K,
     data: Partial<Data<Global<C, K>>>,
   ): Promise<Data<Global<C, K>>>;
+
+  /**
+   * Changes the top-level fields of a global's draft. The published data stays. Needs a session.
+   * `PUT /api/cms/globals/:name/draft`
+   */
+  setGlobalDraft<K extends keyof Globals<C> & string>(
+    name: K,
+    data: Partial<Data<Global<C, K>>>,
+  ): Promise<Partial<Data<Global<C, K>>>>;
+
+  /**
+   * Publishes the draft of a global. Throws a `CmsError` with status `400` for invalid data. Needs a session.
+   * `POST /api/cms/globals/:name/publish`
+   */
+  publishGlobal<K extends keyof Globals<C> & string>(name: K): Promise<Data<Global<C, K>>>;
+
+  /**
+   * Drops the draft of a global and returns the published one. Needs a session.
+   * `DELETE /api/cms/globals/:name/draft`
+   */
+  discardGlobal<K extends keyof Globals<C> & string>(name: K): Promise<Partial<Data<Global<C, K>>>>;
 
   /**
    * The live preview URL of a document from its unsaved form state, relative to the site origin. `null`: no preview
@@ -439,12 +500,28 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
 
     update: (name: string, id: string, data: unknown) => request("PUT", doc(name, id), data),
 
+    createDraft: (name: string, data: unknown) =>
+      request("POST", `${collection(name)}/draft`, data),
+
+    updateDraft: (name: string, id: string, data: unknown) =>
+      request("PUT", `${doc(name, id)}/draft`, data),
+
+    publish: (name: string, id: string) => request("POST", `${doc(name, id)}/publish`),
+
+    discard: (name: string, id: string) => request("DELETE", `${doc(name, id)}/draft`),
+
     delete: (name: string, id: string) => request("DELETE", doc(name, id)),
 
     getGlobal: (name: string, options: ReadQuery = {}) =>
       request("GET", global(name), undefined, readQuery(options)),
 
     setGlobal: (name: string, data: unknown) => request("PUT", global(name), data),
+
+    setGlobalDraft: (name: string, data: unknown) => request("PUT", `${global(name)}/draft`, data),
+
+    publishGlobal: (name: string) => request("POST", `${global(name)}/publish`),
+
+    discardGlobal: (name: string) => request("DELETE", `${global(name)}/draft`),
 
     previewUrl: async (name: string, data: unknown) =>
       (await request("POST", `${collection(name)}/preview-url`, data)).url,

@@ -48,11 +48,17 @@ export async function afterRead(
   name: Name,
   docs: Record<string, any>[],
   operation: Operation,
+  draft = false,
 ) {
   const { fields } = target(core, name);
   for (const doc of docs)
-    await fieldHooks("afterRead", fields, doc, hookArgs(s, name, { operation, data: doc }));
-  return runHooks(slot(core, name, "afterRead"), "docs", docs, hookArgs(s, name, { operation }));
+    await fieldHooks("afterRead", fields, doc, hookArgs(s, name, { operation, data: doc, draft }));
+  return runHooks(
+    slot(core, name, "afterRead"),
+    "docs",
+    docs,
+    hookArgs(s, name, { operation, draft }),
+  );
 }
 
 const beforeRead = (

@@ -2,10 +2,10 @@
 
 The database layer: libsql (SQLite or Turso) through Kysely. All SQL lives here.
 
-| File           | What it does                                                                                                                                          |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`     | `createDb()`, the table types, `toDoc()` (a row with its meta), a small libsql dialect for Kysely, and `migrate()` (core tables, then better-auth's). |
-| `documents.ts` | Every query on the two tables: find, load, insert, update, delete, globals, and the scans for references and joins.                                   |
+| File           | What it does                                                                                                                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`     | `createDb()`, the table types, `toDoc()` (a row with its meta), a small libsql dialect for Kysely, and `migrate()` (core tables, then better-auth's).                                                             |
+| `documents.ts` | Every query on the two tables: find, load, insert, update, delete, drafts (`insertDraft`, `saveDraft`, `discardDraft`, `saveGlobalDraft`, `discardGlobalDraft`), globals, and the scans for references and joins. |
 
 Two tables hold all content:
 

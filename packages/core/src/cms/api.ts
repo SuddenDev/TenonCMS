@@ -11,13 +11,14 @@ import type {
   Schema,
   GlobalMeta,
   SelectOf,
+  WriteOptions,
 } from "../schema/index.ts";
 import { mediaApi } from "../media/index.ts";
 import { read, readGlobal } from "./read.ts";
 import { run } from "./run.ts";
 import { ValidationError } from "../errors.ts";
-import { col, type Core, glob, known, type Scope } from "./scope.ts";
-import { remove, setGlobal, update, write } from "./write.ts";
+import { col, type Core, draftable, glob, known, type Scope } from "./scope.ts";
+import { create, discard, publish, remove, setGlobal, update } from "./write.ts";
 
 // Media documents change only through `cms.media`.
 function writable(core: Core, collection: string) {
@@ -57,21 +58,24 @@ export function bind(core: Core, scope: Scope): LocalApi {
         async (s, args) => (await read(core, s, collection, { ...args.options, id: args.id }))[0],
       );
     },
-    async create(collection, data) {
+    async create(collection, data, { draft = false } = {}) {
       writable(core, collection);
-      const doc = await run(
-        core,
-        scope,
-        "create",
-        col(collection),
-        { collection, data },
-        (s, args) => write(core, s, col(collection), "create", args.data),
-      );
-      return doc!;
+      if (draft) draftable(core, col(collection));
+      return (await create(core, scope, collection, data, draft))!;
     },
-    async update(collection, id, data) {
+    async update(collection, id, data, { draft = false } = {}) {
       writable(core, collection);
-      return update(core, scope, collection, id, data);
+      if (draft) draftable(core, col(collection));
+      return update(core, scope, collection, id, data, { draft });
+    },
+    async publish(collection, id) {
+      writable(core, collection);
+      return publish(core, scope, col(collection), id);
+    },
+    async discard(collection, id) {
+      writable(core, collection);
+      draftable(core, col(collection));
+      return discard(core, scope, col(collection), id);
     },
     async delete(collection, id) {
       writable(core, collection);
@@ -85,9 +89,19 @@ export function bind(core: Core, scope: Scope): LocalApi {
         readGlobal(core, s, name, args.options),
       );
     },
-    async setGlobal(name, data) {
+    async setGlobal(name, data, { draft = false } = {}) {
       known(core, "global", name);
-      return (await setGlobal(core, scope, name, data))!;
+      if (draft) draftable(core, glob(name));
+      return (await setGlobal(core, scope, name, data, { draft }))!;
+    },
+    async publishGlobal(name) {
+      known(core, "global", name);
+      return (await publish(core, scope, glob(name)))!;
+    },
+    async discardGlobal(name) {
+      known(core, "global", name);
+      draftable(core, glob(name));
+      return (await discard(core, scope, glob(name)))!;
     },
     drafts: () => core.bind({ ...scope, drafts: true }),
     media: core.media && mediaApi(core, scope),
@@ -147,19 +161,42 @@ export type Api<T extends Schema, D extends number> = {
     id: string,
     options?: Checked<O, Collections<T>, Collections<T>[K]["fields"], D>,
   ): Promise<ReadCollection<T, K, O, D> | undefined>;
-  /** Creates a document. Throws a `ValidationError` for invalid `data`. */
+  /**
+   * Creates a document. Throws a `ValidationError` for invalid `data`.
+   * With `{ draft: true }`, creates it unpublished: only the drafts perspective reads it until `publish()`.
+   */
   create<K extends keyof Collections<T> & string>(
     collection: K,
     data: Record<string, unknown>,
+    options?: WriteOptions,
   ): Promise<CollectionDoc<T, K>>;
   /**
    * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one.
    * Returns `undefined` if the document does not exist. Throws a `ValidationError` for invalid data.
+   * With `{ draft: true }`, changes the draft and keeps the published data.
    */
   update<K extends keyof Collections<T> & string>(
     collection: K,
     id: string,
     data: Record<string, unknown>,
+    options?: WriteOptions,
+  ): Promise<CollectionDoc<T, K> | undefined>;
+  /**
+   * Publishes the draft of a document, or its data again when it has none. Runs every check and hook of an
+   * `update`. Throws a `ValidationError` for invalid data and keeps the draft. Returns `undefined` if the document
+   * does not exist.
+   */
+  publish<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+  ): Promise<CollectionDoc<T, K> | undefined>;
+  /**
+   * Drops the draft of a document and returns the published one. A document that was never published is deleted, with
+   * its `onDelete` effects, and the result is `undefined`.
+   */
+  discard<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
   ): Promise<CollectionDoc<T, K> | undefined>;
   /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
   delete(collection: keyof Collections<T> & string, id: string): Promise<void>;
@@ -171,11 +208,19 @@ export type Api<T extends Schema, D extends number> = {
     name: K,
     options?: Checked<O, Collections<T>, Globals<T>[K]["fields"], D, false>,
   ): Promise<ReadGlobal<T, K, O, D>>;
-  /** Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Throws a `ValidationError` for invalid data. */
+  /**
+   * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Throws a `ValidationError` for invalid data.
+   * With `{ draft: true }`, changes the draft and keeps the published data.
+   */
   setGlobal<K extends keyof Globals<T> & string>(
     name: K,
     data: Record<string, unknown>,
+    options?: WriteOptions,
   ): Promise<GlobalData<T, K>>;
+  /** Publishes the draft of a global, like `publish()`. */
+  publishGlobal<K extends keyof Globals<T> & string>(name: K): Promise<GlobalData<T, K>>;
+  /** Drops the draft of a global and returns the published one. */
+  discardGlobal<K extends keyof Globals<T> & string>(name: K): Promise<GlobalData<T, K>>;
   /**
    * The same API in the drafts perspective: reads see documents that were never published, and pending drafts
    * instead of the published data. Without it, reads see published documents only.

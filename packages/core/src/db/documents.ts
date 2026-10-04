@@ -150,13 +150,70 @@ export async function insertDoc(db: Db, collection: string, data: Doc) {
   );
 }
 
-/** Publishes `data`. A pending draft stays. */
-export async function updateDoc(db: Db, collection: string, id: string, data: Doc) {
+/** Inserts a document that was never published, with `draft` as its data. */
+export async function insertDraft(db: Db, collection: string, draft: Doc) {
+  const now = Date.now();
+  return toDoc(
+    await db
+      .insertInto("cms_documents")
+      .values({
+        id: crypto.randomUUID(),
+        collection,
+        data: "{}",
+        draft: JSON.stringify(draft),
+        created_at: now,
+        updated_at: now,
+        published_at: null,
+      })
+      .returning(columns(true))
+      .executeTakeFirstOrThrow(),
+  );
+}
+
+/** Stores the draft of a document. The published data stays. Returns the drafts perspective of the row. */
+export async function saveDraft(db: Db, collection: string, id: string, draft: Doc) {
+  return toDoc(
+    await db
+      .updateTable("cms_documents")
+      .set({ draft: JSON.stringify(draft), updated_at: Date.now() })
+      .where("collection", "=", collection)
+      .where("id", "=", id)
+      .returning(columns(true))
+      .executeTakeFirstOrThrow(),
+  );
+}
+
+/** Drops the draft of a document. Returns the published row. */
+export async function discardDraft(db: Db, collection: string, id: string) {
+  return toDoc(
+    await db
+      .updateTable("cms_documents")
+      .set({ draft: null })
+      .where("collection", "=", collection)
+      .where("id", "=", id)
+      .returning(columns(false))
+      .executeTakeFirstOrThrow(),
+  );
+}
+
+/** Publishes `data`. A pending draft stays, unless `clearDraft`. */
+export async function updateDoc(
+  db: Db,
+  collection: string,
+  id: string,
+  data: Doc,
+  clearDraft = false,
+) {
   const now = Date.now();
   return toDoc(
     await db
       .updateTable("cms_documents")
-      .set({ data: JSON.stringify(data), updated_at: now, published_at: now })
+      .set({
+        data: JSON.stringify(data),
+        updated_at: now,
+        published_at: now,
+        ...(clearDraft && { draft: null }),
+      })
       .where("collection", "=", collection)
       .where("id", "=", id)
       .returning(columns(false))
@@ -184,17 +241,37 @@ export async function loadGlobal(db: Db, name: string, drafts = false) {
   return row && (withMeta(row) as Doc);
 }
 
-/** Publishes the data of a global. A pending draft stays. */
-export async function saveGlobal(db: Db, name: string, data: Doc) {
+/** Publishes the data of a global. A pending draft stays, unless `clearDraft`. */
+export async function saveGlobal(db: Db, name: string, data: Doc, clearDraft = false) {
   const now = Date.now();
   const json = JSON.stringify(data);
   await db
     .insertInto("cms_globals")
     .values({ name, data: json, created_at: now, updated_at: now, published_at: now })
     .onConflict((oc) =>
-      oc.column("name").doUpdateSet({ data: json, updated_at: now, published_at: now }),
+      oc.column("name").doUpdateSet({
+        data: json,
+        updated_at: now,
+        published_at: now,
+        ...(clearDraft && { draft: null }),
+      }),
     )
     .execute();
+}
+
+/** Stores the draft of a global. A global that was never saved gets an unpublished row. */
+export async function saveGlobalDraft(db: Db, name: string, draft: Doc) {
+  const now = Date.now();
+  const json = JSON.stringify(draft);
+  await db
+    .insertInto("cms_globals")
+    .values({ name, data: "{}", draft: json, created_at: now, updated_at: now, published_at: null })
+    .onConflict((oc) => oc.column("name").doUpdateSet({ draft: json, updated_at: now }))
+    .execute();
+}
+
+export async function discardGlobalDraft(db: Db, name: string) {
+  await db.updateTable("cms_globals").set({ draft: null }).where("name", "=", name).execute();
 }
 
 /** Documents of `collection` whose relation at `path` holds `id`, as `{ id, data }` with the raw JSON. Reads published data. */

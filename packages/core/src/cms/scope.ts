@@ -1,6 +1,7 @@
 import type { User } from "better-auth";
 import type { Kysely } from "kysely";
 import type { Database } from "../db/index.ts";
+import { ValidationError } from "../errors.ts";
 import type { MediaCore } from "../media/core.ts";
 import type { Plugin } from "../plugins/index.ts";
 import { list } from "../schema/hooks/run.ts";
@@ -49,6 +50,12 @@ export const q = async (core: Core, s: Scope) => s.trx ?? (await core.db());
 export const target = ({ schema }: Core, { kind, name }: Name) =>
   kind === "collection" ? schema.collections[name] : schema.globals[name];
 
+/** Throws when the collection or global has `drafts: false`. */
+export function draftable(core: Core, name: Name) {
+  if (target(core, name).drafts === false)
+    throw new ValidationError({ "": `Drafts are off for "${name.name}"` });
+}
+
 /** Throws for an unknown collection or global. */
 export function known({ schema }: Core, kind: Name["kind"], name: string) {
   const owners = kind === "collection" ? schema.collections : schema.globals;
@@ -76,6 +83,7 @@ export const hookArgs = <E extends object>(s: Inner, name: Name, extra: E) => ({
   user: s.user,
   context: s.context,
   [name.kind]: name.name,
+  draft: false,
   ...extra,
 });
 

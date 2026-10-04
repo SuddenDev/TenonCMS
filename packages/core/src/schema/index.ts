@@ -55,6 +55,8 @@ export type Collection<F extends Fields = Fields> = {
   titleField?: string;
   /** The page of a document in the admin's live preview. See {@link Preview}. */
   preview?: Preview;
+  /** Documents keep a draft next to the published data, saved with `{ draft: true }` and published with `publish()`. Default `true`. */
+  drafts?: boolean;
   /** Functions that run on every read, write and delete of this collection. Typed only through `defineCollection()`. */
   hooks?: CollectionHooks<F>;
 };
@@ -69,6 +71,8 @@ export type Global<F extends Fields = Fields> = {
   fields: F;
   /** The page that shows this global in the admin's live preview, usually `'/'`. See {@link Preview}. */
   preview?: Preview;
+  /** The global keeps a draft next to the published data, saved with `{ draft: true }` and published with `publishGlobal()`. Default `true`. */
+  drafts?: boolean;
   /** Functions that run on every read and write of this global. Typed only through `defineGlobal()`. */
   hooks?: GlobalHooks<F>;
 };
