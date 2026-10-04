@@ -62,10 +62,17 @@ async function saveDraft(body: Data<Fields>) {
     :handle="handle"
     :collapsible="false"
   >
-    <template v-if="global.preview && !previewing" #actions>
-      <Button as-child variant="ghost" size="icon-sm" aria-label="Preview">
+    <template #actions>
+      <Button
+        v-if="global.preview && !previewing"
+        as-child
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Preview"
+      >
         <RouterLink :to="`/presentation/globals/${name}`"><Icon name="eye" /></RouterLink>
       </Button>
+      <slot name="actions" />
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">

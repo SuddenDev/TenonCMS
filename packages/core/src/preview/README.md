@@ -1,7 +1,14 @@
 # preview
 
-Live preview. The admin shows the site next to the form and pushes unsaved form state into it over a
-`BroadcastChannel` (`integral-cms:preview`). Nothing here touches the database except `url.ts`.
+Live preview. The admin shows the site next to the form and pushes unsaved form state into it with `postMessage`.
+Nothing here touches the database except `url.ts`.
+
+The admin resolves relative preview URLs against the `site` option of `defineCms()` (default: its own origin). The
+page talks only to its `parent` (the admin's iframe) or `opener` (a tab the admin opened), and only after that window
+sent a first message from the origin of the `admin` option (a path for the site's own origin, or a full URL like
+`https://cms.example.com/admin`); it posts only to that origin. The admin accepts and posts only to the site's origin.
+On another origin, drafts reach the page through messages, but the drafts perspective needs the preview cookie, so a
+server render shows drafts only when the site shares the admin's cookies (same site).
 
 | File          | What it does                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -16,13 +23,16 @@ runtime code.
 
 ## Messages
 
-| Message                                   | From  | What it does                                                                                |
-| ----------------------------------------- | ----- | ------------------------------------------------------------------------------------------- |
-| `{ type: 'draft', collection, id, data }` | admin | The form state of a document. `id` is `''` for a global. Stored by `<collection>:<id>`.     |
-| `{ type: 'mode', edit }`                  | admin | Sets or removes `data-cms-edit` on `<html>`. In edit mode, bound elements outline on hover. |
-| `{ type: 'edit', collection, id, path }`  | site  | A click on a bound element in edit mode. The admin focuses that field.                      |
-| `{ type: 'url', href }`                   | site  | Sent when the runtime starts, so the admin knows the current page.                          |
-| `{ type: 'saved', collection, id }`       | admin | A draft save. With `morph`, the page re-renders from the server; otherwise ignored.         |
+| Message                                   | From  | What it does                                                                                                                                                                                        |
+| ----------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{ type: 'ready' }`                       | site  | Sent to `"*"` when the runtime starts. The admin answers with `mode` and the current draft.                                                                                                         |
+| `{ type: 'draft', collection, id, data }` | admin | The form state of a document. `id` is `''` for a global. Stored by `<collection>:<id>`.                                                                                                             |
+| `{ type: 'mode', edit }`                  | admin | Sets or removes `data-cms-edit` on `<html>`. In edit mode, bound elements outline on hover.                                                                                                         |
+| `{ type: 'highlight', collection, id }`   | admin | Marks the elements of that document with `data-cms-highlight` (outlined); `collection: null` clears it.                                                                                             |
+| `{ type: 'edit', collection, id, path }`  | site  | A click on a bound element in edit mode. The admin focuses that field.                                                                                                                              |
+| `{ type: 'url', href }`                   | site  | Sent after the admin's first message, so the admin knows the current page.                                                                                                                          |
+| `{ type: 'documents', documents }`        | site  | `{ collection, id }` of every bound document, once each, in page order. Sent after the admin's first message and on every DOM change that changes the list. The admin lists them as "On this page". |
+| `{ type: 'saved', collection, id }`       | admin | A draft save. With `morph`, the page re-renders from the server; otherwise ignored.                                                                                                                 |
 
 ## Binding elements
 

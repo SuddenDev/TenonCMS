@@ -13,6 +13,8 @@ import Media from "@/modules/media/views/Media.vue";
 import MediaFile from "@/modules/media/views/MediaFile.vue";
 import Preview from "@/modules/preview/views/Preview.vue";
 
+const empty = { render: () => null };
+
 function hostPage({ mount, label }: Page, key: string) {
   return {
     setup() {
@@ -69,16 +71,15 @@ export function createAdminRouter(base: string, pages: Record<string, Page> = {}
         children: [{ path: ":id", component: DocEdit, meta: { panes: true } }],
       },
       { path: "/globals/:name", component: GlobalEdit, meta: { panes: true } },
-      { path: "/presentation", component: Preview, meta: { panes: true, menu: false } },
+      // Child routes keep the preview mounted while the document changes. `Preview` reads their params itself.
       {
-        path: "/presentation/collections/:name/:id",
+        path: "/presentation",
         component: Preview,
         meta: { panes: true, menu: false },
-      },
-      {
-        path: "/presentation/globals/:name",
-        component: Preview,
-        meta: { panes: true, menu: false },
+        children: [
+          { path: "collections/:name/:id", component: empty },
+          { path: "globals/:name", component: empty },
+        ],
       },
     ],
   });

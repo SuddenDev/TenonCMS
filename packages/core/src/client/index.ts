@@ -382,6 +382,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     globals?: Globals<C>;
     /** Set when the media library is on. `regenerate`: the image provider stores variants, see `media.regenerate()`. */
     media?: { regenerate: boolean };
+    /** The `site` option: the base of preview URLs. */
+    site?: string;
   }>;
 
   /**

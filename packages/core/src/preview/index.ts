@@ -6,25 +6,40 @@ import { Idiomorph } from "idiomorph";
 export type Drafts = Record<string, Record<string, unknown>>;
 export type Unsubscribe = () => void;
 
-/** Messages on the `integral-cms:preview` channel between the admin and the site. */
+/** Messages between the admin and the site, sent with `postMessage`. */
 export type PreviewMessage =
+  | { type: "ready" }
   | { type: "draft"; collection: string; id: string; data: Record<string, unknown> }
   | { type: "mode"; edit: boolean }
+  | { type: "highlight"; collection: string | null; id: string | null }
   | { type: "edit"; collection: string; id: string; path: string }
   | { type: "url"; href: string }
+  | { type: "documents"; documents: { collection: string; id: string }[] }
   | { type: "saved"; collection: string; id: string };
 
-const CHANNEL = "integral-cms:preview";
 // `API_BASE` of the client. Importing it would pull core code into the browser entry.
 const API = "/api/cms";
 const COOKIE = "integral-preview";
 const BAR_STYLE =
-  "[data-cms-bar]{position:fixed;inset:0 0 auto;height:32px;z-index:2147483647;display:flex;align-items:center;gap:12px;padding:0 12px;background:#18181b;color:#fafafa;font:13px/1 system-ui,sans-serif}" +
-  "[data-cms-bar] a,[data-cms-bar] button,[data-cms-bar] label{color:inherit;font:inherit;text-decoration:none;background:none;border:0;padding:4px 6px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:6px}" +
-  "[data-cms-bar] :is(a,button):hover,[data-cms-bar] [aria-pressed=true]{background:#3f3f46}" +
-  "[data-cms-bar] [data-end]{margin-left:auto}";
+  "[data-cms-bar]{all:initial;position:fixed;inset:0 0 auto;height:32px;z-index:2147483647;box-sizing:border-box;display:flex;align-items:center;gap:4px;padding:0 8px;background:rgb(24 24 27/.92);backdrop-filter:blur(8px);border-bottom:1px solid rgb(255 255 255/.08);color:#e4e4e7;font:500 12px/1 ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}" +
+  "[data-cms-bar] *{box-sizing:border-box}" +
+  "[data-cms-bar] :is(a,button,label){all:unset;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;border-radius:6px;cursor:pointer;white-space:nowrap;color:inherit}" +
+  "[data-cms-bar] :is(a,button,label):hover{background:rgb(255 255 255/.08);color:#fff}" +
+  "[data-cms-bar] :is(a,button,label):focus-visible{outline:2px solid #3b82f6;outline-offset:-2px}" +
+  "[data-cms-bar] a:first-child{font-weight:600;color:#fff}" +
+  "[data-cms-bar] input{all:unset;width:24px;height:14px;border-radius:7px;background:#52525b;position:relative;transition:background .15s}" +
+  "[data-cms-bar] input::after{content:'';position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:transform .15s}" +
+  "[data-cms-bar] input:checked{background:#3b82f6}[data-cms-bar] input:checked::after{transform:translateX(10px)}" +
+  "[data-cms-bar] [data-end]{margin-left:auto;display:flex;padding:2px;gap:2px;border-radius:8px;background:rgb(255 255 255/.06)}" +
+  "[data-cms-bar] [data-end] button{height:20px}" +
+  "[data-cms-bar] [data-end] button::before{content:'';width:6px;height:6px;border-radius:50%;background:#10b981}" +
+  "[data-cms-bar] [data-end] button:first-child::before{background:#f59e0b}" +
+  "[data-cms-bar] [aria-pressed=true]{background:rgb(255 255 255/.14);color:#fff}" +
+  "[data-cms-bar] [data-end]~button{margin-left:4px}" +
+  "@media (prefers-reduced-motion:reduce){[data-cms-bar] *{transition:none!important}}";
 const STYLE =
-  "[data-cms-edit] [data-cms]:hover{outline:2px dashed #3b82f6;outline-offset:2px;cursor:pointer}";
+  "[data-cms-edit] [data-cms]:hover{outline:2px dashed #3b82f6;outline-offset:2px;cursor:pointer}" +
+  "[data-cms-highlight]{outline:2px solid #3b82f6!important;outline-offset:2px;background:rgb(59 130 246/.08)}";
 
 /**
  * The `data-cms` value that binds an element to a field. `id` is `null` for a global.
@@ -129,8 +144,8 @@ async function setPerspective(value: string) {
   location.reload();
 }
 
-// One "Edit" link per document or global bound on the page.
-function editLinks(admin: string) {
+// The documents and globals bound on the page, once each, in page order. A global has an empty id.
+function boundDocuments() {
   const keys = new Set(
     [...document.querySelectorAll("[data-cms]")].map((el) => {
       const { collection, id } = parse(el.getAttribute("data-cms")!);
@@ -138,7 +153,14 @@ function editLinks(admin: string) {
     }),
   );
   return [...keys].map((key) => {
-    const [collection, id] = key.split(":") as [string, string];
+    const [collection = "", id = ""] = key.split(":");
+    return { collection, id };
+  });
+}
+
+// One "Edit" link per document or global bound on the page.
+function editLinks(admin: string) {
+  return boundDocuments().map(({ collection, id }) => {
     const a = document.createElement("a");
     a.textContent = `Edit ${collection}`;
     a.href = `${admin}/presentation/${id ? `collections/${collection}/${id}` : `globals/${collection}`}`;
@@ -178,6 +200,7 @@ function bar(kind: "preview" | "admin", admin: string) {
     const label = document.createElement("label");
     const input = document.createElement("input");
     input.type = "checkbox";
+    input.setAttribute("role", "switch");
     input.checked = html.hasAttribute("data-cms-edit");
     input.onchange = () => html.toggleAttribute("data-cms-edit", input.checked);
     label.append(input, "Edit");
@@ -250,7 +273,10 @@ export const preview: (options?: {
    * Server-rendered sites without client data (Astro) need it. Defaults to `false`.
    */
   morph?: boolean;
-  /** The admin path, for the bars' links. `false` renders no admin bar. Defaults to `/admin`. */
+  /**
+   * The admin path, for the bars' links. Its origin is the only one the live preview trusts, so an admin on another
+   * origin needs a full URL, like `https://cms.example.com/admin`. `false` renders no admin bar. Defaults to `/admin`.
+   */
   admin?: string | false;
 }) => Unsubscribe = ({ morph = false, admin = "/admin" } = {}) => {
   if (stop) return stop;
@@ -264,8 +290,22 @@ export const preview: (options?: {
     return adminBar(admin);
   }
   const html = document.documentElement;
-  const channel = new BroadcastChannel(CHANNEL);
-  const post = (message: PreviewMessage) => channel.postMessage(message);
+  // The admin: the page that holds the iframe, or the one that opened the tab.
+  const host: Window | null = window.parent !== window ? window.parent : window.opener;
+  // Only the admin's origin is trusted. `admin` MAY be a full URL when the admin runs on another origin.
+  const origin = new URL(admin || "/", location.href).origin;
+  // Nothing goes out before the admin's first message, so a page that frames the site learns nothing.
+  let connected = false;
+  const post = (message: PreviewMessage) => connected && host?.postMessage(message, origin);
+  // Tells the admin which documents the page shows, whenever that changes.
+  let reported = "";
+  const report = () => {
+    const documents = boundDocuments();
+    const key = JSON.stringify(documents);
+    if (!connected || key === reported) return;
+    reported = key;
+    post({ type: "documents", documents });
+  };
   const style = document.createElement("style");
   style.textContent = STYLE;
   document.head.append(style);
@@ -293,7 +333,13 @@ export const preview: (options?: {
     busy = false;
   };
 
-  channel.onmessage = ({ data }: MessageEvent<PreviewMessage>) => {
+  const onMessage = ({ source, origin: from, data }: MessageEvent<PreviewMessage>) => {
+    if (!host || source !== host || from !== origin) return;
+    if (!connected) {
+      connected = true;
+      post({ type: "url", href: location.href });
+      report();
+    }
     if (data.type === "draft") {
       drafts = { ...drafts, [`${data.collection}:${data.id}`]: data.data };
       for (const cb of listeners) cb(drafts);
@@ -302,6 +348,15 @@ export const preview: (options?: {
       html.toggleAttribute("data-cms-edit", data.edit);
       const input = document.querySelector<HTMLInputElement>("[data-cms-bar] input");
       if (input) input.checked = data.edit;
+    } else if (data.type === "highlight") {
+      for (const el of document.querySelectorAll("[data-cms-highlight]"))
+        el.removeAttribute("data-cms-highlight");
+      if (data.collection === null) return;
+      for (const el of document.querySelectorAll("[data-cms]")) {
+        const bound = parse(el.getAttribute("data-cms")!);
+        if (bound.collection === data.collection && bound.id === data.id)
+          el.setAttribute("data-cms-highlight", "");
+      }
     } else if (data.type === "saved" && morph) {
       void rerender();
     }
@@ -315,6 +370,7 @@ export const preview: (options?: {
       if (bound) patch(bound);
       for (const node of r.addedNodes) if (node instanceof Element) patchAll(node);
     }
+    report();
   });
   observer.observe(html, { childList: true, subtree: true, characterData: true });
 
@@ -327,16 +383,18 @@ export const preview: (options?: {
     post({ type: "edit", ...parse(bound.getAttribute("data-cms")!) });
   };
   document.addEventListener("click", onClick, true);
-
-  post({ type: "url", href: location.href });
+  window.addEventListener("message", onMessage);
+  host?.postMessage({ type: "ready" } satisfies PreviewMessage, "*");
   const removeBar = name.startsWith("integral-preview-") ? bar("preview", admin || "") : undefined;
 
   stop = () => {
     stop = undefined;
-    channel.close();
+    window.removeEventListener("message", onMessage);
     observer.disconnect();
     style.remove();
     html.removeAttribute("data-cms-edit");
+    for (const el of document.querySelectorAll("[data-cms-highlight]"))
+      el.removeAttribute("data-cms-highlight");
     document.removeEventListener("click", onClick, true);
     removeBar?.();
   };

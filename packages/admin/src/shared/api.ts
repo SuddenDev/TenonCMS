@@ -9,4 +9,4 @@ export type { Data, Field, Fields, MediaRead } from "../../../core/src/schema";
 
 export const client = createClient<{ schema: Schema }>();
 
-export const schema = ref<Schema & { media?: { regenerate: boolean } }>({});
+export const schema = ref<Schema & { media?: { regenerate: boolean }; site?: string }>({});

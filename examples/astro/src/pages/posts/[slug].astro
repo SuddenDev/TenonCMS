@@ -27,7 +27,11 @@ const { post } = Astro.props as InferGetStaticPropsType<typeof getStaticPaths>;
     >
       {post.title}
     </h1>
-    {post.author && <p style="color:blue">{post.author.name}</p>}
+    {post.author && (
+      <p style="color:blue" data-cms={edit("authors", post.author.id, "name")}>
+        {post.author.name}
+      </p>
+    )}
     {post.publishedAt && <time datetime={post.publishedAt}>{post.publishedAt}</time>}
     {post.hero && (
       <img

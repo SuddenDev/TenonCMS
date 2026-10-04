@@ -106,4 +106,15 @@ describe("preview", () => {
     expect(await status(client.previewUrl("posts", { slug: "a" }))).toBe(401);
     expect(await status(client.previewGlobalUrl("home", {}))).toBe(401);
   });
+
+  it("sends `site` in the schema", async () => {
+    const s = setup(defineCms({ ...options, site: "https://example.com/blog" }));
+    await s.client.signUp(admin);
+    expect(await s.client.getSchema()).toMatchObject({ site: "https://example.com/blog" });
+  });
+
+  it("rejects a `site` that is not an http(s) URL", () => {
+    expect(() => defineCms({ ...options, site: "/blog" })).toThrow("`site` MUST be an http(s) URL");
+    expect(() => defineCms({ ...options, site: "ftp://x.com" })).toThrow("`site` MUST be");
+  });
 });

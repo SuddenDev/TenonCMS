@@ -98,4 +98,9 @@ export type CmsOptions<
    * A collection or global named `general` or `seo` throws while that default is on.
    */;
   settings?: S & NoInfer<ExactSettings<S>>;
+  /**
+   * The URL of the site, like `https://example.com`. The admin's preview resolves relative preview URLs against it.
+   * Defaults to the admin's own origin. Live preview on another origin needs the site to run `preview()` too.
+   */
+  site?: string;
 };

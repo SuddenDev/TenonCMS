@@ -48,6 +48,7 @@ export function defineCms<
   plugins = [] as unknown as PL,
   media: mediaOption,
   settings: settingsOption,
+  site,
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S>) {
   type T = {
@@ -55,6 +56,8 @@ export function defineCms<
     globals?: G & PluginGlobals<PL> & SettingsGlobals<S>;
   };
   type D = DefaultDepth<P>;
+  if (site !== undefined && !/^https?:$/.test(URL.parse(site)?.protocol ?? ""))
+    throw new Error("integral-cms: `site` MUST be an http(s) URL");
   const defaults = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 };
   const mediaOptions =
     typeof mediaOption === "object"
@@ -147,6 +150,7 @@ export function defineCms<
     (user) => scoped(user, false) as unknown as Cms<Schema>,
     plugins,
     media && mediaRoutes(core),
+    site,
   );
   return cms as typeof cms & MediaOf<M>;
 }

@@ -13,6 +13,12 @@ export default defineConfig({
         access: "secret",
         default: "file:./cms.db",
       }),
+      SITE_URL: envField.string({
+        context: "server",
+        access: "public",
+        url: true,
+        default: "http://localhost:4321",
+      }),
     },
   },
 });

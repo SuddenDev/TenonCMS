@@ -24,13 +24,14 @@ import { type Level, parsePopulate, parseSelect, visible, whereFromQuery } from 
 
 /**
  * `asUser(user)` returns the local API with the session user set for hooks. `media` holds the media routes, mounted at
- * `/media` when the `media` option is set.
+ * `/media` when the `media` option is set. `site` goes out in `/schema` for the admin's preview.
  */
 export function createApp(
   cms: Cms<Schema>,
   asUser: (user: User) => Cms<Schema>,
   plugins: readonly Plugin[] = [],
   media?: { reads: Hono<Env>; writes: Hono<Env>; regenerate: boolean },
+  site?: string,
 ) {
   const { schema } = cms;
   const collections: Record<string, Collection> = schema.collections ?? {};
@@ -50,6 +51,7 @@ export function createApp(
   );
   // What the admin needs to know of the media options.
   if (media) publicSchema.media = { regenerate: media.regenerate };
+  if (site) publicSchema.site = site;
 
   // Removes fields the caller cannot see, also in groups, populated relations and joins.
   function strip(fields: Fields, doc: unknown, level: Level): unknown {
