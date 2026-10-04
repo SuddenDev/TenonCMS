@@ -8,6 +8,8 @@ import {
   type Globals as HttpGlobals,
   type ReadOptions,
 } from "integral-cms/client";
+import { getDrafts, merge, subscribe } from "integral-cms/preview";
+import { computed, onScopeDispose, type Ref, shallowRef } from "vue";
 
 // The client's types, so the options check the same way. The collection methods cast `options` when they pass it on:
 // TypeScript cannot match the two generic `select` checks, and the composable's own parameter already checks it.
@@ -15,6 +17,31 @@ type Collections = HttpCollections<typeof cms>;
 type Globals = HttpGlobals<typeof cms>;
 type Fields<K extends keyof Collections> = Collections[K]["fields"];
 type Depth = (typeof cms)["populate"]["depth"];
+
+// Merges the admin's unsaved changes into `data` while the page runs in the live preview. `find` gets each document
+// merged. The awaited result gets the same `data`, because Nuxt resolves it to an object of its own.
+function live<R extends PromiseLike<{ data: Ref<unknown> }> & { data: Ref<unknown> }>(
+  collection: string,
+  result: R,
+): R {
+  const drafts = shallowRef(getDrafts());
+  // Servers render once and never dispose the scope, so only browsers subscribe.
+  if (globalThis.window) onScopeDispose(subscribe((d) => (drafts.value = d)));
+  const source = result.data;
+  const data = computed({
+    get: () => {
+      const value = source.value;
+      return Array.isArray(value)
+        ? value.map((doc) => merge(collection, doc, drafts.value))
+        : merge(collection, value, drafts.value);
+    },
+    set: (value) => (source.value = value),
+  });
+  return Object.assign(
+    Promise.resolve(result).then((r) => ({ ...r, data })),
+    { ...result, data },
+  ) as unknown as R;
+}
 
 // The client's read methods for pages. During SSR the request stays in-process; on client-side
 // navigation it hits the public read API.
@@ -28,33 +55,45 @@ export function useIntegral() {
       collection: K,
       options: Checked<O, Collections, Fields<K>, Depth> = {} as never,
     ) {
-      return useAsyncData(`integral:${collection}:${JSON.stringify(options)}`, () =>
-        client.find<K, O>(collection, options as never),
+      return live(
+        collection,
+        useAsyncData(`integral:${collection}:${JSON.stringify(options)}`, () =>
+          client.find<K, O>(collection, options as never),
+        ),
       );
     },
     findOne<K extends keyof Collections & string, const O extends FindOptions<typeof cms, K>>(
       collection: K,
       options: Checked<O, Collections, Fields<K>, Depth>,
     ) {
-      return useAsyncData(
-        `integral:${collection}:one:${JSON.stringify(options)}`,
-        async () => (await client.findOne<K, O>(collection, options as never)) ?? null,
+      return live(
+        collection,
+        useAsyncData(
+          `integral:${collection}:one:${JSON.stringify(options)}`,
+          async () => (await client.findOne<K, O>(collection, options as never)) ?? null,
+        ),
       );
     },
     findById<
       K extends keyof Collections & string,
       const O extends ReadOptions<Collections, Fields<K>> = {},
     >(collection: K, id: string, options: Checked<O, Collections, Fields<K>, Depth> = {} as never) {
-      return useAsyncData(`integral:${collection}:${id}:${JSON.stringify(options)}`, () =>
-        client.findById<K, O>(collection, id, options as never),
+      return live(
+        collection,
+        useAsyncData(`integral:${collection}:${id}:${JSON.stringify(options)}`, () =>
+          client.findById<K, O>(collection, id, options as never),
+        ),
       );
     },
     getGlobal<
       K extends keyof Globals & string,
       const O extends ReadOptions<Collections, Globals[K]["fields"], false> = {},
     >(name: K, options: Checked<O, Collections, Globals[K]["fields"], Depth, false> = {} as never) {
-      return useAsyncData(`integral:global:${name}:${JSON.stringify(options)}`, () =>
-        client.getGlobal<K, O>(name, options),
+      return live(
+        name,
+        useAsyncData(`integral:global:${name}:${JSON.stringify(options)}`, () =>
+          client.getGlobal<K, O>(name, options),
+        ),
       );
     },
   };

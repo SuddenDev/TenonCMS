@@ -1,5 +1,6 @@
 ---
 import type { InferGetStaticPropsType } from "astro";
+import { edit } from "integral-cms/preview";
 import cms from "../../../integral.config";
 
 // Built once per post. Edits show after the next build; images stay live, served by /api/cms/media.
@@ -20,7 +21,10 @@ const { post } = Astro.props as InferGetStaticPropsType<typeof getStaticPaths>;
   </head>
   <body>
     <a href="/">← Home</a>
-    <h1 style={post.color ? `border-left: 4px solid ${post.color}; padding-left: 8px` : undefined}>
+    <h1
+      style={post.color ? `border-left: 4px solid ${post.color}; padding-left: 8px` : undefined}
+      data-cms={edit("posts", post.id, "title")}
+    >
       {post.title}
     </h1>
     {post.author && <p style="color:blue">{post.author.name}</p>}
@@ -34,8 +38,12 @@ const { post } = Astro.props as InferGetStaticPropsType<typeof getStaticPaths>;
         height={post.hero.height}
         alt={post.hero.alt ?? ""}
         style="max-width: 100%; height: auto"
+        data-cms={edit("posts", post.id, "hero")}
+        data-cms-attr="src,srcset,alt"
       />
     )}
-    <p style="white-space: pre-wrap">{post.body}</p>
+    <p style="white-space: pre-wrap" data-cms={edit("posts", post.id, "body")}>
+      {post.body}
+    </p>
   </body>
 </html>

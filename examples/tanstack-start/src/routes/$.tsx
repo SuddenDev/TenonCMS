@@ -1,6 +1,8 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { seoMeta } from "integral-cms/client";
+import { edit } from "integral-cms/preview";
+import { useDraft } from "integral-cms/preview/react";
 import cms from "../../integral.config";
 
 const getPage = createServerFn()
@@ -36,12 +38,14 @@ export const Route = createFileRoute("/$")({
 });
 
 function Page() {
-  const { page } = Route.useLoaderData();
+  const page = useDraft("pages", Route.useLoaderData().page);
   return (
     <main>
       <Link to="/">← Home</Link>
-      <h1>{page.title}</h1>
-      <p style={{ whiteSpace: "pre-wrap" }}>{page.body}</p>
+      <h1 data-cms={edit("pages", page.id, "title")}>{page.title}</h1>
+      <p data-cms={edit("pages", page.id, "body")} style={{ whiteSpace: "pre-wrap" }}>
+        {page.body}
+      </p>
     </main>
   );
 }

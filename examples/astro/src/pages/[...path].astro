@@ -1,5 +1,6 @@
 ---
 import { breadcrumbs, seoMeta } from "integral-cms";
+import { edit } from "integral-cms/preview";
 
 export const prerender = false;
 
@@ -52,7 +53,7 @@ const trail = breadcrumbs(page);
         ))}
       </ol>
     </nav>
-    <h1>{page.title}</h1>
+    <h1 data-cms={edit("pages", page.id, "title")}>{page.title}</h1>
     {page.hero && (
       <img
         src={page.hero.src}
@@ -64,6 +65,8 @@ const trail = breadcrumbs(page);
         style="max-width: 100%; height: auto"
       />
     )}
-    <p style="white-space: pre-wrap">{page.body}</p>
+    <p style="white-space: pre-wrap" data-cms={edit("pages", page.id, "body")}>
+      {page.body}
+    </p>
   </body>
 </html>

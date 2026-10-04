@@ -4,6 +4,7 @@ export const posts = defineCollection({
   label: "Posts",
   nav: { group: "Blog", icon: "newspaper" },
   titleField: "title",
+  preview: "/posts/{slug}",
   fields: {
     title: {
       type: "text",

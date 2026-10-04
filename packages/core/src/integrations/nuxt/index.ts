@@ -1,5 +1,6 @@
 import {
   addImports,
+  addPlugin,
   addServerHandler,
   addTypeTemplate,
   addVitePlugin,
@@ -73,6 +74,8 @@ const integralCms: NuxtModule<Options> = defineNuxtModule<Options>({
         addServerHandler({ route, handler: `${runtime}/server/admin` });
     }
     addImports({ name: "useIntegral", from: `${runtime}/composables` });
+    // The live preview runtime. It does nothing outside the admin's preview.
+    addPlugin({ src: `${runtime}/plugin.client`, mode: "client" });
     // Types `createClient()` from `integral-cms/client` without a type argument.
     addTypeTemplate(
       {

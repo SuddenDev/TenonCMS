@@ -11,4 +11,5 @@ export const pages = defineCollection({
     hero: { type: "image" },
   },
   hooks: page.hooks,
+  preview: page.preview,
 });

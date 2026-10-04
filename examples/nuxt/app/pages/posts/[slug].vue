@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { edit } from "integral-cms/preview";
+
 const route = useRoute();
 const { data: post } = await useIntegral().findOne("posts", {
   where: { slug: String(route.params.slug) },
@@ -19,6 +21,7 @@ useHead({ title: post.value.title });
   <main v-if="post">
     <NuxtLink to="/">← Home</NuxtLink>
     <h1
+      :data-cms="edit('posts', post.id, 'title')"
       :style="
         post.color ? { borderLeft: `4px solid ${post.color}`, paddingLeft: '8px' } : undefined
       "
@@ -36,7 +39,7 @@ useHead({ title: post.value.title });
       :alt="post.hero.alt ?? ''"
       style="max-width: 100%; height: auto"
     />
-    <p style="white-space: pre-wrap">{{ post.body }}</p>
+    <p :data-cms="edit('posts', post.id, 'body')" style="white-space: pre-wrap">{{ post.body }}</p>
     <div class="json">
       <pre>{{ post }}</pre>
     </div>

@@ -93,7 +93,11 @@ function patch(el: Element) {
     }
   } else if (typeof value === "string" || typeof value === "number" || value === null) {
     const text = value === null ? "" : String(value);
-    if (el.textContent !== text) el.textContent = text;
+    const node = el.firstChild;
+    // A lone text node is written in place, so a framework that tracks it keeps its reference.
+    if (node instanceof Text && !node.nextSibling) {
+      if (node.nodeValue !== text) node.nodeValue = text;
+    } else if (el.textContent !== text) el.textContent = text;
   }
 }
 

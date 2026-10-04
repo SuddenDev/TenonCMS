@@ -1,5 +1,7 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { edit } from "integral-cms/preview";
+import { useDraft } from "integral-cms/preview/react";
 import cms from "../../../integral.config";
 
 const getPost = createServerFn()
@@ -18,17 +20,20 @@ export const Route = createFileRoute("/posts/$slug")({
 });
 
 function Post() {
-  const post = Route.useLoaderData();
+  const post = useDraft("posts", Route.useLoaderData());
   return (
     <main>
       <Link to="/">← Home</Link>
       <h1
+        data-cms={edit("posts", post.id, "title")}
         style={post.color ? { borderLeft: `4px solid ${post.color}`, paddingLeft: 8 } : undefined}
       >
         {post.title}
       </h1>
       {post.publishedAt && <time dateTime={post.publishedAt}>{post.publishedAt}</time>}
-      <p style={{ whiteSpace: "pre-wrap" }}>{post.body}</p>
+      <p data-cms={edit("posts", post.id, "body")} style={{ whiteSpace: "pre-wrap" }}>
+        {post.body}
+      </p>
     </main>
   );
 }

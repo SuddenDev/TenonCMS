@@ -1,19 +1,33 @@
 import type { AstroIntegration } from "astro";
 import { fileURLToPath } from "node:url";
-import { adminAlias, adminPath, faviconDefine, type Options } from "../../admin/html.ts";
+import { adminAlias, adminPath, faviconDefine, type Options as Base } from "../../admin/html.ts";
 import { API_BASE } from "../../client/index.ts";
 
-export type { Options };
+export type Options = Base & {
+  /**
+   * Injects the live preview runtime into every page. It does nothing outside the admin's preview.
+   * `false` leaves it out. Defaults to `true`.
+   */
+  preview?: boolean;
+};
 
 export default function integralCms({
   entry = "./integral.config.ts",
   admin = true,
+  preview = true,
 }: Options = {}): AstroIntegration {
   let entryPath: string;
   return {
     name: "integral-cms",
     hooks: {
-      "astro:config:setup"({ command, config, injectRoute, addMiddleware, updateConfig }) {
+      "astro:config:setup"({
+        command,
+        config,
+        injectRoute,
+        injectScript,
+        addMiddleware,
+        updateConfig,
+      }) {
         entryPath = fileURLToPath(new URL(entry, config.root));
         const alias: Record<string, string> = { "#integral/config": entryPath };
         injectRoute({
@@ -33,6 +47,8 @@ export default function integralCms({
             fileURLToPath(new URL("../../admin/", import.meta.url)),
           );
         }
+        if (preview)
+          injectScript("page", "import { preview } from 'integral-cms/preview'; preview();");
         addMiddleware({ entrypoint: new URL("./middleware.ts", import.meta.url), order: "pre" });
         updateConfig({
           vite: {

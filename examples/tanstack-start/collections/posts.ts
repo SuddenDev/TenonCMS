@@ -3,6 +3,7 @@ import { defineCollection } from "integral-cms";
 export const posts = defineCollection({
   label: "Posts",
   titleField: "title",
+  preview: "/posts/{slug}",
   fields: {
     title: { type: "text", required: true },
     slug: { type: "text", required: true },

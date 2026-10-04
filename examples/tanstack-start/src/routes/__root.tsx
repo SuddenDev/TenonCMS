@@ -1,4 +1,6 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { preview } from "integral-cms/preview";
+import { useEffect } from "react";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -7,7 +9,12 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
     ],
   }),
-  component: () => (
+  component: Root,
+});
+
+function Root() {
+  useEffect(() => preview(), []);
+  return (
     <html lang="en">
       <head>
         <HeadContent />
@@ -17,5 +24,5 @@ export const Route = createRootRoute({
         <Scripts />
       </body>
     </html>
-  ),
-});
+  );
+}
