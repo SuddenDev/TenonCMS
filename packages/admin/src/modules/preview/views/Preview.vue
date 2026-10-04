@@ -15,7 +15,8 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const name = computed(() => route.params.name as string);
+// No name: the site itself, without a document.
+const name = computed(() => (route.params.name as string | undefined) ?? "");
 // An empty id is a global, as in the preview protocol.
 const id = computed(() => (route.params.id as string | undefined) ?? "");
 const key = computed(() => `${name.value}:${id.value}`);
@@ -56,8 +57,8 @@ const send = usePreviewChannel(async (message: PageMessage) => {
   // Other admin tabs share the channel; only a page's edit click is handled here.
   if (message.type !== "edit") return;
   const to = message.id
-    ? `/preview/collections/${message.collection}/${message.id}`
-    : `/preview/globals/${message.collection}`;
+    ? `/presentation/collections/${message.collection}/${message.id}`
+    : `/presentation/globals/${message.collection}`;
   if (message.collection !== name.value || message.id !== id.value) await router.push(to);
   focus.value = message.path;
 });
@@ -74,10 +75,16 @@ async function load() {
   if (at === key.value) url.value = safe(next);
 }
 // A new document loads its URL with its first form state. Typing never changes the `src`.
-watch(key, () => {
-  draft.value = undefined;
-  href.value = "";
-});
+// Without a document the site root shows.
+watch(
+  key,
+  () => {
+    draft.value = undefined;
+    href.value = "";
+    if (!name.value) url.value = safe("/");
+  },
+  { immediate: true },
+);
 
 // Image and file fields go out as their media documents, `many` ones as arrays.
 const media = new Map<string, Promise<unknown>>();
@@ -103,6 +110,7 @@ async function withMedia(fields: Fields, data: Record<string, any>) {
 
 let sent = 0;
 const broadcast = useDebounceFn(async () => {
+  if (!name.value) return;
   const n = ++sent;
   const at = { collection: name.value, id: id.value };
   const data = await withMedia(fields.value, draft.value ?? {});
@@ -120,7 +128,11 @@ function change(data: Record<string, unknown>) {
 
 function close() {
   router.push(
-    id.value ? `/collections/${name.value}/${id.value}` : `/settings/globals/${name.value}`,
+    !name.value
+      ? "/"
+      : id.value
+        ? `/collections/${name.value}/${id.value}`
+        : `/settings/globals/${name.value}`,
   );
 }
 </script>
@@ -134,15 +146,17 @@ function close() {
     @reload="load"
     @close="close"
   />
-  <template v-if="id">
+  <template v-if="name && id">
     <DocPane
       :key="key"
       :name="name"
       :id="id"
       :open="openAt(-1)"
       previewing
-      :min="480"
-      :max="800"
+      :min="300"
+      :max="Infinity"
+      :width="480"
+      handle="left"
       :grow="false"
       @change="change"
       @saved="send({ type: 'saved', collection: name, id })"
@@ -162,11 +176,13 @@ function close() {
     />
   </template>
   <GlobalEdit
-    v-else
+    v-else-if="name"
     :key="key"
     previewing
-    :min="480"
-    :max="800"
+    :min="300"
+    :max="Infinity"
+    :width="480"
+    handle="left"
     :grow="false"
     @change="change"
     @saved="send({ type: 'saved', collection: name, id: '' })"

@@ -9,6 +9,10 @@ export interface PaneProps {
   grow?: boolean;
   /** Whether the pane is collapsible */
   collapsible?: boolean;
+  /** Initial width in pixels. Defaults to `min` */
+  width?: number;
+  /** Edge of the resize handle */
+  handle?: "left" | "right";
 }
 </script>
 <script setup lang="ts">
@@ -24,6 +28,8 @@ const props = withDefaults(defineProps<PaneProps>(), {
   max: 400,
   grow: false,
   collapsible: true,
+  width: undefined,
+  handle: "right",
 });
 const { forwardRef, currentElement } = useForwardExpose();
 const { collapsed, hidden, stacked, toggle, back, width, resize } = usePane(
@@ -31,6 +37,7 @@ const { collapsed, hidden, stacked, toggle, back, width, resize } = usePane(
   props.min,
   props.max,
   props.collapsible,
+  props.width,
 );
 
 const style = computed(() =>
@@ -46,7 +53,8 @@ const style = computed(() =>
 function startResize(e: PointerEvent) {
   const handle = e.currentTarget as HTMLElement;
   const from = width.value;
-  const move = (ev: PointerEvent) => resize(from + ev.clientX - e.clientX);
+  const sign = props.handle === "left" ? -1 : 1;
+  const move = (ev: PointerEvent) => resize(from + sign * (ev.clientX - e.clientX));
   handle.setPointerCapture(e.pointerId);
   handle.addEventListener("pointermove", move);
   handle.addEventListener("pointerup", () => handle.removeEventListener("pointermove", move), {
@@ -107,7 +115,8 @@ function startResize(e: PointerEvent) {
       </ScrollArea>
       <div
         v-if="!grow && !stacked"
-        class="hover:bg-ring/10 absolute inset-y-0 -right-1 z-20 w-2 cursor-col-resize touch-none transition-colors"
+        :data-handle="handle"
+        class="hover:bg-ring/10 absolute inset-y-0 z-20 w-2 cursor-col-resize touch-none transition-colors data-[handle=left]:-left-1 data-[handle=right]:-right-1"
         role="separator"
         aria-orientation="vertical"
         :aria-label="`Resize ${title}`"

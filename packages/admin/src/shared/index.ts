@@ -6,6 +6,7 @@ export * from "./composables/useBrand";
 export * from "./composables/useBreadcrumbs";
 export * from "./composables/useMenu";
 export * from "./composables/usePanes";
+export * from "./composables/usePerspective";
 export * from "./composables/useTheme";
 export * from "./components/pane";
 export { default as Icon } from "./components/Icon.vue";

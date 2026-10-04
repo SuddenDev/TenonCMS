@@ -6,7 +6,7 @@ import { client, schema, type Data, type Fields } from "@/shared/api";
 import { keepPaneKey, openRefKey, reloadKey, titleField } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
-import { Pane, Icon } from "@/shared";
+import { Pane, Icon, usePerspective } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
 // `closable`: a reference pane. It shows a close button and leaves the page title alone.
@@ -22,8 +22,10 @@ const props = withDefaults(
     min?: number;
     max?: number;
     grow?: boolean;
+    width?: number;
+    handle?: "left" | "right";
   }>(),
-  { min: 448, grow: true },
+  { min: 448, grow: true, width: undefined, handle: "right" },
 );
 // `saved`: after every save, draft save, publish and discard.
 const emit = defineEmits<{
@@ -45,6 +47,8 @@ const docId = ref(props.id);
 const isNew = computed(() => docId.value === "new");
 const collection = computed(() => schema.value.collections?.[props.name]);
 const drafts = computed(() => collection.value?.drafts !== false);
+// The Published view shows the live version. An edit there would replace the pending draft, so the form is inert.
+const readOnly = computed(() => drafts.value && usePerspective().perspective === "published");
 const formId = `doc-${props.name}-${props.id}`;
 const error = ref("");
 
@@ -139,7 +143,16 @@ async function remove() {
 </script>
 
 <template>
-  <Pane v-if="collection" :title="title()" :min="min" :max="max" :grow="grow" :collapsible="false">
+  <Pane
+    v-if="collection"
+    :title="title()"
+    :min="min"
+    :max="max"
+    :grow="grow"
+    :width="width"
+    :handle="handle"
+    :collapsible="false"
+  >
     <template #actions>
       <Button
         v-if="collection.preview && !previewing && !isNew"
@@ -148,7 +161,9 @@ async function remove() {
         size="icon-sm"
         aria-label="Preview"
       >
-        <RouterLink :to="`/preview/collections/${name}/${docId}`"><Icon name="eye" /></RouterLink>
+        <RouterLink :to="`/presentation/collections/${name}/${docId}`"
+          ><Icon name="eye"
+        /></RouterLink>
       </Button>
       <slot name="actions" />
       <Button
@@ -166,6 +181,9 @@ async function remove() {
         <p class="text-muted-foreground text-xs">{{ collection.label ?? name }}</p>
         <h1 class="mt-1 text-2xl font-semibold">{{ title() }}</h1>
         <StatusBadges v-if="drafts" :doc="doc" />
+        <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
+          Published version. Switch to Drafts to edit.
+        </p>
         <p v-if="collection.description" class="text-muted-foreground mt-2 text-sm">
           {{ collection.description }}
         </p>
@@ -192,10 +210,11 @@ async function remove() {
       </header>
       <DocForm
         :id="formId"
-        class="flex-1"
+        class="flex-1 inert:opacity-60"
         :fields="collection.fields"
         :initial="initial"
         :doc="doc"
+        :inert="readOnly"
         v-bind="drafts ? { saveDraft, publish, discard } : { save }"
         :is-new="props.id === 'new'"
         @change="emit('change', $event)"

@@ -614,6 +614,8 @@ defineCms({
 
 `preview` on a collection or global tells the admin where a document renders. The admin opens that page next to the form and pushes every unsaved edit into it.
 
+In the admin, "Visual Editor" in the top bar opens `/presentation`: the site in a frame, with edit mode on. A click on a bound element opens its document next to the page (`/presentation/collections/:name/:id`, `/presentation/globals/:name`); the eye button on a document opens the same view. The perspective menu in the top bar switches the admin and its previews between drafts and published documents.
+
 ```ts
 posts: {
   // Placeholders walk into groups and through one relation. A missing value means no preview.
@@ -629,7 +631,7 @@ notes: {
 
 The pages preset has `page.preview` (`"{path}"`): add `preview: page.preview` to the collection. A placeholder that names no stored field throws at startup.
 
-On the site, mark what a field renders with `edit()` and start the runtime with `preview()`. It does nothing outside the admin's preview, so it is safe on every page.
+On the site, mark what a field renders with `edit()` and start the runtime with `preview()`. It is safe on every page: visitors without a session see nothing.
 
 ```ts
 import { edit, preview } from "integral-cms/preview";
@@ -641,6 +643,14 @@ preview();
 ```
 
 Bound elements get the typed text, or the listed attributes, on every keystroke. With edit mode on, a click on one focuses its field in the admin.
+
+The runtime picks its mode from `window.name`:
+
+- In the admin's preview iframe it applies the unsaved state, without a bar.
+- In a preview the admin opened in a tab, it also shows the **preview bar** at the top: an "Edit" switch, a Drafts / Published toggle and "Exit preview".
+- On any other page, a signed-in editor with the preview cookie gets the **admin bar**: a link to the admin, one "Edit …" link per document or global bound on the page, and the Drafts / Published toggle. It checks the session with one request first; without one there is no bar.
+
+`preview({ admin: "/cms" })` sets the admin path for the links (default `/admin`); `admin: false` turns the admin bar off. The Astro and Nuxt adapters pass their own `admin` option.
 
 Vue and React pages can re-render from the unsaved state too, so lists and conditions follow. `useDraft()` merges it into the document and starts the runtime:
 
@@ -676,7 +686,7 @@ await cms.find("posts"); // published
 await cms.drafts().find("posts"); // drafts
 ```
 
-Server-rendered pages get the perspective of the visitor with `forRequest()`. It returns the instance with the session user, and in the drafts perspective when the request carries the preview cookie and a valid session:
+Server-rendered pages get the perspective of the visitor with `forRequest()`. It returns the instance with the session user, and in the drafts perspective when the request carries the preview cookie set to `drafts` and a valid session:
 
 ```ts
 const integral = await cms.forRequest(request);
@@ -703,7 +713,7 @@ A draft save runs defaults, slugs, `beforeValidate` and `beforeChange`, and chec
 
 Over HTTP, with a session: `POST /api/cms/collections/:name/draft`, `PUT /api/cms/collections/:name/:id/draft`, `POST /api/cms/collections/:name/:id/publish`, `DELETE /api/cms/collections/:name/:id/draft` (204 when it deleted), `PUT /api/cms/globals/:name/draft`, `POST /api/cms/globals/:name/publish` and `DELETE /api/cms/globals/:name/draft`. The client has `createDraft`, `updateDraft`, `publish`, `discard`, `setGlobalDraft`, `publishGlobal` and `discardGlobal`.
 
-The preview cookie (`integral-preview`, `HttpOnly`) is set by `POST /api/cms/preview` and cleared by `DELETE /api/cms/preview`; both need a session. In the browser, call `client.preview.enter()` and `client.preview.exit()`. HTTP reads follow the same rule: drafts only with the cookie and a session, so the cookie alone shows nothing.
+The preview cookie (`integral-preview`) holds the perspective: `drafts` or `published`. `POST /api/cms/preview` sets it, with an optional body `{ "perspective": "published" }` (default `drafts`), and `DELETE /api/cms/preview` clears it; both need a session. It is not `HttpOnly`, so the preview runtime can read it. In the browser, call `client.preview.enter(perspective?)` and `client.preview.exit()`. HTTP reads follow the same rule: drafts only with `integral-preview=drafts` and a session, so the cookie alone shows nothing.
 
 ### Media
 
@@ -988,7 +998,7 @@ export default defineAdmin({
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
 - `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`.
 - A page has an optional `label` (default: its key), `description` and `nav`. `nav` is the same for collections, globals, pages and media:
-  - `display`: `menu` (default) shows it in the sidebar, `settings` as a card on the Settings page, `none` nowhere. A `none` page like `/reports/:id` still works by URL.
+  - `display`: `menu` (default) shows it in the sidebar, `settings` as a card on the Settings page, `tool` in the top bar after Content and Visual Editor (on phones, in the menu sheet), `none` nowhere. A `none` page like `/reports/:id` still works by URL.
   - `group`: the section. The default is `Content` in the sidebar and `Site` on the Settings page.
   - `icon`: a [Lucide](https://lucide.dev/icons) name, type-checked. `order`: lowest first.
 - Collections and globals take `description` and `nav` in their own config, next to `label`. Items sort by `order` (collections 10, media 15, globals 20, pages 30; equal orders keep their definition order), and sections appear in the order of their first item. `media` takes `{ label, nav }` to move the media library.

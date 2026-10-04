@@ -1,4 +1,5 @@
 import { computed, inject } from "vue";
+import { useRoute } from "vue-router";
 import { groupMenu } from "../../../../core/src/admin/menu";
 import type { Nav } from "../../../../core/src/admin/index.d.ts";
 import { schema } from "@/shared/api";
@@ -109,5 +110,26 @@ export function useMenu() {
         also: targets,
       });
     return groupMenu(items);
+  });
+}
+
+export type Tool = MenuItem & { active: boolean };
+
+/**
+ * The top bar tools: Content, Visual Editor, then every entry with `nav.display: "tool"`, sorted by
+ * `order`. Content is active on every route that no other tool claims.
+ */
+export function useTools() {
+  const entries = useEntries();
+  const route = useRoute();
+  return computed<Tool[]>(() => {
+    const at = (to: string) => route.path === to || route.path.startsWith(`${to}/`);
+    const tools: MenuItem[] = [
+      { label: "Visual Editor", icon: "eye", to: "/presentation", order: 0 },
+      ...entries.value.filter((e) => e.display === "tool").sort((a, b) => a.order - b.order),
+    ];
+    const others = tools.map((t) => ({ ...t, active: [t.to, ...(t.also ?? [])].some(at) }));
+    const content = { label: "Content", icon: "layout-list", to: "/", order: 0 };
+    return [{ ...content, active: !others.some((t) => t.active) }, ...others];
   });
 }

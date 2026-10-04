@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { client, schema, type Session } from "@/shared/api";
+import { readPerspective } from "@/shared/composables/usePerspective";
 
 /** The signed-in user and the schema. `schema` fills in once a session exists. */
 export function useSession() {
@@ -13,7 +14,8 @@ export function useSession() {
       client.getSchema().catch(() => undefined),
     ]);
     // The preview cookie lets the admin's reads, and every preview it opens, see drafts.
-    if (session?.user) await client.preview.enter().catch(console.error);
+    // An existing cookie holds the editor's choice of perspective.
+    if (session?.user && !readPerspective()) await client.preview.enter().catch(console.error);
     user.value = session?.user ?? null;
     if (user.value && s) schema.value = s;
     loading.value = false;

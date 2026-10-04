@@ -69,8 +69,17 @@ export function createAdminRouter(base: string, pages: Record<string, Page> = {}
         children: [{ path: ":id", component: DocEdit, meta: { panes: true } }],
       },
       { path: "/globals/:name", component: GlobalEdit, meta: { panes: true } },
-      { path: "/preview/collections/:name/:id", component: Preview, meta: { panes: true } },
-      { path: "/preview/globals/:name", component: Preview, meta: { panes: true } },
+      { path: "/presentation", component: Preview, meta: { panes: true, menu: false } },
+      {
+        path: "/presentation/collections/:name/:id",
+        component: Preview,
+        meta: { panes: true, menu: false },
+      },
+      {
+        path: "/presentation/globals/:name",
+        component: Preview,
+        meta: { panes: true, menu: false },
+      },
     ],
   });
 }

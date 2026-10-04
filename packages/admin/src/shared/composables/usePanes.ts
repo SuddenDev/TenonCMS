@@ -38,6 +38,8 @@ type Panes = {
   stacked: ComputedRef<boolean>;
   /** The index of the pane shown in the stacked layout; `null` is the last one. */
   active: Ref<number | null>;
+  /** The width of the row in px. */
+  width: Ref<number>;
 };
 
 const key: InjectionKey<Panes> = Symbol("panes");
@@ -79,18 +81,22 @@ export function providePanes(row: Ref<HTMLElement | undefined>) {
     return out;
   });
 
-  provide(key, { entries, list, collapsed, stacked, active });
+  provide(key, { entries, list, collapsed, stacked, active, width });
 }
 
-/** Registers a pane of `min` px, resizable up to `max`. A toggle pins the editor's choice for the pane's lifetime. */
+/**
+ * Registers a pane of `width` px (default `min`), resizable between `min` and `max`. A toggle pins the
+ * editor's choice for the pane's lifetime.
+ */
 export function usePane(
   el: Ref<HTMLElement | undefined>,
   min: number,
   max: number,
   collapsible = true,
+  width = min,
 ) {
   const panes = inject(key)!;
-  const entry = reactive({ el, min, max, width: min, manual: null, collapsible }) as Entry;
+  const entry = reactive({ el, min, max, width, manual: null, collapsible }) as Entry;
   panes.entries.add(entry);
   onBeforeUnmount(() => panes.entries.delete(entry));
 
@@ -105,7 +111,13 @@ export function usePane(
   const back = computed(() =>
     panes.stacked.value && index.value > 0 ? () => (panes.active.value = index.value - 1) : null,
   );
-  const resize = (to: number) => (entry.width = Math.min(Math.max(to, min), max));
+  // The other panes keep at least their `min`, collapsed ones `COLLAPSED`.
+  const resize = (to: number) => {
+    const others = panes.list.value
+      .filter((e) => e !== entry)
+      .reduce((sum, e) => sum + (panes.collapsed.value.has(e) ? COLLAPSED : e.min), 0);
+    entry.width = Math.max(Math.min(to, max, panes.width.value - others), min);
+  };
   return {
     collapsed,
     collapsible,

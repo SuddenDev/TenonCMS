@@ -22,7 +22,7 @@ function openTab() {
 </script>
 
 <template>
-  <Pane title="Preview" :min="640" grow :collapsible="false">
+  <Pane title="Preview" :min="300" grow :collapsible="false">
     <template #header>
       <label class="flex shrink-0 items-center gap-1.5 pr-1 text-xs">
         <Switch v-model="edit" />
