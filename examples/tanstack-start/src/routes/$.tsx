@@ -1,5 +1,6 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { seoMeta } from "integral-cms/client";
 import { edit } from "integral-cms/preview";
 import { useDraft } from "integral-cms/preview/react";
@@ -8,12 +9,14 @@ import cms from "../../integral.config";
 const getPage = createServerFn()
   .validator((path: string) => path)
   .handler(async ({ data: path }) => {
-    const page = await cms.findOne("pages", {
+    // The request's session and preview cookie, so the admin's preview sees drafts.
+    const api = await cms.forRequest(getRequest());
+    const page = await api.findOne("pages", {
       where: { path },
       populate: { seo: { image: true } },
     });
     if (!page) throw notFound();
-    const [general, seo] = await Promise.all([cms.getGlobal("general"), cms.getGlobal("seo")]);
+    const [general, seo] = await Promise.all([api.getGlobal("general"), api.getGlobal("seo")]);
     return { page, general, seo };
   });
 

@@ -22,6 +22,7 @@ runtime code.
 | `{ type: 'mode', edit }`                  | admin | Sets or removes `data-cms-edit` on `<html>`. In edit mode, bound elements outline on hover. |
 | `{ type: 'edit', collection, id, path }`  | site  | A click on a bound element in edit mode. The admin focuses that field.                      |
 | `{ type: 'url', href }`                   | site  | Sent when the runtime starts, so the admin knows the current page.                          |
+| `{ type: 'saved', collection, id }`       | admin | A draft save. With `morph`, the page re-renders from the server; otherwise ignored.         |
 
 ## Binding elements
 
@@ -33,6 +34,14 @@ else from the value itself. Objects and arrays without `data-cms-attr` are left 
 
 The runtime starts only when `window.name` starts with `integral-preview`: the admin names its iframe and the tabs it
 opens that way, and the name survives navigation.
+
+## Re-render (`morph`)
+
+`preview({ morph: true })` is for server-rendered pages without client data (the Astro integration passes it). On
+`saved`, it fetches `location.href` with the page's cookies (so the drafts perspective), morphs `<body>` into the new
+one with `idiomorph`, copies the `<title>` and patches bound elements again. Only one fetch runs at a time; a `saved`
+during it queues one more. The rest of `<head>` is left alone. Prerendered pages fetch their static HTML, so they
+only get the patches. `idiomorph` is bundled into the entry.
 
 `merge()` replaces top-level keys with draft values, except a value of ids that match the ids of the current,
 populated value: the browser cannot populate, so it keeps what the page has.

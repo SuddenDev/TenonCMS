@@ -1,5 +1,6 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { edit } from "integral-cms/preview";
 import { useDraft } from "integral-cms/preview/react";
 import cms from "../../../integral.config";
@@ -7,7 +8,8 @@ import cms from "../../../integral.config";
 const getPost = createServerFn()
   .validator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const post = await cms.findOne("posts", { where: { slug } });
+    const api = await cms.forRequest(getRequest());
+    const post = await api.findOne("posts", { where: { slug } });
     if (!post) throw notFound();
     return post;
   });

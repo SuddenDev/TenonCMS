@@ -651,7 +651,7 @@ const post = useDraft("posts", data); // Vue: a ref; React: the merged value
 
 Per framework:
 
-- **Astro**: the integration injects `preview()` into every page. `integralCms({ preview: false })` leaves it out. Astro pages render on the server, so only bound elements update.
+- **Astro**: the integration injects `preview({ morph: true })` into every page. `integralCms({ preview: false })` leaves it out. Astro pages render on the server, so while you type only bound elements update. After each draft save, the runtime fetches the page again (with the preview cookie, so it renders the drafts) and morphs `<body>` and the title into it. Prerendered pages fetch their static HTML, so they only get the bound-element updates.
 - **Nuxt**: the module starts the runtime in a client plugin, and `useIntegral()` merges the unsaved state into the `data` of `find`, `findOne`, `findById` and `getGlobal`. Pages only add `edit()`.
 - **TanStack Start and other Vite hosts**: call `preview()` once in the root component, in a `useEffect`, and pass loader data through `useDraft()`:
 
@@ -682,6 +682,8 @@ Server-rendered pages get the perspective of the visitor with `forRequest()`. It
 const integral = await cms.forRequest(request);
 const posts = await integral.find("posts");
 ```
+
+The Astro middleware does this, so `Astro.locals.integral` is already bound to the request. Nuxt's `useIntegral()` reads over HTTP with the request's cookies, so the HTTP rule below covers it. In TanStack Start, call it in server functions with `getRequest()` from `@tanstack/react-start/server`.
 
 Writes publish by default. A draft save keeps the published data and stores the change as the pending draft:
 
@@ -837,7 +839,7 @@ export default defineConfig({
 });
 ```
 
-The integration adds a middleware that exposes the instance as `Astro.locals.integral`, fully typed.
+The integration adds a middleware that exposes the instance as `Astro.locals.integral`, fully typed. It is `cms.forRequest(request)`, so the admin's preview sees drafts; prerendered pages and `/api/cms` get the plain instance.
 
 ```astro
 ---

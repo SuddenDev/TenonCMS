@@ -5,7 +5,8 @@ import { API_BASE } from "../../client/index.ts";
 
 export type Options = Base & {
   /**
-   * Injects the live preview runtime into every page. It does nothing outside the admin's preview.
+   * Injects the live preview runtime into every page. It does nothing outside the admin's preview. After a save it
+   * re-renders the page from the server; prerendered pages only get the unsaved changes.
    * `false` leaves it out. Defaults to `true`.
    */
   preview?: boolean;
@@ -48,7 +49,10 @@ export default function integralCms({
           );
         }
         if (preview)
-          injectScript("page", "import { preview } from 'integral-cms/preview'; preview();");
+          injectScript(
+            "page",
+            "import { preview } from 'integral-cms/preview'; preview({ morph: true });",
+          );
         addMiddleware({ entrypoint: new URL("./middleware.ts", import.meta.url), order: "pre" });
         updateConfig({
           vite: {

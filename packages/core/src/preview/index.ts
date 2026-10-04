@@ -1,5 +1,6 @@
 // Browser entry of `integral-cms/preview`. Nothing MAY run at import time: Nitro bundles it into servers too.
 // It MUST NOT import zod or core runtime code.
+import { Idiomorph } from "idiomorph";
 
 /** Unsaved form state by `<collection>:<id>`. Globals are keyed `<name>:`. */
 export type Drafts = Record<string, Record<string, unknown>>;
@@ -10,7 +11,8 @@ export type PreviewMessage =
   | { type: "draft"; collection: string; id: string; data: Record<string, unknown> }
   | { type: "mode"; edit: boolean }
   | { type: "edit"; collection: string; id: string; path: string }
-  | { type: "url"; href: string };
+  | { type: "url"; href: string }
+  | { type: "saved"; collection: string; id: string };
 
 const CHANNEL = "integral-cms:preview";
 const STYLE =
@@ -109,9 +111,10 @@ function patchAll(root: ParentNode) {
 /**
  * Starts the live preview runtime. It does nothing unless the page runs in the admin's preview (`window.name` starts
  * with `integral-preview`). Calling it again returns the same stop function.
- * `morph` is reserved for re-rendering server pages and has no effect yet.
+ * With `morph`, a `saved` message re-renders the page: it fetches the current URL and morphs `<body>` and the title.
+ * Server-rendered sites without client data (Astro) need it.
  */
-export const preview: (options?: { morph?: boolean }) => Unsubscribe = () => {
+export const preview: (options?: { morph?: boolean }) => Unsubscribe = ({ morph = false } = {}) => {
   if (stop) return stop;
   if (!globalThis.window?.name.startsWith("integral-preview")) return () => {};
   const html = document.documentElement;
@@ -121,6 +124,29 @@ export const preview: (options?: { morph?: boolean }) => Unsubscribe = () => {
   style.textContent = STYLE;
   document.head.append(style);
 
+  // One fetch at a time. A save during a fetch schedules one more.
+  let busy = false;
+  let again = false;
+  const rerender = async () => {
+    if (busy) return void (again = true);
+    busy = true;
+    do {
+      again = false;
+      try {
+        const res = await fetch(location.href, {
+          credentials: "same-origin",
+          headers: { accept: "text/html" },
+        });
+        if (!res.ok || !stop) continue;
+        const next = new DOMParser().parseFromString(await res.text(), "text/html");
+        Idiomorph.morph(document.body, next.body);
+        document.title = next.title;
+        patchAll(document);
+      } catch {}
+    } while (again && stop);
+    busy = false;
+  };
+
   channel.onmessage = ({ data }: MessageEvent<PreviewMessage>) => {
     if (data.type === "draft") {
       drafts = { ...drafts, [`${data.collection}:${data.id}`]: data.data };
@@ -128,6 +154,8 @@ export const preview: (options?: { morph?: boolean }) => Unsubscribe = () => {
       patchAll(document);
     } else if (data.type === "mode") {
       html.toggleAttribute("data-cms-edit", data.edit);
+    } else if (data.type === "saved" && morph) {
+      void rerender();
     }
   };
 
