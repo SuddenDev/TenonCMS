@@ -105,3 +105,16 @@ Extract the shared engine and named database queries. Split client requests/type
 Review: engine/query/migration bodies preserve their behavior. Three action functions inline the same draft-flag expression. Client requests keep per-instance state; `Register` remains at the public entry for module augmentation. Preview preserves its singleton state, message source/origin checks, observer cleanup, and server-safe entry. Internal deletion effects retain their existing validation exemptions.
 
 Proof: root `pnpm test` passes 520 tests across 46 files, with the same two live-S3 skips; `pnpm typecheck`, `pnpm lint`, and `pnpm fmt:check` pass. Runtime import tracing finds no external client dependencies, only `idiomorph` for preview, and the expected Vue/React peers for framework entries. No unresolved review findings.
+
+### Round 3: Feature entry points, media, schema, and adapter helpers
+
+Extract collection/global operations and scoped local wrappers, feature Hono endpoints, auth/request middleware, HTTP query/visibility/error helpers, and plugin contracts. Restructure media capabilities, schema validation/traversal/runtime/inference, and admin HTML/path/favicon/input helpers. Existing unit assertions remain colocated with their owners.
+
+Review finds and resolves two issues:
+
+- `/schema` serialization initially runs after public plugin route registration. A permanent regression test observes RED (`Before registration` expected, `After registration` received), then GREEN after restoring snapshot creation before plugin callbacks. Its route still mounts in its original protected position.
+- The generic `uploads` Git ignore rule hides the new source folder. A narrow source-folder exception makes all eight upload files visible to Git, formatting, and lint; generated upload directories remain ignored.
+
+The root review matches all 31 route definitions and preserves middleware order. All 284 non-assembly function bodies from round 2 match after ignoring whitespace/comments; the three changed assemblers bind extracted owners. Additional cross-review covers media compensation and transaction timing, upload ownership, private/query visibility, data-dependent validation, client instance state, and preview origin/source checks. No unresolved security or behavior findings.
+
+Proof: root `pnpm test` passes 521 tests across 52 files, with the same two live-S3 skips; `pnpm typecheck` and `pnpm lint` pass. Browser runtime dependency tracing remains unchanged. Final example builds and runtime smoke checks follow in round 4.

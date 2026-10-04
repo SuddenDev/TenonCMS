@@ -1,5 +1,5 @@
 import { ConflictError, ValidationError } from "../../errors.ts";
-import { runHooks } from "../../schema/hooks/run.ts";
+import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { type Operation } from "../../schema/index.ts";
 import { type Core, type Scope, type Inner, type Stage } from "../../cms/runtime/types.ts";
 import { contextOf, inner } from "../../cms/runtime/operation-context.ts";

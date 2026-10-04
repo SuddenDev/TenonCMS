@@ -20,7 +20,7 @@ export type {
   Select,
   SelectArg,
   SelectOf,
-} from "./types.ts";
+} from "./inference.ts";
 
 export { defineCollection } from "../collections/config/define-collection.ts";
 export type { Collection } from "../collections/config/types.ts";

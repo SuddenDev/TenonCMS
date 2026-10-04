@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { png4 } from "../../tests/fixtures.ts";
-import { dimensions } from "../dimensions.ts";
+import { dimensions } from "./dimensions.ts";
 import type { Storage } from "../storage/types.ts";
 import { ipx } from "./ipx.ts";
 

@@ -7,4 +7,5 @@ dist
 .nuxt
 .output
 uploads
+!packages/core/src/media/operations/uploads/
 .uploads

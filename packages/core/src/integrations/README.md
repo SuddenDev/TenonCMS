@@ -13,3 +13,5 @@ Astro writes it into the injected script, Nuxt into `runtimeConfig.public.integr
 reads. With `admin: false` it is `false`, so no admin bar.
 
 Files the host compiles (`route.ts`, `middleware.ts`, `admin.astro`, `nuxt/runtime/`) ship as `.ts` source in `dist/`.
+
+Adapters share `admin/path.ts` for safe route paths and configuration aliases, `admin/favicon.ts` for the host favicon, `admin/input.ts` for the client entry and `admin/html.ts` for the standalone page. Their public options and copied runtime filenames stay unchanged.

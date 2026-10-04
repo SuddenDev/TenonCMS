@@ -3,7 +3,7 @@ import { col } from "../targets.ts";
 import { q } from "../../cms/runtime/transaction.ts";
 import { hookArgs } from "../lifecycle/hook-args.ts";
 import { slot } from "../lifecycle/collect-hooks.ts";
-import { runHooks } from "../../schema/hooks/run.ts";
+import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { onDelete } from "../integrity/apply-on-delete.ts";
 import { update } from "../../collections/operations/update.operation.ts";
 import { setGlobal } from "../../globals/operations/set.operation.ts";

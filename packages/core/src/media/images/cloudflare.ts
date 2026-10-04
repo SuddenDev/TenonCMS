@@ -1,5 +1,5 @@
 import type { Modifiers } from "../../schema/fields/image.ts";
-import type { ImageProvider } from "../images.ts";
+import type { ImageProvider } from "./types.ts";
 
 // Cloudflare's names for sharp's `fit`, as in Nuxt Image.
 const FIT: Record<NonNullable<Modifiers["fit"]>, string> = {

@@ -2,9 +2,9 @@ import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { type Name, target } from "../targets.ts";
 import { hookArgs } from "../lifecycle/hook-args.ts";
 import { slot } from "../lifecycle/collect-hooks.ts";
-import { runHooks } from "../../schema/hooks/run.ts";
+import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { type Operation } from "../../schema/index.ts";
-import { fieldHooks } from "../../schema/walk.ts";
+import { fieldHooks } from "../../schema/runtime/run-field-hooks.ts";
 
 /** Field `afterRead` per document, then the collection's or global's once for the batch. */
 export async function afterRead(

@@ -82,6 +82,23 @@ describe("plugins", () => {
     expect(await status(client.request("/stats/fail", { method: "POST" }))).toBe(400);
   });
 
+  it("snapshots the public schema before plugin route registration", async () => {
+    const title = { type: "text" as const, label: "Before registration" };
+    const plugin = definePlugin({
+      name: "mutates",
+      publicRoutes: () => {
+        title.label = "After registration";
+      },
+    });
+    const { client } = setup(
+      defineCms({ ...base, collections: { posts: { fields: { title } } }, plugins: [plugin] }),
+    );
+    expect(title.label).toBe("After registration");
+    await client.signUp(admin);
+    const schema = await client.getSchema();
+    expect(schema.collections?.posts.fields.title.label).toBe("Before registration");
+  });
+
   it("run publicMiddleware on every request and middleware behind the session", async () => {
     const seen: string[] = [];
     const guard = definePlugin({

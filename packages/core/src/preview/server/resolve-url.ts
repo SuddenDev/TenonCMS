@@ -1,6 +1,6 @@
 import { isObject } from "../../schema/condition.ts";
 import type { Collection, Fields, Global, LocalApi } from "../../schema/index.ts";
-import { fieldAt } from "../../schema/walk.ts";
+import { fieldAt } from "../../schema/traversal/field-at.ts";
 import { placeholders } from "../templates/placeholders.ts";
 import { resolve } from "../templates/resolve-template.ts";
 

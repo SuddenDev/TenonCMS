@@ -9,15 +9,11 @@ import {
 } from "@nuxt/kit";
 import type {} from "@nuxt/nitro-server/augments";
 import type { NuxtModule } from "@nuxt/schema";
-import {
-  adminAlias,
-  adminChunk,
-  adminHtml,
-  adminInput,
-  adminPath,
-  faviconDefine,
-  type Options,
-} from "../../admin/html.ts";
+import { adminAlias, adminPath } from "../../admin/path.ts";
+import { adminChunk, adminInput } from "../../admin/input.ts";
+import { adminHtml } from "../../admin/html.ts";
+import { faviconDefine } from "../../admin/favicon.ts";
+import { type Options } from "../../admin/options.ts";
 import { API_BASE } from "../../client/index.ts";
 import { createRequire, findPackageJSON } from "node:module";
 import { resolve } from "node:path";

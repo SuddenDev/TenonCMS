@@ -4,7 +4,7 @@ import { q } from "../../cms/runtime/transaction.ts";
 import { beforeRead, afterRead } from "./run-read-hooks.ts";
 import { type Fields } from "../../schema/index.ts";
 import { type ReadOpts } from "./read-documents.ts";
-import { decorate } from "../../media/images.ts";
+import { decorate } from "../../media/images/decorate.ts";
 import { type Spec, toSpec } from "../population/population-spec.ts";
 import { type SelectSpec, pick } from "../population/select-fields.ts";
 import { badSelectPath } from "../population/validate-select.ts";

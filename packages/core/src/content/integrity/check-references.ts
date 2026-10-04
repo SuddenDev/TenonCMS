@@ -1,9 +1,10 @@
 import { type Database } from "../../db/types.ts";
 import { type Fields } from "../../schema/index.ts";
-import { relationPaths, targetOf } from "../../schema/walk.ts";
+import { relationPaths } from "../../schema/traversal/relation-paths.ts";
+import { targetOf } from "../../schema/traversal/reference-fields.ts";
 import { byIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { existingIds } from "../../db/queries/references/existing-ids.query.ts";
-import { accepts } from "../../media/names.ts";
+import { accepts } from "../../media/library/names.ts";
 import { ValidationError } from "../../errors.ts";
 import type { Kysely } from "kysely";
 

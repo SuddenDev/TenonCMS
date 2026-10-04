@@ -16,7 +16,7 @@ The engine shared by collections, globals and media. It receives a CMS core and 
 A collection create enters `collections/operations/create.operation.ts`, then `lifecycle/run-operation.ts`, then `writes/write-document.ts`:
 
 ```text
-beforeOperation -> transaction -> defaults -> slugs -> beforeValidate -> parse
+transaction -> beforeOperation -> defaults -> slugs -> beforeValidate -> parse
 -> validate -> beforeChange -> parse again -> unique -> references -> save
 -> afterChange -> afterRead -> afterOperation -> commit
 ```

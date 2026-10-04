@@ -1,6 +1,8 @@
 import type { AstroIntegration } from "astro";
 import { fileURLToPath } from "node:url";
-import { adminAlias, adminPath, faviconDefine, type Options as Base } from "../../admin/html.ts";
+import { adminAlias, adminPath } from "../../admin/path.ts";
+import { faviconDefine } from "../../admin/favicon.ts";
+import { type Options as Base } from "../../admin/options.ts";
 import { API_BASE } from "../../client/index.ts";
 
 export type Options = Base & {

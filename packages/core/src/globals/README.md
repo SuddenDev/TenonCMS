@@ -1,11 +1,7 @@
 # globals
 
-Global configuration and named singleton writes. `index.ts` exports configuration types and definition helpers; operations use the shared `content/` engine and CMS runtime scope.
+`config/` defines global options and the typed `defineGlobal()` helper. `operations/` owns get, set, publish and discard actions. `operations/local/` checks the name and draft eligibility while binding the current user, perspective, context and transaction.
 
-| Path                          | Responsibility                                                          |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| `config/types.ts`             | Global options, fields, hooks and admin metadata.                       |
-| `config/define-global.ts`     | `defineGlobal()` with literal field and hook inference.                 |
-| `operations/set.operation.ts` | Run the shared write pipeline for a global, including deletion effects. |
+For a read, follow `endpoints/get.endpoint.ts` → `operations/local/get.local.ts` → `operations/get.operation.ts` → `../content/reads/read-global.ts`.
 
-Globals keep their existing lifecycle: they do not run collection `beforeOperation` and `afterOperation` hooks.
+`endpoints/routes.ts` assembles public reads and protected preview URL, set/draft, publish and discard routes. Globals keep their existing lifecycle differences from collections.

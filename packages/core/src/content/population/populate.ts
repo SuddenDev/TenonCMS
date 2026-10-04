@@ -2,7 +2,8 @@ import { type Database } from "../../db/types.ts";
 import { toDoc } from "../../db/map-document.ts";
 import { byIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { joinedDocs } from "../../db/queries/references/joined-documents.query.ts";
-import { isRef, relationPaths, targetOf } from "../../schema/walk.ts";
+import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
+import { relationPaths } from "../../schema/traversal/relation-paths.ts";
 import {
   type Collection,
   type Fields,

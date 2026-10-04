@@ -1,15 +1,11 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ViteDevServer } from "vite";
-import {
-  adminAlias,
-  adminChunk,
-  adminHtml,
-  adminInput,
-  adminPath,
-  faviconDefine,
-  type AdminOption,
-} from "../../admin/html.ts";
+import { adminAlias, adminPath } from "../../admin/path.ts";
+import { adminChunk, adminInput } from "../../admin/input.ts";
+import { adminHtml } from "../../admin/html.ts";
+import { faviconDefine } from "../../admin/favicon.ts";
+import { type AdminOption } from "../../admin/options.ts";
 
 const adminDir = fileURLToPath(new URL("../../admin/", import.meta.url));
 const entry = `${adminDir}entry.ts`;

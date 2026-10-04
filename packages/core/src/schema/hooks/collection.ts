@@ -1,5 +1,5 @@
 import type { Fields } from "../fields/index.ts";
-import type { Data, Doc } from "../types.ts";
+import type { Data, Doc } from "../inference.ts";
 import type { Fn, HookArgs, Operation, Slot } from "./index.ts";
 
 // A collection written inline in `defineCms` has the wide `Fields`, so its hooks get `any`.

@@ -1,34 +1,83 @@
 # integral-cms core
 
-The source of the `integral-cms` package. Each folder is one area and has its own README.
+A feature-first modular monolith. Each module owns a capability; collections and globals share the content engine. Hono adapts HTTP requests to the scoped local API. Public package imports remain defined by the root barrel and package export map.
 
-| Path            | What it is                                                                                   |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| `index.ts`      | The public barrel. Everything a host imports from `integral-cms` is listed here.             |
-| `errors.ts`     | `ValidationError` (400) and `ConflictError` (409). No imports, so the browser can use it.    |
-| `cms/`          | `defineCms()`: the instance and its local API (`find`, `create`, …). Start here.             |
-| `collections/`  | Collection configuration and typed definition helpers.                                       |
-| `globals/`      | Global configuration and typed definition helpers.                                           |
-| `auth/`         | better-auth configuration and provider creation.                                             |
-| `schema/`       | How content is described: collections, fields, hooks, the types built from them, validation. |
-| `content/`      | Shared lifecycle, read/write pipelines, population and content integrity.                    |
-| `db/`           | Content queries and migrations. One JSON documents table for all collections.                |
-| `http/`         | The `/api/cms` HTTP API (Hono), a thin layer over the local API.                             |
-| `client/`       | `createClient()`, the typed HTTP client for the browser.                                     |
-| `media/`        | The media library: uploads, storage adapters (`local`, `s3`), image providers, media routes. |
-| `plugins/`      | The plugin contract and the bundled plugins.                                                 |
-| `presets/`      | Ready-made fields, hooks and settings globals (`general`, `seo`) a host spreads or gets.     |
-| `helpers/`      | Small render helpers without imports (`slugify`, `seoMeta`, `breadcrumbs`).                  |
-| `preview/`      | Live preview: `preview` URLs, and the browser runtime that patches pages with unsaved edits. |
-| `admin/`        | Glue to serve the admin UI on its own page. The UI itself is `packages/admin`.               |
-| `integrations/` | Framework integrations: Astro, Nuxt, plain Vite.                                             |
-| `tests/`        | Integration tests against a real in-memory instance.                                         |
+| Module          | Responsibility                                                 | Start here                                  |
+| --------------- | -------------------------------------------------------------- | ------------------------------------------- |
+| `cms/`          | Instance construction, configuration and API binding.          | [create-cms.ts](cms/create-cms.ts)          |
+| `collections/`  | Collection config, document operations and endpoints.          | [README](collections/README.md)             |
+| `globals/`      | Global config, singleton operations and endpoints.             | [README](globals/README.md)                 |
+| `content/`      | Shared lifecycle, reads/writes, population and integrity.      | [README](content/README.md)                 |
+| `auth/`         | better-auth provider, caller lookup and session middleware.    | [README](auth/README.md)                    |
+| `http/`         | Hono application assembly, parsing, visibility and errors.     | [app.ts](http/app.ts)                       |
+| `schema/`       | Field/hook contracts, inference, validation and traversal.     | [README](schema/README.md)                  |
+| `db/`           | libsql connection, fixed migrations and named content queries. | [README](db/README.md)                      |
+| `media/`        | Uploads, library actions, images, variants and storage.        | [README](media/README.md)                   |
+| `preview/`      | Preview URL resolution and browser draft/DOM runtime.          | [README](preview/README.md)                 |
+| `client/`       | Browser-safe typed HTTP client.                                | [create-client.ts](client/create-client.ts) |
+| `plugins/`      | Extension contracts, schema merging and named route mounting.  | [README](plugins/README.md)                 |
+| `presets/`      | Ready-made fields, hooks and settings.                         | [README](presets/README.md)                 |
+| `helpers/`      | Import-free render helpers.                                    | [README](helpers/README.md)                 |
+| `admin/`        | Page/build glue and public UI extension contracts.             | [README](admin/README.md)                   |
+| `integrations/` | Astro, Nuxt and Vite adapters with copied runtime files.       | [README](integrations/README.md)            |
+| `tests/`        | Behavior tests against a real in-memory CMS.                   | [README](tests/README.md)                   |
 
-## How a request flows
+`index.ts` lists the public root exports. `errors.ts` remains import-free for browser consumers. Internal implementations import their owning leaf modules. Feature definitions belong to `config/`; Hono routes to `endpoints/`; use cases to `operations/`; scoped collection/global methods to `operations/local/`.
 
+Use role suffixes for repeated action names, such as `create.endpoint.ts`, `create.operation.ts` and `create.local.ts`. A file has one main responsibility, usually one or two exported functions; its related private helpers can remain beside it. Module READMEs describe the internal folders.
+
+```text
+HTTP request -> feature endpoint -> scoped local API -> feature operation
+Server call ---------------------> scoped local API -------^
+Nested hook ---------------------> transaction-bound API --^
+                                      |
+                               shared content engine
+                                      |
+                              named database queries
 ```
-browser ── client/ ──▶ http/ ──▶ cms/ (local API) ──▶ collections/globals ──▶ content/ ──▶ db/
-server code ─────────────────────▲
-```
 
-Server code calls the local API directly. HTTP only adds sessions, `private` fields and query parsing.
+The local API validates writes and runs hooks for every entry point. HTTP adds session/CSRF checks, request parsing and public field filtering. Local server calls retain their trusted access. Nested hook calls share user, context, transaction and perspective.
+
+## Create a collection document
+
+For `POST /api/cms/collections/posts`, follow:
+
+1. [http/app.ts](http/app.ts) mounts the collection write group after CSRF/session middleware.
+2. [collections/endpoints/create.endpoint.ts](collections/endpoints/create.endpoint.ts) checks the target, parses the body and calls the session-bound `cms.create()`.
+3. [cms/api/bind-api.ts](cms/api/bind-api.ts) assembles methods. [create.local.ts](collections/operations/local/create.local.ts) binds the scope and checks the name, media restriction and draft eligibility.
+4. [create.operation.ts](collections/operations/create.operation.ts) provides operation arguments to [run-operation.ts](content/lifecycle/run-operation.ts), which opens/reuses the transaction and runs operation hooks.
+5. [write-document.ts](content/writes/write-document.ts) runs defaults, slugs, validation and hooks, then integrity checks and [insert-document.query.ts](db/queries/documents/insert-document.query.ts). It returns through read hooks and operation hooks before commit.
+
+Draft create uses the other route in the same endpoint file and the same operation with `draft: true`. It keeps its existing type-only validation and pending-data behavior. A trusted `cms.create()` starts at step 3.
+
+## Read a global
+
+For `GET /api/cms/globals/general`, follow:
+
+1. [globals/endpoints/get.endpoint.ts](globals/endpoints/get.endpoint.ts) validates the name and read options. [read-request.ts](http/read-request.ts) chooses the request API and field visibility; drafts require a session plus the preview cookie.
+2. [get.local.ts](globals/operations/local/get.local.ts) checks the name. [get.operation.ts](globals/operations/get.operation.ts) enters the shared lifecycle without opening a read transaction.
+3. [read-global.ts](content/reads/read-global.ts) loads the appropriate perspective using [load-global.query.ts](db/queries/globals/load-global.query.ts).
+4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. The endpoint applies [strip-private-fields.ts](http/strip-private-fields.ts) to the result.
+
+Globals retain their own lifecycle: they skip collection `beforeOperation` and `afterOperation`. A never-saved global returns publication metadata with no saved field values.
+
+## Complete an upload
+
+For `POST /api/cms/media/uploads/:id/complete`, follow:
+
+1. [media/endpoints/uploads.endpoint.ts](media/endpoints/uploads.endpoint.ts) runs in the protected media group. [get-upload.ts](media/operations/uploads/get-upload.ts) rejects unknown, expired or foreign uploads.
+2. [complete.operation.ts](media/operations/uploads/complete.operation.ts) assembles the stored parts and verifies the expected byte count and image header.
+3. [cms/runtime/transaction.ts](cms/runtime/transaction.ts) binds the transaction scope. Completion calls the shared content writer, runs media `afterUpload` hooks and deletes the unfinished upload row in that transaction.
+4. After the transaction, [render-all.ts](media/variants/render-all.ts) prerenders configured variants and [read-media.ts](media/runtime/read-media.ts) decorates the result.
+
+The operation retains cleanup on validation/write failure. Upload-table queries still live in media; moving them under a persistence contract is a separate architectural add-on. A local `cms.media.upload()` enters through [upload.operation.ts](media/operations/uploads/upload.operation.ts) and uses the same stages.
+
+## Resolve a preview URL
+
+For `POST /api/cms/collections/posts/preview-url`, follow:
+
+1. [collections/endpoints/preview-url.endpoint.ts](collections/endpoints/preview-url.endpoint.ts) checks the configured target and passes unsaved form state plus the session-bound API to the resolver. Globals have their corresponding feature endpoint.
+2. [preview/server/resolve-url.ts](preview/server/resolve-url.ts) clones the form state, calls a configured preview function, or resolves template fields. A relation placeholder loads one target hop through the local `findById()` with `populate: false`.
+3. [placeholders.ts](preview/templates/placeholders.ts) identifies template paths, and [resolve-template.ts](preview/templates/resolve-template.ts) returns the filled URL or `null` for missing values.
+
+There is no extra public local preview method. The browser entry [preview/index.ts](preview/index.ts) exports DOM/draft runtime helpers and does not import the server URL resolver.

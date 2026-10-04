@@ -1,8 +1,13 @@
 # plugins
 
-| Path         | What it does                                                                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `index.ts`   | `Plugin`, `definePlugin()` and `mergePlugins()`, which adds the plugins' collections and globals to the schema.                                                    |
-| `redirects/` | The bundled redirects plugin: a `redirects` collection, a hook that adds a redirect when a path changes, import and lookup routes, and an admin page (`admin.ts`). |
+| Path                         | What it does                                                       |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `index.ts`                   | Public export barrel.                                              |
+| `types.ts`                   | Plugin configuration and public/protected Hono environments.       |
+| `define-plugin.ts`           | Preserves literal collection and global types.                     |
+| `merge-plugins.ts`           | Merges schema definitions and rejects duplicate or reserved names. |
+| `http/mount-routes.ts`       | Mounts each plugin's routes under its name, in plugin order.       |
+| `http/collect-middleware.ts` | Collects public or protected middleware in plugin order.           |
+| `redirects/`                 | The bundled redirects plugin and admin page.                       |
 
-A plugin can bring collections, globals, hooks, HTTP routes (`routes` behind the session, `publicRoutes` without), Hono middleware (`middleware` behind the session, `publicMiddleware` on every request) and admin pages. Bundled plugins MUST only use the public exports, so a third-party plugin can be written the same way.
+Plugins can provide collections, globals, hooks, media hooks, routes and middleware. Public routes run before CSRF/session checks, so plugins MUST enforce any protection their public writes require. Protected routes and middleware receive the session user and scoped CMS API. Bundled plugins MUST use public exports.

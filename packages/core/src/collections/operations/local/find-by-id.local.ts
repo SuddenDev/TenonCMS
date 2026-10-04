@@ -1,0 +1,11 @@
+import type { Core, Scope } from "../../../cms/runtime/types.ts";
+import type { LocalApi } from "../../../schema/hooks/index.ts";
+import { known } from "../../../content/targets.ts";
+import { findById } from "../find.operation.ts";
+
+export const findByIdLocal =
+  (core: Core, scope: Scope): LocalApi["findById"] =>
+  async (collection, id, options = {}) => {
+    known(core, "collection", collection);
+    return findById(core, scope, collection, id, options);
+  };

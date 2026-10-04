@@ -1,5 +1,5 @@
 import type { MediaHooks, Modifiers } from "../../schema/index.ts";
-import type { ImageProvider } from "../images.ts";
+import type { ImageProvider } from "../images/types.ts";
 import type { Storage } from "../storage/types.ts";
 
 export type ImagesOptions = {

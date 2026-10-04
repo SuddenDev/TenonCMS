@@ -1,7 +1,7 @@
 import { type Core, type Stage } from "../../cms/runtime/types.ts";
 import { type Name, target, isMedia } from "../targets.ts";
 import { type RootHooks } from "../../schema/index.ts";
-import { list } from "../../schema/hooks/run.ts";
+import { list } from "../../schema/runtime/run-hooks.ts";
 
 /** The hooks of a stage: the collection's or global's, then the plugins', then the host's root hooks. None for `media`. */
 export const slot = (core: Core, name: Name, stage: Stage): ((args: any) => unknown)[] =>

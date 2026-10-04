@@ -1,6 +1,7 @@
 import { type Database } from "../../db/types.ts";
 import { type RefField, type Schema } from "../../schema/index.ts";
-import { relationPaths, targetOf } from "../../schema/walk.ts";
+import { relationPaths } from "../../schema/traversal/relation-paths.ts";
+import { targetOf } from "../../schema/traversal/reference-fields.ts";
 import { referencingDocs } from "../../db/queries/references/referencing-documents.query.ts";
 import { referencingGlobal } from "../../db/queries/references/referencing-global.query.ts";
 import type { Kysely } from "kysely";

@@ -1,4 +1,4 @@
-import { accepts } from "../../../../core/src/media/names";
+import { accepts } from "../../../../core/src/media/library/names";
 
 /** Bytes as `1.2 MB`. */
 export function formatSize(bytes: number) {

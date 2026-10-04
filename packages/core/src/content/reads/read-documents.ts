@@ -1,6 +1,6 @@
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
 import { type LocalApi } from "../../schema/index.ts";
-import { filterable } from "../../schema/walk.ts";
+import { filterable } from "../../schema/traversal/filterable.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { col } from "../targets.ts";
 import { q } from "../../cms/runtime/transaction.ts";

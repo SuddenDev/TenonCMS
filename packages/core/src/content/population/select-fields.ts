@@ -1,5 +1,6 @@
 import { type Collection, type Fields } from "../../schema/index.ts";
-import { innerFields, mapValue } from "../../schema/walk.ts";
+import { innerFields } from "../../schema/traversal/inner-fields.ts";
+import { mapValue } from "../../schema/traversal/map-value.ts";
 type Collections = Record<string, Collection>;
 
 /** Keys a read returns. `true` keeps the value; an object lists keys inside a group or a resolved relation or join. */

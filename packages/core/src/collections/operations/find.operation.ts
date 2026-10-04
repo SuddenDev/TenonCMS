@@ -1,0 +1,49 @@
+import type { Core, Scope } from "../../cms/runtime/types.ts";
+import type { LocalApi } from "../../schema/hooks/index.ts";
+import { col } from "../../content/targets.ts";
+import { run } from "../../content/lifecycle/run-operation.ts";
+import { read } from "../../content/reads/read-documents.ts";
+
+export async function find(
+  core: Core,
+  scope: Scope,
+  collection: string,
+  options: NonNullable<Parameters<LocalApi["find"]>[1]> = {},
+) {
+  return run(core, scope, "read", col(collection), { collection, options }, (s, args) =>
+    read(core, s, collection, args.options),
+  );
+}
+
+export async function findOne(
+  core: Core,
+  scope: Scope,
+  collection: string,
+  options: Parameters<LocalApi["findOne"]>[1],
+) {
+  return run(
+    core,
+    scope,
+    "read",
+    col(collection),
+    { collection, options },
+    async (s, args) => (await read(core, s, collection, { ...args.options, limit: 1 }))[0],
+  );
+}
+
+export async function findById(
+  core: Core,
+  scope: Scope,
+  collection: string,
+  id: string,
+  options: NonNullable<Parameters<LocalApi["findById"]>[2]> = {},
+) {
+  return run(
+    core,
+    scope,
+    "read",
+    col(collection),
+    { collection, id, options },
+    async (s, args) => (await read(core, s, collection, { ...args.options, id: args.id }))[0],
+  );
+}

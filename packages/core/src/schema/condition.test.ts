@@ -11,7 +11,7 @@ import {
   type Doc,
   type Fields,
 } from "./index.ts";
-import { dataSchema } from "./validate.ts";
+import { dataSchema } from "./validation/build-data-schema.ts";
 describe("matchCondition", () => {
   const d = { type: "video", price: 5, tag: "", date: "2026-09-24" };
   it.each([

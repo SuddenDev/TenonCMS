@@ -9,7 +9,7 @@ import {
   type Plugin,
 } from "../index.ts";
 import { local } from "../media/storage/local.ts";
-import { modifierId } from "../media/images.ts";
+import { modifierId } from "../media/images/modifiers.ts";
 import type { Modifiers } from "../schema/index.ts";
 import { png, png300 } from "./fixtures.ts";
 import { admin, base, fresh, setup, status, tmpDir, withMedia } from "./setup.ts";
@@ -751,7 +751,7 @@ describe("moves and deletes", () => {
 describe("default media", () => {
   it("uses local storage in ./.uploads and prerendered WebP at quality 85", async () => {
     const { defaultMedia } = await import("../media/default.ts");
-    const { createMediaCore } = await import("../media/core.ts");
+    const { createMediaCore } = await import("../media/runtime/create-media-core.ts");
     const media = createMediaCore(defaultMedia(false), { collections: {}, globals: {} });
     expect(media.storage.url("a.png")).toBe("/api/cms/media/files/a.png");
     const key = `test-${crypto.randomUUID()}.txt`;

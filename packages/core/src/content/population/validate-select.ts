@@ -1,6 +1,6 @@
 import { type Collection, type Fields } from "../../schema/index.ts";
 import { isObject } from "../../schema/condition.ts";
-import { innerFields } from "../../schema/walk.ts";
+import { innerFields } from "../../schema/traversal/inner-fields.ts";
 import { type Spec, step } from "./population-spec.ts";
 import { type SelectSpec } from "./select-fields.ts";
 type Collections = Record<string, Collection>;

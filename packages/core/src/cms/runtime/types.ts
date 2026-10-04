@@ -1,5 +1,5 @@
 import { type Database } from "../../db/types.ts";
-import { type MediaCore } from "../../media/core.ts";
+import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import { type Plugin } from "../../plugins/index.ts";
 import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
 import type { User } from "better-auth";

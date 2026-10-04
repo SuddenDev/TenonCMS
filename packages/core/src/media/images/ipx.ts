@@ -1,6 +1,7 @@
 import { createIPX, type IPX } from "ipx";
 import { API_BASE } from "../../client/index.ts";
-import { modifierId, type ImageProvider } from "../images.ts";
+import { modifierId } from "./modifiers.ts";
+import type { ImageProvider } from "./types.ts";
 import { encodeKey, type Storage } from "../storage/types.ts";
 
 export type IpxOptions = {
