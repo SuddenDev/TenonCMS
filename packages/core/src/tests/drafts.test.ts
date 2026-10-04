@@ -244,6 +244,8 @@ describe("forRequest", () => {
 describe("draft writes", () => {
   // `stage:draft` for every write hook call, in order.
   let calls: string[];
+  // `previousDoc` of each `afterChange` call on `posts`.
+  let previous: unknown[];
   const record =
     (stage: string) =>
     ({ draft }: { draft: boolean }) => {
@@ -261,12 +263,17 @@ describe("draft writes", () => {
           hooks: {
             beforeValidate: [record("beforeValidate")],
             beforeChange: [record("beforeChange")],
-            afterChange: [record("afterChange")],
+            afterChange: [
+              record("afterChange"),
+              ({ previousDoc }: { previousDoc?: unknown }) => {
+                previous.push(previousDoc);
+              },
+            ],
           },
         },
         pages: {
           fields: page.fields,
-          hooks: { beforeChange: page.hooks.beforeChange },
+          hooks: page.hooks,
         },
         notes: {
           fields: { post: { type: "relation", collection: "posts", onDelete: "set-null" } },
@@ -285,6 +292,7 @@ describe("draft writes", () => {
   let cms: ReturnType<typeof make>;
   beforeEach(() => {
     calls = [];
+    previous = [];
     cms = make();
   });
   const errors = (promise: Promise<unknown>) =>
@@ -345,6 +353,37 @@ describe("draft writes", () => {
       publishedAt: expect.any(String),
     });
     expect(await cms.findById("posts", doc.id)).toMatchObject({ title: "A", hasDraft: false });
+  });
+
+  it("passes the published document as previousDoc on publish", async () => {
+    const draft = await cms.create("posts", { title: "A" }, { draft: true });
+    await cms.publish("posts", draft.id);
+    expect(previous).toEqual([undefined]);
+    const live = await cms.create("posts", { title: "Live" });
+    await cms.update("posts", live.id, { title: "Next" }, { draft: true });
+    previous = [];
+    await cms.publish("posts", live.id);
+    expect(previous).toEqual([expect.objectContaining({ title: "Live" })]);
+  });
+
+  it("updates child paths when a draft slug change is published", async () => {
+    const about = await cms.create("pages", { title: "About", slug: "about" });
+    const child = await cms.create("pages", { title: "Jobs", slug: "jobs", parent: about.id });
+    await cms.update("pages", about.id, { slug: "team" }, { draft: true });
+    await cms.publish("pages", about.id);
+    expect(await cms.findById("pages", child.id)).toMatchObject({ path: "/team/jobs" });
+  });
+
+  it("merges a plain write in a drafts scope over the published data", async () => {
+    const doc = await cms.create("posts", { title: "Live" });
+    await cms.update("posts", doc.id, { title: "Next" }, { draft: true });
+    await cms.drafts().update("posts", doc.id, { views: 3 });
+    expect(await cms.findById("posts", doc.id)).toMatchObject({
+      title: "Live",
+      views: 3,
+      hasDraft: true,
+    });
+    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({ title: "Next" });
   });
 
   it("publishes without a draft", async () => {

@@ -123,7 +123,7 @@ export const discard = (core: Core, scope: Scope, name: Name, id?: string) =>
 /**
  * Shared by `create`, `update`, `setGlobal` and publish. Returns `undefined` for a missing document.
  * A draft save runs defaults, slugs, `beforeValidate`, a type check and `beforeChange`, then stores the draft.
- * It skips `validate`, `unique`, id checks and `afterChange`. A publish loads the document with its draft.
+ * It skips `validate`, `unique`, id checks and `afterChange`. A publish runs on the document with its draft.
  */
 export async function write(
   core: Core,
@@ -140,21 +140,24 @@ export async function write(
 ) {
   const { fields } = target(core, name);
   const db = await q(core, s);
-  const drafts = draft || publish || s.drafts;
-  const originalDoc =
+  const load = (drafts: boolean) =>
     name.kind === "global"
-      ? await loadGlobal(db, name.name, drafts)
+      ? loadGlobal(db, name.name, drafts)
       : id
-        ? await loadDoc(db, name.name, id, drafts)
+        ? loadDoc(db, name.name, id, drafts)
         : undefined;
-  if (id && !originalDoc) return undefined;
+  // Draft saves and publishes merge over the draft. A plain write MUST merge over the published data, also in a drafts scope.
+  const source = await load(draft || publish);
+  if (id && !source) return undefined;
+  // Hooks of a publish compare with the published document, which is `undefined` on a first publish.
+  const originalDoc = publish ? await load(false) : source;
   const args = hookArgs(s, name, { operation, id, originalDoc, draft });
   const fieldArgs = (data: Record<string, unknown>) => ({ ...args, data });
 
   // `update` and `setGlobal` change only the top-level keys they get. The others keep their stored values.
   const copy =
-    originalDoc && isObject(input)
-      ? { ...stripMeta(originalDoc), ...structuredClone(input) }
+    source && isObject(input)
+      ? { ...stripMeta(source), ...structuredClone(input) }
       : structuredClone(input);
   if (isObject(copy)) {
     if (operation === "create") await applyDefaults(fields, copy, args);

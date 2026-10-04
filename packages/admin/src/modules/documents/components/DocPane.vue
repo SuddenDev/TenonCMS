@@ -98,8 +98,12 @@ async function saveDraft(data: Data<Fields>) {
   if (isNew.value) {
     doc.value = await client.createDraft(props.name, data);
     docId.value = doc.value.id as string;
-    keepPane(docId.value);
-    await router.replace(`/collections/${props.name}/${docId.value}`);
+    // The save MAY resolve after the user left, e.g. through the flush on blur or unmount. Then the route stays.
+    const { params } = router.currentRoute.value;
+    if (params.name === props.name && params.id === "new") {
+      keepPane(docId.value);
+      await router.replace(`/collections/${props.name}/${docId.value}`);
+    }
   } else doc.value = await client.updateDraft(props.name, docId.value, data);
   reload();
   emit("saved");

@@ -21,6 +21,7 @@ import { useAutosave } from "@/modules/documents/composables/useAutosave";
 // With `saveDraft` the entry has drafts: edits save as a draft on their own, and `publish` and `discard` act on it.
 // Without it, `save` runs on submit.
 // `doc`: the latest saved document, for the status bar. Defaults to `initial`.
+// `global`: the form edits a global. A discard never deletes it.
 const props = defineProps<{
   id?: string;
   fields: Fields;
@@ -31,6 +32,7 @@ const props = defineProps<{
   discard?: () => Promise<void>;
   doc?: Record<string, unknown>;
   isNew?: boolean;
+  global?: boolean;
 }>();
 // `change`: the form state as it would be saved, on every edit and once on load.
 const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
@@ -149,9 +151,10 @@ const publish = () =>
   });
 
 async function discard() {
-  const message = current.value.publishedAt
-    ? "Discard the unpublished changes?"
-    : "Discard this draft? It was never published, so the entry is deleted.";
+  const message =
+    current.value.publishedAt || props.global
+      ? "Discard the unpublished changes?"
+      : "Discard this draft? It was never published, so the entry is deleted.";
   if (!confirm(message)) return;
   await attempt(async () => {
     await autosave.flush();

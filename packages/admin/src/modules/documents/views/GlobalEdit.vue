@@ -71,6 +71,7 @@ async function saveDraft(body: Data<Fields>) {
         :fields="global.fields"
         :initial="data"
         :doc="doc"
+        global
         v-bind="drafts ? { saveDraft, publish, discard } : { save }"
         @change="emit('change', $event)"
       />

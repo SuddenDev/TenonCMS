@@ -53,6 +53,8 @@ const send = usePreviewChannel(async (message: PageMessage) => {
     broadcast();
     return;
   }
+  // Other admin tabs share the channel; only a page's edit click is handled here.
+  if (message.type !== "edit") return;
   const to = message.id
     ? `/preview/collections/${message.collection}/${message.id}`
     : `/preview/globals/${message.collection}`;
