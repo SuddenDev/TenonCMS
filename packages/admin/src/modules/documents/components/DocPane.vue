@@ -3,8 +3,9 @@ import { useHead } from "@unhead/vue";
 import { computed, inject, provide, ref } from "vue";
 import { useRouter } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
-import { openRefKey, reloadKey, titleField } from "@/modules/documents/fields";
+import { keepPaneKey, openRefKey, reloadKey, titleField } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
+import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { Pane, Icon } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
@@ -24,14 +25,26 @@ const props = withDefaults(
   }>(),
   { min: 448, grow: true },
 );
-const emit = defineEmits<{ close: []; deleted: []; change: [data: Record<string, unknown>] }>();
+// `saved`: after every save, draft save, publish and discard.
+const emit = defineEmits<{
+  close: [];
+  deleted: [];
+  saved: [];
+  change: [data: Record<string, unknown>];
+}>();
+// `doc` is the latest saved document. `initial` is what the form shows; a draft save leaves it, so typing goes on.
 const doc = ref<Record<string, unknown> | null>(null);
+const initial = ref<Record<string, unknown>>({});
 
 const router = useRouter();
 const reload = inject(reloadKey, () => {});
+const keepPane = inject(keepPaneKey, () => {});
 if (props.open) provide(openRefKey, props.open);
-const isNew = props.id === "new";
+// A new document gets its id from its first draft save and keeps this pane.
+const docId = ref(props.id);
+const isNew = computed(() => docId.value === "new");
 const collection = computed(() => schema.value.collections?.[props.name]);
+const drafts = computed(() => collection.value?.drafts !== false);
 const formId = `doc-${props.name}-${props.id}`;
 const error = ref("");
 
@@ -48,15 +61,20 @@ const label = (collection: string, d: Record<string, any>) => {
 };
 
 const title = () =>
-  isNew
+  isNew.value
     ? `New ${collection.value?.label ?? props.name}`
     : String((collection.value && doc.value?.[titleField(collection.value)]) || "Untitled");
 
 if (!props.closable) useHead({ title });
 
-if (isNew) doc.value = {};
+function show(d: Record<string, unknown>) {
+  doc.value = d;
+  initial.value = d;
+}
+
+if (isNew.value) doc.value = {};
 else {
-  client.findById(props.name, props.id, { populate: false }).then((d) => (doc.value = d));
+  client.findById(props.name, props.id, { populate: false }).then(show);
   if (joins.value.length) {
     const populate = Object.fromEntries(joins.value.map((j) => [j.key, true]));
     client.findById(props.name, props.id, { populate }).then((d) => (joined.value = d));
@@ -64,21 +82,49 @@ else {
 }
 
 async function save(data: Data<Fields>) {
-  if (isNew) {
+  if (isNew.value) {
     const created = await client.create(props.name, data);
     reload();
+    emit("saved");
     await router.replace(`/collections/${props.name}/${created.id}`);
   } else {
-    doc.value = await client.update(props.name, props.id, data);
+    show(await client.update(props.name, docId.value, data));
     reload();
+    emit("saved");
   }
+}
+
+async function saveDraft(data: Data<Fields>) {
+  if (isNew.value) {
+    doc.value = await client.createDraft(props.name, data);
+    docId.value = doc.value.id as string;
+    keepPane(docId.value);
+    await router.replace(`/collections/${props.name}/${docId.value}`);
+  } else doc.value = await client.updateDraft(props.name, docId.value, data);
+  reload();
+  emit("saved");
+}
+
+async function publish() {
+  show(await client.publish(props.name, docId.value));
+  reload();
+  emit("saved");
+}
+
+// A document that was never published is deleted.
+async function discard() {
+  const kept = await client.discard(props.name, docId.value);
+  reload();
+  emit("saved");
+  if (kept) show(kept);
+  else emit("deleted");
 }
 
 async function remove() {
   if (!confirm("Delete this entry?")) return;
   error.value = "";
   try {
-    await client.delete(props.name, props.id);
+    await client.delete(props.name, docId.value);
   } catch (e) {
     error.value = (e as Error).message;
     return;
@@ -98,7 +144,7 @@ async function remove() {
         size="icon-sm"
         aria-label="Preview"
       >
-        <RouterLink :to="`/preview/collections/${name}/${id}`"><Icon name="eye" /></RouterLink>
+        <RouterLink :to="`/preview/collections/${name}/${docId}`"><Icon name="eye" /></RouterLink>
       </Button>
       <slot name="actions" />
       <Button
@@ -115,6 +161,7 @@ async function remove() {
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
         <p class="text-muted-foreground text-xs">{{ collection.label ?? name }}</p>
         <h1 class="mt-1 text-2xl font-semibold">{{ title() }}</h1>
+        <StatusBadges v-if="drafts" :doc="doc" />
         <p v-if="collection.description" class="text-muted-foreground mt-2 text-sm">
           {{ collection.description }}
         </p>
@@ -143,9 +190,10 @@ async function remove() {
         :id="formId"
         class="flex-1"
         :fields="collection.fields"
-        :initial="doc"
-        :save="save"
-        :is-new="isNew"
+        :initial="initial"
+        :doc="doc"
+        v-bind="drafts ? { saveDraft, publish, discard } : { save }"
+        :is-new="props.id === 'new'"
         @change="emit('change', $event)"
       >
         <Button v-if="!isNew" type="button" variant="ghost" size="sm" @click="remove">

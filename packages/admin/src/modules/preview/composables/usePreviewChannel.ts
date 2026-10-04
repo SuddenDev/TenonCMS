@@ -3,6 +3,7 @@ import { onScopeDispose } from "vue";
 /** What the admin sends. `id` is `''` for a global. */
 export type AdminMessage =
   | { type: "draft"; collection: string; id: string; data: Record<string, unknown> }
+  | { type: "saved"; collection: string; id: string }
   | { type: "mode"; edit: boolean };
 
 /** What the preview runtime in the page sends. `id` is `''` for a global. */

@@ -143,6 +143,7 @@ function close() {
       :max="800"
       :grow="false"
       @change="change"
+      @saved="send({ type: 'saved', collection: name, id })"
       @deleted="router.push(`/collections/${name}`)"
     />
     <DocPane
@@ -153,9 +154,19 @@ function close() {
       :open="openAt(i)"
       closable
       previewing
+      @saved="send({ type: 'saved', collection: r.collection, id: r.id })"
       @close="closeAt(i)"
       @deleted="closeAt(i)"
     />
   </template>
-  <GlobalEdit v-else :key="key" previewing :min="480" :max="800" :grow="false" @change="change" />
+  <GlobalEdit
+    v-else
+    :key="key"
+    previewing
+    :min="480"
+    :max="800"
+    :grow="false"
+    @change="change"
+    @saved="send({ type: 'saved', collection: name, id: '' })"
+  />
 </template>

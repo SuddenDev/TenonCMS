@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
-import { computed, provide, ref } from "vue";
+import { computed, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { client, schema } from "@/shared/api";
-import { reloadKey, titleField } from "@/modules/documents/fields";
+import { keepPaneKey, reloadKey, titleField } from "@/modules/documents/fields";
 import {
   Pane,
   PaneMenu,
@@ -42,6 +42,7 @@ const rows = computed(() => {
       title: title(d) || "(untitled)",
       updatedAt: d.updatedAt as string,
       createdAt: d.createdAt as string,
+      draft: d.hasDraft || d.publishedAt === null,
     }))
     .sort((a, b) =>
       key === "title" ? a.title.localeCompare(b.title) : b[key].localeCompare(a[key]),
@@ -57,6 +58,18 @@ const load = () =>
     .finally(() => (loading.value = false));
 load();
 provide(reloadKey, load);
+
+// The document pane remounts when the id changes, except once for the id a new document got.
+const pane = ref(0);
+let kept: string | undefined;
+watch(
+  () => route.params.id,
+  (id) => {
+    if (id === kept) kept = undefined;
+    else pane.value++;
+  },
+);
+provide(keepPaneKey, (id) => (kept = id));
 </script>
 
 <template>
@@ -85,7 +98,11 @@ provide(reloadKey, load);
             :label="doc.title"
             :subtitle="ago(doc.updatedAt)"
             :active="route.params.id === doc.id"
-          />
+          >
+            <template v-if="doc.draft" #end>
+              <span class="size-2 rounded-full bg-amber-500" role="img" aria-label="Draft" />
+            </template>
+          </PaneMenuItem>
           <p v-if="!loading && !rows.length" class="text-muted-foreground px-2 py-2 text-sm">
             {{ search ? "No matches." : "Nothing here yet." }}
           </p>
@@ -93,7 +110,7 @@ provide(reloadKey, load);
       </PaneMenu>
     </Pane>
     <RouterView v-slot="{ Component }">
-      <component :is="Component" v-if="Component" :key="String(route.params.id)" />
+      <component :is="Component" v-if="Component" :key="pane" />
       <div
         v-else
         class="text-muted-foreground hidden flex-1 items-center justify-center text-sm sm:flex"

@@ -12,6 +12,8 @@ export function useSession() {
       client.getSession(),
       client.getSchema().catch(() => undefined),
     ]);
+    // The preview cookie lets the admin's reads, and every preview it opens, see drafts.
+    if (session?.user) await client.preview.enter().catch(console.error);
     user.value = session?.user ?? null;
     if (user.value && s) schema.value = s;
     loading.value = false;
@@ -27,6 +29,7 @@ export function useSession() {
   }
 
   async function signOut() {
+    await client.preview.exit().catch(console.error);
     await client.signOut();
     user.value = null;
   }

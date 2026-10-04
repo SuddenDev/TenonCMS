@@ -4,6 +4,7 @@ import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import DocForm from "@/modules/documents/components/DocForm.vue";
+import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { Icon, Pane } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
@@ -12,17 +13,32 @@ withDefaults(defineProps<{ previewing?: boolean; min?: number; max?: number; gro
   min: 448,
   grow: true,
 });
-const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
+// `saved`: after every save, draft save, publish and discard.
+const emit = defineEmits<{ saved: []; change: [data: Record<string, unknown>] }>();
 const name = useRoute().params.name as string;
 const global = computed(() => schema.value.globals?.[name]);
-const data = ref<Record<string, unknown> | null>(null);
+const drafts = computed(() => global.value?.drafts !== false);
+// `doc` is the latest saved global. `data` is what the form shows; a draft save leaves it, so typing goes on.
+const doc = ref<Record<string, unknown> | null>(null);
+const data = ref<Record<string, unknown>>({});
 
 useHead({ title: () => global.value?.label ?? name });
 
-client.getGlobal(name, { populate: false }).then((d) => (data.value = d));
+function show(d: Record<string, unknown>) {
+  doc.value = d;
+  data.value = d;
+  emit("saved");
+}
 
-async function save(body: Data<Fields>) {
-  data.value = await client.setGlobal(name, body);
+client.getGlobal(name, { populate: false }).then((d) => (doc.value = data.value = d));
+
+const save = async (body: Data<Fields>) => show(await client.setGlobal(name, body));
+const publish = async () => show(await client.publishGlobal(name));
+const discard = async () => show(await client.discardGlobal(name));
+
+async function saveDraft(body: Data<Fields>) {
+  doc.value = await client.setGlobalDraft(name, body);
+  emit("saved");
 }
 </script>
 
@@ -40,10 +56,11 @@ async function save(body: Data<Fields>) {
         <RouterLink :to="`/preview/globals/${name}`"><Icon name="eye" /></RouterLink>
       </Button>
     </template>
-    <div v-if="data" class="flex min-h-full flex-col">
+    <div v-if="doc" class="flex min-h-full flex-col">
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
         <p class="text-muted-foreground text-xs">Global</p>
         <h1 class="mt-1 text-2xl font-semibold">{{ global.label ?? name }}</h1>
+        <StatusBadges v-if="drafts" :doc="doc" />
         <p v-if="global.description" class="text-muted-foreground mt-2 text-sm">
           {{ global.description }}
         </p>
@@ -53,7 +70,8 @@ async function save(body: Data<Fields>) {
         class="flex-1"
         :fields="global.fields"
         :initial="data"
-        :save="save"
+        :doc="doc"
+        v-bind="drafts ? { saveDraft, publish, discard } : { save }"
         @change="emit('change', $event)"
       />
     </div>

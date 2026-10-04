@@ -27,6 +27,9 @@ export function active(field: Field, root: unknown, sibling: unknown) {
 /** Reloads what the view around a document shows: the list. Document panes call it after a save or delete. */
 export const reloadKey: InjectionKey<() => void> = Symbol("reload");
 
+/** Keeps the pane of a new document when the route switches to the id from its first draft save, so typing goes on. */
+export const keepPaneKey: InjectionKey<(id: string) => void> = Symbol("keepPane");
+
 /** Opens a referenced document in a pane to the right. Provided only in the pane layout. */
 export const openRefKey: InjectionKey<(collection: string, id: string) => void> = Symbol("openRef");
 
