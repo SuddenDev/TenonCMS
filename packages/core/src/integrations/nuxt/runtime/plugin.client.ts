@@ -1,6 +1,7 @@
-import { defineNuxtPlugin } from "#app";
+import { defineNuxtPlugin, useRuntimeConfig } from "#app";
 import { preview } from "integral-cms/preview";
 
 export default defineNuxtPlugin(() => {
-  preview();
+  const { admin } = useRuntimeConfig().public.integral as { admin: string | false };
+  preview({ admin });
 });

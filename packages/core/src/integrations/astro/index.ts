@@ -5,8 +5,9 @@ import { API_BASE } from "../../client/index.ts";
 
 export type Options = Base & {
   /**
-   * Injects the live preview runtime into every page. It does nothing outside the admin's preview. After a save it
-   * re-renders the page from the server; prerendered pages only get the unsaved changes.
+   * Injects the preview runtime into every page. In the admin's preview it shows unsaved changes; after a save it
+   * re-renders the page from the server, and prerendered pages only get the unsaved changes. A signed-in user with
+   * the preview cookie gets the admin bar, unless `admin` is `false`.
    * `false` leaves it out. Defaults to `true`.
    */
   preview?: boolean;
@@ -51,7 +52,7 @@ export default function integralCms({
         if (preview)
           injectScript(
             "page",
-            "import { preview } from 'integral-cms/preview'; preview({ morph: true });",
+            `import { preview } from 'integral-cms/preview'; preview({ morph: true, admin: ${JSON.stringify(path ?? false)} });`,
           );
         addMiddleware({ entrypoint: new URL("./middleware.ts", import.meta.url), order: "pre" });
         updateConfig({

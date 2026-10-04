@@ -48,6 +48,9 @@ type Http<R> = string extends keyof R
     };
 
 /** The collections of `C` as the HTTP API sends them: `private` fields are optional. Use them to type browser code; the client's read types build on them. */
+/** What reads of a signed-in user see: `drafts` (unpublished changes) or `published` (what visitors see). */
+export type Perspective = "drafts" | "published";
+
 export type Collections<C extends { schema: Schema }> = Http<
   NonNullable<C["schema"]["collections"]>
 >;
@@ -424,12 +427,12 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   media: MediaClient;
 
   /**
-   * The preview cookie. While it is set, reads of the signed-in user see drafts, also on the site's pages.
-   * Both need a session.
+   * The preview cookie. It holds a {@link Perspective}. While it is `drafts`, reads of the signed-in user see drafts,
+   * also on the site's pages. Both need a session.
    */
   preview: {
-    /** Sets the cookie. `POST /api/cms/preview` */
-    enter(): Promise<void>;
+    /** Sets the cookie to `perspective`, default `drafts`. `POST /api/cms/preview` */
+    enter(perspective?: Perspective): Promise<void>;
     /** Clears the cookie. `DELETE /api/cms/preview` */
     exit(): Promise<void>;
   };
@@ -558,8 +561,8 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     },
 
     preview: {
-      enter: async () => {
-        await request("POST", "/preview");
+      enter: async (perspective: Perspective = "drafts") => {
+        await request("POST", "/preview", { perspective });
       },
       exit: async () => {
         await request("DELETE", "/preview");

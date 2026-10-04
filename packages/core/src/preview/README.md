@@ -3,13 +3,13 @@
 Live preview. The admin shows the site next to the form and pushes unsaved form state into it over a
 `BroadcastChannel` (`integral-cms:preview`). Nothing here touches the database except `url.ts`.
 
-| File          | What it does                                                                                                                               |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `template.ts` | `placeholders()` and `resolve()` for `preview` templates like `'/{category.slug}/{slug}'`. No imports.                                     |
-| `url.ts`      | `previewUrl()`: the URL of a document or global from its form state. Reads one relation hop with `findById`, or calls the host's function. |
-| `index.ts`    | `integral-cms/preview`, the browser runtime: `edit()`, `preview()`, `subscribe()`, `getDrafts()`, `merge()`. No code runs at import time.  |
-| `vue.ts`      | `integral-cms/preview/vue`: `useDraft(collection, doc)`, a shallow ref with the draft merged in.                                           |
-| `react.ts`    | `integral-cms/preview/react`: `useDraft(collection, doc)` on `useSyncExternalStore`.                                                       |
+| File          | What it does                                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `template.ts` | `placeholders()` and `resolve()` for `preview` templates like `'/{category.slug}/{slug}'`. No imports.                                                    |
+| `url.ts`      | `previewUrl()`: the URL of a document or global from its form state. Reads one relation hop with `findById`, or calls the host's function.                |
+| `index.ts`    | `integral-cms/preview`, the browser runtime: `edit()`, `preview()` (with the bars), `subscribe()`, `getDrafts()`, `merge()`. No code runs at import time. |
+| `vue.ts`      | `integral-cms/preview/vue`: `useDraft(collection, doc)`, a shallow ref with the draft merged in.                                                          |
+| `react.ts`    | `integral-cms/preview/react`: `useDraft(collection, doc)` on `useSyncExternalStore`.                                                                      |
 
 `index.ts`, `vue.ts` and `react.ts` run in the browser and in server bundles. They MUST NOT import zod or core
 runtime code.
@@ -32,8 +32,29 @@ listed attributes are set instead: from the value's keys when it is an object (t
 else from the value itself. Objects and arrays without `data-cms-attr` are left to `useDraft()`. A
 `MutationObserver` patches elements again after a framework re-render.
 
-The runtime starts only when `window.name` starts with `integral-preview`: the admin names its iframe and the tabs it
-opens that way, and the name survives navigation.
+## Modes and bars
+
+`preview()` picks its mode from `window.name`, which survives navigation:
+
+| `window.name`        | Mode                                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------- |
+| `integral-preview`   | The admin's iframe. Live preview, no bar.                                                            |
+| `integral-preview-…` | A preview the admin opened in a tab. Live preview and the preview bar.                               |
+| anything else        | The admin bar, only with the `integral-preview` cookie, a session and `admin` not `false`. Else off. |
+
+Both bars are one `<div data-cms-bar>` built by `bar()`, fixed at the top, 32 px high. It is appended to `<html>`, not
+`<body>`, so a morph keeps it; `<html>` gets `margin-top: 32px` while it shows.
+
+- Preview bar: an "Edit" switch (`data-cms-edit` on `<html>`; a later `mode` message wins), the Drafts / Published
+  toggle and "Exit preview" (clears `window.name` and reloads).
+- Admin bar: "Admin" (links to `admin`), one "Edit <collection>" link per distinct `collection:id` in `[data-cms]`
+  (`<admin>/presentation/collections/<collection>/<id>`, `<admin>/presentation/globals/<name>`; scanned on start and
+  on `DOMContentLoaded`) and the toggle. It shows only after `GET /api/cms/auth/get-session` returns a session
+  (better-auth answers `null` without one). It never shows on the admin's own pages.
+
+The toggle reads the perspective from the cookie (`drafts`, else published), and a click sends
+`POST /api/cms/preview` with `{ perspective }`, then reloads. The cookie is not `HttpOnly` for this; it grants
+nothing without a session.
 
 ## Re-render (`morph`)
 

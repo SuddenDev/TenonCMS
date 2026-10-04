@@ -43,4 +43,4 @@ Hooks get their own `cms` (built by `inner()` in `scope.ts`). Calls through it s
 
 A read sees published documents (default) or drafts (`Scope.drafts`). `cms.drafts()` returns the instance in the drafts
 perspective. `cms.forRequest(request)` returns it with the session user, in the drafts perspective when the request
-carries the preview cookie (`PREVIEW_COOKIE` in `http/middleware.ts`) and a valid session. Read options never carry it.
+carries the preview cookie (`PREVIEW_COOKIE` in `http/middleware.ts`) set to `drafts` and a valid session. Read options never carry it.

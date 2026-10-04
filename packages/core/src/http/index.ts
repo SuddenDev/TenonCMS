@@ -141,9 +141,13 @@ export function createApp(
   // Behind CSRF and a session. Writes use `c.var.cms`, which carries the session user.
   const writes = new Hono<Env>();
   writes.get("/schema", (c) => c.json(publicSchema));
-  // The preview cookie. Reads of a signed-in user that carry it use the drafts perspective.
-  writes.post("/preview", (c) => {
-    setCookie(c, PREVIEW_COOKIE, "1", { httpOnly: true, sameSite: "Lax", path: "/" });
+  // The preview cookie holds a perspective. Reads of a signed-in user with `drafts` see drafts.
+  // It is not HttpOnly: the preview runtime reads it, and it grants nothing without a session.
+  writes.post("/preview", async (c) => {
+    const perspective = (await body(c.req))?.perspective ?? "drafts";
+    if (perspective !== "drafts" && perspective !== "published")
+      return c.json({ message: 'perspective MUST be "drafts" or "published"' }, 400);
+    setCookie(c, PREVIEW_COOKIE, perspective, { sameSite: "Lax", path: "/" });
     return c.body(null, 204);
   });
   writes.delete("/preview", (c) => {

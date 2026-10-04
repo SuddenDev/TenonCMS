@@ -15,6 +15,14 @@ export type PreviewMessage =
   | { type: "saved"; collection: string; id: string };
 
 const CHANNEL = "integral-cms:preview";
+// `API_BASE` of the client. Importing it would pull core code into the browser entry.
+const API = "/api/cms";
+const COOKIE = "integral-preview";
+const BAR_STYLE =
+  "[data-cms-bar]{position:fixed;inset:0 0 auto;height:32px;z-index:2147483647;display:flex;align-items:center;gap:12px;padding:0 12px;background:#18181b;color:#fafafa;font:13px/1 system-ui,sans-serif}" +
+  "[data-cms-bar] a,[data-cms-bar] button,[data-cms-bar] label{color:inherit;font:inherit;text-decoration:none;background:none;border:0;padding:4px 6px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:6px}" +
+  "[data-cms-bar] :is(a,button):hover,[data-cms-bar] [aria-pressed=true]{background:#3f3f46}" +
+  "[data-cms-bar] [data-end]{margin-left:auto}";
 const STYLE =
   "[data-cms-edit] [data-cms]:hover{outline:2px dashed #3b82f6;outline-offset:2px;cursor:pointer}";
 
@@ -108,15 +116,153 @@ function patchAll(root: ParentNode) {
   for (const el of root.querySelectorAll("[data-cms]")) patch(el);
 }
 
+const perspective = () =>
+  document.cookie.split(";").some((c) => c.trim() === `${COOKIE}=drafts`) ? "drafts" : "published";
+
+async function setPerspective(value: string) {
+  await fetch(`${API}/preview`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ perspective: value }),
+  });
+  location.reload();
+}
+
+// One "Edit" link per document or global bound on the page.
+function editLinks(admin: string) {
+  const keys = new Set(
+    [...document.querySelectorAll("[data-cms]")].map((el) => {
+      const { collection, id } = parse(el.getAttribute("data-cms")!);
+      return `${collection}:${id}`;
+    }),
+  );
+  return [...keys].map((key) => {
+    const [collection, id] = key.split(":") as [string, string];
+    const a = document.createElement("a");
+    a.textContent = `Edit ${collection}`;
+    a.href = `${admin}/presentation/${id ? `collections/${collection}/${id}` : `globals/${collection}`}`;
+    return a;
+  });
+}
+
 /**
- * Starts the live preview runtime. It does nothing unless the page runs in the admin's preview (`window.name` starts
- * with `integral-preview`). Calling it again returns the same stop function.
- * With `morph`, a `saved` message re-renders the page: it fetches the current URL and morphs `<body>` and the title.
- * Server-rendered sites without client data (Astro) need it.
+ * The bar at the top of the page. `preview` (a preview tab): an edit switch, the perspective and "Exit preview".
+ * `admin` (a signed-in user on the site): a link to the admin, one edit link per bound document and the perspective.
+ * Returns the function that removes it.
  */
-export const preview: (options?: { morph?: boolean }) => Unsubscribe = ({ morph = false } = {}) => {
+function bar(kind: "preview" | "admin", admin: string) {
+  const html = document.documentElement;
+  const root = document.createElement("div");
+  root.setAttribute("data-cms-bar", "");
+  const style = document.createElement("style");
+  style.textContent = BAR_STYLE;
+  const button = (text: string, onclick: () => void) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.onclick = onclick;
+    return b;
+  };
+
+  const links = document.createElement("span");
+  links.style.display = "contents";
+  const scan = () => links.replaceChildren(...editLinks(admin));
+  if (kind === "admin") {
+    const home = document.createElement("a");
+    home.textContent = "Admin";
+    home.href = admin;
+    scan();
+    root.append(home, links);
+  } else {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = html.hasAttribute("data-cms-edit");
+    input.onchange = () => html.toggleAttribute("data-cms-edit", input.checked);
+    label.append(input, "Edit");
+    root.append(label);
+  }
+
+  const toggle = document.createElement("span");
+  toggle.setAttribute("data-end", "");
+  toggle.style.display = "flex";
+  const current = perspective();
+  for (const [value, text] of [
+    ["drafts", "Drafts"],
+    ["published", "Published"],
+  ] as const) {
+    const b = button(text, () => value !== current && void setPerspective(value));
+    b.setAttribute("aria-pressed", String(value === current));
+    toggle.append(b);
+  }
+  root.append(toggle);
+  if (kind === "preview")
+    root.append(
+      button("Exit preview", () => {
+        window.name = "";
+        location.reload();
+      }),
+    );
+
+  // Outside `<body>`, so a morph or a framework render does not remove it.
+  html.append(style, root);
+  const margin = html.style.marginTop;
+  html.style.marginTop = "32px";
+  document.addEventListener("DOMContentLoaded", scan);
+  return () => {
+    root.remove();
+    style.remove();
+    html.style.marginTop = margin;
+    document.removeEventListener("DOMContentLoaded", scan);
+  };
+}
+
+// A signed-in user on the site with the preview cookie gets the admin bar. Without a session there is no bar.
+function adminBar(admin: string): Unsubscribe {
+  let remove: (() => void) | undefined;
+  let stopped = false;
+  void fetch(`${API}/auth/get-session`, { credentials: "same-origin" })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((session) => {
+      if (session && !stopped) remove = bar("admin", admin);
+    })
+    .catch(() => {});
+  stop = () => {
+    stop = undefined;
+    stopped = true;
+    remove?.();
+  };
+  return stop;
+}
+
+/**
+ * Starts the preview runtime. The mode comes from `window.name`:
+ * - `integral-preview` (the admin's iframe): live preview.
+ * - `integral-preview-…` (a preview the admin opened in a tab): live preview and the preview bar.
+ * - Anything else: the admin bar, but only with the preview cookie and a session. Otherwise it does nothing.
+ *
+ * Calling it again returns the same stop function.
+ */
+export const preview: (options?: {
+  /**
+   * Re-renders the page on a `saved` message: fetches the current URL and morphs `<body>` and the title.
+   * Server-rendered sites without client data (Astro) need it. Defaults to `false`.
+   */
+  morph?: boolean;
+  /** The admin path, for the bars' links. `false` renders no admin bar. Defaults to `/admin`. */
+  admin?: string | false;
+}) => Unsubscribe = ({ morph = false, admin = "/admin" } = {}) => {
   if (stop) return stop;
-  if (!globalThis.window?.name.startsWith("integral-preview")) return () => {};
+  const name = globalThis.window?.name;
+  if (name === undefined) return () => {};
+  if (!name.startsWith("integral-preview")) {
+    // The admin's own page MAY load this too (Astro injects it into every page).
+    const inAdmin = admin && (location.pathname + "/").startsWith(`${admin}/`);
+    if (!admin || inAdmin || !/(^|;\s*)integral-preview=[^;]/.test(document.cookie))
+      return () => {};
+    return adminBar(admin);
+  }
   const html = document.documentElement;
   const channel = new BroadcastChannel(CHANNEL);
   const post = (message: PreviewMessage) => channel.postMessage(message);
@@ -154,6 +300,8 @@ export const preview: (options?: { morph?: boolean }) => Unsubscribe = ({ morph 
       patchAll(document);
     } else if (data.type === "mode") {
       html.toggleAttribute("data-cms-edit", data.edit);
+      const input = document.querySelector<HTMLInputElement>("[data-cms-bar] input");
+      if (input) input.checked = data.edit;
     } else if (data.type === "saved" && morph) {
       void rerender();
     }
@@ -181,6 +329,7 @@ export const preview: (options?: { morph?: boolean }) => Unsubscribe = ({ morph 
   document.addEventListener("click", onClick, true);
 
   post({ type: "url", href: location.href });
+  const removeBar = name.startsWith("integral-preview-") ? bar("preview", admin || "") : undefined;
 
   stop = () => {
     stop = undefined;
@@ -189,6 +338,7 @@ export const preview: (options?: { morph?: boolean }) => Unsubscribe = ({ morph 
     style.remove();
     html.removeAttribute("data-cms-edit");
     document.removeEventListener("click", onClick, true);
+    removeBar?.();
   };
   return stop;
 };

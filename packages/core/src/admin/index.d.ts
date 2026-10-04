@@ -87,9 +87,11 @@ export type Nav = {
    * Where the entry is listed.
    * - `menu`: in the sidebar (default).
    * - `settings`: on the Settings page, not in the sidebar.
+   * - `tool`: as a tool in the top bar, next to Content and Visual Editor, sorted by `order`. Hidden in the
+   *   sidebar. Below the `sm` breakpoint, tools sit in the menu sheet.
    * - `none`: nowhere. The route still opens, e.g. a detail page.
    */
-  display?: "menu" | "settings" | "none";
+  display?: "menu" | "settings" | "tool" | "none";
   /**
    * Section of the sidebar or the Settings page. Defaults to `Content` in the sidebar and `Site` on the
    * Settings page. Sections appear in the order of their first entry.

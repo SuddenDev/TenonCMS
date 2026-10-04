@@ -156,6 +156,10 @@ describe("preview over HTTP", () => {
     expect(await titles()).toEqual([]);
     await s.client.preview.enter();
     expect(await titles()).toEqual(["Draft"]);
+    await s.client.preview.enter("published");
+    expect(await titles()).toEqual([]);
+    await s.client.preview.enter("drafts");
+    expect(await titles()).toEqual(["Draft"]);
     await s.client.preview.exit();
     expect(await titles()).toEqual([]);
   });
@@ -163,7 +167,7 @@ describe("preview over HTTP", () => {
   it("ignores the cookie without a session", async () => {
     const res = await cms.fetch(
       new Request(`${origin}/api/cms/collections/posts`, {
-        headers: { cookie: "integral-preview=1" },
+        headers: { cookie: "integral-preview=drafts" },
       }),
     );
     expect(await res.json()).toEqual([]);
@@ -171,19 +175,33 @@ describe("preview over HTTP", () => {
 
   it("sets and clears the cookie", async () => {
     await s.client.signUp(admin);
-    const call = (method: string) =>
+    const call = (method: string, body?: object) =>
       s.fetch(`${origin}/api/cms/preview`, {
         method,
         headers: { "content-type": "application/json" },
+        body: body && JSON.stringify(body),
       });
     const enter = await call("POST");
     expect(enter.status).toBe(204);
-    expect(enter.headers.get("set-cookie")).toMatch(
-      /^integral-preview=1; Path=\/; HttpOnly; SameSite=Lax$/,
+    expect(enter.headers.get("set-cookie")).toBe("integral-preview=drafts; Path=/; SameSite=Lax");
+    const published = await call("POST", { perspective: "published" });
+    expect(published.headers.get("set-cookie")).toBe(
+      "integral-preview=published; Path=/; SameSite=Lax",
     );
     const exit = await call("DELETE");
     expect(exit.status).toBe(204);
     expect(exit.headers.get("set-cookie")).toMatch(/^integral-preview=; Max-Age=0/);
+  });
+
+  it("rejects an unknown perspective", async () => {
+    await s.client.signUp(admin);
+    const res = await s.fetch(`${origin}/api/cms/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ perspective: "all" }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ message: expect.any(String) });
   });
 
   it("needs a session to set the cookie", async () => {
@@ -217,10 +235,18 @@ describe("forRequest", () => {
   });
 
   it("reads drafts with a preview cookie and a session", async () => {
-    expect(await (await cms.forRequest(request("integral-preview=1"))).find("posts")).toEqual([]);
+    expect(await (await cms.forRequest(request("integral-preview=drafts"))).find("posts")).toEqual(
+      [],
+    );
     const cookie = await session();
-    const api = await cms.forRequest(request(`${cookie}; integral-preview=1`));
+    const api = await cms.forRequest(request(`${cookie}; integral-preview=drafts`));
     expect(await api.find("posts")).toHaveLength(1);
+  });
+
+  it("reads published content with the published perspective", async () => {
+    const cookie = await session();
+    const api = await cms.forRequest(request(`${cookie}; integral-preview=published`));
+    expect(await api.find("posts")).toEqual([]);
   });
 
   it("binds the session user", async () => {
