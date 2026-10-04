@@ -29,6 +29,16 @@ const { refs, openAt, closeAt } = useRefs();
 const focus = ref<string | null>(null);
 provide(focusKey, focus);
 
+// Only http(s) URLs reach the iframe and `window.open`.
+function safe(value: string | null) {
+  try {
+    const u = new URL(value ?? "", location.origin);
+    return value !== null && /^https?:$/.test(u.protocol) ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 const edit = ref(true);
 const href = ref("");
 const url = ref<string | null>();
@@ -38,7 +48,7 @@ const draft = shallowRef<Record<string, unknown>>();
 const send = usePreviewChannel(async (message: PageMessage) => {
   // A page that just loaded knows neither the mode nor the unsaved state.
   if (message.type === "url") {
-    href.value = message.href;
+    href.value = safe(message.href) ?? "";
     send({ type: "mode", edit: edit.value });
     broadcast();
     return;
@@ -59,7 +69,7 @@ async function load() {
   const next = await (
     id.value ? client.previewUrl(name.value, data) : client.previewGlobalUrl(name.value, data)
   ).catch(() => null);
-  if (at === key.value) url.value = next;
+  if (at === key.value) url.value = safe(next);
 }
 // A new document loads its URL with its first form state. Typing never changes the `src`.
 watch(key, () => {
