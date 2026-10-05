@@ -12,12 +12,13 @@ Make one module folder easy to read without changing what it does. Work one fold
 Read every non-test file in the folder before you edit. Then ask the user these questions and give a default for each, so "go" is a full answer:
 
 - **Scope:** JSDoc and spacing only, or also restructure long functions? Name the candidates.
-- **Arrow exports:** turn `export const f = () => …` into `function` declarations?
 - **Functions that return nothing:** use `@throws` instead of `@returns`?
 - **Renames:** rename short or misleading names, or keep the diff small?
 - **Existing comments:** turn `//` comments that describe an export into JSDoc?
 
 Defaults: restructure only the functions that read worst, use `function` declarations, use `@throws`, keep names, turn the comments into JSDoc and leave test files alone.
+
+**Arrow exports:** turn complex arrow exports `export const f = () => …` into `function` declarations, but keep small local closures as arrow functions.
 
 ## 2. Rules for code
 
