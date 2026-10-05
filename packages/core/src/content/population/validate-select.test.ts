@@ -25,9 +25,9 @@ const collections: Record<string, Collection> = {
 describe("badSelectPath", () => {
   const check = (
     select: Record<string, any>,
-    spec: Parameters<typeof badSelectPath>[3] = 2,
+    plan: Parameters<typeof badSelectPath>[3] = 2,
     name = "posts",
-  ) => badSelectPath(collections, collections[name].fields, select, spec);
+  ) => badSelectPath(collections, collections[name].fields, select, plan);
 
   it("accepts meta keys only on documents", () => {
     expect(check({ author: { id: true, createdAt: true } })).toBeUndefined();
@@ -59,8 +59,8 @@ describe("badSelectPath", () => {
     [{ author: { avatar: { url: true } } }, { author: true }],
     [{ tags: { name: true } }, { author: true }],
     [{ constructor: true }, 2],
-  ])("rejects %o with populate %o", (select, spec) => {
-    expect(check(select, spec as never)).toEqual(expect.any(String));
+  ])("rejects %o with populate %o", (select, plan) => {
+    expect(check(select, plan as never)).toEqual(expect.any(String));
   });
 
   it("names the offending path", () => {

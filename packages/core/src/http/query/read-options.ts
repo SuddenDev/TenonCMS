@@ -13,12 +13,12 @@ export function readOptions(
   query: { populate?: string; depth?: string; select?: string },
   doc = true,
 ): ReadOpts | string {
-  const spec = parsePopulate(collections, fields, query, config);
-  if (typeof spec === "string") return spec;
-  const read: ReadOpts = typeof spec === "number" ? { depth: spec } : { populate: spec };
+  const plan = parsePopulate(collections, fields, query, config);
+  if (typeof plan === "string") return plan;
+  const read: ReadOpts = typeof plan === "number" ? { depth: plan } : { populate: plan };
   if (query.select === undefined) return read;
   const select = parseSelect(query.select);
-  const error = badSelectPath(collections, fields, select, spec, "", doc);
+  const error = badSelectPath(collections, fields, select, plan, "", doc);
   return error ? `Invalid select: ${error}` : { ...read, select };
 }
 type ReadOpts = {

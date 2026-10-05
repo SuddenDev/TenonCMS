@@ -10,6 +10,7 @@ export type Global<F extends Fields = Fields> = {
   description?: string;
   /** Placement in the admin navigation. Defaults to the sidebar. */
   nav?: Nav;
+  /** The fields that make up this global. */
   fields: F;
   /** The page that shows this global in the admin's live preview, usually `'/'`. See {@link Preview}. */
   preview?: Preview;

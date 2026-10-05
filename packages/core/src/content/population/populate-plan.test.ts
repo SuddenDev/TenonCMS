@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { step } from "./population-spec.ts";
+import { step } from "./populate-plan.ts";
 describe("step", () => {
   it("treats image and file like a relation", () => {
     const image = { type: "image" } as const;

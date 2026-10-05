@@ -1,7 +1,22 @@
-# globals
+# Globals
 
-`config/` defines global options and the typed `defineGlobal()` helper. `operations/` owns get, set, publish and discard actions. `operations/local/` checks the name and draft eligibility while binding the current user, perspective, context and transaction.
+Globals are named singleton documents for site-wide data. This module defines their config and binds get, set, publish and discard operations to a CMS scope. Shared validation, hooks and persistence live in [content](../content/README.md).
 
-For a read, follow `endpoints/get.endpoint.ts` → `operations/local/get.local.ts` → `operations/get.operation.ts` → `../content/reads/read-global.ts`.
+## Follow a read
 
-`endpoints/routes.ts` assembles public reads and protected preview URL, set/draft, publish and discard routes. Globals keep their existing lifecycle differences from collections.
+`GET /api/cms/globals/general` flows through:
+
+`endpoints/get.endpoint.ts` → `operations/local/get.local.ts` → `operations/get.operation.ts` → `content/reads/read-global.ts`
+
+The local method checks the global name. The operation enters the shared lifecycle, and the reader loads the global for the current published or drafts perspective. A global that has never been saved returns no field values.
+
+## Files
+
+| Path                | Responsibility                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| `config/`           | Global options and `defineGlobal()`, which preserves field and hook types.                        |
+| `operations/local/` | Bind API methods to a scope and check global names and draft eligibility.                         |
+| `operations/`       | Run get, set, publish and discard through the shared content engine.                              |
+| `endpoints/`        | Parse HTTP requests and call local methods. `routes.ts` groups public reads and protected writes. |
+
+Global operations run global and root hooks; they skip collection `beforeOperation` and `afterOperation` hooks. Drafts are enabled by default; set `drafts: false` to disable them.

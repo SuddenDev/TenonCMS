@@ -7,6 +7,7 @@ import { body } from "../../http/parse-body.ts";
 
 export function createEndpoint(core: Core) {
   const collections: Record<string, Collection> = core.schema.collections ?? {};
+
   return new Hono<Env>()
     .post("/collections/:name", async (c) => {
       const { name } = collectionOf(collections, c.req.param("name"));

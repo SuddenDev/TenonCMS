@@ -11,6 +11,8 @@ import { consola } from "consola";
 /**
  * Every local API call goes through here. Collection calls run `beforeOperation` and `afterOperation`.
  * Writes run in one transaction with their hooks and nested calls. Reads open none.
+ *
+ * @returns The result of `fn` after `afterOperation` hooks.
  */
 export async function run<R>(
   core: Core,
@@ -21,15 +23,19 @@ export async function run<R>(
   fn: (s: Inner, args: Record<string, any>) => Promise<R>,
 ): Promise<R> {
   const context = contextOf(scope);
+
   // Globals have no `beforeOperation` and `afterOperation`, root ones included.
   const of = (stage: Stage) => (name.kind === "collection" ? slot(core, name, stage) : undefined);
+
   const body = async (trx = scope.trx) => {
     const s = inner(core, scope, trx, context);
     const base = hookArgs(s, name, { operation, draft: args.draft === true });
+
     const input = await runHooks(of("beforeOperation"), "args", args, base);
     const result = await fn(s, input);
     return runHooks(of("afterOperation"), "result", result, { ...base, args: input });
   };
+
   const inTransaction = operation !== "read" && operation !== "getGlobal" && !scope.trx;
   try {
     if (!inTransaction) return await body();

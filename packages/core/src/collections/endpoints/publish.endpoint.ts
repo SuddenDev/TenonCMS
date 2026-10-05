@@ -7,10 +7,12 @@ import { notFound } from "../../http/errors.ts";
 
 export function publishEndpoint(core: Core) {
   const collections: Record<string, Collection> = core.schema.collections ?? {};
+
   return new Hono<Env>().post("/collections/:name/:id/publish", async (c) => {
     const { name } = collectionOf(collections, c.req.param("name"));
     const doc = await c.var.cms.publish(name, c.req.param("id"));
     if (!doc) throw notFound();
+
     return c.json(doc);
   });
 }

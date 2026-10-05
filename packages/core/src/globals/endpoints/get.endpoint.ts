@@ -9,6 +9,7 @@ import { strip } from "../../http/strip-private-fields.ts";
 export function getEndpoint(core: Core) {
   const { schema } = core;
   const collections = schema.collections ?? {};
+
   return new Hono<Env>().get("/globals/:name", async (c) => {
     const { name, fields } = globalOf(schema.globals ?? {}, c.req.param("name"));
     const read = readOptions(collections, core.populate, fields, c.req.query(), false);

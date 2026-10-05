@@ -6,6 +6,7 @@ import { body } from "../../http/parse-body.ts";
 
 export function setEndpoint(core: Core) {
   const { schema } = core;
+
   return new Hono<Env>()
     .put("/globals/:name", async (c) => {
       const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));

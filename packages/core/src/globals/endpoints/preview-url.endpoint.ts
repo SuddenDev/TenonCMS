@@ -8,6 +8,7 @@ import { previewUrl } from "../../preview/server/resolve-url.ts";
 
 export function previewUrlEndpoint(core: Core) {
   const { schema } = core;
+
   return new Hono<Env>().post("/globals/:name/preview-url", async (c) => {
     const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
     const entry = schema.globals![name]!;

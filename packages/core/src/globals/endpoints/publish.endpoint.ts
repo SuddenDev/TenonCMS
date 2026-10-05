@@ -5,6 +5,7 @@ import { globalOf } from "./get-target.ts";
 
 export function publishEndpoint(core: Core) {
   const { schema } = core;
+
   return new Hono<Env>().post("/globals/:name/publish", async (c) => {
     const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
     return c.json(await c.var.cms.publishGlobal(name));

@@ -11,6 +11,8 @@ import type { Kysely } from "kysely";
 /**
  * Every id MUST exist in its target collection. One query per relation field.
  * Files of `image` and `file` fields MUST also fit the field's `accept` and `maxSize`; an `image` only takes `image/*`.
+ *
+ * @throws {ValidationError} At the path of the first field that fails.
  */
 export async function checkRefs(
   db: Kysely<Database>,
@@ -21,20 +23,24 @@ export async function checkRefs(
   for (const { path, field } of relationPaths(fields)) {
     const value = path.reduce<any>((o, k) => o?.[k], data);
     const ids: string[] = value == null ? [] : field.many ? value : [value];
+    const to = targetOf(field);
     const fail = (message: string) => {
       throw new ValidationError({ [path.join(".")]: message });
     };
-    const to = targetOf(field);
+
     if (self && to === self.collection && ids.includes(self.id))
       fail("A document cannot reference itself");
     if (!ids.length) continue;
+
     if (field.type === "relation") {
       const found = await existingIds(db, to, ids);
       if (found.length !== new Set(ids).size) fail(`Unknown id in "${to}"`);
       continue;
     }
+
     const files = await byIds(db, to, ids);
     if (files.length !== new Set(ids).size) fail(`Unknown id in "${to}"`);
+
     for (const f of files) {
       if (field.type === "image" && !accepts(["image/*"], f.mimeType)) fail("Not an image");
       if (!accepts(field.accept, f.mimeType)) fail(`Type "${f.mimeType}" is not accepted`);

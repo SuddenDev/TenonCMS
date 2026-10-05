@@ -10,12 +10,16 @@ import { setGlobal } from "../../globals/operations/set.operation.ts";
 import { loadDoc } from "../../db/queries/documents/load-document.query.ts";
 import { deleteDoc } from "../../db/queries/documents/delete-document.query.ts";
 
-/** `delete`: the hooks around the row delete, then `onDelete` for every reference. */
+/**
+ * `delete`: the hooks around the row delete, then `onDelete` for every reference.
+ */
 export async function remove(core: Core, s: Inner, collection: string, id: string) {
   const db = await q(core, s);
+
   // A delete removes the row whether it was published or not.
   const doc = await loadDoc(db, collection, id, true);
   if (!doc) return;
+
   const base = hookArgs(s, col(collection), { id, doc });
   await runHooks(slot(core, col(collection), "beforeDelete"), "doc", doc, base);
   await deleteDoc(db, collection, id);

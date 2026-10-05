@@ -5,6 +5,10 @@ import { ValidationError } from "../../errors.ts";
 import type { Kysely } from "kysely";
 
 // ponytail: one scan per unique field per write. Add SQLite expression indexes if collections grow large.
+/**
+ * Checks every `unique` top-level field against the published documents of the collection, except `id` itself.
+ * @throws {ValidationError} With every field whose value is already used.
+ */
 export async function checkUnique(
   db: Kysely<Database>,
   collection: string,
@@ -13,9 +17,11 @@ export async function checkUnique(
   id?: string,
 ) {
   const errors: Record<string, string> = {};
+
   for (const [key, f] of Object.entries(fields)) {
     if (!("unique" in f) || !f.unique || data[key] == null) continue;
     if (await taken(db, collection, key, data[key], id)) errors[key] = "Already used";
   }
+
   if (Object.keys(errors).length) throw new ValidationError(errors);
 }

@@ -3,14 +3,19 @@ import { type Name, target, isMedia } from "../targets.ts";
 import { type RootHooks } from "../../schema/index.ts";
 import { list } from "../../schema/runtime/run-hooks.ts";
 
-/** The hooks of a stage: the collection's or global's, then the plugins', then the host's root hooks. None for `media`. */
-export const slot = (core: Core, name: Name, stage: Stage): ((args: any) => unknown)[] =>
-  isMedia(name)
-    ? []
-    : [
-        ...list<(args: any) => unknown>(
-          (target(core, name).hooks as RootHooks | undefined)?.[stage],
-        ),
-        ...core.plugins.flatMap((p) => list<(args: any) => unknown>(p.hooks?.[stage])),
-        ...list<(args: any) => unknown>(core.rootHooks[stage]),
-      ];
+type Hook = (args: any) => unknown;
+
+/**
+ * Collects the hooks of one stage in run order: the collection's or global's, then the plugins', then the host's root hooks.
+ * @returns The hooks of the stage. None for `media`.
+ */
+export function slot(core: Core, name: Name, stage: Stage): Hook[] {
+  if (isMedia(name)) return [];
+
+  const own = (target(core, name).hooks as RootHooks | undefined)?.[stage];
+  return [
+    ...list<Hook>(own),
+    ...core.plugins.flatMap((p) => list<Hook>(p.hooks?.[stage])),
+    ...list<Hook>(core.rootHooks[stage]),
+  ];
+}

@@ -1,7 +1,7 @@
 import { innerFields } from "../../schema/traversal/inner-fields.ts";
 import { isRef } from "../../schema/traversal/reference-fields.ts";
 import type { Collection, Fields } from "../../schema/index.ts";
-import type { Spec } from "../../content/population/population-spec.ts";
+import type { PopulatePlan } from "../../content/population/populate-plan.ts";
 import { treeOf } from "./path-tree.ts";
 
 // The prefix of `path` up to the first key that is not a group, relation or join, or the hop above `maxDepth`.
@@ -30,7 +30,7 @@ export function parsePopulate(
   fields: Fields,
   query: { populate?: string; depth?: string },
   config: { depth: number; maxDepth: number },
-): Spec | string {
+): PopulatePlan | string {
   const depth = query.depth === undefined ? config.depth : Number(query.depth);
   if (query.depth !== undefined && (!/^\d+$/.test(query.depth) || depth > config.maxDepth))
     return `Invalid depth: ${query.depth}`;

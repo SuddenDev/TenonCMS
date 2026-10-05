@@ -10,6 +10,7 @@ export type Collection<F extends Fields = Fields> = {
   description?: string;
   /** Placement in the admin navigation. Defaults to the sidebar. */
   nav?: Nav;
+  /** The fields that make up the collection. */
   fields: F;
   /** Field shown in the admin list view. Defaults to the first field. */
   titleField?: string;
