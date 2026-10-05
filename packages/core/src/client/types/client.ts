@@ -2,157 +2,45 @@ import type {
   Checked,
   Data,
   Doc,
-  Fields as FieldsOf,
-  FilterKey,
-  MediaRead,
-  MediaUpdate,
-  PopulateOf,
   Read,
-  ReadDoc,
   ReadOptions,
   Schema,
   SelectOf,
-} from "../schema/index.ts";
+  PopulateOf,
+} from "../../schema/index.ts";
+import type { MediaClient } from "./media.ts";
+import type { FindOptions } from "./options.ts";
+import type {
+  CollectionFields,
+  Collections,
+  Depth,
+  GlobalFields,
+  Globals,
+  ReadCollection,
+  RegisteredCms,
+} from "./schema.ts";
 
-import type { Register } from "./index.ts";
-
-// Fields as the HTTP API sends them: private fields optional.
-// Untyped fields (the admin's) stay as they are. The recursion would not terminate.
-type HttpFields<F> = string extends keyof F ? F : { [K in keyof F]: HttpField<F[K]> };
-
-type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, "required"> : HttpGroup<F>;
-
-type HttpGroup<F> = F extends { type: "group"; fields: infer G }
-  ? Omit<F, "fields"> & { fields: Extract<HttpFields<G>, FieldsOf> }
-  : F;
-
-// `Extract` keeps the result assignable to `Fields`.
-type Http<R> = string extends keyof R
-  ? R
-  : {
-      [K in keyof R]: Omit<R[K], "fields"> & {
-        fields: R[K] extends { fields: infer F } ? Extract<HttpFields<F>, FieldsOf> : never;
-      };
-    };
-
-/** The collections of `C` as the HTTP API sends them: `private` fields are optional. Use them to type browser code; the client's read types build on them. */
 /** What reads of a signed-in user see: `drafts` (unpublished changes) or `published` (what visitors see). */
 export type Perspective = "drafts" | "published";
 
-export type Collections<C extends { schema: Schema }> = Http<
-  NonNullable<C["schema"]["collections"]>
->;
-
-/** The globals of `C` as the HTTP API sends them: `private` fields are optional. */
-export type Globals<C extends { schema: Schema }> = Http<NonNullable<C["schema"]["globals"]>>;
-
-type Fields<
-  C extends { schema: Schema },
-  K extends keyof Collections<C>,
-> = Collections<C>[K]["fields"];
-
-type Depth<C> = C extends { populate: { depth: infer D extends number } } ? D : 2;
-
-type ReadCollection<C extends { schema: Schema }, K extends keyof Collections<C>, O> = ReadDoc<
-  Collections<C>,
-  Fields<C, K>,
-  PopulateOf<O, Depth<C>>,
-  SelectOf<O>
->;
-
-/** Options of `find` and `findOne` for collection `K`. */
-export type FindOptions<C extends { schema: Schema }, K extends keyof Collections<C>> = ReadOptions<
-  Collections<C>,
-  Fields<C, K>
-> & {
-  /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
-  where?: Partial<Record<FilterKey<Fields<C, K>>, string | number | boolean | null>>;
-  /** Maximum number of documents. */
-  limit?: number;
-};
-
-/** The registered `cms` type, or an untyped schema without a registration. */
-export type RegisteredCms = Register extends { cms: infer C extends { schema: Schema } }
-  ? C
-  : { schema: Schema };
-
-export type ClientOptions = {
-  /** Origin of the host app, e.g. `https://example.com`. Defaults to the current origin. */
-  baseUrl?: string;
-  /** Custom `fetch`, e.g. one that forwards cookies. Defaults to the global `fetch`. */
-  fetch?: typeof fetch;
-};
-
 /** The signed-in admin, as returned by `getSession()`. Dates are ISO strings. */
 export type Session = {
+  /** The signed-in admin. */
   user: {
     id: string;
     name: string;
     email: string;
     emailVerified: boolean;
+    /** Avatar URL. */
     image?: string | null;
     createdAt: string;
     updatedAt: string;
   };
+  /** The session behind the cookie. */
   session: { id: string; userId: string; expiresAt: string; createdAt: string; updatedAt: string };
 };
 
-type Global<C extends { schema: Schema }, K extends keyof Globals<C>> = Globals<C>[K]["fields"];
-
-/** Options of `client.media.upload()`. */
-export type UploadOptions = {
-  /** Folder to upload into, e.g. `blog/2026`. Default: the root. */
-  folder?: string;
-  /** Name of the file. Default: `file.name`. */
-  filename?: string;
-  /** Called after each finished part with the bytes uploaded so far. */
-  onProgress?(progress: { loaded: number; total: number }): void;
-  /** Aborts the upload. Parts in storage are dropped. */
-  signal?: AbortSignal;
-};
-
-/** The media library over HTTP. Needs `defineCms({ media })`. Writes need a session. */
-export type MediaClient = {
-  /**
-   * Uploads a file in parts, 4 at a time, retrying a failed part 3 times. Returns the media document.
-   * `POST /api/cms/media/uploads`, then one `PUT` per part, then `POST /api/cms/media/uploads/:id/complete`.
-   */
-  upload(file: Blob & { name?: string }, options?: UploadOptions): Promise<MediaRead>;
-  /**
-   * Changes `alt`, or moves the file with a new `filename` or `folder`.
-   * `PATCH /api/cms/media/:id`
-   */
-  update(id: string, data: MediaUpdate): Promise<MediaRead>;
-  /**
-   * Moves every file under `from` to `to`. `failed` lists files that did not move; call it again to finish.
-   * `POST /api/cms/media/folders/rename`
-   */
-  renameFolder(
-    from: string,
-    to: string,
-  ): Promise<{ moved: number; failed: { id: string; message: string }[] }>;
-  /**
-   * Deletes a file. Throws a `CmsError` with status `409` and `references` while a `restrict` field uses it.
-   * `DELETE /api/cms/media/:id`
-   */
-  delete(id: string): Promise<null>;
-  /**
-   * Brings the stored variants of one file in line with the current image options. `force` re-renders all of them.
-   * Throws a `CmsError` with status `404` for a missing file, or when the image provider stores no variants.
-   * `POST /api/cms/media/:id/regenerate`
-   */
-  regenerate(
-    id: string,
-    options?: { force?: boolean },
-  ): Promise<{ rendered: number; removed: number }>;
-  /**
-   * Lists every folder with its parents, sorted. The root is left out.
-   * `GET /api/cms/media/folders`
-   */
-  folders(): Promise<string[]>;
-};
-
-/** The HTTP client. Names and document types come from `C`, the registered `cms`. See {@link Register}. */
+/** The HTTP client. Names and document types come from `C`, the registered `cms`. See {@link RegisteredCms}. */
 export type Client<C extends { schema: Schema } = RegisteredCms> = {
   /**
    * Lists documents of a collection, newest first.
@@ -160,13 +48,13 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   find<K extends keyof Collections<C> & string, const O extends FindOptions<C, K> = {}>(
     collection: K,
-    options?: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
+    options?: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>>,
   ): Promise<ReadCollection<C, K, O>[]>;
 
   /** Returns the newest document that matches `where`, or `undefined`. */
   findOne<K extends keyof Collections<C> & string, const O extends FindOptions<C, K>>(
     collection: K,
-    options: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
+    options: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>>,
   ): Promise<ReadCollection<C, K, O> | undefined>;
 
   /**
@@ -175,11 +63,11 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   findById<
     K extends keyof Collections<C> & string,
-    const O extends ReadOptions<Collections<C>, Fields<C, K>> = {},
+    const O extends ReadOptions<Collections<C>, CollectionFields<C, K>> = {},
   >(
     collection: K,
     id: string,
-    options?: Checked<O, Collections<C>, Fields<C, K>, Depth<C>>,
+    options?: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>>,
   ): Promise<ReadCollection<C, K, O>>;
 
   /**
@@ -188,8 +76,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   create<K extends keyof Collections<C> & string>(
     collection: K,
-    data: Data<Fields<C, K>>,
-  ): Promise<Doc<Fields<C, K>>>;
+    data: Data<CollectionFields<C, K>>,
+  ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
    * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
@@ -198,8 +86,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   update<K extends keyof Collections<C> & string>(
     collection: K,
     id: string,
-    data: Partial<Data<Fields<C, K>>>,
-  ): Promise<Doc<Fields<C, K>>>;
+    data: Partial<Data<CollectionFields<C, K>>>,
+  ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
    * Creates a document as an unpublished draft. Types are checked, `required` and the other checks wait for
@@ -208,8 +96,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   createDraft<K extends keyof Collections<C> & string>(
     collection: K,
-    data: Partial<Data<Fields<C, K>>>,
-  ): Promise<Doc<Fields<C, K>>>;
+    data: Partial<Data<CollectionFields<C, K>>>,
+  ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
    * Changes the top-level fields of a document's draft, like `update()`. The published data stays. Needs a session.
@@ -218,8 +106,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   updateDraft<K extends keyof Collections<C> & string>(
     collection: K,
     id: string,
-    data: Partial<Data<Fields<C, K>>>,
-  ): Promise<Doc<Fields<C, K>>>;
+    data: Partial<Data<CollectionFields<C, K>>>,
+  ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
    * Publishes the draft of a document. Throws a `CmsError` with status `400` for invalid data and keeps the draft.
@@ -229,7 +117,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   publish<K extends keyof Collections<C> & string>(
     collection: K,
     id: string,
-  ): Promise<Doc<Fields<C, K>>>;
+  ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
    * Drops the draft of a document and returns the published one. A document that was never published is deleted and
@@ -239,7 +127,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   discard<K extends keyof Collections<C> & string>(
     collection: K,
     id: string,
-  ): Promise<Doc<Fields<C, K>> | null>;
+  ): Promise<Doc<CollectionFields<C, K>> | null>;
 
   /**
    * Deletes a document. Needs a session.
@@ -253,11 +141,13 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   getGlobal<
     K extends keyof Globals<C> & string,
-    const O extends ReadOptions<Collections<C>, Global<C, K>, false> = {},
+    const O extends ReadOptions<Collections<C>, GlobalFields<C, K>, false> = {},
   >(
     name: K,
-    options?: Checked<O, Collections<C>, Global<C, K>, Depth<C>, false>,
-  ): Promise<Partial<Read<Collections<C>, Global<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>>>;
+    options?: Checked<O, Collections<C>, GlobalFields<C, K>, Depth<C>, false>,
+  ): Promise<
+    Partial<Read<Collections<C>, GlobalFields<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>>
+  >;
 
   /**
    * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.
@@ -265,8 +155,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   setGlobal<K extends keyof Globals<C> & string>(
     name: K,
-    data: Partial<Data<Global<C, K>>>,
-  ): Promise<Data<Global<C, K>>>;
+    data: Partial<Data<GlobalFields<C, K>>>,
+  ): Promise<Data<GlobalFields<C, K>>>;
 
   /**
    * Changes the top-level fields of a global's draft. The published data stays. Needs a session.
@@ -274,20 +164,22 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   setGlobalDraft<K extends keyof Globals<C> & string>(
     name: K,
-    data: Partial<Data<Global<C, K>>>,
-  ): Promise<Partial<Data<Global<C, K>>>>;
+    data: Partial<Data<GlobalFields<C, K>>>,
+  ): Promise<Partial<Data<GlobalFields<C, K>>>>;
 
   /**
    * Publishes the draft of a global. Throws a `CmsError` with status `400` for invalid data. Needs a session.
    * `POST /api/cms/globals/:name/publish`
    */
-  publishGlobal<K extends keyof Globals<C> & string>(name: K): Promise<Data<Global<C, K>>>;
+  publishGlobal<K extends keyof Globals<C> & string>(name: K): Promise<Data<GlobalFields<C, K>>>;
 
   /**
    * Drops the draft of a global and returns the published one. Needs a session.
    * `DELETE /api/cms/globals/:name/draft`
    */
-  discardGlobal<K extends keyof Globals<C> & string>(name: K): Promise<Partial<Data<Global<C, K>>>>;
+  discardGlobal<K extends keyof Globals<C> & string>(
+    name: K,
+  ): Promise<Partial<Data<GlobalFields<C, K>>>>;
 
   /**
    * The live preview URL of a document from its unsaved form state, relative to the site origin. `null`: no preview
@@ -313,7 +205,9 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    * `GET /api/cms/schema`
    */
   getSchema(): Promise<{
+    /** Collections by name. */
     collections?: Collections<C>;
+    /** Globals by name. */
     globals?: Globals<C>;
     /** Set when the media library is on. `regenerate`: the image provider stores variants, see `media.regenerate()`. */
     media?: { regenerate: boolean };
@@ -357,7 +251,14 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   request<T = unknown>(
     path: `/${string}`,
-    options?: { method?: string; body?: unknown; query?: object },
+    options?: {
+      /** HTTP method. Default: `GET`. */
+      method?: string;
+      /** Sent as JSON. */
+      body?: unknown;
+      /** Sent as the query string. `undefined` values are left out. */
+      query?: object;
+    },
   ): Promise<T>;
 
   /** The media library. See {@link MediaClient}. */

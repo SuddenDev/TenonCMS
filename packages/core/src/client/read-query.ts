@@ -1,3 +1,6 @@
+/** Read options as the client methods accept them, before serialization. */
+export type ReadQuery = { populate?: boolean | object; depth?: number; select?: object };
+
 // For `populate` and `select`: `{ author: { avatar: true } }` becomes `author.avatar`. An empty object ends a path too.
 function paths(spec: object, prefix = ""): string[] {
   return Object.entries(spec).flatMap(([key, value]) =>
@@ -9,16 +12,12 @@ function paths(spec: object, prefix = ""): string[] {
   );
 }
 
-// `select: {}` is sent as an empty `select=`, which returns only `id`. A populate object with no paths means ids.
-export function readQuery({
-  populate,
-  depth,
-  select,
-}: {
-  populate?: boolean | object;
-  depth?: number;
-  select?: object;
-}) {
+/**
+ * Turns read options into query parameters. `select: {}` is sent as an empty `select=`, which returns only `id`.
+ * A populate object with no paths is sent as `populate=false`, which returns ids.
+ * @returns Query parameters. `depth` is `undefined` when not set, so `request()` drops it.
+ */
+export function readQuery({ populate, depth, select }: ReadQuery) {
   const query: Record<string, string | number | undefined> = { depth };
   if (populate === false) query.populate = "false";
   else if (typeof populate === "object") query.populate = paths(populate).join(",") || "false";

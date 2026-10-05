@@ -1,7 +1,7 @@
 export { createClient } from "./create-client.ts";
 export { CmsError } from "./errors.ts";
 export { API_BASE } from "./constants.ts";
-export type * from "./types.ts";
+export type * from "./types/index.ts";
 export type { Checked, ReadOptions } from "../schema/index.ts";
 
 // Helpers have no imports, so this file stays safe in the browser.
