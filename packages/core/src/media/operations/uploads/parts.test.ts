@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectivePartSize } from "./upload-data.ts";
+import { effectivePartSize } from "./parts.ts";
 
 describe("effectivePartSize", () => {
   it("keeps the part size while there are at most 10000 parts", () => {

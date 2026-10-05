@@ -1,13 +1,10 @@
 import type { ImageOptions, Modifiers } from "../../schema/fields/image.ts";
 import type { Images } from "./types.ts";
 
-export const drop = <T extends object>(o: T) =>
-  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
-
 /** The modifiers of one image read: `format` / `quality`, then the field's preset, then the field's own. */
 export function modifiersFor(images: Images, field: ImageOptions = {}): Modifiers {
   const { preset, sizes, ...own } = field;
-  return drop({
+  return withoutUndefined({
     format: images.format,
     quality: images.quality,
     ...(preset ? images.presets[preset] : undefined),
@@ -15,7 +12,7 @@ export function modifiersFor(images: Images, field: ImageOptions = {}): Modifier
   });
 }
 
-// IPX short names.
+/** IPX short names of the modifiers. */
 export const SHORT: Record<keyof Modifiers, string> = {
   width: "w",
   height: "h",
@@ -26,16 +23,21 @@ export const SHORT: Record<keyof Modifiers, string> = {
   blur: "blur",
 };
 
-export const LONG = Object.fromEntries(Object.entries(SHORT).map(([k, v]) => [v, k])) as Record<
-  string,
-  keyof Modifiers
->;
+/** Modifier names by IPX short name. */
+export const LONG = new Map(
+  Object.entries(SHORT).map(([name, short]) => [short, name as keyof Modifiers]),
+);
 
-export const NUMERIC = new Set(["width", "height", "quality", "blur"]);
+/** Modifiers whose value is a whole number. */
+export const NUMERIC = new Set<keyof Modifiers>(["width", "height", "quality", "blur"]);
 
 /** The stable string form of modifiers: IPX syntax with sorted keys, e.g. `f_webp&q_80&w_640`. */
-export const modifierId = (m: Modifiers) =>
-  Object.entries(drop(m))
-    .map(([k, v]) => `${SHORT[k as keyof Modifiers] ?? k}_${v}`)
+export const modifierId = (modifiers: Modifiers) =>
+  Object.entries(withoutUndefined(modifiers))
+    .map(([name, value]) => `${SHORT[name as keyof Modifiers] ?? name}_${value}`)
     .sort()
     .join("&");
+
+function withoutUndefined<T extends object>(o: T) {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+}

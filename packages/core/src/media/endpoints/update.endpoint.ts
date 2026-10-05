@@ -2,9 +2,10 @@ import { Hono } from "hono";
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
 import { notFound } from "../../http/errors.ts";
-import { update } from "../operations/update.operation.ts";
+import { update } from "../operations/update/update.operation.ts";
 import { body, scope } from "./request-context.ts";
 
+/** Protected `PATCH /:id`: changes `alt`, or moves the file with a new `filename` or `folder`. */
 export function updateEndpoints(core: Core) {
   const api = new Hono<Env>();
   api.patch("/:id", async (c) => {

@@ -30,8 +30,8 @@ export default defineConfig({
     "src/plugins/redirects/index.ts",
     "src/plugins/redirects/admin.ts",
     // Own entries, so `node:fs`, `ipx` and `aws4fetch` stay out of bundles that do not use them.
-    "src/media/storage/local.ts",
-    "src/media/storage/s3.ts",
+    "src/media/storage/local/index.ts",
+    "src/media/storage/s3/index.ts",
     "src/media/images/ipx.ts",
     "src/media/images/cloudflare.ts",
     "src/media/default.ts",

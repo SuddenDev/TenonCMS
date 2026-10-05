@@ -3,7 +3,7 @@ import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { local } from "./local.ts";
+import { local } from "./index.ts";
 
 const stream = (bytes: Uint8Array<ArrayBuffer>) => new Blob([bytes]).stream();
 const text = async (s: ReadableStream) => new TextDecoder().decode(await new Response(s).bytes());

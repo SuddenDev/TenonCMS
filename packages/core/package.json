@@ -71,13 +71,13 @@
       "default": "./dist/plugins/redirects/admin.mjs"
     },
     "./media/local": {
-      "types": "./dist/media/storage/local.d.mts",
+      "types": "./dist/media/storage/local/index.d.mts",
       "workerd": "./dist/media/workerd.mjs",
-      "default": "./dist/media/storage/local.mjs"
+      "default": "./dist/media/storage/local/index.mjs"
     },
     "./media/s3": {
-      "types": "./dist/media/storage/s3.d.mts",
-      "default": "./dist/media/storage/s3.mjs"
+      "types": "./dist/media/storage/s3/index.d.mts",
+      "default": "./dist/media/storage/s3/index.mjs"
     },
     "./media/ipx": {
       "types": "./dist/media/images/ipx.d.mts",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { s3 } from "./s3.ts";
+import { s3 } from "./index.ts";
 
 type Call = { method: string; url: URL; headers: Headers; body: string };
 

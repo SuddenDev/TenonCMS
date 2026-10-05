@@ -1,6 +1,6 @@
 import { AwsClient } from "aws4fetch";
 import { beforeAll, describe, expect, it } from "vitest";
-import { s3 } from "./s3.ts";
+import { s3 } from "./index.ts";
 
 // Runs only against a real bucket, e.g. MinIO: `docker run -p 9000:9000 minio/minio server /data`, then
 // S3_TEST_ENDPOINT=http://localhost:9000 S3_TEST_KEY=minioadmin S3_TEST_SECRET=minioadmin npx vitest run s3.live

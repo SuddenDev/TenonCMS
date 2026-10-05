@@ -5,7 +5,7 @@ import { createClient as createLibsql } from "@libsql/client";
 import { expect } from "vitest";
 import { CmsError, createClient } from "../client/index.ts";
 import { defineCms, type MediaOptions, type PopulateOptions, type Schema } from "../index.ts";
-import { local } from "../media/storage/local.ts";
+import { local } from "../media/storage/local/index.ts";
 
 export const origin = "http://localhost";
 export const base = {

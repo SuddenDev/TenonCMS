@@ -2,6 +2,7 @@ import type { Storage } from "../storage/types.ts";
 
 // Variants live under `.variants/<key>/<modifier id>`, so one list call finds the variants of a file.
 
+/** The folder that holds every variant. */
 export const VARIANTS = ".variants/";
 
 /** Where the variant `id` (a modifier id) of the file `key` lives. */

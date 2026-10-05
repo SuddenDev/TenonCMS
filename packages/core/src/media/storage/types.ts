@@ -41,7 +41,9 @@ export type Storage = {
   put(key: string, data: Uint8Array, mimeType: string): Promise<void>;
   /** Every key that starts with `prefix`, in any order. Core lists `.variants/<key>/` to find a file's variants. */
   list(prefix: string): Promise<string[]>;
+  /** Moves the file at `from` to `to`. */
   move(from: string, to: string): Promise<void>;
+  /** Deletes the file at `key`. */
   delete(key: string): Promise<void>;
   /** The public URL of a file. */
   url(key: string): string;

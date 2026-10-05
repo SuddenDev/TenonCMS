@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { ipx } from "./images/ipx.ts";
 import type { MediaOptions } from "./config/options.ts";
-import { local } from "./storage/local.ts";
+import { local } from "./storage/local/index.ts";
 
 /**
  * The media library of `defineCms()` without a `media` option or with `media: true`: files in `./.uploads`, WebP variants at

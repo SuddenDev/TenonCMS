@@ -4,6 +4,7 @@ import { modifierId } from "./modifiers.ts";
 import type { ImageProvider } from "./types.ts";
 import { encodeKey, type Storage } from "../storage/types.ts";
 
+/** Options of `ipx()`. */
 export type IpxOptions = {
   /** Render every allowed variant right after upload, instead of on first request. Default `false`. */
   prerender?: boolean;

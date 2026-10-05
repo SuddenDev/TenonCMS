@@ -2,6 +2,7 @@ import type { MediaHooks, Modifiers } from "../../schema/index.ts";
 import type { ImageProvider } from "../images/types.ts";
 import type { Storage } from "../storage/types.ts";
 
+/** The `media.images` option: responsive image variants. */
 export type ImagesOptions = {
   /** Builds variant URLs: `ipx()` from `integral-cms/media/ipx`, `cloudflare()` from `integral-cms/media/cloudflare`, or your own. */
   provider: ImageProvider;
@@ -17,6 +18,7 @@ export type ImagesOptions = {
   maxSize?: number;
 };
 
+/** The `media` option of `defineCms()`. */
 export type MediaOptions = {
   /** Where files live: `local()` from `integral-cms/media/local`, `s3()` from `integral-cms/media/s3`, or your own. */
   storage: Storage;

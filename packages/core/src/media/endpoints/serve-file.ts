@@ -1,5 +1,16 @@
+import type { Core } from "../../cms/runtime/types.ts";
+import { mediaByKey } from "../../db/queries/media/media-by-key.query.ts";
 import type { Storage } from "../storage/types.ts";
-import { SAFE } from "./file-headers.ts";
+
+/** Headers for every served file. User files MAY be HTML or SVG; they MUST NOT run scripts on the host's origin. */
+export const SAFE = {
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+};
+
+/** The media document stored at `key`. `undefined` for a missing one and for reserved keys such as `.variants/…`. */
+export const findByKey = async (core: Core, key: string) =>
+  key.startsWith(".") ? undefined : mediaByKey(await core.db(), key);
 
 /** `bytes=a-b`, `bytes=a-` or `bytes=-n` of a file of `size` bytes. `null` for a range that does not fit. */
 function parseRange(header: string, size: number) {
@@ -15,11 +26,13 @@ export async function serveFile(storage: Storage, doc: Record<string, any>, rang
   // With a range, one byte is enough to learn the size.
   const file = await storage.get(doc.key, range ? { start: 0, end: 0 } : undefined);
   if (!file) return undefined;
+
   const headers = { ...SAFE, "content-type": doc.mimeType, "accept-ranges": "bytes" };
   if (!range)
     return new Response(file.body, {
       headers: { ...headers, "content-length": String(file.size) },
     });
+
   await file.body.cancel();
   const bytes = parseRange(range, file.size);
   if (!bytes)
@@ -27,6 +40,7 @@ export async function serveFile(storage: Storage, doc: Record<string, any>, rang
       status: 416,
       headers: { "content-range": `bytes */${file.size}` },
     });
+
   const part = (await storage.get(doc.key, bytes))!;
   return new Response(part.body, {
     status: 206,

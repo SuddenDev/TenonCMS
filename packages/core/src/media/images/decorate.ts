@@ -12,23 +12,29 @@ export function decorate(
   field?: ImageOptions,
 ): Record<string, any> {
   const url = media.storage.url(doc.key);
-  if (!String(doc.mimeType).startsWith("image/")) return { ...doc, url };
+  if (!isImage(doc)) return { ...doc, url };
+
   const { images } = media;
   if (!images || !hasVariants(images, doc)) return { ...doc, url, src: url, srcset: "" };
+
   const { src, srcset } = variantsFor(images, field, doc.width);
-  const at = (m: Modifiers) =>
-    images.provider.getImage({ key: doc.key, url, width: doc.width, height: doc.height }, m).url;
+  const original = { key: doc.key, url, width: doc.width, height: doc.height };
+  const urlOf = (modifiers: Modifiers) => images.provider.getImage(original, modifiers).url;
   return {
     ...doc,
     url,
-    src: at(src),
-    srcset: srcset.map((v) => `${at(v.modifiers)} ${v.descriptor}`).join(", "),
+    src: urlOf(src),
+    srcset: srcset.map((v) => `${urlOf(v.modifiers)} ${v.descriptor}`).join(", "),
   };
 }
 
 /** Whether an image gets variants: a raster image with dimensions, at most `images.maxSize`. */
 export const hasVariants = (images: Images, doc: Record<string, any>) =>
-  String(doc.mimeType).startsWith("image/") &&
+  isImage(doc) &&
   doc.mimeType !== "image/svg+xml" &&
   Boolean(doc.width) &&
   doc.size <= images.maxSize;
+
+function isImage(doc: Record<string, any>) {
+  return String(doc.mimeType).startsWith("image/");
+}

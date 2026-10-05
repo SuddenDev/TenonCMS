@@ -5,10 +5,12 @@ import { folders } from "../operations/folders.operation.ts";
 import { renameFolder } from "../operations/rename-folder.operation.ts";
 import { body, scope } from "./request-context.ts";
 
+/** Public `GET /folders`: every folder of the library. */
 export function foldersReadEndpoints(core: Core) {
   return new Hono<Env>().get("/folders", async (c) => c.json(await folders(core)));
 }
 
+/** Protected `POST /folders/rename`. */
 export function foldersWriteEndpoints(core: Core) {
   const api = new Hono<Env>();
   api.post("/folders/rename", async (c) => {

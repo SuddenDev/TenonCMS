@@ -8,7 +8,7 @@ import {
   type MediaOptions,
   type Plugin,
 } from "../index.ts";
-import { local } from "../media/storage/local.ts";
+import { local } from "../media/storage/local/index.ts";
 import { modifierId } from "../media/images/modifiers.ts";
 import type { Modifiers } from "../schema/index.ts";
 import { png, png300 } from "./fixtures.ts";
