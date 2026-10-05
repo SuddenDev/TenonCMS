@@ -1,6 +1,10 @@
 import { isObject } from "../../schema/condition.ts";
 
-/** A tree from dot paths, with `true` at the leaves. A longer path wins over its prefix. Null-prototype nodes, so `__proto__` cannot reach `Object.prototype`. */
+/**
+ * Builds a tree from dot paths, with `true` at the leaves. A longer path wins over its prefix.
+ * Nodes MUST have a null prototype, so a `__proto__` segment cannot reach `Object.prototype`.
+ * @returns The tree.
+ */
 export function treeOf(paths: string[]): Record<string, any> {
   const tree = Object.create(null);
   for (const path of paths) {

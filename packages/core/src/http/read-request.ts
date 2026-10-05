@@ -2,20 +2,20 @@ import type { Core } from "../cms/runtime/types.ts";
 import { outerScope } from "../cms/runtime/operation-context.ts";
 import type { LocalApi } from "../schema/index.ts";
 import { caller } from "../auth/get-caller.ts";
-import type { Level } from "./query/visibility.ts";
+import type { Visibility } from "./visibility.ts";
 
 /**
- * The visibility level and local API of a public read. Reads need no session, so the read routes run before the
- * session middleware and look up the caller here: a session sees private fields, gives hooks its user and, with the
- * preview cookie, reads drafts.
+ * Looks up the caller of a public read. Read routes run before the session middleware, because reads need no
+ * session. A session sees private fields and gives hooks its user; with the preview cookie it also reads drafts.
+ * @returns The caller's visibility and the local API scoped to the caller.
  */
-export async function reader(
+export async function readRequest(
   core: Core,
   request: Request,
-): Promise<{ level: Level; api: LocalApi }> {
+): Promise<{ visibility: Visibility; api: LocalApi }> {
   const { user, perspective } = await caller(core.getSession, request);
   return {
-    level: user ? "admin" : "public",
+    visibility: user ? "admin" : "public",
     api: core.localApi(outerScope(user, perspective)),
   };
 }

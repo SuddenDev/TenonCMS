@@ -17,8 +17,10 @@ import { exitEndpoint } from "../preview/endpoints/exit.endpoint.ts";
 import { handleError } from "./errors.ts";
 
 /**
- * The Hono app behind `cms.fetch`. Media routes are mounted at `/media` when the `media` option is set.
- * `site` goes out in `/schema` for the admin's preview.
+ * Builds the Hono app behind `cms.fetch`. Public reads mount before the CSRF and session checks, protected routes
+ * after them. Media routes mount at `/media` when the `media` option is set. `site` goes out in `/schema` for the
+ * admin's preview.
+ * @returns The app, with every route under `API_BASE`.
  */
 export function createApp(core: Core, site?: string) {
   const { plugins } = core;
@@ -26,6 +28,7 @@ export function createApp(core: Core, site?: string) {
   const schemaEndpoint = readEndpoint(core.schema, media, site);
   const collections = collectionsRoutes(core);
   const globals = globalsRoutes(core);
+
   const reads = new Hono<Env>();
   mountRoutes(reads, plugins, "publicRoutes");
   if (media) reads.route("/media", media.reads);

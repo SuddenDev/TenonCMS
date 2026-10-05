@@ -4,8 +4,17 @@ import type { Collection, Fields } from "../../schema/index.ts";
 import { parsePopulate } from "./parse-populate.ts";
 import { parseSelect } from "./parse-select.ts";
 
-// The read options, or the message of a 400.
-// `doc`: false for globals, which have no `id`, `createdAt` or `updatedAt`.
+type ReadOpts = {
+  populate?: boolean | Record<string, unknown>;
+  depth?: number;
+  select?: SelectSpec;
+};
+
+/**
+ * Parses `?populate=`, `?depth=` and `?select=` into the options of a local read.
+ * Pass `doc = false` for globals, which have no `id`, `createdAt` or `updatedAt`.
+ * @returns The read options, or the message of a 400.
+ */
 export function readOptions(
   collections: Record<string, Collection>,
   config: { depth: number; maxDepth: number },
@@ -17,12 +26,8 @@ export function readOptions(
   if (typeof plan === "string") return plan;
   const read: ReadOpts = typeof plan === "number" ? { depth: plan } : { populate: plan };
   if (query.select === undefined) return read;
+
   const select = parseSelect(query.select);
   const error = badSelectPath(collections, fields, select, plan, "", doc);
   return error ? `Invalid select: ${error}` : { ...read, select };
 }
-type ReadOpts = {
-  populate?: boolean | Record<string, unknown>;
-  depth?: number;
-  select?: SelectSpec;
-};

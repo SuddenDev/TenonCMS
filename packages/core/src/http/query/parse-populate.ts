@@ -24,7 +24,11 @@ function badPopulatePath(
   }
 }
 
-/** Parses `?populate=` and `?depth=`. Returns the error message for a bad depth, an unknown path, a field that cannot populate or too many hops. */
+/**
+ * Parses `?populate=` and `?depth=`. Without `populate`, the plan is the depth; `populate=false` turns it off.
+ * @returns The populate plan, or the message of a 400 for a bad depth, an unknown path, a field that cannot populate
+ * or too many hops.
+ */
 export function parsePopulate(
   collections: Record<string, Collection>,
   fields: Fields,
@@ -34,8 +38,10 @@ export function parsePopulate(
   const depth = query.depth === undefined ? config.depth : Number(query.depth);
   if (query.depth !== undefined && (!/^\d+$/.test(query.depth) || depth > config.maxDepth))
     return `Invalid depth: ${query.depth}`;
+
   if (query.populate === undefined) return depth;
   if (query.populate === "false") return false;
+
   const paths = query.populate.split(",");
   for (const path of paths) {
     const bad = badPopulatePath(collections, fields, path, config.maxDepth);

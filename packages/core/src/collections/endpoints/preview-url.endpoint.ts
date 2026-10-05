@@ -4,7 +4,7 @@ import type { Core } from "../../cms/runtime/types.ts";
 import type { Collection } from "../../schema/index.ts";
 import { collectionOf } from "./get-target.ts";
 import { notFound } from "../../http/errors.ts";
-import { body } from "../../http/parse-body.ts";
+import { parseBody } from "../../http/parse-body.ts";
 import { previewUrl } from "../../preview/server/resolve-url.ts";
 
 export function previewUrlEndpoint(core: Core) {
@@ -16,7 +16,7 @@ export function previewUrlEndpoint(core: Core) {
     if (!entry.preview) throw notFound();
 
     return c.json({
-      url: await previewUrl(entry, await body(c.req), c.var.cms),
+      url: await previewUrl(entry, await parseBody(c.req), c.var.cms),
     });
   });
 }
