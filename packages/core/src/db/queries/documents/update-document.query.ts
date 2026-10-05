@@ -1,4 +1,4 @@
-import { type Db, type Doc, columns } from "../document-sql.ts";
+import { type Db, type DocData, rowColumns } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 
 /** Publishes `data`. A pending draft stays, unless `clearDraft`. */
@@ -6,7 +6,7 @@ export async function updateDoc(
   db: Db,
   collection: string,
   id: string,
-  data: Doc,
+  data: DocData,
   clearDraft = false,
 ) {
   const now = Date.now();
@@ -21,7 +21,7 @@ export async function updateDoc(
       })
       .where("collection", "=", collection)
       .where("id", "=", id)
-      .returning(columns(false))
+      .returning(rowColumns(false))
       .executeTakeFirstOrThrow(),
   );
 }

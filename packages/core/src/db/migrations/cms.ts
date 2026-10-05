@@ -61,7 +61,7 @@ const cmsMigrations: Record<string, Migration> = {
   },
 };
 
-/** Runs the CMS migrations. */
+/** The Kysely migrator for the CMS tables, with its own migration tables. */
 export const migrator = (db: Kysely<Database>) =>
   new Migrator({
     db,

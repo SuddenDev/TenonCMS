@@ -1,4 +1,4 @@
-import { type Db, docs, json } from "../document-sql.ts";
+import { type Db, selectDocs, jsonAt } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 import { sql } from "kysely";
 
@@ -16,11 +16,11 @@ export async function findDocs(
     drafts = false,
   }: { id?: string; where?: Record<string, unknown>; limit?: number; drafts?: boolean },
 ) {
-  let query = docs(db, collection, drafts);
+  let query = selectDocs(db, collection, drafts);
   if (id !== undefined) query = query.where("id", "=", id);
   for (const [key, value] of Object.entries(where)) {
     if (value === undefined) continue;
-    const field = json(key, drafts);
+    const field = jsonAt(key, drafts);
     query = query.where(
       value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`,
     );

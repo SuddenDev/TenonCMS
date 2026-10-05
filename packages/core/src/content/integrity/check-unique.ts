@@ -1,6 +1,6 @@
 import { type Database } from "../../db/types.ts";
 import { type Fields } from "../../schema/index.ts";
-import { taken } from "../../db/queries/references/value-taken.query.ts";
+import { valueTaken } from "../../db/queries/references/value-taken.query.ts";
 import { ValidationError } from "../../errors.ts";
 import type { Kysely } from "kysely";
 
@@ -20,7 +20,7 @@ export async function checkUnique(
 
   for (const [key, f] of Object.entries(fields)) {
     if (!("unique" in f) || !f.unique || data[key] == null) continue;
-    if (await taken(db, collection, key, data[key], id)) errors[key] = "Already used";
+    if (await valueTaken(db, collection, key, data[key], id)) errors[key] = "Already used";
   }
 
   if (Object.keys(errors).length) throw new ValidationError(errors);

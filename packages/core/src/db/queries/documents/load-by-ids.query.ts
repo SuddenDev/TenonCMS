@@ -1,7 +1,8 @@
-import { type Db, docs, inIds } from "../document-sql.ts";
+import { type Db, selectDocs, inIds } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 
-export async function byIds(db: Db, collection: string, ids: string[], drafts = false) {
+/** The documents of `ids` in `collection` that the perspective sees, in no fixed order. */
+export async function loadByIds(db: Db, collection: string, ids: string[], drafts = false) {
   if (!ids.length) return [];
-  return (await docs(db, collection, drafts).where(inIds(ids)).execute()).map(toDoc);
+  return (await selectDocs(db, collection, drafts).where(inIds(ids)).execute()).map(toDoc);
 }

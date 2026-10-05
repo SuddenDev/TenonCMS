@@ -1,6 +1,16 @@
-# db
+# DB
 
-Content persistence through Kysely and libsql (SQLite or Turso). The layer owns content queries and migrations. Media operations still own upload-table queries until persistence ownership is consolidated separately.
+Content persistence through Kysely and libsql (SQLite or Turso). The module owns the connection, the fixed tables, their migrations and the content queries. It does not validate data or run hooks; that is [content](../content/README.md). Media operations still own the `cms_uploads` queries.
+
+## Follow a read
+
+`loadDoc()` flows through:
+
+`queries/documents/load-document.query.ts` → `queries/document-sql.ts` → `map-document.ts`
+
+The query file names one statement. `document-sql.ts` gives it the perspective: `selectDocs()` picks the visible rows (`visible()`) and the `Row` columns (`rowColumns()`), with the data from `dataOf()`. `toDoc()` parses the JSON and adds `id`, `createdAt`, `updatedAt`, `publishedAt` and `hasDraft`.
+
+## Files
 
 | Path                      | Responsibility                                                                     |
 | ------------------------- | ---------------------------------------------------------------------------------- |

@@ -1,8 +1,8 @@
-import { type Db, type Doc, columns } from "../document-sql.ts";
+import { type Db, type DocData, rowColumns } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 
 /** Inserts a published document. */
-export async function insertDoc(db: Db, collection: string, data: Doc) {
+export async function insertDoc(db: Db, collection: string, data: DocData) {
   const now = Date.now();
   return toDoc(
     await db
@@ -15,7 +15,7 @@ export async function insertDoc(db: Db, collection: string, data: Doc) {
         updated_at: now,
         published_at: now,
       })
-      .returning(columns(false))
+      .returning(rowColumns(false))
       .executeTakeFirstOrThrow(),
   );
 }

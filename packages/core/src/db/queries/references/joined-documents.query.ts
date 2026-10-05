@@ -1,4 +1,4 @@
-import { type Db, dataOf, seen, rawColumns } from "../document-sql.ts";
+import { type Db, dataOf, visible, rawRowColumns } from "../document-sql.ts";
 import { type Row } from "../../types.ts";
 import { sql } from "kysely";
 
@@ -17,16 +17,16 @@ export async function joinedDocs(
   const path = `$.${on}`;
   const list = JSON.stringify(ids);
   const data = sql.raw(dataOf(drafts, "d."));
-  const where = sql`d.collection = ${collection} AND ${seen(drafts, "d.")}`;
+  const where = sql`d.collection = ${collection} AND ${visible(drafts, "d.")}`;
   const query = many
     ? sql<
         Row & { ref: string }
-      >`SELECT ${rawColumns(drafts, "d.")}, j.value AS ref FROM cms_documents d, json_each(${data}, ${path}) j
+      >`SELECT ${rawRowColumns(drafts, "d.")}, j.value AS ref FROM cms_documents d, json_each(${data}, ${path}) j
         WHERE ${where} AND j.value IN (SELECT value FROM json_each(${list}))
         ORDER BY d.created_at DESC, d.rowid DESC`
     : sql<
         Row & { ref: string }
-      >`SELECT ${rawColumns(drafts, "d.")}, json_extract(${data}, ${path}) AS ref FROM cms_documents d
+      >`SELECT ${rawRowColumns(drafts, "d.")}, json_extract(${data}, ${path}) AS ref FROM cms_documents d
         WHERE ${where} AND json_extract(${data}, ${path}) IN (SELECT value FROM json_each(${list}))
         ORDER BY d.created_at DESC, d.rowid DESC`;
   return (await query.execute(db)).rows;

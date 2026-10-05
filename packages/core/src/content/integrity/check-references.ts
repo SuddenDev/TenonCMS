@@ -2,7 +2,7 @@ import { type Database } from "../../db/types.ts";
 import { type Fields } from "../../schema/index.ts";
 import { relationPaths } from "../../schema/traversal/relation-paths.ts";
 import { targetOf } from "../../schema/traversal/reference-fields.ts";
-import { byIds } from "../../db/queries/documents/load-by-ids.query.ts";
+import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { existingIds } from "../../db/queries/references/existing-ids.query.ts";
 import { accepts } from "../../media/library/names.ts";
 import { ValidationError } from "../../errors.ts";
@@ -38,7 +38,7 @@ export async function checkRefs(
       continue;
     }
 
-    const files = await byIds(db, to, ids);
+    const files = await loadByIds(db, to, ids);
     if (files.length !== new Set(ids).size) fail(`Unknown id in "${to}"`);
 
     for (const f of files) {

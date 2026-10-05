@@ -1,6 +1,6 @@
 import { type Database } from "../../db/types.ts";
 import { toDoc } from "../../db/map-document.ts";
-import { byIds } from "../../db/queries/documents/load-by-ids.query.ts";
+import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { joinedDocs } from "../../db/queries/references/joined-documents.query.ts";
 import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
 import { relationPaths } from "../../schema/traversal/relation-paths.ts";
@@ -70,7 +70,7 @@ export async function populate(
 async function resolveRef(ctx: Hop, docs: Docs, key: string, field: RefField) {
   const to = targetOf(field);
   const ids = [...new Set(docs.flatMap((d) => d[key] ?? []))];
-  const found = await hop(ctx, to, await byIds(ctx.db, to, ids, ctx.read.drafts));
+  const found = await hop(ctx, to, await loadByIds(ctx.db, to, ids, ctx.read.drafts));
 
   const { media } = ctx.read;
   const value = (id: string) => {

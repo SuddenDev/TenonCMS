@@ -1,4 +1,4 @@
-import { type Db, type Doc, dataOf, seen } from "../document-sql.ts";
+import { type Db, type DocData, dataOf, visible } from "../document-sql.ts";
 import { withMeta } from "../../map-document.ts";
 import { sql } from "kysely";
 
@@ -9,7 +9,7 @@ export async function loadGlobal(db: Db, name: string, drafts = false) {
     .select(["published_at", sql<number>`draft IS NOT NULL`.as("has_draft")])
     .select(sql<string>`${sql.raw(dataOf(drafts))}`.as("data"))
     .where("name", "=", name)
-    .where(seen(drafts))
+    .where(visible(drafts))
     .executeTakeFirst();
-  return row && (withMeta(row) as Doc);
+  return row && (withMeta(row) as DocData);
 }

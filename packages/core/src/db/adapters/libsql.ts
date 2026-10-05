@@ -9,7 +9,10 @@ import {
 
 type Connection = DatabaseConnection & { tx?: Transaction };
 
-// Same shape as `@libsql/kysely-libsql`, over our own `@libsql/client`. That package pulls a second client and native binary.
+/**
+ * A Kysely dialect over our own `@libsql/client`, in the shape of `@libsql/kysely-libsql`.
+ * That package pulls a second client and native binary. Transactions are interactive `write` transactions.
+ */
 export function libsqlDialect(client: Client): Dialect {
   return {
     createAdapter: () => new SqliteAdapter(),
