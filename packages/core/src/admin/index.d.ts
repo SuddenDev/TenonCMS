@@ -109,8 +109,13 @@ export type Nav = {
   order?: number;
 };
 
-/** One step of the breadcrumbs. `to` is a path relative to {@link IntegralContext.base}. */
-export type Crumb = { label: string; to: string };
+/** One step of the breadcrumbs. */
+export type Crumb = {
+  /** Text of the step. */
+  label: string;
+  /** Link target, relative to {@link IntegralContext.base}, e.g. `/content/reports`. */
+  to: string;
+};
 
 /** A custom admin page. */
 export type Page = {

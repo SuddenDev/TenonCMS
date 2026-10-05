@@ -1,20 +1,25 @@
 # admin
 
-Glue that serves the admin UI on a page of its own. The UI itself is the Vue app in `packages/admin`; its build writes `index.js` next to these files in `dist/admin`.
+The contract and page runtime of the admin UI, shipped in `dist/admin`. The UI itself is the Vue app in `packages/admin`; its build writes `index.js` next to these files. How adapters serve the page (path, alias, favicon, build input, HTML) lives in `src/integrations/admin/`.
 
-| File                 | What it does                                                                             |
+## Follow the admin page
+
+The page that `adminHtml()` renders loads:
+
+`entry.ts` → `#integral/admin` (`integral.admin.ts` or `default.ts`) → `mountAdmin()` in `index.js`
+
+`entry.ts` reads the base path from `data-base` and the favicon from the `__INTEGRAL_FAVICON__` define, then mounts the admin with the host's options. Host fields and pages are `Mount` functions; `renderVue()` and `renderReact()` build one from a component.
+
+## Files
+
+| Path                 | Responsibility                                                                           |
 | -------------------- | ---------------------------------------------------------------------------------------- |
 | `index.d.ts`         | Types of `integral-cms/admin`: `defineAdmin()`, `Nav`, `Mount`, page and field contexts. |
-| `entry.ts`           | The page script: mounts the admin with the host's `integral.admin.ts` and favicon.       |
+| `entry.ts`           | The page script: mounts the admin.                                                       |
 | `default.ts`         | Empty options, used when the host has no `integral.admin.ts`.                            |
-| `html.ts`            | Builds the standalone admin page from script and stylesheet URLs.                        |
-| `path.ts`            | Validates the admin route and resolves the host configuration alias.                     |
-| `favicon.ts`         | Detects the host favicon and passes it through a Vite define.                            |
-| `input.ts`           | Names and registers the admin client build entry.                                        |
-| `options.ts`         | Shared admin path and framework adapter options.                                         |
-| `menu.ts`            | `groupMenu()`: sorts items and groups them (fallback group `Content`, or the one given). |
-| `icons.d.ts`         | Generated `IconName` union of the Lucide icons. Run the admin's `icons` script.          |
 | `virtual.d.ts`       | Types the `#integral/admin-html` module (the page as a string).                          |
+| `icons.d.ts`         | Generated `IconName` union of the Lucide icons. Run the admin's `icons` script.          |
 | `vue.ts`, `react.ts` | `renderVue()` / `renderReact()`: wrap a host component as a `Mount`.                     |
+| `menu.ts`            | `groupMenu()`: sorts items and groups them (fallback group `Content`, or the one given). |
 
-Extensions only use `mount(el, ctx)`, so no framework crosses the boundary.
+Extensions only use `mount(el, ctx)`, so no framework crosses the boundary. `entry.ts`, `default.ts` and the `.d.ts` files are copied to `dist/admin` as is, so they MUST keep their names. `menu.ts` MUST stay free of imports, because the admin bundles it by relative path.

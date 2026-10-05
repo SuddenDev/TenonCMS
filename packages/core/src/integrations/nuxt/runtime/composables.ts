@@ -43,57 +43,59 @@ function live<R extends PromiseLike<{ data: Ref<unknown> }> & { data: Ref<unknow
   ) as unknown as R;
 }
 
-// The client's read methods for pages. During SSR the request stays in-process; on client-side
-// navigation it hits the public read API.
+// Reads once per key into Nuxt's payload, with the preview drafts merged in.
+function load<T>(name: string, key: string, read: () => Promise<T>) {
+  return live(name, useAsyncData(`integral:${key}`, read));
+}
+
+/**
+ * The client's read methods for pages, each wrapped in `useAsyncData`. During SSR the request stays in-process;
+ * on client-side navigation it hits the public read API. In the admin's live preview, `data` shows unsaved changes.
+ * @example
+ * const { data: post } = await useIntegral().findOne('posts', { where: { slug } })
+ */
 export function useIntegral() {
   const event = useRequestEvent();
   const client = createClient<typeof cms>({
     fetch: event && ((input, init) => event.fetch(String(input), init)),
   });
+
   return {
     find<K extends keyof Collections & string, const O extends FindOptions<typeof cms, K> = {}>(
       collection: K,
       options: Checked<O, Collections, Fields<K>, Depth> = {} as never,
     ) {
-      return live(
-        collection,
-        useAsyncData(`integral:${collection}:${JSON.stringify(options)}`, () =>
-          client.find<K, O>(collection, options as never),
-        ),
+      return load(collection, `${collection}:${JSON.stringify(options)}`, () =>
+        client.find<K, O>(collection, options as never),
       );
     },
+
     findOne<K extends keyof Collections & string, const O extends FindOptions<typeof cms, K>>(
       collection: K,
       options: Checked<O, Collections, Fields<K>, Depth>,
     ) {
-      return live(
+      return load(
         collection,
-        useAsyncData(
-          `integral:${collection}:one:${JSON.stringify(options)}`,
-          async () => (await client.findOne<K, O>(collection, options as never)) ?? null,
-        ),
+        `${collection}:one:${JSON.stringify(options)}`,
+        async () => (await client.findOne<K, O>(collection, options as never)) ?? null,
       );
     },
+
     findById<
       K extends keyof Collections & string,
       const O extends ReadOptions<Collections, Fields<K>> = {},
     >(collection: K, id: string, options: Checked<O, Collections, Fields<K>, Depth> = {} as never) {
-      return live(
-        collection,
-        useAsyncData(`integral:${collection}:${id}:${JSON.stringify(options)}`, () =>
-          client.findById<K, O>(collection, id, options as never),
-        ),
+      return load(collection, `${collection}:${id}:${JSON.stringify(options)}`, () =>
+        client.findById<K, O>(collection, id, options as never),
       );
     },
+
     getGlobal<
       K extends keyof Globals & string,
       const O extends ReadOptions<Collections, Globals[K]["fields"], false> = {},
     >(name: K, options: Checked<O, Collections, Globals[K]["fields"], Depth, false> = {} as never) {
-      return live(
-        name,
-        useAsyncData(`integral:global:${name}:${JSON.stringify(options)}`, () =>
-          client.getGlobal<K, O>(name, options),
-        ),
+      return load(name, `global:${name}:${JSON.stringify(options)}`, () =>
+        client.getGlobal<K, O>(name, options),
       );
     },
   };
