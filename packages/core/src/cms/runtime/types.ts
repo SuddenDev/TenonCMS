@@ -5,22 +5,39 @@ import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.t
 import type { User } from "better-auth";
 import type { Kysely } from "kysely";
 
-/** What the local API needs from its `defineCms()` instance. */
+/**
+ * The internal context of one `defineCms()` instance. It is not public.
+ * The local API, hooks and HTTP routes read the schema, hooks, defaults, database, auth and media from it.
+ */
 export type Core = {
   /** The host's schema with the plugins' collections and globals. */
   schema: Required<Schema>;
   plugins: readonly Plugin[];
   rootHooks: RootHooks;
   /** The `populate` config with defaults. */
-  defaults: { depth: number; maxDepth: number };
+  populate: { depth: number; maxDepth: number };
   /** Connects and migrates on the first call. */
   db: () => Promise<Kysely<Database>>;
-  /** The local API of a scope. */
-  bind: (scope: Scope) => LocalApi;
+  /** Creates better-auth on the first call. Throws for a bad `secret`. */
+  auth: () => Promise<{ handler(request: Request): Promise<Response> }>;
+  /** The session of a request's headers, or `null`. */
+  getSession: (headers: Headers) => Promise<{ user: User } | null>;
+  /**
+   * The local API of a scope. It sits on `Core`, so operations can create nested APIs for hooks without importing
+   * every operation, which would be an import cycle.
+   */
+  localApi: (scope: Scope) => LocalApi;
   /** The resolved `media` option. Missing without it. */
   media?: MediaCore;
 };
 export type Stage = keyof RootHooks;
+
+/**
+ * Which version of a document reads return.
+ * - `published`: only published documents, with their published data.
+ * - `drafts`: every document, with its pending draft where one exists.
+ */
+export type Perspective = "published" | "drafts";
 
 /** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */
 export type Scope = {
@@ -29,8 +46,8 @@ export type Scope = {
   context: Record<string, unknown>;
   // True inside a hook: the call keeps `context` and runs no `afterError` of its own.
   nested: boolean;
-  /** Reads use the drafts perspective. Default: published. */
-  drafts?: boolean;
+  /** Default: `published`. */
+  perspective?: Perspective;
 };
 /** The scope hooks and nested calls get, with its bound API. */
 export type Inner = Scope & { cms: LocalApi };

@@ -529,16 +529,16 @@ GREEN
 - `src/index.ts`:
 
 ```ts
-export type PopulateConfig = {
+export type PopulateOptions = {
   /** Hops resolved by `populate: true`. Default 2. */
   depth?: number;
   /** Limit for HTTP requests. Default 5. The local API has no limit. */
   maxDepth?: number;
 };
-type DefaultDepth<P extends PopulateConfig> = P["depth"] extends number ? P["depth"] : 2;
+type DefaultDepth<P extends PopulateOptions> = P["depth"] extends number ? P["depth"] : 2;
 ```
 
-- `defineCms<const C, const G, const P extends PopulateConfig = {}>`, option `populate?: P`. Return type uses `PopulateOf<O, DefaultDepth<P>>`.
+- `defineCms<const C, const G, const P extends PopulateOptions = {}>`, option `populate?: P`. Return type uses `PopulateOf<O, DefaultDepth<P>>`.
 - Expose it: `cms.populate = { depth: config.depth ?? 2, maxDepth: config.maxDepth ?? 5 } as { depth: DefaultDepth<P>; maxDepth: number }`. The client reads the depth type from here (Task 17), `app.ts` reads `maxDepth` (Task 16).
 - `checkSchema` gets the config and throws when `depth > maxDepth` (add that case to Task 3's `it.each` now: `/maxDepth/`).
 - Run both `typecheck` and the `relation schema` test. Expect pass.

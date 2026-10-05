@@ -29,7 +29,7 @@ Every core task is RED then GREEN: write the listed tests, run them, see them fa
 - **`Nav` lives in `src/admin/index.d.ts`** next to `Page`, and `schema/index.ts` imports it with `import type { Nav } from "../admin/index.d.ts"`, like `IconName`. If the core d.ts build inlines more than `Nav` or fails, move `Nav` to `src/admin/nav.d.ts`, add it to tsdown `copy`, and import it from both. Check `dist/index.d.mts` in Task 1.
 - **The settings merge** is a small function `addSettings(schema, option, hasMedia)` in `src/cms/index.ts`, called after `mergePlugins()` and before the media collection. It throws `integral-cms: duplicate global "<name>"` like `mergePlugins()`. The globals themselves are data in `src/presets/settings.ts`.
 - **Without media**, `addSettings()` strips `favicon` from `general` and `image` from `seo` by destructuring. It never touches a host replacement.
-- **`SettingsGlobals<S>`** lives in `src/cms/options.ts` next to `PluginGlobals`. `CmsOptions` gets `S extends SettingsOption | undefined = undefined` and `settings?: S & NoInfer<…>`: generic inference skips excess property checks (Gotchas), so extra keys are mapped to `never` explicitly.
+- **`SettingsGlobals<S>`** lives in `src/cms/options.ts` next to `PluginGlobals`. `CmsOptions` gets `S extends SettingsOptions | undefined = undefined` and `settings?: S & NoInfer<…>`: generic inference skips excess property checks (Gotchas), so extra keys are mapped to `never` explicitly.
 - **Sidebar active state**: `MenuItem` gets `also?: string[]`, extra paths that mark it active. The Settings item lists the targets of every settings item. `NavGroup.vue`'s `active()` checks them too.
 - **`meta.parent`** becomes `string | ((route) => string | undefined)`. The collection and global routes use a function that reads `schema.value` and returns `/settings` for `nav.display === "settings"`.
 - **Form layout** lives in `DocForm.vue` (cards) plus one small shared header component, `modules/documents/components/FormHeader.vue` (back link, title, description, actions slot), used by `GlobalEdit.vue` and `DocEdit.vue`. The top Save button submits the form through `form="<id>"`, so `DocForm` keeps owning the submit.
@@ -82,7 +82,7 @@ Tests in `src/tests/settings.test.ts`, block "defineCms":
 - `media: false`: `general` has no `favicon`, `seo` has no `image`; `setGlobal` with only `title` works (startup does not throw).
 - Over HTTP: `GET /api/cms/globals/general` answers 200 `{}` without a session.
 
-Code: `SettingsOption` type and the `settings` key in `CmsOptions` (JSDoc with the three forms), `addSettings()` in `src/cms/index.ts`.
+Code: `SettingsOptions` type and the `settings` key in `CmsOptions` (JSDoc with the three forms), `addSettings()` in `src/cms/index.ts`.
 
 - Then run the full suite. `setup.ts` and other instances now carry two more globals: fix tests that count globals or snapshot `/schema` by passing `settings: false`, not by loosening the assertion. Replace the `site` global in `setup.ts` only if a test depends on its name.
 

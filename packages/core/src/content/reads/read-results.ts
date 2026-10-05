@@ -25,7 +25,7 @@ export async function readDocs(
   const operation = name.kind === "collection" ? "read" : "getGlobal";
   const before = await beforeRead(core, s, name, docs, operation);
   await populate(await q(core, s), collections, fields, before, spec, {
-    drafts: !!s.drafts,
+    drafts: s.perspective === "drafts",
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
     before: (collection, docs) => beforeRead(core, s, col(collection), docs, "read"),
     after: (collection, docs) => afterRead(core, s, col(collection), docs, "read"),
@@ -41,7 +41,7 @@ export async function readDocs(
 // The populate spec and the checked `select` of read options. Throws for a `select` that does not fit
 // the fields or what `populate` resolves. `doc`: false for globals, which have no meta keys.
 export function readSpec(core: Core, fields: Fields, options: ReadOpts, doc = true) {
-  const spec = toSpec(options, core.defaults.depth);
+  const spec = toSpec(options, core.populate.depth);
   const select = options.select as SelectSpec | undefined;
   const error = select && badSelectPath(core.schema.collections, fields, select, spec, "", doc);
   if (error) throw new Error(`Invalid select: ${error}`);

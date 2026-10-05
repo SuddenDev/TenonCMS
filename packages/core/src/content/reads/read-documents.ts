@@ -16,6 +16,9 @@ export async function read(core: Core, s: Inner, collection: string, options: Re
     if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`);
     if (!filterable(fields, key)) throw new Error(`Field "${key}" is not filterable`);
   }
-  const docs = await findDocs(await q(core, s), collection, { ...options, drafts: s.drafts });
+  const docs = await findDocs(await q(core, s), collection, {
+    ...options,
+    drafts: s.perspective === "drafts",
+  });
   return readDocs(core, s, col(collection), docs, spec, select);
 }

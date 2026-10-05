@@ -1,6 +1,8 @@
 import type { Field, Fields } from "./index.ts";
 
-// Inference of stored data, compile-time relation checks and the read types. Nothing here runs.
+// Inference of stored data, compile-time relation checks and read types. Nothing here runs.
+
+/* ── Shared type helpers ──────────────────────────────────────────────────────────────── */
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 /** `T` with property `K` replaced by `V`. */
@@ -13,7 +15,7 @@ type FieldsOf<Cs, C> = C extends keyof Cs
     : never
   : never;
 
-// Stored data.
+/* ── Stored values and documents ──────────────────────────────────────────────────────── */
 
 type Scalar = {
   text: string;
@@ -38,11 +40,16 @@ type FieldValue<F extends Field> = F extends { type: "group"; fields: infer G ex
 type JoinKey<F> = Keys<F, { type: "join" }>;
 type RequiredKey<F> = Keys<F, { required: true }>;
 
-export type Data<F extends Fields> = {
+type RequiredData<F extends Fields> = {
   [K in Exclude<RequiredKey<F>, JoinKey<F>>]: FieldValue<F[K]>;
-} & {
+};
+type OptionalData<F extends Fields> = {
   [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: FieldValue<F[K]> | null;
 };
+
+export type Data<F extends Fields> = RequiredData<F> & OptionalData<F>;
+
+/* ── Read metadata and populated media ───────────────────────────────────────────────── */
 
 type Meta = {
   id: string;
@@ -91,14 +98,14 @@ export type FilterKey<F extends Fields> = Exclude<
   Keys<F, { type: "group" | "join" } | { many: true }>
 >;
 
-// Relation checks. An invalid `collection` or `on` is replaced by an `Invalid` type, so the error names the allowed values.
+/* ── Relation validation ──────────────────────────────────────────────────────────────── */
 
 /** Dot paths of relation fields in `F` that point to `Target`, through groups. */
-type RelationPaths<F, Target extends string, P extends string = ""> = {
+type RelationPaths<F, Target extends string, Prefix extends string = ""> = {
   [K in keyof F & string]: F[K] extends { type: "group"; fields: infer G }
-    ? RelationPaths<G, Target, `${P}${K}.`>
+    ? RelationPaths<G, Target, `${Prefix}${K}.`>
     : F[K] extends { type: "relation"; collection: Target }
-      ? `${P}${K}`
+      ? `${Prefix}${K}`
       : never;
 }[keyof F & string];
 
@@ -140,177 +147,239 @@ type CheckFields<F, C, Self extends string> = {
       : F[K];
 };
 
+type CheckCollections<S, C> = {
+  [K in keyof S]: S[K] extends { fields: infer F }
+    ? Replace<S[K], "fields", CheckFields<F, C, K & string>>
+    : S[K];
+};
+
 /**
  * Checks every relation and join in `S` against the collections in `C`.
  * Resolves to `S` when all are valid. Use it as `S & NoInfer<CheckRefs<S, C>>`, so `S` is inferred from the argument alone.
  */
 export type CheckRefs<S, C> = S extends { [K in keyof S]: { fields: unknown } }
-  ? {
-      [K in keyof S]: Replace<S[K], "fields", CheckFields<S[K]["fields"], C, K & string>>;
-    } extends infer R
+  ? CheckCollections<S, C> extends infer R
     ? S extends R
       ? S
       : R
     : never
   : S;
 
-// The populate spec. `P` is `false` (ids), a number (hops left) or a populate object. `Sub` and `Next` are the
+/* ── Populate traversal rules ────────────────────────────────────────────────────────── */
+
+// The spec is `false` (ids), a number (hops left), or an object. `Sub` and `Next` are the
 // type-level twins of `step()` in `populate.ts`.
 
 type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-/** What `P` says about key `K`. */
-type Sub<P, K> = P extends number
-  ? P
-  : P extends object
-    ? K extends keyof P
-      ? P[K]
+/** The populate spec for `Key`. */
+type Sub<Spec, Key> = Spec extends number
+  ? Spec
+  : Spec extends object
+    ? Key extends keyof Spec
+      ? Spec[Key]
       : false
     : false;
 /** The spec the documents under a resolved relation get. */
-type Next<S> = S extends true ? false : S extends number ? Prev[S] : S;
-/** Whether `S` resolves a relation at all. */
-type Off<S> = S extends false | 0 | undefined ? true : false;
+type Next<Spec> = Spec extends true ? false : Spec extends number ? Prev[Spec] : Spec;
+/** Whether `Spec` resolves a relation. */
+type Off<Spec> = Spec extends false | 0 | undefined ? true : false;
 /** Join keys a read leaves out: every join, unless a populate object names it. */
-type Joins<F, P> = {
-  [K in keyof F]: F[K] extends { type: "join" }
-    ? P extends object
-      ? K extends keyof P
-        ? never
-        : K
-      : K
-    : never;
-}[keyof F];
+type UnpopulatedJoins<F, Spec> = Exclude<JoinKey<F>, Spec extends object ? keyof Spec : never>;
 
-// Read results.
+/* ── Read result types ───────────────────────────────────────────────────────────────── */
 
-/** Documents of collection `C` with relations resolved as `P` says. */
-type Target<Cs, C, P> = C extends keyof Cs
-  ? Simplify<Resolve<Cs, FieldsOf<Cs, C>, P> & Meta>
+/** Documents of `Collection` with relations resolved as `Spec` says. */
+type Target<Collections, Collection, Spec> = Collection extends keyof Collections
+  ? Simplify<Resolve<Collections, FieldsOf<Collections, Collection>, Spec> & Meta>
   : never;
-type Targets<Cs, C, P, F> = F extends { many: true } ? Target<Cs, C, P>[] : Target<Cs, C, P>;
+type Targets<Collections, Collection, Spec, Relation> = Relation extends { many: true }
+  ? Target<Collections, Collection, Spec>[]
+  : Target<Collections, Collection, Spec>;
 
-/** The value of one field in a read, with spec `S`. */
-type Value<Cs, F, S> = F extends { type: "group"; fields: infer G extends Fields }
-  ? Resolve<Cs, G, S extends true ? 1 : S>
-  : F extends { type: "relation"; collection: infer C }
-    ? Off<S> extends true
-      ? Ids<F>
-      : Targets<Cs, C, Next<S>, F>
-    : F extends { type: "image" | "file" }
-      ? Off<S> extends true
-        ? Ids<F>
-        : MediaValue<F, F extends { type: "image" } ? Image : File>
-      : F extends { type: "join"; collection: infer C }
-        ? Target<Cs, C, Next<S>>[]
-        : F extends Field
-          ? FieldValue<F>
+type GroupValue<Collections, Group extends Fields, Spec> = Resolve<
+  Collections,
+  Group,
+  Spec extends true ? 1 : Spec
+>;
+type RelationValue<Collections, Relation, Spec> = Relation extends {
+  collection: infer Collection;
+}
+  ? Off<Spec> extends true
+    ? Ids<Relation>
+    : Targets<Collections, Collection, Next<Spec>, Relation>
+  : never;
+type MediaFieldValue<MediaField, Spec> =
+  Off<Spec> extends true
+    ? Ids<MediaField>
+    : MediaValue<MediaField, MediaField extends { type: "image" } ? Image : File>;
+type JoinValue<Collections, Join, Spec> = Join extends { collection: infer Collection }
+  ? Target<Collections, Collection, Next<Spec>>[]
+  : never;
+
+/** The value of one field in a read, using the populate spec for that field. */
+type FieldReadValue<Collections, FieldType, Spec> = FieldType extends {
+  type: "group";
+  fields: infer Group extends Fields;
+}
+  ? GroupValue<Collections, Group, Spec>
+  : FieldType extends { type: "relation" }
+    ? RelationValue<Collections, FieldType, Spec>
+    : FieldType extends { type: "image" | "file" }
+      ? MediaFieldValue<FieldType, Spec>
+      : FieldType extends { type: "join" }
+        ? JoinValue<Collections, FieldType, Spec>
+        : FieldType extends Field
+          ? FieldValue<FieldType>
           : never;
 
-/** Data of `fields` as a read returns it, with relations resolved as `P` says. Joins are required, unnamed joins absent. */
-export type Resolve<Cs, F extends Fields, P> = Simplify<
-  {
-    [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: Value<Cs, F[K], Sub<P, K>> | null;
-  } & {
-    [K in Exclude<RequiredKey<F> | JoinKey<F>, Joins<F, P>>]: Value<Cs, F[K], Sub<P, K>>;
-  }
+/** Data of `F` as a read returns it. Unnamed joins are absent; named joins are required. */
+type OptionalReadFields<Collections, F extends Fields, Spec> = {
+  [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: FieldReadValue<
+    Collections,
+    F[K],
+    Sub<Spec, K>
+  > | null;
+};
+type RequiredReadFields<Collections, F extends Fields, Spec> = {
+  [K in Exclude<RequiredKey<F> | JoinKey<F>, UnpopulatedJoins<F, Spec>>]: FieldReadValue<
+    Collections,
+    F[K],
+    Sub<Spec, K>
+  >;
+};
+
+export type Resolve<Collections, F extends Fields, Spec> = Simplify<
+  OptionalReadFields<Collections, F, Spec> & RequiredReadFields<Collections, F, Spec>
 >;
 
 /** An untyped schema (the admin's) reads plain records. The recursive types would not terminate. */
-type Wide<Cs> = string extends keyof Cs ? true : false;
-export type Read<Cs, F extends Fields, P, S = true> =
-  Wide<Cs> extends true ? Record<string, any> : Selected<Resolve<Cs, F, P>, S>;
-// The meta keys other than `id` only when `S` lists them.
-type SelectedMeta<S> = [S] extends [true] ? Meta : Pick<Meta, "id" | Extract<keyof S, keyof Meta>>;
-export type ReadDoc<Cs, F extends Fields, P, S = true> = Simplify<
-  Read<Cs, F, P, S> & SelectedMeta<S>
+type Wide<Collections> = string extends keyof Collections ? true : false;
+export type Read<Collections, F extends Fields, PopulateSpec, SelectSpec = true> =
+  Wide<Collections> extends true
+    ? Record<string, any>
+    : Selected<Resolve<Collections, F, PopulateSpec>, SelectSpec>;
+// `id` is always selected. Other metadata must be named in the select spec.
+type SelectedMeta<SelectSpec> = [SelectSpec] extends [true]
+  ? Meta
+  : Pick<Meta, "id" | Extract<keyof SelectSpec, keyof Meta>>;
+export type ReadDoc<Collections, F extends Fields, PopulateSpec, SelectSpec = true> = Simplify<
+  Read<Collections, F, PopulateSpec, SelectSpec> & SelectedMeta<SelectSpec>
 >;
 
-/** `T` with only `id` and the keys of `S`. */
-type SelectedObject<T, S> = Simplify<{
-  [K in keyof T as K extends "id" | keyof S ? K : never]: K extends keyof S
-    ? Selected<T[K], S[K]>
-    : T[K];
+/* ── Selection projection ─────────────────────────────────────────────────────────────── */
+
+/** `Value` with only `id` and the keys in `SelectSpec`. */
+type SelectedObject<Value, SelectSpec> = Simplify<{
+  [K in keyof Value as K extends "id" | keyof SelectSpec ? K : never]: K extends keyof SelectSpec
+    ? Selected<Value[K], SelectSpec[K]>
+    : Value[K];
 }>;
-/** `T` with only `id` and the keys of `S`, at every object level. Arrays and `null` pass through; so do plain records (an untyped schema). */
-type Selected<T, S> = [S] extends [true]
-  ? T
-  : T extends (infer U)[]
-    ? Selected<U, S>[]
-    : T extends object
-      ? string extends keyof T
-        ? T
-        : SelectedObject<T, S>
-      : T;
+/** `Value` with only the selected keys at each object level. */
+type Selected<Value, SelectSpec> = [SelectSpec] extends [true]
+  ? Value
+  : Value extends (infer Item)[]
+    ? Selected<Item, SelectSpec>[]
+    : Value extends object
+      ? string extends keyof Value
+        ? Value
+        : SelectedObject<Value, SelectSpec>
+      : Value;
 
-// Read options.
+/* ── Populate and select option types ────────────────────────────────────────────────── */
 
-/** The populate spec of an options literal: `populate: false`, a populate object, `depth`, or the default `D`. */
-export type PopulateOf<O, D extends number> = O extends { populate: false }
+/** The populate spec of `Options`: `populate: false`, a populate object, `depth`, or the default depth. */
+export type PopulateOf<Options, DefaultDepth extends number> = Options extends {
+  populate: false;
+}
   ? false
-  : O extends { populate: infer P extends object }
-    ? P
-    : O extends { depth: infer N extends number }
-      ? N
-      : D;
-export type SelectOf<O> = O extends { select: infer S extends object } ? S : true;
+  : Options extends { populate: infer Spec extends object }
+    ? Spec
+    : Options extends { depth: infer Depth extends number }
+      ? Depth
+      : DefaultDepth;
+export type SelectOf<Options> = Options extends { select: infer Spec extends object } ? Spec : true;
 
 /** Paths a `populate` object may name: groups, relations and joins, nested along their targets. Images and files are leaves. */
-export type Populate<Cs, F extends Fields> = {
-  [K in Keys<F, { type: "group" | "relation" | "join" | "image" | "file" }>]?: F[K] extends {
-    type: "group";
-    fields: infer G extends Fields;
-  }
-    ? true | Populate<Cs, G>
-    : F[K] extends { collection: infer C }
-      ? true | Populate<Cs, FieldsOf<Cs, C>>
-      : true;
+type PopulateField<Collections, FieldType> = FieldType extends {
+  type: "group";
+  fields: infer Group extends Fields;
+}
+  ? true | Populate<Collections, Group>
+  : FieldType extends { collection: infer Collection }
+    ? true | Populate<Collections, FieldsOf<Collections, Collection>>
+    : true;
+export type Populate<Collections, F extends Fields> = {
+  [K in Keys<F, { type: "group" | "relation" | "join" | "image" | "file" }>]?: PopulateField<
+    Collections,
+    F[K]
+  >;
 };
-export type PopulateArg<Cs, F extends Fields> =
-  Wide<Cs> extends true ? Record<string, unknown> : Populate<Cs, F>;
+export type PopulateArg<Collections, F extends Fields> =
+  Wide<Collections> extends true ? Record<string, unknown> : Populate<Collections, F>;
 
-type SelectGroup<Cs, G extends Fields, S> = true | Select<Cs, G, S extends true ? 1 : S, false>;
-// Into a relation only when `S` resolves it.
-type SelectRelation<Cs, C, S> =
-  Off<S> extends true ? true : true | Select<Cs, FieldsOf<Cs, C>, Next<S>>;
-// Into a join only when a populate object names it, or under the wide `number` P of the `ReadOptions` constraint.
-type SelectJoin<Cs, C, P, K, S> = P extends object
-  ? K extends keyof P
-    ? true | Select<Cs, FieldsOf<Cs, C>, Next<S>>
+type SelectGroup<Collections, Group extends Fields, Spec> =
+  | true
+  | Select<Collections, Group, Spec extends true ? 1 : Spec, false>;
+type SelectRelation<Collections, Collection, Spec> =
+  Off<Spec> extends true
+    ? true
+    : true | Select<Collections, FieldsOf<Collections, Collection>, Next<Spec>>;
+type SelectJoin<Collections, Collection, PopulateSpec, Key, Spec> = PopulateSpec extends object
+  ? Key extends keyof PopulateSpec
+    ? true | Select<Collections, FieldsOf<Collections, Collection>, Next<Spec>>
     : true
-  : number extends P
-    ? true | Select<Cs, FieldsOf<Cs, C>, Next<S>>
+  : number extends PopulateSpec
+    ? true | Select<Collections, FieldsOf<Collections, Collection>, Next<Spec>>
     : true;
 
+type SelectField<Collections, FieldType, PopulateSpec, Key> = FieldType extends {
+  type: "group";
+  fields: infer Group extends Fields;
+}
+  ? SelectGroup<Collections, Group, Sub<PopulateSpec, Key>>
+  : FieldType extends { type: "relation"; collection: infer Collection }
+    ? SelectRelation<Collections, Collection, Sub<PopulateSpec, Key>>
+    : FieldType extends { type: "join"; collection: infer Collection }
+      ? SelectJoin<Collections, Collection, PopulateSpec, Key, Sub<PopulateSpec, Key>>
+      : true;
+
 /**
- * Keys a `select` object may name: fields, and on a document (`Doc`) the meta keys.
- * An object is allowed under a group, and under a relation or join that `P` resolves.
+ * Keys a `select` object may name: fields, and on a document the meta keys.
+ * Nested keys are allowed under groups and populated relations or joins.
  */
-export type Select<Cs, F extends Fields, P, Doc extends boolean = true> = {
-  [K in keyof F]?: F[K] extends { type: "group"; fields: infer G extends Fields }
-    ? SelectGroup<Cs, G, Sub<P, K>>
-    : F[K] extends { type: "relation"; collection: infer C }
-      ? SelectRelation<Cs, C, Sub<P, K>>
-      : F[K] extends { type: "join"; collection: infer C }
-        ? SelectJoin<Cs, C, P, K, Sub<P, K>>
-        : true;
-} & (Doc extends true
+export type Select<Collections, F extends Fields, PopulateSpec, Document extends boolean = true> = {
+  [K in keyof F]?: SelectField<Collections, F[K], PopulateSpec, K>;
+} & (Document extends true
   ? { id?: true; createdAt?: true; updatedAt?: true; publishedAt?: true; hasDraft?: true }
   : {});
-export type SelectArg<Cs, F extends Fields, P, Doc extends boolean = true> =
-  Wide<Cs> extends true ? Record<string, any> : Select<Cs, F, P, Doc>;
+export type SelectArg<
+  Collections,
+  F extends Fields,
+  PopulateSpec,
+  Document extends boolean = true,
+> =
+  Wide<Collections> extends true
+    ? Record<string, any>
+    : Select<Collections, F, PopulateSpec, Document>;
+
+/* ── Read option validation ───────────────────────────────────────────────────────────── */
 
 // Generic inference skips excess property checks, so extra keys map to `never` at every level.
 // An object under a key that allows only `true` maps to `never`; without that rule `keyof never` accepts every key.
-export type Exact<P, A> = P extends object
-  ? [A] extends [never]
+export type Exact<Provided, Allowed> = Provided extends object
+  ? [Allowed] extends [never]
     ? never
-    : { [K in keyof P]: K extends keyof A ? Exact<P[K], Exclude<A[K], true | undefined>> : never }
-  : P;
+    : {
+        [K in keyof Provided]: K extends keyof Allowed
+          ? Exact<Provided[K], Exclude<Allowed[K], true | undefined>>
+          : never;
+      }
+  : Provided;
 
-/** Read options of `find`, `findOne`, `findById` and `getGlobal`. `Doc` is `false` for globals, which have no `id`, `createdAt` or `updatedAt`. */
-export type ReadOptions<Cs, F extends Fields, Doc extends boolean = true> = {
+/** Read options of `find`, `findOne`, `findById` and `getGlobal`. Globals have no `id`, `createdAt` or `updatedAt`. */
+export type ReadOptions<Collections, F extends Fields, Document extends boolean = true> = {
   /** `false` returns ids. An object resolves only the listed paths, `true` one hop. Default: every relation up to `depth`. */
-  populate?: boolean | PopulateArg<Cs, F>;
+  populate?: boolean | PopulateArg<Collections, F>;
   /** Hops resolved when `populate` is not an object. */
   depth?: number;
   /**
@@ -319,16 +388,19 @@ export type ReadOptions<Cs, F extends Fields, Doc extends boolean = true> = {
    * join that `populate` resolves. `{}` returns only `id`. Hooks see the full documents; `afterOperation` sees the result.
    * Default: every field.
    */
-  select?: SelectArg<Cs, F, number, Doc>;
+  select?: SelectArg<Collections, F, number, Document>;
 };
-/** Checks the `populate` and `select` literals in `O` against the fields at every level. `D` is the default depth. */
+/** Checks the `populate` and `select` literals at every level. */
 export type Checked<
-  O extends ReadOptions<Cs, F, Doc>,
-  Cs,
+  Options extends ReadOptions<Collections, F, Document>,
+  Collections,
   F extends Fields,
-  D extends number = 2,
-  Doc extends boolean = true,
-> = O & {
-  populate?: Exact<O["populate"], PopulateArg<Cs, F>>;
-  select?: Exact<O["select"], SelectArg<Cs, F, PopulateOf<O, D>, Doc>>;
+  DefaultDepth extends number = 2,
+  Document extends boolean = true,
+> = Options & {
+  populate?: Exact<Options["populate"], PopulateArg<Collections, F>>;
+  select?: Exact<
+    Options["select"],
+    SelectArg<Collections, F, PopulateOf<Options, DefaultDepth>, Document>
+  >;
 };

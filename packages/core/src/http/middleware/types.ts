@@ -1,5 +1,5 @@
 import type { User } from "better-auth";
-import type { Cms } from "../../cms/create-cms.ts";
-import type { Schema } from "../../schema/index.ts";
+import type { LocalApi } from "../../schema/index.ts";
 
-export type Env = { Variables: { cms: Cms<Schema>; user: User } };
+/** `cms` is the local API for the request's caller. `user` is set only behind the session middleware. */
+export type Env = { Variables: { cms: LocalApi; user: User } };

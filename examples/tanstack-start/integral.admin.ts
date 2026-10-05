@@ -9,6 +9,7 @@ export default defineAdmin({
       title: "Stats",
       nav: { icon: "chart-bar" },
       route: "/reports/stats",
+      showPageTitle: false,
       mount: renderReact(Stats),
     },
     post: {

@@ -39,7 +39,9 @@ type ReadGlobal<T extends Schema, K extends keyof Globals<T>, O, D extends numbe
 > &
   GlobalMeta<SelectOf<O>>;
 
-/** The typed local API of `defineCms()`. `D` is the default populate depth. */
+/**
+ * The typed local API of `defineCms()`. `D` is the default populate depth.
+ */
 export type Api<T extends Schema, D extends number> = {
   /**
    * Lists documents of a collection, newest first.
@@ -49,6 +51,7 @@ export type Api<T extends Schema, D extends number> = {
     collection: K,
     options?: Checked<O, Collections<T>, Collections<T>[K]["fields"], D>,
   ): Promise<ReadCollection<T, K, O, D>[]>;
+
   /**
    * Returns the newest document that matches `where`, or `undefined`.
    * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
@@ -58,6 +61,7 @@ export type Api<T extends Schema, D extends number> = {
     options: Checked<O, Collections<T>, Collections<T>[K]["fields"], D>,
   ): Promise<ReadCollection<T, K, O, D> | undefined>;
   /** Returns one document, or `undefined`. */
+
   findById<
     K extends keyof Collections<T> & string,
     const O extends ReadOptions<Collections<T>, Collections<T>[K]["fields"]> = {},
@@ -66,6 +70,7 @@ export type Api<T extends Schema, D extends number> = {
     id: string,
     options?: Checked<O, Collections<T>, Collections<T>[K]["fields"], D>,
   ): Promise<ReadCollection<T, K, O, D> | undefined>;
+
   /**
    * Creates a document. Throws a `ValidationError` for invalid `data`.
    * With `{ draft: true }`, creates it unpublished: only the drafts perspective reads it until `publish()`.
@@ -75,6 +80,7 @@ export type Api<T extends Schema, D extends number> = {
     data: Record<string, unknown>,
     options?: WriteOptions,
   ): Promise<CollectionDoc<T, K>>;
+
   /**
    * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one.
    * Returns `undefined` if the document does not exist. Throws a `ValidationError` for invalid data.
@@ -86,6 +92,7 @@ export type Api<T extends Schema, D extends number> = {
     data: Record<string, unknown>,
     options?: WriteOptions,
   ): Promise<CollectionDoc<T, K> | undefined>;
+
   /**
    * Publishes the draft of a document, or its data again when it has none. Runs every check and hook of an
    * `update`. Throws a `ValidationError` for invalid data and keeps the draft. Returns `undefined` if the document
@@ -95,6 +102,7 @@ export type Api<T extends Schema, D extends number> = {
     collection: K,
     id: string,
   ): Promise<CollectionDoc<T, K> | undefined>;
+
   /**
    * Drops the draft of a document and returns the published one. A document that was never published is deleted, with
    * its `onDelete` effects, and the result is `undefined`.
@@ -103,8 +111,10 @@ export type Api<T extends Schema, D extends number> = {
     collection: K,
     id: string,
   ): Promise<CollectionDoc<T, K> | undefined>;
+
   /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
   delete(collection: keyof Collections<T> & string, id: string): Promise<void>;
+
   /** Returns a global. Fields that were never saved are missing. */
   getGlobal<
     K extends keyof Globals<T> & string,
@@ -113,6 +123,7 @@ export type Api<T extends Schema, D extends number> = {
     name: K,
     options?: Checked<O, Collections<T>, Globals<T>[K]["fields"], D, false>,
   ): Promise<ReadGlobal<T, K, O, D>>;
+
   /**
    * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Throws a `ValidationError` for invalid data.
    * With `{ draft: true }`, changes the draft and keeps the published data.
@@ -122,13 +133,18 @@ export type Api<T extends Schema, D extends number> = {
     data: Record<string, unknown>,
     options?: WriteOptions,
   ): Promise<GlobalData<T, K>>;
+
   /** Publishes the draft of a global, like `publish()`. */
   publishGlobal<K extends keyof Globals<T> & string>(name: K): Promise<GlobalData<T, K>>;
+
   /** Drops the draft of a global and returns the published one. */
   discardGlobal<K extends keyof Globals<T> & string>(name: K): Promise<GlobalData<T, K>>;
+
   /**
-   * The same API in the drafts perspective: reads see documents that were never published, and pending drafts
-   * instead of the published data. Without it, reads see published documents only.
+   * Returns a copy of this API whose reads use the drafts perspective: they see documents that were never published,
+   * and pending drafts instead of the published data. Without it, reads see published documents only.
+   * @example
+   * await cms.withDrafts().find("posts")
    */
-  drafts<S>(this: S): S;
+  withDrafts<S>(this: S): S;
 };

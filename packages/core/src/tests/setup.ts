@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createClient as createLibsql } from "@libsql/client";
 import { expect } from "vitest";
 import { CmsError, createClient } from "../client/index.ts";
-import { defineCms, type MediaOptions, type PopulateConfig, type Schema } from "../index.ts";
+import { defineCms, type MediaOptions, type PopulateOptions, type Schema } from "../index.ts";
 import { local } from "../media/storage/local.ts";
 
 export const origin = "http://localhost";
@@ -88,7 +88,7 @@ export async function status(promise: Promise<unknown>) {
   return error instanceof CmsError ? error.status : error;
 }
 
-export const relational = (url = ":memory:", populate: PopulateConfig = {}) =>
+export const relational = (url = ":memory:", populate: PopulateOptions = {}) =>
   defineCms({
     collections: {
       assets: {

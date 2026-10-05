@@ -1,16 +1,17 @@
 import type { AuthOptions } from "../../auth/config/options.ts";
+import type { mediaCollection } from "../../media/config/collection.ts";
 import type { MediaOptions } from "../../media/config/options.ts";
 import type { Plugin } from "../../plugins/index.ts";
 import type { settings } from "../../presets/settings.ts";
-import type { CheckRefs, Collection, Global, RootHooks } from "../../schema/index.ts";
+import type { CheckRefs, Collection, Global, MediaApi, RootHooks } from "../../schema/index.ts";
 
-export type PopulateConfig = {
+export type PopulateOptions = {
   /** Hops resolved by `populate: true`. Default 2. */
   depth?: number;
   /** Limit for HTTP requests. Default 5. The local API has no limit. */
   maxDepth?: number;
 };
-export type DefaultDepth<P extends PopulateConfig> = P["depth"] extends number ? P["depth"] : 2;
+export type DefaultDepth<P extends PopulateOptions> = P["depth"] extends number ? P["depth"] : 2;
 
 type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
   k: infer I,
@@ -25,10 +26,23 @@ export type PluginGlobals<PL extends readonly Plugin[]> = UnionToIntersection<
   NonNullable<PL[number]["globals"]>
 >;
 
+// The `media` collection and `cms.media` exist unless `media: false`.
+// Not distributive, and `M = never` (options cast `as never`) counts as no media: otherwise TS2589.
+export type MediaCollections<M> = [M] extends [false] ? unknown : { media: MediaCollection };
+// Type only: reads compute `url`, and `src` and `srcset` for images. They are not stored and not filterable.
+type MediaCollection = {
+  fields: (typeof mediaCollection)["fields"] & {
+    url: { type: "text"; required: true };
+    src: { type: "text" };
+    srcset: { type: "text" };
+  };
+};
+export type MediaOf<M> = [M] extends [false] ? {} : { media: MediaApi };
+
 /**
  * Which settings globals `defineCms()` adds. An omitted key is the default from `settings` in `integral-cms/presets`.
  */
-export type SettingsOption = {
+export type SettingsOptions = {
   /** Site title, tagline, URL and favicon. `false` drops it, a `Global` replaces it. Stored as `general`. */
   general?: Global | false;
   /** Search and social defaults. `false` drops it, a `Global` replaces it. Stored as `seo`. */
@@ -55,17 +69,17 @@ export type SettingsGlobals<S> = [S] extends [never]
 type ExactSettings<S> = [S] extends [never]
   ? unknown
   : [S] extends [object]
-    ? { [K in Exclude<keyof S, keyof SettingsOption>]: never }
+    ? { [K in Exclude<keyof S, keyof SettingsOptions>]: never }
     : unknown;
 
 export type CmsOptions<
   C extends Record<string, Collection>,
   G extends Record<string, Global>,
   A extends AuthOptions = {},
-  P extends PopulateConfig = {},
+  P extends PopulateOptions = {},
   PL extends readonly Plugin[] = [],
   M extends MediaOptions | boolean | undefined = undefined,
-  S extends false | SettingsOption | undefined = undefined,
+  S extends false | SettingsOptions | undefined = undefined,
 > = {
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
   collections?: C & NoInfer<CheckRefs<C, C & PluginCollections<PL>> & Record<string, Collection>>;

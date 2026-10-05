@@ -303,7 +303,7 @@ describe("hooks", () => {
     expect(await cms.getGlobal("site")).toEqual(unpublished);
   });
 
-  it("get the session user on HTTP writes", async () => {
+  it("get the session user over HTTP", async () => {
     const seen: unknown[] = [];
     const record = ({ user }: { user: { email: string } | null }) =>
       void seen.push(user?.email ?? null);
@@ -327,8 +327,10 @@ describe("hooks", () => {
     expect(seen).toEqual(["a@b.co", "a@b.co", "a@b.co"]);
     seen.length = 0;
     await client.find("posts");
+    expect(seen).toEqual(["a@b.co"]);
+    seen.length = 0;
     await cms.create("posts", { title: "b" });
-    expect(seen).toEqual([null, null, null, null]);
+    expect(seen).toEqual([null, null, null]);
   });
 
   it("share context with nested calls", async () => {

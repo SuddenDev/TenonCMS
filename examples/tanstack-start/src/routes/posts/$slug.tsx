@@ -8,7 +8,7 @@ import cms from "../../../integral.config";
 const getPost = createServerFn()
   .validator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const api = await cms.forRequest(getRequest());
+    const api = await cms.withSession(getRequest());
     const post = await api.findOne("posts", { where: { slug } });
     if (!post) throw notFound();
     return post;

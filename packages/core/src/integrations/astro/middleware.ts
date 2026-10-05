@@ -8,6 +8,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.integral =
     context.isPrerendered || context.url.pathname.startsWith(API_BASE)
       ? cms
-      : await cms.forRequest(context.request);
+      : await cms.withSession(context.request);
   return next();
 });

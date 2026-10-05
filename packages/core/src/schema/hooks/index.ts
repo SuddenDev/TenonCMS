@@ -63,8 +63,8 @@ export type LocalApi = {
   setGlobal(name: string, data: Record<string, unknown>, options?: WriteOptions): Promise<Row>;
   publishGlobal(name: string): Promise<Row>;
   discardGlobal(name: string): Promise<Row>;
-  /** The same API in the drafts perspective. Reads see unpublished documents and pending drafts. */
-  drafts(): LocalApi;
+  /** Returns a copy of this API whose reads use the drafts perspective: unpublished documents and pending drafts. */
+  withDrafts(): LocalApi;
   /** The media library. Missing without `defineCms({ media })`. */
   media?: MediaApi;
 };
@@ -73,7 +73,7 @@ export type LocalApi = {
 export type HookArgs = {
   /** The local API, bound to the current transaction. Nested calls run their own hooks. Untyped. */
   cms: LocalApi;
-  /** The session user of an HTTP write. `null` for public reads and for server calls of the local API. */
+  /** The session user of an HTTP request or of `cms.withSession()`. `null` without a session and for server calls of the local API. */
   user: User | null;
   /** One object shared by all hooks of an operation and every nested call inside it. Use it to pass values along or to stop loops. */
   context: Record<string, unknown>;

@@ -14,8 +14,14 @@ import { setGlobalLocal } from "../../globals/operations/local/set.local.ts";
 import { publishGlobalLocal } from "../../globals/operations/local/publish.local.ts";
 import { discardGlobalLocal } from "../../globals/operations/local/discard.local.ts";
 
-/** The local API of one scope. The implementation is untyped; `Api` types it for the host. */
-export function bind(core: Core, scope: Scope): LocalApi {
+/**
+ * Creates a local API whose operations use the supplied CMS core and scope.
+ *
+ * @param core CMS state used to resolve schema, database, and media operations.
+ * @param scope Caller context shared by the API's operations.
+ * @returns The local API bound to `core` and `scope`.
+ */
+export function createLocalApi(core: Core, scope: Scope): LocalApi {
   return {
     find: findLocal(core, scope),
     findOne: findOneLocal(core, scope),
@@ -29,7 +35,7 @@ export function bind(core: Core, scope: Scope): LocalApi {
     setGlobal: setGlobalLocal(core, scope),
     publishGlobal: publishGlobalLocal(core, scope),
     discardGlobal: discardGlobalLocal(core, scope),
-    drafts: () => core.bind({ ...scope, drafts: true }),
+    withDrafts: () => core.localApi({ ...scope, perspective: "drafts" }),
     media: core.media && mediaApi(core, scope),
   };
 }

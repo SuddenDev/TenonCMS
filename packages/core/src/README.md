@@ -44,7 +44,7 @@ For `POST /api/cms/collections/posts`, follow:
 
 1. [http/app.ts](http/app.ts) mounts the collection write group after CSRF/session middleware.
 2. [collections/endpoints/create.endpoint.ts](collections/endpoints/create.endpoint.ts) checks the target, parses the body and calls the session-bound `cms.create()`.
-3. [cms/api/bind-api.ts](cms/api/bind-api.ts) assembles methods. [create.local.ts](collections/operations/local/create.local.ts) binds the scope and checks the name, media restriction and draft eligibility.
+3. [cms/api/create-local-api.ts](cms/api/create-local-api.ts) assembles methods. [create.local.ts](collections/operations/local/create.local.ts) binds the scope and checks the name, media restriction and draft eligibility.
 4. [create.operation.ts](collections/operations/create.operation.ts) provides operation arguments to [run-operation.ts](content/lifecycle/run-operation.ts), which opens/reuses the transaction and runs operation hooks.
 5. [write-document.ts](content/writes/write-document.ts) runs defaults, slugs, validation and hooks, then integrity checks and [insert-document.query.ts](db/queries/documents/insert-document.query.ts). It returns through read hooks and operation hooks before commit.
 

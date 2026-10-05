@@ -683,13 +683,13 @@ Reads run in one of two perspectives:
 
 ```ts
 await cms.find("posts"); // published
-await cms.drafts().find("posts"); // drafts
+await cms.withDrafts().find("posts"); // drafts
 ```
 
-Server-rendered pages get the perspective of the visitor with `forRequest()`. It returns the instance with the session user, and in the drafts perspective when the request carries the preview cookie set to `drafts` and a valid session:
+Server-rendered pages get the perspective of the visitor with `withSession()`. It returns the instance with the session user, and in the drafts perspective when the request carries the preview cookie set to `drafts` and a valid session:
 
 ```ts
-const integral = await cms.forRequest(request);
+const integral = await cms.withSession(request);
 const posts = await integral.find("posts");
 ```
 
@@ -849,7 +849,7 @@ export default defineConfig({
 });
 ```
 
-The integration adds a middleware that exposes the instance as `Astro.locals.integral`, fully typed. It is `cms.forRequest(request)`, so the admin's preview sees drafts; prerendered pages and `/api/cms` get the plain instance.
+The integration adds a middleware that exposes the instance as `Astro.locals.integral`, fully typed. It is `cms.withSession(request)`, so the admin's preview sees drafts; prerendered pages and `/api/cms` get the plain instance.
 
 ```astro
 ---

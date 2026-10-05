@@ -8,7 +8,7 @@ import { readDocs, readSpec } from "./read-results.ts";
 /** `getGlobal`. Fields that were never saved are missing. */
 export async function readGlobal(core: Core, s: Inner, name: string, options: ReadOpts) {
   const { spec, select } = readSpec(core, core.schema.globals[name].fields, options, false);
-  const data = (await loadGlobal(await q(core, s), name, s.drafts)) ?? {
+  const data = (await loadGlobal(await q(core, s), name, s.perspective === "drafts")) ?? {
     publishedAt: null,
     hasDraft: false,
   };

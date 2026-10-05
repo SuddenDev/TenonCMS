@@ -87,20 +87,20 @@ describe("drafts perspective", () => {
   it("reads every document with its draft", async () => {
     await unpublished(ids.p.id, { title: "Draft", author: ids.a.id });
     await draft(ids.a.id, { name: "Draft Ann" });
-    const doc = await cms.drafts().findById("posts", ids.p.id);
+    const doc = await cms.withDrafts().findById("posts", ids.p.id);
     expect(doc).toMatchObject({
       title: "Draft",
       publishedAt: null,
       hasDraft: true,
       author: { name: "Draft Ann" },
     });
-    expect(await cms.drafts().find("posts")).toHaveLength(1);
+    expect(await cms.withDrafts().find("posts")).toHaveLength(1);
   });
 
   it("filters on draft data", async () => {
     await draft(ids.t1.id, { name: "uno" });
-    expect(await cms.drafts().find("tags", { where: { name: "uno" } })).toHaveLength(1);
-    expect(await cms.drafts().find("tags", { where: { name: "one" } })).toEqual([]);
+    expect(await cms.withDrafts().find("tags", { where: { name: "uno" } })).toHaveLength(1);
+    expect(await cms.withDrafts().find("tags", { where: { name: "one" } })).toEqual([]);
   });
 
   it("populates joins from drafts", async () => {
@@ -108,7 +108,7 @@ describe("drafts perspective", () => {
     const read = (api: typeof cms) =>
       api.findById("tags", ids.t1.id, { populate: { posts: true } });
     expect((await read(cms))?.posts).toHaveLength(1);
-    expect((await read(cms.drafts()))?.posts).toEqual([]);
+    expect((await read(cms.withDrafts()))?.posts).toEqual([]);
   });
 
   it("reads global drafts", async () => {
@@ -118,7 +118,7 @@ describe("drafts perspective", () => {
       featured: [ids.p.id],
       hasDraft: true,
     });
-    expect(await cms.drafts().getGlobal("site", { populate: false })).toMatchObject({
+    expect(await cms.withDrafts().getGlobal("site", { populate: false })).toMatchObject({
       featured: [],
     });
   });
@@ -137,8 +137,24 @@ describe("drafts perspective", () => {
     } as never;
     await unpublished(ids.p.id, { title: "Draft" });
     await hooked.find("tags");
-    await hooked.drafts().find("tags");
+    await hooked.withDrafts().find("tags");
     expect(seen).toEqual([0, 1]);
+  });
+
+  it("is available to hooks through withDrafts()", async () => {
+    const seen: unknown[] = [];
+    const hooked = relational(url);
+    (hooked.schema.collections!.tags as { hooks?: object }).hooks = {
+      afterRead: [
+        async ({ docs, cms }: any) => {
+          seen.push((await cms.withDrafts().find("posts", { populate: false })).length);
+          return docs;
+        },
+      ],
+    } as never;
+    await unpublished(ids.p.id, { title: "Draft" });
+    await hooked.find("tags");
+    expect(seen).toEqual([1]);
   });
 });
 
@@ -210,7 +226,7 @@ describe("preview over HTTP", () => {
   });
 });
 
-describe("forRequest", () => {
+describe("withSession", () => {
   const request = (cookie?: string) =>
     new Request(origin, { headers: cookie ? { cookie } : undefined });
   async function session() {
@@ -229,23 +245,23 @@ describe("forRequest", () => {
   beforeEach(() => unpublished(ids.p.id, { title: "Draft" }));
 
   it("reads published content without a preview cookie", async () => {
-    expect(await (await cms.forRequest(request())).find("posts")).toEqual([]);
+    expect(await (await cms.withSession(request())).find("posts")).toEqual([]);
     const cookie = await session();
-    expect(await (await cms.forRequest(request(cookie))).find("posts")).toEqual([]);
+    expect(await (await cms.withSession(request(cookie))).find("posts")).toEqual([]);
   });
 
   it("reads drafts with a preview cookie and a session", async () => {
-    expect(await (await cms.forRequest(request("integral-preview=drafts"))).find("posts")).toEqual(
+    expect(await (await cms.withSession(request("integral-preview=drafts"))).find("posts")).toEqual(
       [],
     );
     const cookie = await session();
-    const api = await cms.forRequest(request(`${cookie}; integral-preview=drafts`));
+    const api = await cms.withSession(request(`${cookie}; integral-preview=drafts`));
     expect(await api.find("posts")).toHaveLength(1);
   });
 
   it("reads published content with the published perspective", async () => {
     const cookie = await session();
-    const api = await cms.forRequest(request(`${cookie}; integral-preview=published`));
+    const api = await cms.withSession(request(`${cookie}; integral-preview=published`));
     expect(await api.find("posts")).toEqual([]);
   });
 
@@ -261,9 +277,32 @@ describe("forRequest", () => {
       ],
     } as never;
     const cookie = await session();
-    await (await hooked.forRequest(request(cookie))).find("tags");
-    await (await hooked.forRequest(request())).find("tags");
-    expect(users).toEqual([admin.email, null]);
+    await (await hooked.withSession(request(cookie))).find("tags");
+    await (await hooked.withSession(request())).find("tags");
+    await (await hooked.withSession(request(cookie))).withDrafts().find("tags");
+    expect(users).toEqual([admin.email, null, admin.email]);
+  });
+});
+
+describe("session user of HTTP reads", () => {
+  it("is passed to read hooks, in both perspectives", async () => {
+    const users: unknown[] = [];
+    const hooked = relational(url);
+    (hooked.schema.collections!.tags as { hooks?: object }).hooks = {
+      beforeRead: [
+        ({ docs, user }: any) => {
+          users.push(user?.email ?? null);
+          return docs;
+        },
+      ],
+    } as never;
+    const s = setup(hooked);
+    await s.client.find("tags");
+    await s.client.signUp(admin);
+    await s.client.find("tags");
+    await s.client.preview.enter();
+    await s.client.find("tags");
+    expect(users).toEqual([null, admin.email, admin.email]);
   });
 });
 
@@ -331,7 +370,7 @@ describe("draft writes", () => {
     const doc = await cms.create("posts", { title: "Draft" }, { draft: true });
     expect(doc).toMatchObject({ title: "Draft", publishedAt: null, hasDraft: true });
     expect(await cms.find("posts")).toEqual([]);
-    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({ title: "Draft" });
+    expect(await cms.withDrafts().findById("posts", doc.id)).toMatchObject({ title: "Draft" });
   });
 
   it("keeps the published data on a draft update", async () => {
@@ -403,13 +442,13 @@ describe("draft writes", () => {
   it("merges a plain write in a drafts scope over the published data", async () => {
     const doc = await cms.create("posts", { title: "Live" });
     await cms.update("posts", doc.id, { title: "Next" }, { draft: true });
-    await cms.drafts().update("posts", doc.id, { views: 3 });
+    await cms.withDrafts().update("posts", doc.id, { views: 3 });
     expect(await cms.findById("posts", doc.id)).toMatchObject({
       title: "Live",
       views: 3,
       hasDraft: true,
     });
-    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({ title: "Next" });
+    expect(await cms.withDrafts().findById("posts", doc.id)).toMatchObject({ title: "Next" });
   });
 
   it("publishes without a draft", async () => {
@@ -420,7 +459,7 @@ describe("draft writes", () => {
   it("validates on publish and keeps the draft", async () => {
     const doc = await cms.create("posts", { views: 1 }, { draft: true });
     expect(await errors(cms.publish("posts", doc.id))).toHaveProperty("title");
-    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({
+    expect(await cms.withDrafts().findById("posts", doc.id)).toMatchObject({
       views: 1,
       publishedAt: null,
       hasDraft: true,
@@ -437,14 +476,14 @@ describe("draft writes", () => {
     const doc = await cms.create("posts", { title: "Live" });
     await cms.update("posts", doc.id, { title: "Next" }, { draft: true });
     expect(await cms.discard("posts", doc.id)).toMatchObject({ title: "Live", hasDraft: false });
-    expect(await cms.drafts().findById("posts", doc.id)).toMatchObject({ title: "Live" });
+    expect(await cms.withDrafts().findById("posts", doc.id)).toMatchObject({ title: "Live" });
   });
 
   it("deletes a document that was never published on discard", async () => {
     const post = await cms.create("posts", { title: "A" }, { draft: true });
     const note = await cms.create("notes", { post: post.id });
     expect(await cms.discard("posts", post.id)).toBeUndefined();
-    expect(await cms.drafts().findById("posts", post.id)).toBeUndefined();
+    expect(await cms.withDrafts().findById("posts", post.id)).toBeUndefined();
     expect(await cms.findById("notes", note.id, { populate: false })).toMatchObject({
       post: null,
     });
@@ -473,7 +512,7 @@ describe("draft writes", () => {
     expect(await cms.getGlobal("site")).toMatchObject({ name: "Next", hasDraft: false });
     await cms.setGlobal("site", { name: "Later" }, { draft: true });
     expect(await cms.discardGlobal("site")).toMatchObject({ name: "Next", hasDraft: false });
-    expect(await cms.drafts().getGlobal("site")).toMatchObject({ name: "Next" });
+    expect(await cms.withDrafts().getGlobal("site")).toMatchObject({ name: "Next" });
   });
 
   it("sends drafts in the schema", async () => {

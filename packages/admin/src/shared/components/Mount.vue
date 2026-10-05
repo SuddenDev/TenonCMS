@@ -40,5 +40,5 @@ function onClick(e: MouseEvent) {
 </script>
 
 <template>
-  <div ref="el" @click="onClick" />
+  <div ref="el" class="h-full w-full" @click="onClick" />
 </template>

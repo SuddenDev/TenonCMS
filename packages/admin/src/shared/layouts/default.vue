@@ -149,7 +149,7 @@ providePanes(row);
         <slot v-if="route.meta.panes" />
         <Pane v-else title="Page" :min="448" grow :collapsible="false">
           <template #header><PageTitle :value="route.meta.pageTitle ?? true" /></template>
-          <main class="h-full p-6"><slot /></main>
+          <main class="h-full"><slot /></main>
         </Pane>
       </template>
     </div>

@@ -44,44 +44,46 @@ function openTab() {
 <template>
   <Pane title="Preview" :min="300" grow :collapsible="false">
     <template #header>
-      <label class="flex shrink-0 items-center gap-1.5 pr-1 text-xs">
-        <Switch v-model="edit" />
-        Edit
-      </label>
-      <Button variant="ghost" size="icon-sm" aria-label="Reload" @click="emit('reload')">
-        <Icon name="rotate-cw" />
-      </Button>
-      <form class="flex min-w-0 flex-1" @submit.prevent="submit">
-        <Input
-          v-model="typed"
-          inputmode="url"
-          aria-label="URL"
-          class="h-8 text-xs"
-          @input="editing = true"
-          @keydown.esc="reset"
-          @blur="reset"
-        />
-      </form>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Open in new tab"
-        :disabled="!url"
-        @click="openTab"
-      >
-        <Icon name="external-link" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        :aria-label="mobile ? 'Desktop' : 'Mobile'"
-        @click="mobile = !mobile"
-      >
-        <Icon :name="mobile ? 'monitor' : 'smartphone'" />
-      </Button>
-      <Button variant="ghost" size="icon-sm" aria-label="Close" @click="emit('close')">
-        <Icon name="x" />
-      </Button>
+      <header class="border-border flex h-12 shrink-0 items-center gap-1 border-b pr-2 pl-3">
+        <label class="flex shrink-0 items-center gap-1.5 pr-1 text-xs">
+          <Switch v-model="edit" />
+          Edit
+        </label>
+        <Button variant="ghost" size="icon-sm" aria-label="Reload" @click="emit('reload')">
+          <Icon name="rotate-cw" />
+        </Button>
+        <form class="flex min-w-0 flex-1" @submit.prevent="submit">
+          <Input
+            v-model="typed"
+            inputmode="url"
+            aria-label="URL"
+            class="h-8 text-xs"
+            @input="editing = true"
+            @keydown.esc="reset"
+            @blur="reset"
+          />
+        </form>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Open in new tab"
+          :disabled="!url"
+          @click="openTab"
+        >
+          <Icon name="external-link" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          :aria-label="mobile ? 'Desktop' : 'Mobile'"
+          @click="mobile = !mobile"
+        >
+          <Icon :name="mobile ? 'monitor' : 'smartphone'" />
+        </Button>
+        <Button variant="ghost" size="icon-sm" aria-label="Close" @click="emit('close')">
+          <Icon name="x" />
+        </Button>
+      </header>
     </template>
     <p
       v-if="url === null"

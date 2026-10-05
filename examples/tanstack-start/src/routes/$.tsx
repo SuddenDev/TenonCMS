@@ -10,7 +10,7 @@ const getPage = createServerFn()
   .validator((path: string) => path)
   .handler(async ({ data: path }) => {
     // The request's session and preview cookie, so the admin's preview sees drafts.
-    const api = await cms.forRequest(getRequest());
+    const api = await cms.withSession(getRequest());
     const page = await api.findOne("pages", {
       where: { path },
       populate: { seo: { image: true } },
