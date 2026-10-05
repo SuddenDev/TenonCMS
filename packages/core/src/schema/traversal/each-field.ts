@@ -7,9 +7,11 @@ type Visit = (
   siblings: Record<string, any>,
   path: string,
 ) => unknown;
+
 /**
  * Visits every stored field of `fields` in order, with the object that holds its value. After the visit, a group whose
  * value is an object is walked too, unless `visit` returned `false`. Joins are skipped.
+ * @returns A promise that settles once every field is visited.
  */
 export async function eachField(
   fields: Fields,

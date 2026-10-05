@@ -1,17 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createClient } from "../client/index.ts";
 import { matchCondition } from "./condition.ts";
-import { defineCms } from "../index.ts";
-import { page } from "../presets/index.ts";
-import {
-  type Collection,
-  type Data,
-  defineCollection,
-  defineGlobal,
-  type Doc,
-  type Fields,
-} from "./index.ts";
-import { dataSchema } from "./validation/build-data-schema.ts";
+
 describe("matchCondition", () => {
   const d = { type: "video", price: 5, tag: "", date: "2026-09-24" };
   it.each([

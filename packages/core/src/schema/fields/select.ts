@@ -7,5 +7,6 @@ export type SelectField = Base & {
   options: readonly string[];
 };
 
+/** The validator of a `select` field: one of its `options`. */
 export const selectSchema = (field: SelectField): z.ZodType =>
   z.enum(field.options as [string, ...string[]]);

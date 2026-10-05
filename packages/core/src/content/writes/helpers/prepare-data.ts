@@ -7,9 +7,9 @@ import { runHooks } from "../../../schema/runtime/run-hooks.ts";
 import { isObject } from "../../../schema/condition.ts";
 import { parseData } from "../../../schema/validation/parse-data.ts";
 import { applyDefaults } from "../../../schema/runtime/apply-defaults.ts";
-import { fieldHooks } from "../../../schema/runtime/run-field-hooks.ts";
+import { runFieldHooks } from "../../../schema/runtime/run-field-hooks.ts";
 import { fillSlugs } from "../../../schema/runtime/fill-slugs.ts";
-import { runValidate } from "../../../schema/runtime/validate-fields.ts";
+import { validateFields } from "../../../schema/runtime/validate-fields.ts";
 import { ValidationError } from "../../../errors.ts";
 
 const stripMeta = ({
@@ -51,7 +51,7 @@ export async function prepareData(
   if (isObject(copy)) {
     if (operation === "create") await applyDefaults(fields, copy, args);
     await fillSlugs(fields, copy);
-    await fieldHooks("beforeValidate", fields, copy, fieldArgs(copy));
+    await runFieldHooks("beforeValidate", fields, copy, fieldArgs(copy));
   }
 
   const valid = parseData(
@@ -62,11 +62,11 @@ export async function prepareData(
 
   // Delete effects only clear references, so the document's own rules do not apply.
   if (!effect && !draft) {
-    const errors = await runValidate(fields, valid, fieldArgs(valid));
+    const errors = await validateFields(fields, valid, fieldArgs(valid));
     if (Object.keys(errors).length) throw new ValidationError(errors);
   }
 
-  await fieldHooks("beforeChange", fields, valid, fieldArgs(valid));
+  await runFieldHooks("beforeChange", fields, valid, fieldArgs(valid));
   return parseData(
     fields,
     await runHooks(slot(core, name, "beforeChange"), "data", valid, args),

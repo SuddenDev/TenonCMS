@@ -1,6 +1,6 @@
 import type { Common } from "./common.ts";
 
-// Not stored, so it has no validator; `dataSchema()` skips it.
+/** A reverse list of referencing documents. Not stored, so it has no validator; `dataSchema()` skips it. */
 export type JoinField = Common & {
   /** Not stored. Lists the documents of `collection` whose relation at `on` points here. Only in collections, at the top level. */
   type: "join";

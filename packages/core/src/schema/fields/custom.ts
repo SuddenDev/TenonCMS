@@ -6,5 +6,6 @@ export type CustomField = Base & {
   type: `custom:${string}`;
 };
 
+/** The validator of a `custom:*` field: a string, non-empty when required and active. */
 export const customSchema = (field: CustomField, on: boolean): z.ZodType =>
   on && field.required ? z.string().min(1) : z.string();

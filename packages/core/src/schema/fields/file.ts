@@ -1,6 +1,6 @@
 import type { Base } from "./common.ts";
 
-// Options of `image` and `file`.
+/** Options of `image` and `file`. */
 export type MediaFieldOptions = Base<unknown, string | string[]> & {
   /** Store an array of media ids instead of one. Not filterable. With `required`, at least one id. */
   many?: boolean;

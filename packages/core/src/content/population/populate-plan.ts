@@ -18,7 +18,7 @@ export function toPopulatePlan(
 
 /**
  * A group passes the plan through, one hop at least. A join resolves only when a populate object names it.
- * The type-level twins are `Sub` and `Next` in `inference.ts`.
+ * The type-level twins are `Sub` and `Next` in `schema/inference/read.ts`.
  *
  * @returns Whether the value of `key` resolves at all (`on`), and the plan its value continues with (`child`).
  */

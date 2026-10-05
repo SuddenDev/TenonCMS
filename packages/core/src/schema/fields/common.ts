@@ -1,7 +1,7 @@
 import type { Condition } from "../condition.ts";
 import type { FieldHooks, Fn, HookArgs, Validate } from "../hooks/index.ts";
 
-// Options of every field, joins included.
+/** Options of every field, joins included. */
 export type Common = {
   /** Label in the admin. Defaults to the field key. */
   label?: string;
@@ -16,7 +16,7 @@ export type Common = {
   private?: boolean;
 };
 
-// `V` is the value hooks see. `S` is the stored value, which `default` and `validate` get.
+/** Options of every stored field. `V` is the value hooks see. `S` is the stored value, which `default` and `validate` get. */
 export type Base<V = string, S = V> = Common & {
   /** The value MUST be present on create and update. Optional fields read as `null` or missing. */
   required?: boolean;

@@ -19,7 +19,10 @@ export type RelationField = Base<unknown, string | string[]> & {
   onDelete?: "set-null" | "restrict" | "cascade";
 };
 
-// Also the validator of `image` and `file`, which store media ids.
+/**
+ * The validator of a `relation`, `image` or `file` field: one id, or an array of distinct ids with `many`.
+ * @returns A check that skips `required` when `on` is false.
+ */
 export function relationSchema(
   field: { many?: boolean; required?: boolean },
   on: boolean,

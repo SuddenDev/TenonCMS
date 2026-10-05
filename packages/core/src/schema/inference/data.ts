@@ -1,0 +1,92 @@
+import type { Field, Fields } from "../fields/index.ts";
+import type { Keys } from "./common.ts";
+
+type Scalar = {
+  text: string;
+  textarea: string;
+  date: string;
+  slug: string;
+  number: number;
+  boolean: boolean;
+};
+
+/** The stored ids of a reference field: an array with `many`, else one id. */
+export type Ids<F> = F extends { many: true } ? string[] : string;
+
+/** The stored value of one field. */
+export type FieldValue<F extends Field> = F extends {
+  type: "group";
+  fields: infer G extends Fields;
+}
+  ? Data<G>
+  : F extends { type: "select"; options: readonly (infer O)[] }
+    ? O
+    : F extends { type: "relation" | "image" | "file" }
+      ? Ids<F>
+      : F extends { type: keyof Scalar }
+        ? Scalar[F["type"]]
+        : string;
+
+export type JoinKey<F> = Keys<F, { type: "join" }>;
+export type RequiredKey<F> = Keys<F, { required: true }>;
+
+type RequiredData<F extends Fields> = {
+  [K in Exclude<RequiredKey<F>, JoinKey<F>>]: FieldValue<F[K]>;
+};
+type OptionalData<F extends Fields> = {
+  [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: FieldValue<F[K]> | null;
+};
+
+/** The stored data of `F`. Joins are not stored. */
+export type Data<F extends Fields> = RequiredData<F> & OptionalData<F>;
+
+/** The metadata of every stored document. */
+export type Meta = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  /** When the document was last published. `null`: never published. */
+  publishedAt: string | null;
+  /** Whether a draft is pending. */
+  hasDraft: boolean;
+};
+
+/** A stored document of `F` with its metadata. */
+export type Doc<F extends Fields> = Data<F> & Meta;
+
+/** The meta of a global read. A `select` leaves it out. */
+export type GlobalMeta<S = true> = [S] extends [true] ? Pick<Meta, "publishedAt" | "hasDraft"> : {};
+
+/** A populated `file` field: a document of the media library. */
+export type File = Meta & {
+  /** URL of the original. Computed on read. */
+  url: string;
+  /** Folder path, `''` at the root, e.g. `blog/2026`. */
+  folder: string;
+  filename: string;
+  /** Storage key: `folder/filename`, or `filename` at the root. */
+  key: string;
+  mimeType: string;
+  /** Size in bytes. */
+  size: number;
+  alt?: string | null;
+};
+
+/** A populated `image` field: a `File` with dimensions, and `src` and `srcset` built from the field's `image` options. */
+export type Image = File & {
+  /** URL of the default variant, or of the original without an image provider. */
+  src: string;
+  /** Variants for `<img srcset>`. Empty without an image provider. */
+  srcset: string;
+  width: number;
+  height: number;
+};
+
+/** A populated `image` or `file`, or several with `many`. */
+export type MediaValue<F, T> = F extends { many: true } ? T[] : T;
+
+/** Field keys that `where` accepts. Groups, joins and `many` relations are not filterable. */
+export type FilterKey<F extends Fields> = Exclude<
+  keyof F,
+  Keys<F, { type: "group" | "join" } | { many: true }>
+>;

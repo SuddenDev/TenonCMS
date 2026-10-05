@@ -9,7 +9,11 @@ import { slugSchema } from "./slug.ts";
 import { relationSchema } from "./relation.ts";
 import { customSchema } from "./custom.ts";
 
-/** The validator of one field. `on`: the field's condition matches. Otherwise only the type is checked. */
+/**
+ * Picks the validator of one stored field that is not a group.
+ * @param on Whether the field's condition matches. When `false`, only the type is checked.
+ * @returns The field's zod schema, without `optional` or `nullable`.
+ */
 export function fieldSchema(field: Exclude<StoredField, GroupField>, on: boolean): z.ZodType {
   switch (field.type) {
     case "text":

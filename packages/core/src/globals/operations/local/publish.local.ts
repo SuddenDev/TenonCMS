@@ -1,5 +1,5 @@
 import type { Core, Scope } from "../../../cms/runtime/types.ts";
-import type { LocalApi } from "../../../schema/hooks/index.ts";
+import type { LocalApi } from "../../../cms/api/local-api.ts";
 import { known } from "../../../content/targets.ts";
 import { publishGlobal } from "../publish.operation.ts";
 

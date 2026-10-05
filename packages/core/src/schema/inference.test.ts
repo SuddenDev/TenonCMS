@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { createClient } from "../client/index.ts";
-import { matchCondition } from "./condition.ts";
 import { defineCms } from "../index.ts";
 import { page } from "../presets/index.ts";
 import {
@@ -20,6 +19,7 @@ import { checkSchema } from "./validation/check-schema.ts";
 import { dataSchema } from "./validation/build-data-schema.ts";
 import { relationPaths } from "./traversal/relation-paths.ts";
 import { targetOf } from "./traversal/reference-fields.ts";
+
 describe("group types", () => {
   const fields = {
     seo: { type: "group", fields: { title: { type: "text" }, noindex: { type: "boolean" } } },

@@ -13,6 +13,7 @@ export type FieldArgs = HookArgs & {
   operation: Operation;
 };
 
+/** One field hook. It gets the field's value and MAY return a new one. */
 export type FieldHook<V> = Fn<
   FieldArgs & {
     /** The field's value. Return a new value to replace it. */
@@ -21,7 +22,7 @@ export type FieldHook<V> = Fn<
   V | null | undefined
 >;
 
-// Method syntax makes the parameters bivariant, like `Fn`.
+/** A field's custom check: `true`, or an error message. Method syntax makes the parameters bivariant, like `Fn`. */
 export type Validate<V> = {
   validate(value: V | null | undefined, args: FieldArgs): Awaitable<true | string>;
 }["validate"];

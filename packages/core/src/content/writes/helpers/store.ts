@@ -6,7 +6,7 @@ import { afterRead } from "../../lifecycle/run-read-hooks.ts";
 import { checkRefs } from "../../integrity/check-references.ts";
 import { checkUnique } from "../../integrity/check-unique.ts";
 import { runHooks } from "../../../schema/runtime/run-hooks.ts";
-import { fieldHooks } from "../../../schema/runtime/run-field-hooks.ts";
+import { runFieldHooks } from "../../../schema/runtime/run-field-hooks.ts";
 import { loadGlobal } from "../../../db/queries/globals/load-global.query.ts";
 import { saveGlobalDraft } from "../../../db/queries/drafts/save-global-draft.query.ts";
 import { saveDraft } from "../../../db/queries/drafts/save-draft.query.ts";
@@ -72,7 +72,7 @@ export async function storeDocument(
   else stored = await insertDoc(db, name.name, data);
 
   const fieldArgs = (hookData: Record<string, unknown>) => ({ ...args, data: hookData });
-  await fieldHooks("afterChange", fields, stored, fieldArgs(stored));
+  await runFieldHooks("afterChange", fields, stored, fieldArgs(stored));
   const doc = await runHooks(
     slot(core, name, "afterChange"),
     "doc",

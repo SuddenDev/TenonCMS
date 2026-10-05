@@ -45,7 +45,7 @@ These three internal types explain how calls keep the right user, draft perspect
 
 An ordinary server call starts with `user: null` and the published perspective. Each outer operation gets a fresh `context` object. A call through a hook's `cms` inherits the current user, perspective, context and transaction, and runs its own hooks.
 
-`Core.localApi(scope)` lets the content engine create these nested APIs without importing all feature operations. [create-local-api.ts](api/create-local-api.ts) owns the method assembly; each feature owns its method implementation.
+`Core.localApi(scope)` lets the content engine create these nested APIs without importing all feature operations. [local-api.ts](api/local-api.ts) is the untyped contract that hooks, HTTP routes, plugins and preview functions get as `cms`, and that each `*.local.ts` implements one method of. [create-local-api.ts](api/create-local-api.ts) owns the method assembly; each feature owns its method implementation.
 
 Inside hooks, use the supplied `cms` for nested calls. This keeps those calls in the current transaction. Calling the host's original CMS instance starts an independent operation and can block or fail when the database already has an active transaction.
 

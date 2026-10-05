@@ -1,5 +1,5 @@
 import type { Core, Scope } from "../../../cms/runtime/types.ts";
-import type { LocalApi } from "../../../schema/hooks/index.ts";
+import type { LocalApi } from "../../../cms/api/local-api.ts";
 import { glob, known, draftable } from "../../../content/targets.ts";
 import { discardGlobal } from "../discard.operation.ts";
 

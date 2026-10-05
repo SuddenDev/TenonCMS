@@ -8,4 +8,5 @@ export type DateField = Base & {
   placeholder?: string;
 };
 
+/** The validator of a `date` field: an ISO date. */
 export const dateSchema = (): z.ZodType => z.iso.date();

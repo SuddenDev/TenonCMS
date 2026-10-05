@@ -1,5 +1,5 @@
 import type { Core, Scope } from "../runtime/types.ts";
-import type { LocalApi } from "../../schema/hooks/index.ts";
+import type { LocalApi } from "./local-api.ts";
 import { mediaApi } from "../../media/api.ts";
 import { findLocal } from "../../collections/operations/local/find.local.ts";
 import { findOneLocal } from "../../collections/operations/local/find-one.local.ts";

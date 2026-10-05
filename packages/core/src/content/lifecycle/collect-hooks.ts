@@ -1,7 +1,7 @@
 import { type Core, type Stage } from "../../cms/runtime/types.ts";
 import { type Name, target, isMedia } from "../targets.ts";
 import { type RootHooks } from "../../schema/index.ts";
-import { list } from "../../schema/runtime/run-hooks.ts";
+import { hookList } from "../../schema/runtime/run-hooks.ts";
 
 type Hook = (args: any) => unknown;
 
@@ -14,8 +14,8 @@ export function slot(core: Core, name: Name, stage: Stage): Hook[] {
 
   const own = (target(core, name).hooks as RootHooks | undefined)?.[stage];
   return [
-    ...list<Hook>(own),
-    ...core.plugins.flatMap((p) => list<Hook>(p.hooks?.[stage])),
-    ...list<Hook>(core.rootHooks[stage]),
+    ...hookList<Hook>(own),
+    ...core.plugins.flatMap((p) => hookList<Hook>(p.hooks?.[stage])),
+    ...hookList<Hook>(core.rootHooks[stage]),
   ];
 }

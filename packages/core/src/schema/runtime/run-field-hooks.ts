@@ -2,8 +2,11 @@ import { type Fields, type FieldHooks } from "../index.ts";
 import { eachField } from "../traversal/each-field.ts";
 import { runHooks } from "./run-hooks.ts";
 
-/** Runs one stage of field hooks in place, depth-first. A group's own hooks run before its fields'. */
-export function fieldHooks(
+/**
+ * Runs one stage of field hooks in place, depth-first. A group's own hooks run before its fields'.
+ * @returns A promise that settles once every hook ran.
+ */
+export function runFieldHooks(
   stage: keyof FieldHooks<unknown>,
   fields: Fields,
   data: Record<string, any>,

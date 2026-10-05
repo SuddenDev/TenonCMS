@@ -19,6 +19,10 @@ export type SlugField = Base & {
   path?: string;
 };
 
+/**
+ * The validator of a `slug` field. A value MUST match `SLUG_PATTERN`; an optional slug MAY be empty.
+ * @returns A plain string check when `on` is false.
+ */
 export function slugSchema(field: SlugField, on: boolean): z.ZodType {
   if (!on) return z.string();
   const s = z.string().regex(new RegExp(`^(?:${SLUG_PATTERN})$`, "v"));

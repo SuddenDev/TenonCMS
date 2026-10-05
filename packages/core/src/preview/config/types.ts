@@ -1,4 +1,4 @@
-import type { LocalApi } from "../../schema/hooks/index.ts";
+import type { LocalApi } from "../../cms/api/local-api.ts";
 
 /**
  * Where the live preview opens a document, relative to the site origin.

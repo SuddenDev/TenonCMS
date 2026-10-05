@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Base } from "./common.ts";
 
-// Options of `text` and `textarea`.
+/** Options of `text` and `textarea`. */
 export type TextOptions = {
   /** Shown in the empty input. */
   placeholder?: string;
@@ -25,7 +25,10 @@ export type TextField = Base &
   };
 
 // Browsers compile the HTML `pattern` attribute with the `v` flag. The server MUST match them.
-// Compiled even when unused, so an invalid pattern always throws.
+/**
+ * The validator of a `text` or `textarea` field. The pattern compiles even when `on` is false, so an invalid one always throws.
+ * @returns A plain string check when `on` is false.
+ */
 export function textSchema(field: TextField, on: boolean): z.ZodType {
   const pattern =
     field.pattern === undefined ? undefined : new RegExp(`^(?:${field.pattern})$`, "v");

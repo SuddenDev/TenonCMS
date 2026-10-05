@@ -4,7 +4,7 @@ import { hookArgs } from "./hook-args.ts";
 import { slot } from "./collect-hooks.ts";
 import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { type Operation } from "../../schema/index.ts";
-import { fieldHooks } from "../../schema/runtime/run-field-hooks.ts";
+import { runFieldHooks } from "../../schema/runtime/run-field-hooks.ts";
 
 /**
  * Runs field `afterRead` hooks per document, then the collection's or global's once for the batch.
@@ -21,7 +21,12 @@ export async function afterRead(
   const { fields } = target(core, name);
 
   for (const doc of docs)
-    await fieldHooks("afterRead", fields, doc, hookArgs(s, name, { operation, data: doc, draft }));
+    await runFieldHooks(
+      "afterRead",
+      fields,
+      doc,
+      hookArgs(s, name, { operation, data: doc, draft }),
+    );
 
   const args = hookArgs(s, name, { operation, draft });
   return runHooks(slot(core, name, "afterRead"), "docs", docs, args);

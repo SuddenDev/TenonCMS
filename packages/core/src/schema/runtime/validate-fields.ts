@@ -2,8 +2,11 @@ import { type Fields, type FieldArgs } from "../index.ts";
 import { eachField } from "../traversal/each-field.ts";
 import { matchCondition } from "../condition.ts";
 
-/** The messages of field `validate` functions by path. Fields whose condition is false are skipped, with their children. */
-export async function runValidate(
+/**
+ * Runs the `validate` function of every field. Fields whose condition is false are skipped, with their children.
+ * @returns The error messages by field path. Empty when every field passes.
+ */
+export async function validateFields(
   fields: Fields,
   data: Record<string, any>,
   args: Omit<FieldArgs, "siblingData" | "path">,

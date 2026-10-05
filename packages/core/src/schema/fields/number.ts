@@ -11,6 +11,10 @@ export type NumberField = Base<number> & {
   max?: number;
 };
 
+/**
+ * The validator of a `number` field.
+ * @returns A plain number check when `on` is false.
+ */
 export function numberSchema(field: NumberField, on: boolean): z.ZodType {
   let s = z.number();
   if (on && field.min !== undefined) s = s.min(field.min);

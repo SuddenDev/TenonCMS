@@ -43,6 +43,7 @@ export type Condition = {
   [path: string]: ConditionValue | Operators | readonly Condition[] | undefined;
 };
 
+/** Whether `v` is a plain object: not `null` and not an array. */
 export const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -75,7 +76,10 @@ function test(value: unknown, ops: Operators) {
   });
 }
 
-/** Whether `condition` matches. Core and admin MUST both use this function, so they agree on which fields apply. */
+/**
+ * Checks a condition against a document. Core and admin MUST both use this function, so they agree on which fields apply.
+ * @returns Whether every key of `condition` matches.
+ */
 export function matchCondition(
   condition: Condition,
   data: unknown,

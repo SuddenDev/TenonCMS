@@ -1,7 +1,10 @@
 import { type Fields, type RefField } from "../index.ts";
 import { isRef } from "./reference-fields.ts";
 
-/** Every `relation`, `image` and `file` at the top level and inside groups, with its key path. */
+/**
+ * Finds every `relation`, `image` and `file` at the top level and inside groups.
+ * @returns Each field with its key path, in field order.
+ */
 export function relationPaths(
   fields: Fields,
   prefix: string[] = [],

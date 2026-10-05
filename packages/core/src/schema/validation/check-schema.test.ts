@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createClient } from "../../client/index.ts";
-import { matchCondition } from "../condition.ts";
 import { defineCms } from "../../index.ts";
-import { page } from "../../presets/index.ts";
-import {
-  type Collection,
-  type Data,
-  defineCollection,
-  defineGlobal,
-  type Doc,
-  type Fields,
-} from "../index.ts";
-import { dataSchema } from "./build-data-schema.ts";
+import { type Collection, type Fields } from "../index.ts";
+
 describe("defineCms checks", () => {
   const define =
     (collections: Record<string, Collection>, globals: Record<string, { fields: Fields }> = {}) =>
