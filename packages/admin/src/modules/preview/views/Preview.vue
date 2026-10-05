@@ -92,12 +92,15 @@ async function load() {
   if (at === key.value) url.value = safe(next);
 }
 // A new document loads its URL with its first form state. Typing never changes the `src`.
-// The site root shows first. Back on the list, the page stays where it is.
+// Back on the list, the page stays where it is.
 watch(key, () => {
   draft.value = undefined;
   send({ type: "highlight", collection: null, id: null });
 });
-navigate("");
+
+// The `?url=` page shows first, else the site root. Only a page of the site MAY load, so a link cannot frame another one.
+const start = typeof route.query.url === "string" ? safe(route.query.url) : null;
+navigate(start && new URL(start).origin === new URL(siteUrl()).origin ? start : "");
 
 // A typed URL. The iframe reloads even when `src` did not change, because the page may have moved on.
 function navigate(value: string) {

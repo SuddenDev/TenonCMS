@@ -61,6 +61,7 @@ export function defineCms<
   media: mediaOption,
   settings: settingsOption,
   site,
+  adminBar = {},
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S>) {
   type T = {
@@ -119,6 +120,7 @@ export function defineCms<
     getSession,
     localApi: (scope) => createLocalApi(core, scope),
     media: mediaOptions && createMediaCore(mediaOptions, schema),
+    adminBar,
   };
 
   /* ── Instance ──────────────────────────────────────────────────────────────────────── */

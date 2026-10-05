@@ -1,5 +1,6 @@
 import type { User } from "better-auth";
 import type { Hono, MiddlewareHandler } from "hono";
+import type { AdminBarItemsHook } from "../preview/config/admin-bar.ts";
 import type { Collection, Global, LocalApi, MediaHooks, RootHooks } from "../schema/index.ts";
 
 /** Hono environment of a plugin's {@link Plugin.routes}: the local API bound to the session user, and the user. */
@@ -52,4 +53,6 @@ export type Plugin<
    * Runs after the CSRF and session checks, so `c.var.user` is set and `c.var.cms` runs hooks with that user.
    */
   middleware?: MiddlewareHandler<RouteEnv>;
+  /** Admin bar items. The plugins' hooks run in the order of `plugins`, before the host's `adminBar.items`. */
+  adminBar?: { items?: AdminBarItemsHook };
 };

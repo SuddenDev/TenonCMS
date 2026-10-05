@@ -10,9 +10,35 @@ export default defineConfig(() => ({
   plugins: [vue(), tailwindcss()],
   build: {
     // Vue is bundled in. Hosts plug in through `mount(el)`, so no shared runtime is needed.
-    lib: { entry: "src/index.ts", formats: ["es"], fileName: "index" },
+    lib: {
+      entry: { index: "src/index.ts", bar: "src/admin-bar/index.ts" },
+      formats: ["es"],
+      fileName: (_, name) => `${name}.js`,
+    },
     outDir: "../core/dist/admin",
     emptyOutDir: false,
+  },
+  css: {
+    postcss: {
+      plugins: [
+        {
+          // Chrome ignores `@property` in shadow roots, so the admin bar needs the fallbacks unconditionally.
+          postcssPlugin: "unwrap-properties",
+          AtRule: {
+            supports(rule) {
+              const parent = rule.parent;
+              if (
+                parent?.type === "atrule" &&
+                "name" in parent &&
+                parent.name === "layer" &&
+                parent.params === "properties"
+              )
+                rule.replaceWith(rule.nodes ?? []);
+            },
+          },
+        },
+      ],
+    },
   },
   resolve: {
     alias: {

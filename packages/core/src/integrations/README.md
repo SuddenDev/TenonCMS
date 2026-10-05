@@ -8,7 +8,7 @@ The Astro integration and the Nuxt module set up a host through:
 
 alias `#integral/config` → API route → `admin/` (path, alias, favicon, entry, page) → preview runtime → injected types
 
-The aliases point the runtime files at the host's config and `integral.admin.ts`. The API route passes every `/api/cms` request to `cms.fetch`. `adminPath()` validates the admin path; the admin page loads `src/admin/entry.ts`, a second client entry in the host's Vite build. The preview runtime gets the admin path (or `false`) for the bars' links: Astro writes it into the injected script, Nuxt into `runtimeConfig.public.integral.admin`. Last, the types fill the client's `Register`, and on Astro `App.Locals`.
+The aliases point the runtime files at the host's config and `integral.admin.ts`. The API route passes every `/api/cms` request to `cms.fetch`. `adminPath()` validates the admin path; the admin page loads `src/admin/entry.ts`, a second client entry in the host's Vite build. The preview runtime gets the admin path (or `false`) for the admin bar's links: Astro writes it into the injected script, Nuxt into `runtimeConfig.public.integral.admin`. Last, the types fill the client's `Register`, and on Astro `App.Locals`.
 
 ## Files
 

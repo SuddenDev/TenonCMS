@@ -1,0 +1,37 @@
+@import "tailwindcss" source(none);
+@source "./";
+@source "../shared/components/Icon.vue";
+@source "../shared/components/ui/{dropdown-menu,sheet,switch,button}";
+@import "tw-animate-css";
+@import "shadcn-vue/tailwind.css";
+@import "../shared/theme.css";
+@custom-variant dark (&:is(.dark *));
+
+/* Chrome ignores `@font-face` in shadow roots, so the bar uses the system font. */
+:host {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Inherited properties reach the shadow root from the host page, and `:host` rules lose to the page's.
+ * The wrapper holds the bar and its portals, so it resets them for both.
+ */
+.admin-bar-root {
+  all: initial;
+  display: block;
+  font-family: var(--font-sans);
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  .admin-bar-root * {
+    @apply border-border outline-ring/50;
+  }
+  .admin-bar-root button:not(:disabled),
+  .admin-bar-root [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}

@@ -1,7 +1,6 @@
+import { isObject } from "../../schema/condition.ts";
 import type { Drafts } from "../config/types.ts";
-
-const isObject = (v: unknown): v is Record<string, any> =>
-  !!v && typeof v === "object" && !Array.isArray(v);
+import { draftKey } from "./store.ts";
 
 const idOf = (v: unknown) => (isObject(v) ? v.id : v);
 
@@ -22,7 +21,7 @@ function sameIds(draft: unknown, current: unknown) {
  */
 export function merge<T>(collection: string, doc: T, drafts: Drafts): T {
   if (!isObject(doc)) return doc;
-  const draft = drafts[`${collection}:${doc.id ?? ""}`];
+  const draft = drafts[draftKey(collection, String(doc.id ?? ""))];
   if (!draft) return doc;
   const out: Record<string, unknown> = { ...doc };
   for (const [key, value] of Object.entries(draft))

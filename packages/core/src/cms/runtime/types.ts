@@ -1,8 +1,9 @@
 import { type Database } from "../../db/types.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import { type Plugin } from "../../plugins/index.ts";
+import type { AdminBarOptions } from "../../preview/config/admin-bar.ts";
 import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
-import type { User } from "better-auth";
+import type { BetterAuthOptions, User } from "better-auth";
 import type { Kysely } from "kysely";
 
 /**
@@ -19,7 +20,7 @@ export type Core = {
   /** Connects and migrates on the first call. */
   db: () => Promise<Kysely<Database>>;
   /** Creates better-auth on the first call. Throws for a bad `secret`. */
-  auth: () => Promise<{ handler(request: Request): Promise<Response> }>;
+  auth: () => Promise<{ handler(request: Request): Promise<Response>; options: BetterAuthOptions }>;
   /** The session of a request's headers, or `null`. */
   getSession: (headers: Headers) => Promise<{ user: User } | null>;
   /**
@@ -29,6 +30,8 @@ export type Core = {
   localApi: (scope: Scope) => LocalApi;
   /** The resolved `media` option. Missing without it. */
   media?: MediaCore;
+  /** The `adminBar` option. `false` mounts no `/admin-bar` route. */
+  adminBar: false | AdminBarOptions;
 };
 export type Stage = keyof RootHooks;
 

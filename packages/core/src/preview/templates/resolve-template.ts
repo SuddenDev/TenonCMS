@@ -1,11 +1,10 @@
-// This file MUST have no imports. Browser code may bundle it.
-const PLACEHOLDER = /\{([^{}]+)\}/g;
+import { PLACEHOLDER } from "./placeholders.ts";
 
 /**
  * Fills each `{dot.path}` with the value at that path of `doc`. Returns `null` when a value is missing, empty or not a
  * string or number, so a half-filled document has no preview.
  */
-export function resolve(template: string, doc: unknown): string | null {
+export function resolveTemplate(template: string, doc: unknown): string | null {
   let missing = false;
   const url = template.replace(PLACEHOLDER, (_, path: string) => {
     const value = path

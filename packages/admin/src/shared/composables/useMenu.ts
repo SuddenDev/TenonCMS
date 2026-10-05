@@ -124,10 +124,10 @@ export function useMenu() {
 export type Tool = MenuItem & { active: boolean };
 
 /**
- * The top bar tools: Content (order 5), Visual Editor (order 10) and every entry with
+ * The admin's top bar tools: Content (order 5), Visual Editor (order 10) and every entry with
  * `nav.display: "main"`, all sorted by `order`.
  */
-export function useToolbar() {
+export function useAppBar() {
   const entries = useEntries();
   const route = useRoute();
   return computed<Tool[]>(() => {

@@ -8,7 +8,8 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "paths": {
-      "integral-cms/media/default": ["./src/media/default.ts"]
+      "integral-cms/media/default": ["./src/media/default.ts"],
+      "integral-cms/admin/bar": ["./src/admin/bar.d.ts"]
     }
   },
   "include": ["src", "env.d.ts"]

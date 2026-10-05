@@ -28,13 +28,13 @@ import {
   Icon,
   Pane,
   usePerspective,
-  useToolbar,
+  useAppBar,
   type Perspective,
 } from "@/shared";
 
 const route = useRoute();
 const { name, logo, icon } = useBrand();
-const tools = useToolbar();
+const tools = useAppBar();
 const { perspective, set } = usePerspective();
 const perspectives = [
   { value: "drafts", label: "Drafts" },

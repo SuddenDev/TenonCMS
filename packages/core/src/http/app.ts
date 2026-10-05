@@ -7,6 +7,7 @@ import type { Env } from "./middleware/types.ts";
 import { withCms } from "./middleware/with-cms.middleware.ts";
 import { session } from "../auth/middleware/session.middleware.ts";
 import { providerEndpoint } from "../auth/endpoints/provider.endpoint.ts";
+import { sessionHint } from "../auth/middleware/session-hint.middleware.ts";
 import { pluginMiddleware } from "../plugins/http/collect-middleware.ts";
 import { mountRoutes } from "../plugins/http/mount-routes.ts";
 import { collectionsRoutes } from "../collections/endpoints/routes.ts";
@@ -14,6 +15,7 @@ import { globalsRoutes } from "../globals/endpoints/routes.ts";
 import { readEndpoint } from "../schema/endpoints/read.endpoint.ts";
 import { enterEndpoint } from "../preview/endpoints/enter.endpoint.ts";
 import { exitEndpoint } from "../preview/endpoints/exit.endpoint.ts";
+import { adminBarEndpoint } from "../preview/endpoints/admin-bar.endpoint.ts";
 import { handleError } from "./errors.ts";
 
 /**
@@ -39,6 +41,7 @@ export function createApp(core: Core, site?: string) {
   writes.route("/", schemaEndpoint);
   writes.route("/", enterEndpoint());
   writes.route("/", exitEndpoint());
+  if (core.adminBar) writes.route("/", adminBarEndpoint(core.adminBar, plugins));
   mountRoutes(writes, plugins, "routes");
   if (media) writes.route("/media", media.writes);
   writes.route("/", collections.writes);
@@ -48,6 +51,7 @@ export function createApp(core: Core, site?: string) {
   api.onError(handleError);
   api.notFound((c) => c.json({ message: "Not Found" }, 404));
   api.use(withCms(core), ...pluginMiddleware(plugins, "publicMiddleware"));
+  api.use("/auth/*", sessionHint(core));
   api.route("/", providerEndpoint(core));
   api.route("/", reads);
   api.use(csrf(), session(core), ...pluginMiddleware(plugins, "middleware"));

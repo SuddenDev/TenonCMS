@@ -548,20 +548,30 @@ The second argument is optional. It takes the [settings](#settings) globals `gen
 
 ```astro
 ---
-import { breadcrumbs } from 'integral-cms'
+import { breadcrumbs } from "integral-cms";
 
-const page = await Astro.locals.integral.findOne('pages', {
+const page = await Astro.locals.integral.findOne("pages", {
   where: { path },
   populate: { parent: { parent: true } },
-  select: { title: true, path: true, parent: { title: true, path: true, parent: { title: true, path: true } } },
-})
-const trail = breadcrumbs(page) // [{ title: 'About', path: '/about' }, …, { title: 'Person', path: '/about/team/person' }]
+  select: {
+    title: true,
+    path: true,
+    parent: { title: true, path: true, parent: { title: true, path: true } },
+  },
+});
+const trail = breadcrumbs(page); // [{ title: 'About', path: '/about' }, …, { title: 'Person', path: '/about/team/person' }]
 ---
 
 <nav aria-label="Breadcrumb">
   <ol>
     {trail.map((crumb, i) => (
-      <li>{i === trail.length - 1 ? <span aria-current="page">{crumb.title}</span> : <a href={crumb.path}>{crumb.title}</a>}</li>
+      <li>
+        {i === trail.length - 1 ? (
+          <span aria-current="page">{crumb.title}</span>
+        ) : (
+          <a href={crumb.path}>{crumb.title}</a>
+        )}
+      </li>
     ))}
   </ol>
 </nav>
@@ -647,10 +657,10 @@ Bound elements get the typed text, or the listed attributes, on every keystroke.
 The runtime picks its mode from `window.name`:
 
 - In the admin's preview iframe it applies the unsaved state, without a bar.
-- In a preview the admin opened in a tab, it also shows the **preview bar** at the top: an "Edit" switch, a Drafts / Published toggle and "Exit preview".
-- On any other page, a signed-in editor with the preview cookie gets the **admin bar**: a link to the admin, one "Edit …" link per document or global bound on the page, and the Drafts / Published toggle. It checks the session with one request first; without one there is no bar.
+- In a preview the admin opened in a tab, it also shows the **admin bar** with an "Edit" switch and "Exit preview".
+- On any other page, a signed-in editor gets the **admin bar**. Visitors download nothing extra: the bar loads only when the `integral-session` cookie is set, which sign-in sets and sign-out clears.
 
-`preview({ admin: "/cms" })` sets the admin path for the links (default `/admin`); `admin: false` turns the admin bar off. The Astro and Nuxt adapters pass their own `admin` option.
+`preview({ admin: "/cms" })` sets the admin path for the links (default `/admin`); `admin: false` turns the admin bar off on the site. The Astro and Nuxt adapters pass their own `admin` option.
 
 Vue and React pages can re-render from the unsaved state too, so lists and conditions follow. `useDraft()` merges it into the document and starts the runtime:
 
@@ -671,6 +681,48 @@ useEffect(() => preview(), []);
 // src/routes/posts/$slug.tsx
 const post = useDraft("posts", Route.useLoaderData());
 ```
+
+#### Admin bar
+
+The admin bar is a slim bar over the page: "Dashboard" on the left; "Edit …" (one link per document or global bound on the page, a dropdown for several), "Live edit" (opens the page in the Visual Editor) and the Drafts / Published menu on the right. It hides while you scroll down and comes back when you scroll up. On phones the right side moves into a menu. It follows the system's light or dark mode, and the host page's CSS cannot reach it.
+
+```ts
+// integral.config.ts
+defineCms({
+  // Omitted: at the top with the built-in items. `false`: no bar.
+  adminBar: {
+    position: "bottom",
+    // Gets the whole list and returns a new one, so it can add, replace, reorder or drop items.
+    items: (items, { user, cms, url }) => [
+      ...items,
+      {
+        id: "analytics",
+        label: "Analytics",
+        icon: "chart-bar",
+        href: `/admin/reports?url=${encodeURIComponent(url)}`,
+      },
+    ],
+  },
+});
+```
+
+An item has a unique `id` (a later one replaces an earlier one), a `label`, and `href` or `children` (a dropdown); `group` (`start` or `end`, default `end`), `order` and `icon` are optional. The built-in ids are `dashboard`, `edit`, `live-edit`, `perspective` and, in a preview tab, `exit-preview`, with orders 10 to 40; items without `order` follow them. Items from the server MUST be JSON, so they have no `onClick` or `mount`. `url` is the page the bar shows on; it comes from the browser and is never fetched. A hook that throws is logged and skipped.
+
+Page code adds items with click handlers:
+
+```ts
+import { addAdminBarItem } from "integral-cms/preview";
+
+const remove = addAdminBarItem({
+  id: "clear-cache",
+  label: "Clear cache",
+  onClick: () => fetch("/purge"),
+});
+```
+
+An item with `mount(el, ctx)` renders its own element with plain DOM, like the admin's extension slots. It returns a cleanup function or `{ update(ctx), unmount() }`; `update` gets the new context, e.g. after a perspective change. `el` sits in the bar's shadow root, so the page's CSS does not reach it: style it inline. `label` names it in the mobile menu. See `examples/astro/src/admin-bar.ts`.
+
+Plugins add items with `adminBar.items`, see [Plugins](#plugins). Items compose in this order: built-ins, the plugins' hooks, the host's hook, then `addAdminBarItem()` calls.
 
 ### Drafts
 
@@ -853,8 +905,8 @@ The integration adds a middleware that exposes the instance as `Astro.locals.int
 
 ```astro
 ---
-export const prerender = false
-const posts = await Astro.locals.integral.find('posts')
+export const prerender = false;
+const posts = await Astro.locals.integral.find("posts");
 ---
 ```
 
@@ -1073,6 +1125,7 @@ The server half, from `definePlugin()`:
 | `publicRoutes`     | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                                             |
 | `publicMiddleware` | Hono middleware for every `/api/cms` request, auth included, before any route. `c.var.cms` has no user. Return a response to stop the request (rate limits, logging, headers) |
 | `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set                                          |
+| `adminBar`         | `{ items }`: an [admin bar](#admin-bar) items hook, like the host's. Plugin hooks run in plugin order, before the host's                                                      |
 
 Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `auth`, `collections`, `globals` and `schema` are reserved names.
 

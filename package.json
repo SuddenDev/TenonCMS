@@ -18,7 +18,7 @@
     "dev:standalone": "pnpm build:packages && CMS_URL=http://localhost:3200 pnpm --parallel --filter integral-cms --filter @integral-cms/admin --filter example-standalone dev",
     "build": "pnpm build:packages && pnpm --filter \"./examples/*\" build",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
-    "test": "pnpm --filter integral-cms test",
+    "test": "pnpm --filter integral-cms --filter @integral-cms/admin test",
     "fmt": "oxfmt && prettier --write \"**/*.astro\"",
     "fmt:check": "oxfmt --check && prettier --check \"**/*.astro\"",
     "lint": "oxlint",

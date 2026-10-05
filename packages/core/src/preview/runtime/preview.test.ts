@@ -1,37 +1,46 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { preview, type Unsubscribe } from "../index.ts";
+import type { AdminBarContext } from "../../admin/index.d.ts";
+import { addAdminBarItem, preview, type Unsubscribe } from "../index.ts";
+import { builtIns } from "./admin-bar-items.ts";
+
+const handle = { update: vi.fn<(ctx: AdminBarContext) => void>(), unmount: vi.fn() };
+const mountAdminBar = vi.fn((_el: ShadowRoot, _ctx: AdminBarContext) => handle);
+vi.mock("integral-cms/admin/bar", () => ({ mountAdminBar }));
 
 describe("preview", () => {
   let stop: Unsubscribe = () => {};
-  const bar = () => document.querySelector("[data-cms-bar]");
-  const button = (text: string) =>
-    [...bar()!.querySelectorAll("button")].find((b) => b.textContent === text)!;
   const cookie = (value: string) => {
     document.cookie = `integral-preview=${value}; path=/`;
   };
-  const session = (body: unknown) =>
+  const hint = () => {
+    document.cookie = "integral-session=1; path=/";
+  };
+  const serve = (status: number, body: unknown) =>
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(JSON.stringify(body))),
+      vi.fn(async () => new Response(JSON.stringify(body), { status })),
     );
+  const mounted = async () => {
+    await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
+    return mountAdminBar.mock.calls[0]![1];
+  };
 
   beforeEach(() => {
     window.name = "";
     document.cookie = "integral-preview=; max-age=0; path=/";
+    document.cookie = "integral-session=; max-age=0; path=/";
     document.body.innerHTML = "";
+    serve(200, { position: "bottom", items: builtIns("site") });
     vi.spyOn(location, "reload").mockImplementation(() => {});
   });
   afterEach(() => {
     stop();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
-  });
-
-  it("shows no bar in the admin's iframe", () => {
-    window.name = "integral-preview";
-    stop = preview();
-    expect(bar()).toBeNull();
+    mountAdminBar.mockClear();
+    handle.update.mockClear();
+    handle.unmount.mockClear();
   });
 
   it("talks only to the admin's origin in the window that opened it, after its first message", () => {
@@ -115,43 +124,201 @@ describe("preview", () => {
     expect(lit()).toEqual([]);
   });
 
-  it("shows the preview bar in a preview tab and removes it on stop", () => {
-    window.name = "integral-preview-1";
+  it("shows no admin bar in the admin's iframe", () => {
+    window.name = "integral-preview";
+    hint();
     stop = preview();
-    expect(bar()).not.toBeNull();
-    expect(document.documentElement.style.marginTop).toBe("32px");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("asks for no admin bar without the session hint", () => {
+    cookie("drafts");
+    stop = preview();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("asks for no admin bar with admin: false", () => {
+    hint();
+    stop = preview({ admin: false });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("asks for no admin bar on the admin's own pages", () => {
+    hint();
+    history.pushState(null, "", "/cms/collections/pages");
+    stop = preview({ admin: "/cms" });
+    history.pushState(null, "", "/");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("mounts the admin bar with the filled items for the session hint", async () => {
+    hint();
+    cookie("drafts");
+    document.body.innerHTML = `<h1 data-cms="pages:p1:title"></h1><p data-cms="pages:p1:body"></p>`;
+    stop = preview({ admin: "/cms" });
+    const ctx = await mounted();
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/cms/admin-bar?url=${encodeURIComponent(location.href)}`,
+      { credentials: "same-origin" },
+    );
+    expect(document.documentElement.lastElementChild!.hasAttribute("data-cms-bar")).toBe(true);
+    expect(mountAdminBar.mock.calls[0]![0]).toBeInstanceOf(ShadowRoot);
+    expect(ctx).toMatchObject({
+      position: "bottom",
+      mode: "site",
+      perspective: "drafts",
+      edit: false,
+    });
+    expect(ctx.items).toEqual([
+      { id: "dashboard", group: "start", order: 10, label: "Dashboard", href: "/cms" },
+      {
+        id: "edit",
+        group: "end",
+        order: 10,
+        label: "Edit pages",
+        href: "/cms/content/collections/pages/p1",
+      },
+      {
+        id: "live-edit",
+        group: "end",
+        order: 20,
+        label: "Live edit",
+        href: `/cms/presentation?url=${encodeURIComponent(location.href)}`,
+      },
+      { id: "perspective", group: "end", order: 30, label: "Drafts" },
+    ]);
+  });
+
+  it("lists several bound documents under one Edit item", async () => {
+    hint();
+    document.body.innerHTML = `<h1 data-cms="posts:x:title"></h1><footer data-cms="footer::text"></footer>`;
+    stop = preview({ admin: "/cms" });
+    const edit = (await mounted()).items.find((i) => i.id === "edit");
+    expect(edit).toEqual({
+      id: "edit",
+      group: "end",
+      order: 10,
+      label: "Edit",
+      children: [
+        { id: "edit:posts:x", label: "Edit posts", href: "/cms/content/collections/posts/x" },
+        { id: "edit:footer:", label: "Edit footer", href: "/cms/content/globals/footer" },
+      ],
+    });
+  });
+
+  it("drops Edit without bound documents and keeps labels the hooks changed", async () => {
+    hint();
+    serve(200, {
+      position: "top",
+      items: [
+        { id: "dashboard", group: "start", order: 10, label: "Back office" },
+        { id: "edit", group: "end", order: 10, label: "Edit" },
+        { id: "analytics", label: "Analytics", href: "/stats" },
+      ],
+    });
+    stop = preview();
+    expect((await mounted()).items).toEqual([
+      { id: "dashboard", group: "start", order: 10, label: "Back office", href: "/admin" },
+      { id: "analytics", label: "Analytics", href: "/stats" },
+    ]);
+  });
+
+  it("finds documents bound after the first scan", async () => {
+    hint();
+    stop = preview();
+    await mounted();
+    document.body.innerHTML = `<h1 data-cms="posts:x:title"></h1>`;
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    const ctx = handle.update.mock.lastCall![0];
+    expect(ctx.items.find((i) => i.id === "edit")?.label).toBe("Edit posts");
+  });
+
+  it("mounts nothing and clears the hint on 401", async () => {
+    hint();
+    serve(401, {});
+    stop = preview();
+    await vi.waitFor(() => expect(document.cookie).not.toContain("integral-session"));
+    await new Promise((r) => setTimeout(r));
+    expect(mountAdminBar).not.toHaveBeenCalled();
+  });
+
+  it("mounts nothing and keeps the hint on another error", async () => {
+    hint();
+    serve(500, {});
+    stop = preview();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r));
+    expect(mountAdminBar).not.toHaveBeenCalled();
+    expect(document.cookie).toContain("integral-session=1");
+  });
+
+  it("updates the bar with items from page code and removes them again", async () => {
+    hint();
+    stop = preview();
+    await mounted();
+    const remove = addAdminBarItem({ id: "purge", label: "Purge", onClick: () => {} });
+    expect(handle.update.mock.lastCall![0].items.at(-1)).toMatchObject({ id: "purge" });
+    remove();
+    expect(handle.update.mock.lastCall![0].items.some((i) => i.id === "purge")).toBe(false);
+  });
+
+  it("unmounts the bar and removes its host on stop", async () => {
+    hint();
+    stop = preview();
+    await mounted();
     stop();
-    expect(bar()).toBeNull();
-    expect(document.documentElement.style.marginTop).toBe("");
+    expect(handle.unmount).toHaveBeenCalled();
+    expect(document.querySelector("[data-cms-bar]")).toBeNull();
   });
 
-  it("toggles edit mode from the preview bar", () => {
-    window.name = "integral-preview-1";
+  it("mounts nothing when stopped before the bar loads", async () => {
+    hint();
     stop = preview();
-    const input = bar()!.querySelector("input")!;
-    input.click();
-    expect(document.documentElement.hasAttribute("data-cms-edit")).toBe(true);
-    input.click();
-    expect(document.documentElement.hasAttribute("data-cms-edit")).toBe(false);
+    stop();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mountAdminBar).not.toHaveBeenCalled();
+    expect(document.querySelector("[data-cms-bar]")).toBeNull();
   });
 
-  it("leaves the preview tab on exit", () => {
+  it("mounts the bar in a preview tab without the hint, with Exit preview", async () => {
     window.name = "integral-preview-1";
     stop = preview();
-    button("Exit preview").click();
+    const ctx = await mounted();
+    expect(ctx.mode).toBe("preview-tab");
+    expect(ctx.items.find((i) => i.id === "live-edit")).toEqual({
+      id: "live-edit",
+      group: "end",
+      order: 20,
+      label: "Live edit",
+    });
+    ctx.items.find((i) => i.id === "exit-preview")!.onClick!();
     expect(window.name).toBe("");
     expect(location.reload).toHaveBeenCalled();
   });
 
-  it("switches the perspective and reloads", async () => {
+  it("keeps the edit switch and the admin's mode message in sync", async () => {
     window.name = "integral-preview-1";
-    cookie("drafts");
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    stop = preview();
+    const ctx = await mounted();
+    const html = document.documentElement;
+    ctx.setEdit(true);
+    expect(html.hasAttribute("data-cms-edit")).toBe(true);
+    expect(handle.update.mock.lastCall![0].edit).toBe(true);
+    const mode = { data: { type: "mode", edit: false }, origin: location.origin, source: opener };
+    window.dispatchEvent(new MessageEvent("message", mode as never));
+    expect(html.hasAttribute("data-cms-edit")).toBe(false);
+    expect(handle.update.mock.lastCall![0].edit).toBe(false);
+  });
+
+  it("switches the perspective and reloads", async () => {
+    hint();
+    stop = preview();
+    const ctx = await mounted();
     const post = vi.fn(async () => new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", post);
-    stop = preview();
-    expect(button("Drafts").getAttribute("aria-pressed")).toBe("true");
-    expect(button("Published").getAttribute("aria-pressed")).toBe("false");
-    button("Published").click();
+    ctx.setPerspective("published");
     await vi.waitFor(() => expect(location.reload).toHaveBeenCalled());
     expect(post).toHaveBeenCalledWith("/api/cms/preview", {
       method: "POST",
@@ -159,61 +326,5 @@ describe("preview", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ perspective: "published" }),
     });
-  });
-
-  it("does nothing on a site page without the preview cookie", () => {
-    session({ user: {} });
-    stop = preview();
-    expect(fetch).not.toHaveBeenCalled();
-    expect(bar()).toBeNull();
-  });
-
-  it("shows no admin bar without a session", async () => {
-    cookie("drafts");
-    session(null);
-    stop = preview();
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
-    await new Promise((r) => setTimeout(r));
-    expect(fetch).toHaveBeenCalledWith("/api/cms/auth/get-session", { credentials: "same-origin" });
-    expect(bar()).toBeNull();
-  });
-
-  it("shows no admin bar with admin: false", () => {
-    cookie("drafts");
-    session({ user: {} });
-    stop = preview({ admin: false });
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("shows no admin bar on the admin's own pages", () => {
-    cookie("drafts");
-    session({ user: {} });
-    history.pushState(null, "", "/cms/collections/pages");
-    stop = preview({ admin: "/cms" });
-    history.pushState(null, "", "/");
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("shows the admin bar with edit links for a session", async () => {
-    cookie("published");
-    session({ user: {} });
-    document.body.innerHTML = `
-      <h1 data-cms="pages:p1:title"></h1>
-      <p data-cms="pages:p1:body"></p>
-      <p data-cms="posts:x:title"></p>
-      <footer data-cms="footer::text"></footer>`;
-    stop = preview({ admin: "/cms" });
-    await vi.waitFor(() => expect(bar()).not.toBeNull());
-    const links = [...bar()!.querySelectorAll("a")].map((a) => [
-      a.textContent,
-      a.getAttribute("href"),
-    ]);
-    expect(links).toEqual([
-      ["Admin", "/cms"],
-      ["Edit pages", "/cms/presentation/collections/pages/p1"],
-      ["Edit posts", "/cms/presentation/collections/posts/x"],
-      ["Edit footer", "/cms/presentation/globals/footer"],
-    ]);
-    expect(button("Published").getAttribute("aria-pressed")).toBe("true");
   });
 });

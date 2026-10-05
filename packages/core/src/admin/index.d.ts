@@ -109,6 +109,67 @@ export type Nav = {
   order?: number;
 };
 
+/**
+ * An entry of the admin bar, the bar signed-in editors see on the site.
+ *
+ * Built-in ids: `dashboard` (group `start`), `edit`, `live-edit`, `perspective` and `exit-preview` (group `end`,
+ * orders 10 to 40).
+ */
+export type AdminBarItem = {
+  /** Unique. A later item with the same id replaces the earlier one. */
+  id: string;
+  /** Side of the bar. `start` is left, `end` is right and moves into a menu sheet on small screens. Defaults to `end`. */
+  group?: "start" | "end";
+  /** Position within the group, lowest first. Items without one follow the ordered ones, in insertion order. */
+  order?: number;
+  /** Text of the item. */
+  label: string;
+  /** Lucide icon name, e.g. `chart-bar`. See https://lucide.dev/icons. */
+  icon?: IconName;
+  /** Link target. */
+  href?: string;
+  /** Runs on click. Only items from page code have one: server items MUST be JSON. */
+  onClick?: () => void;
+  /** Entries of a dropdown. The item opens them instead of linking. */
+  children?: AdminBarItem[];
+  /**
+   * Renders the item into `el` instead of a button, with plain DOM. Only items from page code have one. `el` sits in
+   * the bar's shadow root, so the page's CSS does not reach it: style it inline. `label` names it in the mobile menu.
+   * @example
+   * mount: (el, ctx) => {
+   *   el.textContent = ctx.perspective;
+   *   return { update: (next) => (el.textContent = next.perspective), unmount: () => el.replaceChildren() };
+   * }
+   */
+  mount?: Mount<AdminBarContext>;
+};
+
+/** An {@link AdminBarItem} from a server hook. It MUST be JSON, so it has no `onClick` or `mount`. */
+export type ServerAdminBarItem = Omit<AdminBarItem, "onClick" | "children" | "mount"> & {
+  onClick?: never;
+  mount?: never;
+  /** Entries of a dropdown. The item opens them instead of linking. */
+  children?: ServerAdminBarItem[];
+};
+
+/** What the admin bar renders. The site's preview runtime owns it and passes a new one on every change. */
+export type AdminBarContext = {
+  /** Edge of the page the bar sits at. */
+  position: "top" | "bottom";
+  /** `site` for a normal visit, `preview-tab` for a preview the admin opened in a tab. */
+  mode: "site" | "preview-tab";
+  /** Items to show, composed and sorted. */
+  items: AdminBarItem[];
+  /** Which version of documents the page shows. */
+  perspective: "drafts" | "published";
+  /** Whether the on-page edit mode is on. Only used in a preview tab. */
+  edit: boolean;
+  /** Switches the perspective. Reloads the page. */
+  setPerspective(perspective: "drafts" | "published"): void;
+  /** Turns the on-page edit mode on or off. */
+  setEdit(edit: boolean): void;
+};
+
 /** One step of the breadcrumbs. */
 export type Crumb = {
   /** Text of the step. */

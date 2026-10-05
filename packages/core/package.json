@@ -34,6 +34,10 @@
       "types": "./dist/admin/index.d.ts",
       "default": "./dist/admin/index.js"
     },
+    "./admin/bar": {
+      "types": "./dist/admin/bar.d.ts",
+      "default": "./dist/admin/bar.js"
+    },
     "./admin/vue": {
       "types": "./dist/admin/vue.d.mts",
       "default": "./dist/admin/vue.mjs"

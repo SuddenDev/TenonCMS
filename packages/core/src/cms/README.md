@@ -37,11 +37,11 @@ The first `auth()` call checks that `secret` has at least 32 characters, initial
 
 These three internal types explain how calls keep the right user, draft perspective and transaction:
 
-| Type    | Lifetime and contents                                                                                                                                                                |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Core`  | Shared by every instance created from one `defineCms()` call. Holds the assembled schema, plugins, hooks, defaults, lazy runtime, optional media core and `localApi(scope)` factory. |
-| `Scope` | Carries a caller's `user`, read `perspective`, optional transaction, hook `context` and `nested` flag.                                                                               |
-| `Inner` | A scope used inside an operation, with a `cms` API bound to that scope. Hooks receive this API.                                                                                      |
+| Type    | Lifetime and contents                                                                                                                                                                                       |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Core`  | Shared by every instance created from one `defineCms()` call. Holds the assembled schema, plugins, hooks, defaults, lazy runtime, optional media core, the `adminBar` option and `localApi(scope)` factory. |
+| `Scope` | Carries a caller's `user`, read `perspective`, optional transaction, hook `context` and `nested` flag.                                                                                                      |
+| `Inner` | A scope used inside an operation, with a `cms` API bound to that scope. Hooks receive this API.                                                                                                             |
 
 An ordinary server call starts with `user: null` and the published perspective. Each outer operation gets a fresh `context` object. A call through a hook's `cms` inherits the current user, perspective, context and transaction, and runs its own hooks.
 

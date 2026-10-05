@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createClient } from "../client/index.ts";
-import { defineCms } from "../index.ts";
+import { defineCms, definePlugin } from "../index.ts";
 import { page } from "../presets/index.ts";
 import {
   type Collection,
@@ -658,3 +658,51 @@ async function httpTypes() {
   const author: string = post.author!.name;
   client.create("people", { slug: "x" });
 }
+
+describe("adminBar option", () => {
+  const base = { database: { url: ":memory:" }, secret: "" };
+
+  it("accepts a position, an items hook and false", () => {
+    defineCms({ ...base, adminBar: { position: "bottom", items: (items) => items } });
+    defineCms({
+      ...base,
+      adminBar: {
+        items: async (items, { user, url }) => [
+          ...items,
+          { id: "a", label: user.email, href: url, children: [{ id: "b", label: "B" }] },
+        ],
+      },
+    });
+    defineCms({ ...base, adminBar: false });
+    definePlugin({ name: "x", adminBar: { items: (i) => i } });
+    expect(true).toBe(true);
+  });
+
+  it("rejects an unknown position", () => {
+    // @ts-expect-error not a position
+    defineCms({ ...base, adminBar: { position: "left" } });
+    expect(true).toBe(true);
+  });
+
+  it("rejects mount in server items", () => {
+    defineCms({
+      ...base,
+      adminBar: {
+        // @ts-expect-error server items MUST be JSON
+        items: (items) => [...items, { id: "a", label: "A", mount: () => () => {} }],
+      },
+    });
+    expect(true).toBe(true);
+  });
+
+  it("rejects onClick in server items", () => {
+    defineCms({
+      ...base,
+      adminBar: {
+        // @ts-expect-error server items MUST be JSON
+        items: (items) => [...items, { id: "a", label: "A", onClick: () => {} }],
+      },
+    });
+    expect(true).toBe(true);
+  });
+});

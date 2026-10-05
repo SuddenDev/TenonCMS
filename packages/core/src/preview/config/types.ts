@@ -19,6 +19,7 @@ export type Preview =
 
 /** Unsaved form state by `<collection>:<id>`. Globals are keyed `<name>:`. */
 export type Drafts = Record<string, Record<string, unknown>>;
+/** Stops what a call started. */
 export type Unsubscribe = () => void;
 
 /** Messages between the admin and the site, sent with `postMessage`. */
@@ -32,6 +33,7 @@ export type PreviewMessage =
   | { type: "documents"; documents: { collection: string; id: string }[] }
   | { type: "saved"; collection: string; id: string };
 
+/** Options of `preview()`. */
 export type PreviewOptions = {
   /**
    * Re-renders the page on a `saved` message: fetches the current URL and morphs `<body>` and the title.

@@ -78,6 +78,6 @@ For `POST /api/cms/collections/posts/preview-url`, follow:
 
 1. [collections/endpoints/preview-url.endpoint.ts](collections/endpoints/preview-url.endpoint.ts) checks the configured target and passes unsaved form state plus the session-bound API to the resolver. Globals have their corresponding feature endpoint.
 2. [preview/server/resolve-url.ts](preview/server/resolve-url.ts) clones the form state, calls a configured preview function, or resolves template fields. A relation placeholder loads one target hop through the local `findById()` with `populate: false`.
-3. [placeholders.ts](preview/templates/placeholders.ts) identifies template paths, and [resolve-template.ts](preview/templates/resolve-template.ts) returns the filled URL or `null` for missing values.
+3. [placeholders.ts](preview/templates/placeholders.ts) identifies template paths, and [resolve-template.ts](preview/templates/resolve-template.ts) `resolveTemplate()` returns the filled URL or `null` for missing values.
 
 There is no extra public local preview method. The browser entry [preview/index.ts](preview/index.ts) exports DOM/draft runtime helpers and does not import the server URL resolver.

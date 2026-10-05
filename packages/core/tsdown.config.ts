@@ -39,7 +39,8 @@ export default defineConfig({
     "src/media/workerd.ts",
   ],
   // Core imports its default media through the package exports, so Workers builds get `workerd.ts` instead.
-  external: ["integral-cms/media/default"],
+  // The admin bar is built by the admin package; the host's bundler splits it into its own chunk.
+  external: ["integral-cms/media/default", "integral-cms/admin/bar"],
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.
   copy: [
@@ -50,6 +51,7 @@ export default defineConfig({
     { from: "src/client/register.d.ts", to: "dist/client" },
     // The admin's Vite build writes index.js next to these.
     { from: "src/admin/index.d.ts", to: "dist/admin" },
+    { from: "src/admin/bar.d.ts", to: "dist/admin" },
     { from: "src/admin/icons.d.ts", to: "dist/admin" },
     { from: "src/admin/default.ts", to: "dist/admin" },
     { from: "src/admin/entry.ts", to: "dist/admin" },
