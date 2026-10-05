@@ -7,22 +7,14 @@ description: Refactor and document one source module folder for readability with
 
 Make one module folder easy to read without changing what it does. Work one folder at a time. The reference is `packages/core/src/content/`, and `content/writes/write-document.ts` is the model for a complex function.
 
-## 1. Read, then ask
+## 1. Read, evaluate, then ask
 
-Read every non-test file in the folder before you edit. Then ask the user these questions and give a default for each, so "go" is a full answer:
-
-- **Scope:** JSDoc and spacing only, or also restructure long functions? Name the candidates.
-- **Functions that return nothing:** use `@throws` instead of `@returns`?
-- **Renames:** rename short or misleading names, or keep the diff small?
-- **Existing comments:** turn `//` comments that describe an export into JSDoc?
-
-Defaults: restructure only the functions that read worst, use `function` declarations, use `@throws`, keep names, turn the comments into JSDoc and leave test files alone.
-
-**Arrow exports:** turn complex arrow exports `export const f = () => …` into `function` declarations, but keep small local closures as arrow functions.
+Read every non-test file in the folder before you edit. Find the parts that are hard to read, poorly documented, or have unclear names. Base this on the rules for code that are established below.
+Draft suggested changes and give a rationale for the changes. The draft should be kept concise. Then the user can intervene or approve them before implementation. Ask questions if anything is unclear.
 
 ## 2. Rules for code
 
-**JSDoc on every export.** Write one or two short sentences, then `@returns` (or `@throws` for checks that return nothing). List parameters only when a caller would get them wrong. The JSDoc MUST sit directly above the function; any other comment goes above the JSDoc, or the JSDoc detaches.
+**JSDoc on every export.** Write one or two short sentences, then `@params`(if it is more client side and not just core side), `@returns` (or `@throws` for checks that return nothing). List parameters only when a caller would get them wrong. The JSDoc MUST sit directly above the function; any other comment goes above the JSDoc, or the JSDoc detaches.
 
 ```ts
 /**
@@ -55,7 +47,10 @@ export async function write(core, s, name, operation, input, options = {}) {
 }
 ```
 
-More examples: `onDelete()` in `content/integrity/apply-on-delete.ts` reads as "find, block, clear, cascade". `populate()` in `content/population/populate.ts` only loops and dispatches to `resolveRef()`, `resolveJoin()` and `hop()`.
+Good examples are:
+
+- `onDelete()` in `content/integrity/apply-on-delete.ts` reads as "find, block, clear, cascade".
+- The scaffolding, code quality, patterns and structure of `core/src/cms/create-cms.ts`.
 
 - When several helpers share many parameters, pass one small context object (`Hop` in `populate.ts`).
 - When the formatter wraps a call over several lines, name the argument first (`const cleared = …; await clear(cleared, id, effects);`).
@@ -69,6 +64,12 @@ More examples: `onDelete()` in `content/integrity/apply-on-delete.ts` reads as "
 - Use `git mv`, so the history follows the file.
 
 **Folders follow the flow, not the mechanism.** Group code by the pipeline it belongs to (`reads/`, `writes/`, `integrity/`), not by what it calls (`hooks/`). A hook call is one step in a pipeline and belongs next to its neighbours. Code that several sibling pipelines share goes into a shared folder (`lifecycle/`), so one pipeline never imports from another.
+
+**Regular Comment** Should only be 1-2 lines, used for internal explanations, group anchors, or clarifications, not for documenting exports.
+
+**Existing comments:** turn `//` comments that describe an export into JSDoc
+
+**Arrow exports:** turn complex arrow exports `export const f = () => …` that are >50 lines into `function` declarations, but keep small local closures as arrow functions.
 
 ## 3. Module README
 
