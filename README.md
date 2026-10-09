@@ -684,45 +684,56 @@ const post = useDraft("posts", Route.useLoaderData());
 
 #### Admin bar
 
-The admin bar is a slim bar over the page: "Dashboard" on the left; "Edit …" (one link per document or global bound on the page, a dropdown for several), "Live edit" (opens the page in the Visual Editor) and the Drafts / Published menu on the right. It hides while you scroll down and comes back when you scroll up. On phones the right side moves into a menu. It follows the system's light or dark mode, and the host page's CSS cannot reach it.
+The admin bar is a floating pill with your brand, an Edit button, the Drafts / Published menu and a dismiss button. Edit opens the visual editor with the current page URL, including its query and fragment. Dismiss hides the bar for this page. Preview tabs show only Back to visual editor, an Edit preview switch for selecting fields, and a close button. Closing preview disconnects live updates, removes overlays and restores the normal bar without reloading the page.
+
+The pill defaults to `bottom-center`, 16 px from the viewport edge, with safe-area spacing. The eight positions are `top-left`, `top-center`, `top-right`, `center-left`, `center-right`, `bottom-left`, `bottom-center` and `bottom-right`. It stays visible while editing or focused; otherwise it hides on downward scroll. The normal bar renders every item inline in its sorted order, including custom items. On phones it uses at most 95% of the viewport width; items scroll horizontally with edge fades and the dismiss button stays visible. The bar and its portals use a shadow root; the visual editor runs on its own admin page.
 
 ```ts
 // integral.config.ts
+import { clientRef } from "integral-cms/admin";
+
 defineCms({
-  // Omitted: at the top with the built-in items. `false`: no bar.
-  adminBar: {
-    position: "bottom",
-    // Gets the whole list and returns a new one, so it can add, replace, reorder or drop items.
-    items: (items, { user, cms, url }) => [
-      ...items,
-      {
-        id: "analytics",
-        label: "Analytics",
-        icon: "chart-bar",
-        href: `/admin/reports?url=${encodeURIComponent(url)}`,
+  admin: {
+    // Omitted: bottom-center with the built-in items. `false`: no bar.
+    adminBar: {
+      position: "bottom-center",
+      // The key is the item's id.
+      items: {
+        // A link. `load` runs on the server and may override `label`, `icon`, `href` and `children`.
+        analytics: {
+          label: "Analytics",
+          icon: "chart-bar",
+          order: 40,
+          load: ({ url }) => ({
+            href: `https://analytics.example.com/?url=${encodeURIComponent(url)}`,
+          }),
+        },
+        // A button. `load` gives the handler its data as `ctx.data`.
+        hello: {
+          label: "Say hello",
+          onClick: clientRef("./src/admin/bar.ts#sayHello"),
+          load: ({ user }) => ({ editor: user.name }),
+        },
+        // Removes a built-in item.
+        perspective: false,
       },
-    ],
+    },
   },
 });
 ```
 
-An item has a unique `id` (a later one replaces an earlier one), a `label`, and `href` or `children` (a dropdown); `group` (`start` or `end`, default `end`), `order` and `icon` are optional. The built-in ids are `dashboard`, `edit`, `live-edit`, `perspective` and, in a preview tab, `exit-preview`, with orders 10 to 40; items without `order` follow them. Items from the server MUST be JSON, so they have no `onClick` or `mount`. `url` is the page the bar shows on; it comes from the browser and is never fetched. A hook that throws is logged and skipped.
+`admin.adminBar.items` is an object of registrations; the key is the item's id. A later registration with the same key replaces the earlier one in place (it replaces the whole item, with no field merge). An item has an `order` and an `icon`, and is one of:
 
-Page code adds items with click handlers:
+- a link (`href`) or a dropdown (`children`), rendered by the bar. `children` is an object keyed by id like `items`, and an id is unique across the bar, children included. A child takes everything an item takes, except its own `children`. A loader may replace the children for the request with an object of the same shape;
+- a button: `onClick: clientRef(...)`, run in the browser with the latest item context;
+- a custom control: `mount: clientRef(...)`, the same `mount(el, ctx)` contract as fields and pages;
+- `false` instead of an item, which removes the item with that key, built-ins included, before any loader or browser code runs.
 
-```ts
-import { addAdminBarItem } from "integral-cms/preview";
+`mount` cannot be combined with `href`, `onClick` or `children`, and `onClick` not with `href` or `children`; both throw at startup, as does a missing `label`. `load` is optional and runs on the server for every bar request, with `{ user, cms, url }`. `url` is the page the bar shows on; it comes from the browser and is never fetched. For a link or dropdown, the result is an overlay of `label`, `icon`, `href` and `children`, and `null` hides the item for that request. For a button or a custom control, the result is any JSON and arrives as `ctx.data`; `null` is valid data. Each item only sees its own data. A loader that throws or returns something invalid is logged and the item is skipped; the rest of the bar stays. `ctx.integral.reload()` runs one item's loader again.
 
-const remove = addAdminBarItem({
-  id: "clear-cache",
-  label: "Clear cache",
-  onClick: () => fetch("/purge"),
-});
-```
+The bar is one flat row sorted by `order`, then by registration order; items without `order` follow. Built-ins: `dashboard` 10, `edit` 20, `perspective` 30. Plugins add items with `admin.adminBar.items`, see [Plugins](#plugins). They compose in this order: built-ins, plugins in plugin order, the host. Preview tabs show the fixed `edit` (10) and `live-edit` (20) controls; custom items and their loaders do not run there. `position` and `adminBar: false` belong to the host.
 
-An item with `mount(el, ctx)` renders its own element with plain DOM, like the admin's extension slots. It returns a cleanup function or `{ update(ctx), unmount() }`; `update` gets the new context, e.g. after a perspective change. `el` sits in the bar's shadow root, so the page's CSS does not reach it: style it inline. `label` names it in the mobile menu. See `examples/astro/src/admin-bar.ts`.
-
-Plugins add items with `adminBar.items`, see [Plugins](#plugins). Items compose in this order: built-ins, the plugins' hooks, the host's hook, then `addAdminBarItem()` calls.
+An item with `mount(el, ctx)` renders its own element with plain DOM, like the admin's extension slots. It returns a cleanup function or `{ update(ctx), unmount() }`; `update` gets the new context, e.g. after a perspective change. `el` sits in the bar's shadow root, so the page's CSS does not reach it: style it inline. See `examples/astro/admin.ts` and `examples/astro/src/admin/bar.ts`.
 
 ### Drafts
 
@@ -986,7 +997,7 @@ export const Route = createFileRoute("/")({ loader: () => getPosts(), component:
 Send `/api/cms/*` to `cms.fetch(request)`. With Vite, use `integralAdmin()` as in TanStack Start and return `#integral/admin-html` for `/admin` and `/admin/*`. Otherwise serve a page of its own with an empty element and mount into it:
 
 ```ts
-import { mountAdmin } from "integral-cms/admin";
+import { mountAdmin } from "integral-cms/admin/mount";
 
 mountAdmin("#admin");
 ```
@@ -1025,27 +1036,59 @@ auth: {
 
 ## Customize the admin
 
-Create `integral.admin.ts` next to `integral.config.ts`. Astro, Nuxt and `integralAdmin()` pick it up at startup; delete it to go back to the default. Restart the dev server after adding or removing it.
+Everything the admin needs from the host sits in one `admin` object in `integral.config.ts`: branding, custom fields, pages and the admin bar. Write it inline, or extract it into a module and import it. Browser implementations load through `clientRef()`.
 
 ```ts
-// integral.admin.ts
-import { defineAdmin } from "integral-cms/admin";
-import { redirectsAdmin } from "integral-cms/plugins/redirects/admin";
+// admin.ts
+import { clientRef, type AdminOptions } from "integral-cms/admin";
 
-export default defineAdmin({
+export const admin = {
   name: "Acme",
   logo: { light: "/logo-light.svg", dark: "/logo-dark.svg" },
   icon: "/icon.svg",
   media: { nav: { group: "Assets", icon: "images" } },
-  fields: { color: mountColorInput },
-  pages: {
-    home: { route: "/", mount: mountHome },
-    stats: { title: "Stats", nav: { icon: "chart-bar", order: 5 }, mount: mountStats },
-    report: { route: "/reports/:id", nav: { display: "none" }, mount: mountReport },
+  fields: {
+    color: { mount: clientRef("./src/admin/color.ts#mountColor") },
   },
-  plugins: [redirectsAdmin()],
-});
+  pages: {
+    home: {
+      route: "/",
+      nav: { display: "main" },
+      mount: clientRef("./src/admin/home.ts#mountHome"),
+    },
+    stats: {
+      title: "Stats",
+      nav: { icon: "chart-bar", order: 5 },
+      // Runs on the server. The mount gets the result as `ctx.data`.
+      load: async ({ cms, user }) => ({
+        editor: user.name,
+        posts: await cms.find("posts", { limit: 10, populate: false, select: { title: true } }),
+      }),
+      mount: clientRef("./src/admin/stats.ts#mountStats"),
+    },
+    report: {
+      route: "/reports/:id",
+      nav: { display: "none" },
+      mount: clientRef("./src/admin/report.ts#mountReport"),
+    },
+  },
+} satisfies AdminOptions;
+
+// integral.config.ts
+export default defineCms({ /* … */ admin });
 ```
+
+`satisfies AdminOptions` is optional: `defineCms` types an inline object too.
+
+**Server and browser.** Only `load` functions run on the server. They get the signed-in user and the user's `cms`, MUST only read, and MUST return JSON (`null`, booleans, strings, finite numbers, arrays, plain objects); anything else is an error. Everything the browser runs is a `clientRef()` to an export in a module of its own. `clientRef()` names a module and an optional `#export` (default: `default`). Relative paths resolve from the project root, not from the file that calls it. Package paths resolve through package exports. Astro, Nuxt and `integralAdmin()` find the literal `clientRef()` calls in the static imports of `integral.config.ts` without running it, and bundle those exports for the browser only. Computed references are rejected. Inline functions for `mount`, `onClick` or `pageHeader` are rejected too. Keep loader results small and deliberate: being signed in does not make every server value fit for the browser.
+
+**What is public.** Only the login branding (`/admin-brand`). Fields, pages and bar items arrive after sign-in from `/schema` and `/admin-bar`, without loader functions. `POST /api/cms/admin/load` runs one loader for the signed-in user and answers with its data; it only accepts registered keys. Responses are `Cache-Control: no-store`. Loaders read the user's perspective: drafts only with a session and the preview cookie.
+
+**Merging.** Plugin registrations come first, then the host's. A field or page key used twice throws. Host branding wins. Bar items replace earlier items with the same `id`.
+
+**Styles.** The admin runs on a page of its own, so a field or page MAY bring CSS. The bar's graph is different: it loads on site pages after the session check, so its modules MUST NOT inject CSS. Put styled fields and pages behind `clientRef()`, and mount bar CSS inside the shadow root (`?inline`).
+
+Not available yet: switching between Drafts and Published without a reload, and loaders that depend on unsaved form values.
 
 - `fields` registers an input per custom field type. A field with `type: 'custom:color'` uses `fields.color`. Custom types are stored and validated as strings, and fall back to a text input without a registered one. Only built-in types and `custom:` types type-check, so a typo like `'txt'` is an error.
 - `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`. A page shown in the content sidebar or on the Settings page opens under `/content` (`/stats` becomes `/content/stats`) or `/content/settings`; `main` and `none` pages use the route as is and open full width, without the sidebar, under the top bar.
@@ -1057,79 +1100,84 @@ export default defineAdmin({
 - Settings: the sidebar has a "Settings" entry under "Admin" when any item has `display: "settings"`. It opens `/content/settings`, a page with one section of cards per `group`, and each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", group: "Site", order: 3 }, fields })`.
 - `name` shows in the sidebar header, on the login and in the page title (default `integral-cms`). `logo` (sidebar header and login) and `icon` (collapsed sidebar) are URLs, or `{ light, dark }` pairs that follow the admin's theme. The admin links the files and does not bundle them: put them in the host's `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
 - The favicon is `favicon` if set, else `icon`, else the host's `favicon.svg`, `.ico` or `.png` in its public folder. `favicon` takes a URL or a `{ light, dark }` pair.
-- `showPageTitle` on a page sets its title bar: `true` (default) shows the breadcrumbs, `false` nothing, an array of `{ label, to }` your own breadcrumbs, and a function `(crumbs, { params, query, integral })` returns new breadcrumbs or an HTML string. The string is not escaped, so escape untrusted values like `params`, and prefix links with `integral.base`.
+- `title` is metadata: the navigation label, the default breadcrumb and the document title. The visible header area above a page is `pageHeader`: `true` (default) shows the breadcrumbs, `false` nothing, an array of `{ label, to }` your own breadcrumbs, and `clientRef()` of a function `(crumbs, { params, query, data, integral })` returns new breadcrumbs or an HTML string. The function MUST be synchronous. The string is not escaped, so escape untrusted values like `params`, and prefix links with `integral.base`.
 - A page on a built-in path replaces that view: `route: '/'` with `display: 'main'` replaces the redirect from `/` to `/content` (the admin has no dashboard of its own), and `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
-- `plugins` takes the admin halves of [plugins](#plugins). Their fields and pages merge in before yours; a key used twice throws when the admin mounts.
+- Plugins contribute the same `admin` object through [`definePlugin({ admin })`](#plugins).
 
-Every slot is one function, `mount(el, ctx)`, so any framework can plug in. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers:
+Every browser slot (field, page, bar item) is one function, `mount(el, ctx)`, exported from a module and registered with `clientRef()`. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers; export their result and reference the export:
 
 ```ts
+// src/admin/color.ts
 import { renderVue } from "integral-cms/admin/vue";
 import { renderReact } from "integral-cms/admin/react";
+import ColorInput from "./ColorInput.vue";
 
-fields: {
-  color: renderVue(ColorInput);
-} // a .vue component, gets the context as reactive props
-fields: {
-  color: renderReact(ColorInput);
-} // a React component, re-rendered on context changes
+// A .vue component, gets the context as reactive props
+export const mountColor = renderVue(ColorInput);
+// A React component, re-rendered on context changes
+export const mountColorReact = renderReact(ColorInputReact);
 ```
 
 They import your `vue` or `react-dom`, so the components run in your app's runtime with HMR. Other frameworks, or no framework, write the function directly:
 
 ```ts
 // Plain DOM
-color(el, { value, onChange }) {
-  const input = Object.assign(document.createElement('input'), { type: 'color', value })
-  input.oninput = () => onChange(input.value)
-  el.append(input)
-  return () => input.remove()
-}
+export const mountColor: Mount<FieldContext> = (el, { value, onChange }) => {
+  const input = Object.assign(document.createElement("input"), { type: "color", value });
+  input.oninput = () => onChange(input.value);
+  el.append(input);
+  return () => input.remove();
+};
 
 // Svelte 5
-color: (el, ctx) => {
-  const app = mount(ColorInput, { target: el, props: ctx })
-  return () => unmount(app)
-}
+export const mountColor: Mount<FieldContext> = (el, ctx) => {
+  const app = mount(ColorInput, { target: el, props: ctx });
+  return () => unmount(app);
+};
 ```
 
 The admin bundles its own Vue, so hosts install nothing extra and no runtime is shared with it.
 
-Contexts: fields get `{ name, field, value, onChange }`. Pages get `{ params, query }`: the route params and the query string. Both also get `integral`: `base` is the admin path to prefix links with, and `navigate(path)` opens an admin view without a reload. Plain links under `base` also open in the admin. For content, use `createClient()` from `integral-cms/client`; the admin's session cookie makes writes work. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
+Contexts: fields get `{ name, field, value, onChange, data }`. Pages get `{ params, query, data }`: the route params, the query string and what the page's `load` returned. Bar items get the bar context and `data`. All of them also get `integral`: `base` is the admin path to prefix links with, `navigate(path)` opens an admin view without a reload, and `reload()` runs the `load` of that field, page or item again. Plain links under `base` also open in the admin. For writes, use `createClient()` from `integral-cms/client`; the admin's session cookie makes them work.
+
+`data` is `undefined` without a `load`. With one, the first mount waits for the browser code and the data, and shows a loading state in its own area. A failed load shows a local error with a retry; it never shows a server stack. Then:
+
+- A page reloads when its route params or query change. It never shows the previous route's data as current.
+- A field loads when it mounts and when its owner changes, for example when a new document gets its id on first save. Typing in the field does not reload it, and `update(ctx)` still gets the new `value`.
+- A bar item loads with the bar request, again when the page URL changes and on the existing focus check.
+- Responses that arrive after cleanup or after a newer request are dropped. A 401 ends the session as usual.
+
+There are no extra events (`onSave`, subscriptions). `update(ctx)`, the field setter, your framework's watchers and the server hooks cover those cases. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
 
 To serve the admin elsewhere, pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `integralAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
 
 ## Plugins
 
-A plugin is a package with two halves. The server half goes into `integral.config.ts`, the admin half into `integral.admin.ts`. Both are plain objects, so a host can also spread their parts by hand to rename or leave out something.
+Register a plugin once in `integral.config.ts`. It contributes collections, globals, hooks, routes and an `admin` object (fields, pages, bar items), with no second file to wire up. A plugin MAY define no collections or globals at all and only extend the admin.
 
 ```ts
 // integral.config.ts
 import { redirects } from "integral-cms/plugins/redirects";
 export default defineCms({ collections: { pages }, plugins: [redirects()] });
-
-// integral.admin.ts
-import { redirectsAdmin } from "integral-cms/plugins/redirects/admin";
-export default defineAdmin({ plugins: [redirectsAdmin()] });
 ```
 
-The server half, from `definePlugin()`:
+A plugin is an object from `definePlugin()`:
 
-| Key                | What it adds                                                                                                                                                                  |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`             | Unique, lowercase, e.g. `redirects`. Prefix of the plugin's routes                                                                                                            |
-| `collections`      | Collections, typed like the host's: `cms.find('redirects')` works. A name the host or another plugin uses throws at startup                                                   |
-| `globals`          | Globals, the same way. The admin renders them, so a global doubles as the plugin's settings page                                                                              |
-| `hooks`            | Root hooks for every collection and global, run after the collection's own hooks and before the host's root hooks                                                             |
-| `routes`           | `(api) => api.get(…)` on a Hono sub-app at `/api/cms/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, `c.var.user` is that user               |
-| `publicRoutes`     | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                                             |
-| `publicMiddleware` | Hono middleware for every `/api/cms` request, auth included, before any route. `c.var.cms` has no user. Return a response to stop the request (rate limits, logging, headers) |
-| `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set                                          |
-| `adminBar`         | `{ items }`: an [admin bar](#admin-bar) items hook, like the host's. Plugin hooks run in plugin order, before the host's                                                      |
+| Key                | What it adds                                                                                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`             | Unique, lowercase, e.g. `redirects`. Prefix of the plugin's routes                                                                                                                           |
+| `collections`      | Collections, typed like the host's: `cms.find('redirects')` works. A name the host or another plugin uses throws at startup                                                                  |
+| `globals`          | Globals, the same way. The admin renders them, so a global doubles as the plugin's settings page                                                                                             |
+| `hooks`            | Root hooks for every collection and global, run after the collection's own hooks and before the host's root hooks                                                                            |
+| `routes`           | `(api) => api.get(…)` on a Hono sub-app at `/api/cms/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, `c.var.user` is that user                              |
+| `publicRoutes`     | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                                                            |
+| `publicMiddleware` | Hono middleware for every `/api/cms` request, auth included, before any route. `c.var.cms` has no user. Return a response to stop the request (rate limits, logging, headers)                |
+| `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set                                                         |
+| `admin`            | Fields, pages and admin bar `items`, like the host's [`admin`](#customize-the-admin). A plugin sets no bar `position` and never turns the bar off. Merged before the host's, in plugin order |
 
-Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `auth`, `collections`, `globals` and `schema` are reserved names.
+Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `admin`, `auth`, `collections`, `globals`, `media`, `preview` and `schema` are reserved names.
 
-The admin half, from `defineAdminPlugin()`, has `name`, `fields` and `pages`, exactly as `integral.admin.ts` does. Pages call plugin routes with `client.request()`.
+The redirects plugin registers its tools page this way. Pages call plugin routes with `client.request()`. A plugin that ships browser code MUST keep `clientRef()` calls literal and keep `integral-cms/admin` external, so the adapters can find them.
 
 A plugin does not need a route for everything. What the site needs at a pretty URL is a framework route in the host, calling a helper the plugin exports with the local API. That is how the redirects plugin resolves a path:
 
@@ -1179,14 +1227,14 @@ Working:
 
 - Schema-in-code collections and globals with inferred types
 - Relations between collections: `relation` and `join` fields, typed `populate`, `onDelete` rules
-- Admin: list, create, edit, delete; globals; email/password login; custom fields and pages via `integral.admin.ts` (`mount(el, ctx)` from any framework)
+- Admin: list, create, edit, delete; globals; email/password login; custom fields, pages and admin bar items via `admin` in `integral.config.ts` (`mount(el, ctx)` from any framework, optional server `load`)
 - Public read API with equality filters, `limit` and `select`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Collection, global and field hooks, run by the local API in one transaction per write
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
 - Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
 - `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `breadcrumbs()` / `slugify()`
 - Media library: chunked uploads to the local disk or S3/R2, folders, `image` and `file` fields, responsive images through IPX or Cloudflare, media hooks
-- Plugins with a server half (collections, globals, root hooks, routes) and an admin half (fields, pages); `integral-cms/plugins/redirects` as the first one
+- Plugins with collections, globals, root hooks, routes and admin registrations (fields, pages, bar items); `integral-cms/plugins/redirects` as the first one
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions
