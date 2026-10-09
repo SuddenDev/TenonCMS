@@ -9,12 +9,6 @@ declare module "#integral/config" {
   export default cms;
 }
 
-// The host's optional admin customization. Adapters alias `#integral/admin` to it or to a stub.
-declare module "#integral/admin" {
-  const options: import("./src/admin/index.d.ts").AdminOptions;
-  export default options;
-}
-
 declare module "#app" {
   export * from "nuxt/app";
 }
@@ -23,4 +17,9 @@ declare namespace App {
   interface Locals {
     integral: typeof import("#integral/config").default;
   }
+}
+
+declare module "#integral/client-registry" {
+  const registry: Record<string, () => Promise<unknown>>;
+  export default registry;
 }

@@ -6,8 +6,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "#integral/client-registry": fileURLToPath(
+        new URL("src/admin/test-registry.ts", import.meta.url),
+      ),
       "integral-cms/media/default": fileURLToPath(new URL("src/media/default.ts", import.meta.url)),
       "integral-cms/admin/bar": fileURLToPath(new URL("src/admin/bar.d.ts", import.meta.url)),
+      "integral-cms/admin": fileURLToPath(new URL("src/admin/config.ts", import.meta.url)),
     },
   },
 });

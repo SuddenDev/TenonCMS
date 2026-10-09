@@ -32,19 +32,19 @@
     },
     "./admin": {
       "types": "./dist/admin/index.d.ts",
-      "default": "./dist/admin/index.js"
+      "default": "./dist/admin/config.mjs"
     },
     "./admin/bar": {
       "types": "./dist/admin/bar.d.ts",
       "default": "./dist/admin/bar.js"
     },
     "./admin/vue": {
-      "types": "./dist/admin/vue.d.mts",
-      "default": "./dist/admin/vue.mjs"
+      "types": "./dist/admin/vue/vue.d.mts",
+      "default": "./dist/admin/vue/vue.mjs"
     },
     "./admin/react": {
-      "types": "./dist/admin/react.d.mts",
-      "default": "./dist/admin/react.mjs"
+      "types": "./dist/admin/react/react.d.mts",
+      "default": "./dist/admin/react/react.mjs"
     },
     "./preview": {
       "types": "./dist/preview/index.d.mts",
@@ -96,6 +96,10 @@
       "types": "./dist/media/default.d.mts",
       "workerd": "./dist/media/workerd.mjs",
       "default": "./dist/media/default.mjs"
+    },
+    "./admin/mount": {
+      "types": "./dist/admin/mount.d.ts",
+      "default": "./dist/admin/mount.js"
     }
   },
   "scripts": {
@@ -145,7 +149,7 @@
     "h3": ">=1.15",
     "react": ">=18",
     "react-dom": ">=18",
-    "vite": ">=7",
+    "vite": ">=8",
     "vue": ">=3.5"
   },
   "peerDependenciesMeta": {

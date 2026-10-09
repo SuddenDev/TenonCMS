@@ -1,10 +1,10 @@
 import type { AstroIntegration } from "astro";
 import { fileURLToPath } from "node:url";
-import { adminAlias } from "../admin/build.ts";
+import { API_BASE } from "../../client/index.ts";
+import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
 import { adminPath } from "../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
-import { API_BASE } from "../../client/index.ts";
 
 /** Options of the Astro integration. */
 export type Options = AdapterOptions & {
@@ -42,7 +42,6 @@ export default function integralCms({
         updateConfig,
       }) {
         entryPath = fileURLToPath(new URL(entry, config.root));
-        const alias: Record<string, string> = { "#integral/config": entryPath };
 
         injectRoute({
           pattern: `${API_BASE}/[...path]`,
@@ -57,8 +56,6 @@ export default function integralCms({
             entrypoint: new URL("./admin.astro", import.meta.url),
             prerender: false,
           });
-          const adminDir = fileURLToPath(new URL("../../admin/", import.meta.url));
-          alias["#integral/admin"] = adminAlias(fileURLToPath(config.root), adminDir);
         }
 
         if (preview) {
@@ -73,7 +70,8 @@ export default function integralCms({
 
         updateConfig({
           vite: {
-            resolve: { alias },
+            plugins: [clientReferences(entry)],
+            resolve: { alias: { "#integral/config": entryPath } },
             define: faviconDefine(fileURLToPath(config.publicDir)),
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.
             // Dev does not bundle. Keeping core internal there lets Vite reload it when `dist/` changes.
@@ -85,7 +83,7 @@ export default function integralCms({
       "astro:config:done"({ injectTypes }) {
         // Astro's type injection takes a string. This is the only generated code.
         const module = JSON.stringify(entryPath.replace(/\.[cm]?[jt]s$/, ""));
-        injectTypes({ filename: "types.d.ts", content: localsTypes(module) });
+        injectTypes({ filename: "types.d.ts", content: appTypes(module) });
         injectTypes({ filename: "config.d.ts", content: configTypes(module) });
       },
     },
@@ -94,7 +92,7 @@ export default function integralCms({
 
 // Types `Astro.locals.integral` and the client's `Register`.
 // `export {}` makes it a module, so `declare module` augments the client instead of replacing it.
-function localsTypes(module: string) {
+function appTypes(module: string) {
   return `declare global {
   namespace App {
     interface Locals {

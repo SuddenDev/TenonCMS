@@ -4,14 +4,16 @@ import {
   addPlugin,
   addServerHandler,
   addTypeTemplate,
+  addVitePlugin,
   createResolver,
   defineNuxtModule,
 } from "@nuxt/kit";
 import type {} from "@nuxt/nitro-server/augments";
 import type { NuxtModule } from "@nuxt/schema";
-import type { AdapterOptions } from "../admin/types.ts";
 import { API_BASE } from "../../client/index.ts";
+import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { adminPath } from "../admin/path.ts";
+import type { AdapterOptions } from "../admin/types.ts";
 import { setupAdmin } from "./lib/setup-admin.ts";
 import { libsqlBinaries } from "./lib/libsql.ts";
 
@@ -36,12 +38,18 @@ const integralCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>
     nuxt.options.build.transpile.push(runtime);
     addServerHandler({ route: `${API_BASE}/**`, handler: `${runtime}/server/handler` });
 
-    // setup admin ui
+    // The admin page, a second client entry in the host's Vite build.
     const path = adminPath(options.admin);
     if (path) setupAdmin(nuxt, path, runtime);
 
-    // The preview runtime. It reads the admin path for the bars' links; `false` renders no admin bar.
+    // `#integral/client-registry`: the browser modules that `clientRef()` calls name.
+    addVitePlugin(
+      clientReferences(options.entry!, nuxt.options.rootDir) as Parameters<typeof addVitePlugin>[0],
+    );
+
     addImports({ name: "useIntegral", from: `${runtime}/composables` });
+
+    // The preview runtime reads the admin path for the bars' links; `false` renders no admin bar.
     nuxt.options.runtimeConfig.public.integral = { admin: path ?? false };
     addPlugin({ src: `${runtime}/plugin.client`, mode: "client" });
 

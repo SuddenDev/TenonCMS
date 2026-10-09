@@ -11,7 +11,7 @@ export default defineConfig(() => ({
   build: {
     // Vue is bundled in. Hosts plug in through `mount(el)`, so no shared runtime is needed.
     lib: {
-      entry: { index: "src/index.ts", bar: "src/admin-bar/index.ts" },
+      entry: { mount: "src/index.ts", bar: "src/admin-bar/index.ts" },
       formats: ["es"],
       fileName: (_, name) => `${name}.js`,
     },

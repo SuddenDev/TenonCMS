@@ -20,8 +20,9 @@ export default defineConfig({
     "src/client/index.ts",
     "src/integrations/astro/index.ts",
     "src/integrations/nuxt/index.ts",
-    "src/admin/vue.ts",
-    "src/admin/react.ts",
+    "src/admin/config.ts",
+    "src/admin/vue/vue.ts",
+    "src/admin/react/react.ts",
     "src/preview/index.ts",
     "src/preview/vue.ts",
     "src/preview/react.ts",
@@ -40,7 +41,13 @@ export default defineConfig({
   ],
   // Core imports its default media through the package exports, so Workers builds get `workerd.ts` instead.
   // The admin bar is built by the admin package; the host's bundler splits it into its own chunk.
-  external: ["integral-cms/media/default", "integral-cms/admin/bar"],
+  external: [
+    "integral-cms",
+    "integral-cms/media/default",
+    "integral-cms/admin/bar",
+    "integral-cms/admin",
+    "#integral/client-registry",
+  ],
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.
   copy: [
@@ -49,11 +56,11 @@ export default defineConfig({
     { from: "src/integrations/astro/admin.astro", to: "dist/integrations/astro" },
     { from: "src/integrations/nuxt/runtime", to: "dist/integrations/nuxt" },
     { from: "src/client/register.d.ts", to: "dist/client" },
-    // The admin's Vite build writes index.js next to these.
+    // The admin's Vite build writes mount.js next to these.
     { from: "src/admin/index.d.ts", to: "dist/admin" },
+    { from: "src/admin/mount.d.ts", to: "dist/admin" },
     { from: "src/admin/bar.d.ts", to: "dist/admin" },
     { from: "src/admin/icons.d.ts", to: "dist/admin" },
-    { from: "src/admin/default.ts", to: "dist/admin" },
     { from: "src/admin/entry.ts", to: "dist/admin" },
     { from: "src/admin/virtual.d.ts", to: "dist/admin" },
   ],
