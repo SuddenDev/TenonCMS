@@ -1,7 +1,8 @@
 @import "tailwindcss" source(none);
 @source "./";
 @source "../shared/components/Icon.vue";
-@source "../shared/components/ui/{dropdown-menu,sheet,switch,button}";
+@source "../shared/components/Themed.vue";
+@source "../shared/components/ui/{dropdown-menu,switch,button}";
 @import "tw-animate-css";
 @import "shadcn-vue/tailwind.css";
 @import "../shared/theme.css";
@@ -33,5 +34,60 @@
   .admin-bar-root button:not(:disabled),
   .admin-bar-root [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+}
+
+.floating-bar {
+  --clear-top: max(16px, env(safe-area-inset-top));
+  --clear-right: max(16px, env(safe-area-inset-right));
+  --clear-bottom: max(16px, env(safe-area-inset-bottom));
+  --clear-left: max(16px, env(safe-area-inset-left));
+  width: max-content;
+  max-width: calc(100vw - var(--clear-left) - var(--clear-right));
+  white-space: nowrap;
+}
+.floating-bar[data-position^="top-"] {
+  top: var(--clear-top);
+}
+.floating-bar[data-position^="bottom-"] {
+  bottom: var(--clear-bottom);
+}
+.floating-bar[data-position$="-left"] {
+  left: var(--clear-left);
+}
+.floating-bar[data-position$="-right"] {
+  right: var(--clear-right);
+}
+.floating-bar[data-position$="-center"] {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.floating-bar[data-position^="center-"] {
+  top: 50%;
+  transform: translateY(-50%);
+}
+@media (max-width: 639px) {
+  .floating-bar[data-mode="site"] {
+    --clear-left: max(2.5vw, env(safe-area-inset-left));
+    --clear-right: max(2.5vw, env(safe-area-inset-right));
+    max-width: min(95vw, calc(100vw - var(--clear-left) - var(--clear-right)));
+  }
+  .floating-bar {
+    gap: 0;
+    padding-inline: 6px;
+  }
+  .floating-bar button,
+  .floating-bar a,
+  .floating-bar label {
+    font-size: 11px;
+    padding-inline: 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-bar-root * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
   }
 }

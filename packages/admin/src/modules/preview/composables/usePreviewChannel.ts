@@ -1,3 +1,4 @@
+import { isPreviewMessage } from "../../../../../core/src/preview/runtime/message.ts";
 import { onScopeDispose } from "vue";
 import { schema } from "@/shared/api";
 
@@ -8,8 +9,14 @@ export type AdminMessage =
   | { type: "mode"; edit: boolean }
   | { type: "highlight"; collection: string | null; id: string | null };
 
+const tabs = new Set<Window>();
+export const registerPreviewTab = (tab: Window | null) => {
+  if (tab) tabs.add(tab);
+};
+
 /** What the preview runtime in the page sends. `id` is `''` for a global. */
 export type PageMessage =
+  | { type: "mode"; edit: boolean }
   | { type: "ready" }
   | { type: "edit"; collection: string; id: string; path: string }
   | { type: "url"; href: string }
@@ -23,7 +30,7 @@ export const siteUrl = () => schema.value.site ?? location.origin;
  * that said `ready`: the iframe and the tabs the admin opened.
  */
 export function usePreviewChannel(receive: (message: PageMessage) => void) {
-  const pages = new Set<MessageEventSource>();
+  const pages = new Set<Window>();
   const origin = () => new URL(siteUrl()).origin;
   const send = (message: AdminMessage) => {
     for (const page of pages)
@@ -31,11 +38,18 @@ export function usePreviewChannel(receive: (message: PageMessage) => void) {
       else page.postMessage(message, { targetOrigin: origin() });
   };
   const onMessage = (e: MessageEvent<PageMessage>) => {
-    if (e.origin !== origin() || !e.source) return;
-    if (e.data?.type === "ready") pages.add(e.source);
-    receive(e.data);
+    if (e.origin !== origin() || !e.source || !isPreviewMessage(e.data)) return;
+    const frame = document.querySelector<HTMLIFrameElement>(
+      'iframe[name="integral-preview"]',
+    )?.contentWindow;
+    if (e.source !== frame && !tabs.has(e.source as Window)) return;
+    if (e.data?.type === "ready") pages.add(e.source as Window);
+    if (["ready", "edit", "url", "documents", "mode"].includes(e.data.type)) receive(e.data);
   };
   window.addEventListener("message", onMessage);
-  onScopeDispose(() => window.removeEventListener("message", onMessage));
+  onScopeDispose(() => {
+    window.removeEventListener("message", onMessage);
+    pages.clear();
+  });
   return send;
 }

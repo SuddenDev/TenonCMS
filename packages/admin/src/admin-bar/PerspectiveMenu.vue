@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 
-const props = defineProps<{ ctx: AdminBarContext; align?: "start" | "end" }>();
+const props = defineProps<{ ctx: AdminBarContext }>();
 
 const perspectives = [
   { value: "drafts", label: "Drafts" },
@@ -40,7 +40,7 @@ const select = (value: unknown) => {
         </Button>
       </ToolbarButton>
     </DropdownMenuTrigger>
-    <DropdownMenuContent :align="align ?? 'end'" :side="ctx.position === 'top' ? 'bottom' : 'top'">
+    <DropdownMenuContent align="start" :side="ctx.position.startsWith('top-') ? 'bottom' : 'top'">
       <DropdownMenuRadioGroup :model-value="ctx.perspective" @update:model-value="select">
         <DropdownMenuRadioItem
           v-for="p in perspectives"

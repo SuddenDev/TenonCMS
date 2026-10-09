@@ -659,50 +659,31 @@ async function httpTypes() {
   client.create("people", { slug: "x" });
 }
 
-describe("adminBar option", () => {
+describe("admin.adminBar option", () => {
   const base = { database: { url: ":memory:" }, secret: "" };
 
-  it("accepts a position, an items hook and false", () => {
-    defineCms({ ...base, adminBar: { position: "bottom", items: (items) => items } });
+  it("accepts a position, individual items and false", () => {
     defineCms({
       ...base,
-      adminBar: {
-        items: async (items, { user, url }) => [
-          ...items,
-          { id: "a", label: user.email, href: url, children: [{ id: "b", label: "B" }] },
-        ],
+      admin: {
+        adminBar: {
+          position: "bottom-center",
+          items: {
+            a: { label: "A", href: "/a", children: { b: { label: "B" } } },
+            gone: false,
+          },
+        },
       },
     });
-    defineCms({ ...base, adminBar: false });
-    definePlugin({ name: "x", adminBar: { items: (i) => i } });
+    defineCms({ ...base, admin: { adminBar: false } });
+    definePlugin({ name: "x", admin: { adminBar: { items: { a: { label: "A" } } } } });
     expect(true).toBe(true);
   });
 
   it("rejects an unknown position", () => {
     // @ts-expect-error not a position
-    defineCms({ ...base, adminBar: { position: "left" } });
-    expect(true).toBe(true);
-  });
-
-  it("rejects mount in server items", () => {
-    defineCms({
-      ...base,
-      adminBar: {
-        // @ts-expect-error server items MUST be JSON
-        items: (items) => [...items, { id: "a", label: "A", mount: () => () => {} }],
-      },
-    });
-    expect(true).toBe(true);
-  });
-
-  it("rejects onClick in server items", () => {
-    defineCms({
-      ...base,
-      adminBar: {
-        // @ts-expect-error server items MUST be JSON
-        items: (items) => [...items, { id: "a", label: "A", onClick: () => {} }],
-      },
-    });
-    expect(true).toBe(true);
+    expect(() => defineCms({ ...base, admin: { adminBar: { position: "left" } } })).toThrow(
+      "adminBar.position",
+    );
   });
 });

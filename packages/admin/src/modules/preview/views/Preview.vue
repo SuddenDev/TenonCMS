@@ -56,6 +56,10 @@ const onPage = ref<PageDocument[]>([]);
 // Switches documents first, so a field with the same path in the old form does not take the focus.
 const send = usePreviewChannel(async (message: PageMessage) => {
   // A page that just loaded knows neither the mode nor the unsaved state.
+  if (message.type === "mode") {
+    edit.value = message.edit;
+    return;
+  }
   if (message.type === "ready") {
     onPage.value = [];
     send({ type: "mode", edit: edit.value });

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { registerPreviewTab } from "../composables/usePreviewChannel";
 import { ref, watch } from "vue";
 import { Icon, Pane } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
@@ -37,7 +38,7 @@ function reset() {
 
 function openTab() {
   const href = props.href || props.url;
-  if (href) window.open(href, `integral-preview-${props.target}`);
+  if (href) registerPreviewTab(window.open(href, `integral-preview-${props.target}`));
 }
 </script>
 

@@ -1,31 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
-import {
-  addAdminBarItem,
-  builtIns,
-  composeItems,
-  getAddedItems,
-  subscribeItems,
-} from "./admin-bar-items.ts";
+import { describe, expect, it } from "vitest";
+import { builtIns, composeItems } from "./admin-bar-items.ts";
 
 const ids = (items: { id: string }[]) => items.map((i) => i.id);
 
 describe("builtIns", () => {
   it("lists the stubs of a site page", () => {
     expect(builtIns("site")).toEqual([
-      { id: "dashboard", group: "start", order: 10, label: "Dashboard" },
-      { id: "edit", group: "end", order: 10, label: "Edit" },
-      { id: "live-edit", group: "end", order: 20, label: "Live edit" },
-      { id: "perspective", group: "end", order: 30, label: "Drafts" },
+      { id: "dashboard", order: 10, label: "Dashboard", builtIn: true },
+      { id: "edit", order: 20, label: "Edit", icon: "pencil", builtIn: true },
+      { id: "perspective", order: 30, label: "Drafts", builtIn: true },
     ]);
   });
 
-  it("adds exit-preview in a preview tab", () => {
-    expect(builtIns("preview-tab").at(-1)).toEqual({
-      id: "exit-preview",
-      group: "end",
-      order: 40,
-      label: "Exit preview",
-    });
+  it("lists only the editor link and overlay switch in a preview tab", () => {
+    expect(builtIns("preview-tab")).toEqual([
+      { id: "edit", order: 10, label: "Back to visual editor", icon: "arrow-left", builtIn: true },
+      { id: "live-edit", order: 20, label: "Edit preview", builtIn: true },
+    ]);
   });
 });
 
@@ -44,41 +35,36 @@ describe("composeItems", () => {
     ]);
   });
 
-  it("sorts by group, then order, unordered items last in insertion order", () => {
+  it("sorts by order, ties and unordered items in insertion order, unordered last", () => {
     const items = composeItems(
       [
         { id: "x", label: "X" },
-        { id: "end-20", order: 20, label: "E" },
-        { id: "start", group: "start", label: "S" },
-        { id: "end-10", group: "end", order: 10, label: "E" },
+        { id: "b20", order: 20, label: "B" },
+        { id: "a10", order: 10, label: "A" },
+        { id: "b20-too", order: 20, label: "C" },
       ],
       [{ id: "y", label: "Y" }],
     );
-    expect(ids(items)).toEqual(["start", "end-10", "end-20", "x", "y"]);
+    expect(ids(items)).toEqual(["a10", "b20", "b20-too", "x", "y"]);
+  });
+
+  it("keeps the position of a replaced item among ties and takes its new order", () => {
+    const items = composeItems(
+      [
+        { id: "a", order: 1, label: "A" },
+        { id: "b", order: 1, label: "B" },
+        { id: "c", label: "C" },
+      ],
+      [
+        { id: "a", order: 1, label: "A2" },
+        { id: "c", order: 0, label: "C2" },
+      ],
+    );
+    expect(items.map((i) => i.label)).toEqual(["C2", "A2", "B"]);
   });
 
   it("passes children through", () => {
     const children = [{ id: "c", label: "C" }];
     expect(composeItems([{ id: "p", label: "P", children }], [])[0].children).toBe(children);
-  });
-});
-
-describe("addAdminBarItem", () => {
-  it("adds an item until its remover runs and notifies subscribers", () => {
-    const cb = vi.fn();
-    const unsubscribe = subscribeItems(cb);
-    const item = { id: "clear", label: "Clear cache", onClick: () => {} };
-
-    const remove = addAdminBarItem(item);
-    expect(getAddedItems()).toEqual([item]);
-    expect(cb).toHaveBeenCalledTimes(1);
-
-    remove();
-    expect(getAddedItems()).toEqual([]);
-    expect(cb).toHaveBeenCalledTimes(2);
-
-    unsubscribe();
-    addAdminBarItem(item)();
-    expect(cb).toHaveBeenCalledTimes(2);
   });
 });

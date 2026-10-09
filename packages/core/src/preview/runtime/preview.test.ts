@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminBarContext } from "../../admin/index.d.ts";
-import { addAdminBarItem, preview, type Unsubscribe } from "../index.ts";
+import { preview, type Unsubscribe } from "../index.ts";
 import { builtIns } from "./admin-bar-items.ts";
 
 const handle = { update: vi.fn<(ctx: AdminBarContext) => void>(), unmount: vi.fn() };
@@ -21,6 +21,19 @@ describe("preview", () => {
       "fetch",
       vi.fn(async () => new Response(JSON.stringify(body), { status })),
     );
+  // Preview controls are fixed. Site items include a configured link.
+  const serveModes = () =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const mode = new URL(url, location.origin).searchParams.get("mode") as
+          | "site"
+          | "preview-tab";
+        const items = builtIns(mode);
+        if (mode === "site") items.push({ id: "purge", label: "Purge", href: "/purge" });
+        return new Response(JSON.stringify({ position: "bottom-center", items, branding: {} }));
+      }),
+    );
   const mounted = async () => {
     await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
     return mountAdminBar.mock.calls[0]![1];
@@ -31,11 +44,12 @@ describe("preview", () => {
     document.cookie = "integral-preview=; max-age=0; path=/";
     document.cookie = "integral-session=; max-age=0; path=/";
     document.body.innerHTML = "";
-    serve(200, { position: "bottom", items: builtIns("site") });
+    serve(200, { position: "bottom-center", items: builtIns("site") });
     vi.spyOn(location, "reload").mockImplementation(() => {});
   });
   afterEach(() => {
     stop();
+    history.replaceState(null, "", "/");
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     mountAdminBar.mockClear();
@@ -151,86 +165,100 @@ describe("preview", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("leaves preview when a preview tab returns to the visual editor", () => {
+    window.name = "integral-preview-posts:back";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    history.replaceState(null, "", "/cms/presentation?url=%2Fposts%2Fcurrent");
+    stop = preview({ admin: "/cms" });
+    expect(window.name).toBe("");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(opener.postMessage).not.toHaveBeenCalled();
+  });
+
   it("mounts the admin bar with the filled items for the session hint", async () => {
     hint();
     cookie("drafts");
+    history.replaceState(null, "", "/posts/current?lang=de&view=draft#details");
     document.body.innerHTML = `<h1 data-cms="pages:p1:title"></h1><p data-cms="pages:p1:body"></p>`;
     stop = preview({ admin: "/cms" });
     const ctx = await mounted();
     expect(fetch).toHaveBeenCalledWith(
-      `/api/cms/admin-bar?url=${encodeURIComponent(location.href)}`,
+      `/api/cms/admin-bar?url=${encodeURIComponent("/posts/current?lang=de&view=draft")}&mode=site`,
       { credentials: "same-origin" },
     );
     expect(document.documentElement.lastElementChild!.hasAttribute("data-cms-bar")).toBe(true);
     expect(mountAdminBar.mock.calls[0]![0]).toBeInstanceOf(ShadowRoot);
     expect(ctx).toMatchObject({
-      position: "bottom",
+      position: "bottom-center",
       mode: "site",
       perspective: "drafts",
       edit: false,
     });
     expect(ctx.items).toEqual([
-      { id: "dashboard", group: "start", order: 10, label: "Dashboard", href: "/cms" },
+      { id: "dashboard", order: 10, label: "Dashboard", builtIn: true, href: "/cms" },
       {
         id: "edit",
-        group: "end",
-        order: 10,
-        label: "Edit pages",
-        href: "/cms/content/collections/pages/p1",
-      },
-      {
-        id: "live-edit",
-        group: "end",
         order: 20,
-        label: "Live edit",
+        label: "Edit",
+        icon: "pencil",
+        builtIn: true,
         href: `/cms/presentation?url=${encodeURIComponent(location.href)}`,
       },
-      { id: "perspective", group: "end", order: 30, label: "Drafts" },
+      { id: "perspective", order: 30, label: "Drafts", builtIn: true },
     ]);
   });
 
-  it("lists several bound documents under one Edit item", async () => {
+  it("keeps the Edit link on the current route after client navigation", async () => {
     hint();
-    document.body.innerHTML = `<h1 data-cms="posts:x:title"></h1><footer data-cms="footer::text"></footer>`;
     stop = preview({ admin: "/cms" });
-    const edit = (await mounted()).items.find((i) => i.id === "edit");
-    expect(edit).toEqual({
-      id: "edit",
-      group: "end",
-      order: 10,
-      label: "Edit",
-      children: [
-        { id: "edit:posts:x", label: "Edit posts", href: "/cms/content/collections/posts/x" },
-        { id: "edit:footer:", label: "Edit footer", href: "/cms/content/globals/footer" },
-      ],
-    });
+    await mounted();
+    history.pushState(null, "", "/posts/next?lang=en#title");
+    document.body.innerHTML = `<h1 data-cms="posts:next:title">Next</h1>`;
+    await vi.waitFor(() =>
+      expect(handle.update.mock.lastCall![0].items.find((item) => item.id === "edit")?.href).toBe(
+        `/cms/presentation?url=${encodeURIComponent(location.href)}`,
+      ),
+    );
+    history.replaceState(null, "", "/posts/next?lang=de#title");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(handle.update.mock.lastCall![0].items.find((item) => item.id === "edit")?.href).toBe(
+      `/cms/presentation?url=${encodeURIComponent(location.href)}`,
+    );
   });
 
-  it("drops Edit without bound documents and keeps labels the hooks changed", async () => {
+  it("keeps a normal site page outside the live preview channel", async () => {
     hint();
-    serve(200, {
-      position: "top",
-      items: [
-        { id: "dashboard", group: "start", order: 10, label: "Back office" },
-        { id: "edit", group: "end", order: 10, label: "Edit" },
-        { id: "analytics", label: "Analytics", href: "/stats" },
-      ],
-    });
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    document.body.innerHTML = `<h1 data-cms="posts:1:title">Original</h1><input value="Keep">`;
+    const original = document.querySelector("input");
     stop = preview();
-    expect((await mounted()).items).toEqual([
-      { id: "dashboard", group: "start", order: 10, label: "Back office", href: "/admin" },
-      { id: "analytics", label: "Analytics", href: "/stats" },
-    ]);
+    const ctx = await mounted();
+    for (const data of [
+      { type: "mode", edit: true },
+      { type: "draft", collection: "posts", id: "1", data: { title: "Draft" } },
+    ])
+      window.dispatchEvent(
+        new MessageEvent("message", { data, source: opener as never, origin: location.origin }),
+      );
+    expect(document.querySelector("h1")!.textContent).toBe("Original");
+    expect(document.querySelector("input")).toBe(original);
+    expect(document.documentElement.hasAttribute("data-cms-edit")).toBe(false);
+    expect(document.querySelector("iframe")).toBeNull();
+    expect(opener.postMessage).not.toHaveBeenCalled();
+    ctx.dismiss();
+    expect((document.querySelector("[data-cms-bar]") as HTMLElement).hidden).toBe(true);
   });
 
-  it("finds documents bound after the first scan", async () => {
+  it("removes the bar after session expiry", async () => {
     hint();
     stop = preview();
     await mounted();
-    document.body.innerHTML = `<h1 data-cms="posts:x:title"></h1>`;
-    document.dispatchEvent(new Event("DOMContentLoaded"));
-    const ctx = handle.update.mock.lastCall![0];
-    expect(ctx.items.find((i) => i.id === "edit")?.label).toBe("Edit posts");
+    serve(401, {});
+    window.dispatchEvent(new Event("focus"));
+    await vi.waitFor(() => expect(document.querySelector("[data-cms-bar]")).toBeNull());
+    expect(document.cookie).not.toContain("integral-session");
   });
 
   it("mounts nothing and clears the hint on 401", async () => {
@@ -252,16 +280,6 @@ describe("preview", () => {
     expect(document.cookie).toContain("integral-session=1");
   });
 
-  it("updates the bar with items from page code and removes them again", async () => {
-    hint();
-    stop = preview();
-    await mounted();
-    const remove = addAdminBarItem({ id: "purge", label: "Purge", onClick: () => {} });
-    expect(handle.update.mock.lastCall![0].items.at(-1)).toMatchObject({ id: "purge" });
-    remove();
-    expect(handle.update.mock.lastCall![0].items.some((i) => i.id === "purge")).toBe(false);
-  });
-
   it("unmounts the bar and removes its host on stop", async () => {
     hint();
     stop = preview();
@@ -280,20 +298,74 @@ describe("preview", () => {
     expect(document.querySelector("[data-cms-bar]")).toBeNull();
   });
 
-  it("mounts the bar in a preview tab without the hint, with Exit preview", async () => {
+  it("shows only preview controls, then restores the normal bar when dismissed", async () => {
     window.name = "integral-preview-1";
+    history.replaceState(null, "", "/posts/current?lang=de#title");
+    serveModes();
     stop = preview();
     const ctx = await mounted();
+    const host = document.querySelector("[data-cms-bar]");
     expect(ctx.mode).toBe("preview-tab");
-    expect(ctx.items.find((i) => i.id === "live-edit")).toEqual({
-      id: "live-edit",
-      group: "end",
-      order: 20,
-      label: "Live edit",
+    expect(ctx.items.map((item) => item.id)).toEqual(["edit", "live-edit"]);
+    expect(ctx.items[0]).toMatchObject({
+      label: "Back to visual editor",
+      href: `/admin/presentation?url=${encodeURIComponent(location.href)}`,
     });
-    ctx.items.find((i) => i.id === "exit-preview")!.onClick!();
+    ctx.setEdit(true);
+    ctx.dismiss();
     expect(window.name).toBe("");
-    expect(location.reload).toHaveBeenCalled();
+    expect(location.reload).not.toHaveBeenCalled();
+    expect(document.documentElement.hasAttribute("data-cms-edit")).toBe(false);
+    expect(document.querySelector("[data-cms-bar]")).toBe(host);
+    expect((host as HTMLElement).hidden).toBe(false);
+    expect(handle.update.mock.lastCall![0]).toMatchObject({ mode: "site", edit: false });
+    await vi.waitFor(() =>
+      expect(handle.update.mock.lastCall![0].items.map((item) => item.id)).toEqual([
+        "dashboard",
+        "edit",
+        "perspective",
+        "purge",
+      ]),
+    );
+    expect(mountAdminBar).toHaveBeenCalledTimes(1);
+    expect(handle.unmount).not.toHaveBeenCalled();
+    stop();
+    expect(handle.unmount).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("[data-cms-bar]")).toBeNull();
+  });
+
+  it("disconnects live updates, highlights and edit clicks after leaving preview", async () => {
+    window.name = "integral-preview-posts:exit";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    document.body.innerHTML = `<h1 data-cms="posts:exit:title">Original</h1>`;
+    stop = preview();
+    const ctx = await mounted();
+    const send = (data: unknown) =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data,
+          source: opener as never,
+          origin: location.origin,
+        }),
+      );
+    send({ type: "mode", edit: true });
+    send({ type: "highlight", collection: "posts", id: "exit" });
+    expect(document.querySelector("[data-cms-highlight]")).not.toBeNull();
+    ctx.dismiss();
+    opener.postMessage.mockClear();
+    send({ type: "mode", edit: true });
+    send({ type: "draft", collection: "posts", id: "exit", data: { title: "Draft" } });
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    document.querySelector("h1")!.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(document.querySelector("h1")!.textContent).toBe("Original");
+    expect(document.querySelector("[data-cms-highlight]")).toBeNull();
+    expect(document.documentElement.hasAttribute("data-cms-edit")).toBe(false);
+    expect(opener.postMessage).not.toHaveBeenCalled();
+    serve(401, {});
+    window.dispatchEvent(new Event("focus"));
+    await vi.waitFor(() => expect(document.querySelector("[data-cms-bar]")).toBeNull());
   });
 
   it("keeps the edit switch and the admin's mode message in sync", async () => {
@@ -310,6 +382,38 @@ describe("preview", () => {
     window.dispatchEvent(new MessageEvent("message", mode as never));
     expect(html.hasAttribute("data-cms-edit")).toBe(false);
     expect(handle.update.mock.lastCall![0].edit).toBe(false);
+  });
+
+  it("does not apply a pending saved-page refresh after leaving preview", async () => {
+    window.name = "integral-preview-posts:pending";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    document.body.innerHTML = `<h1>Keep this page</h1>`;
+    stop = preview({ morph: true });
+    const ctx = await mounted();
+    let finish!: (html: string) => void;
+    const text = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, text })),
+    );
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: { type: "saved", collection: "posts", id: "pending" },
+        source: opener as never,
+        origin: location.origin,
+      }),
+    );
+    await vi.waitFor(() => expect(text).toHaveBeenCalled());
+    ctx.dismiss();
+    finish("<html><body><h1>Late refresh</h1></body></html>");
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.querySelector("h1")!.textContent).toBe("Keep this page");
   });
 
   it("switches the perspective and reloads", async () => {

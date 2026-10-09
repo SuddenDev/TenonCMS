@@ -1,20 +1,18 @@
 <script setup lang="ts">
-import { useEventListener, useMediaQuery } from "@vueuse/core";
-import { ConfigProvider, ToolbarRoot } from "reka-ui";
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { useEventListener } from "@vueuse/core";
+import { ConfigProvider, ToolbarButton, ToolbarRoot } from "reka-ui";
+import { onBeforeUnmount, ref, watch } from "vue";
 import type { AdminBarContext } from "../../../core/src/admin/index.d.ts";
+import X from "@lucide/vue/dist/esm/icons/x.mjs";
+import { Button } from "@/shared/components/ui/button";
 import { headroom, type HeadroomState } from "./headroom";
 import AdminBarItem from "./AdminBarItem.vue";
-import AdminBarSheet from "./AdminBarSheet.vue";
 
 const props = defineProps<{ ctx: AdminBarContext; root: HTMLElement; portal: HTMLElement }>();
 
 const HEIGHT = 30;
-const wide = useMediaQuery("(min-width: 640px)");
-const start = computed(() => props.ctx.items.filter((item) => item.group === "start"));
-const end = computed(() => props.ctx.items.filter((item) => item.group !== "start"));
 
-// Open menus and the sheet hold focus, so focus inside the root also covers them.
+// Open menus hold focus, so focus inside the root also covers them.
 const pinned = ref(false);
 useEventListener(
   () => props.root,
@@ -29,7 +27,10 @@ useEventListener(
 
 const state = ref<HeadroomState>({ y: scrollY, hidden: false });
 const update = () =>
-  (state.value = headroom(state.value, scrollY, { height: HEIGHT, pinned: pinned.value }));
+  (state.value = headroom(state.value, scrollY, {
+    height: HEIGHT,
+    pinned: pinned.value || props.ctx.edit,
+  }));
 let frame = 0;
 useEventListener(
   window,
@@ -43,7 +44,7 @@ useEventListener(
   },
   { passive: true },
 );
-watch(pinned, update);
+watch([pinned, () => props.ctx.edit], update);
 onBeforeUnmount(() => cancelAnimationFrame(frame));
 </script>
 
@@ -52,16 +53,32 @@ onBeforeUnmount(() => cancelAnimationFrame(frame));
     <ToolbarRoot
       aria-label="Admin bar"
       loop
+      :data-mode="ctx.mode"
       :data-position="ctx.position"
       :data-hidden="state.hidden"
-      class="bg-card/95 text-card-foreground border-border fixed inset-x-0 z-40 flex h-[30px] items-center gap-0.5 px-1.5 backdrop-blur transition-transform duration-200 ease-out data-[position=bottom]:bottom-0 data-[position=bottom]:border-t data-[hidden=true]:data-[position=bottom]:translate-y-full data-[position=top]:top-0 data-[position=top]:border-b data-[hidden=true]:data-[position=top]:-translate-y-full motion-reduce:transition-none"
+      class="floating-bar bg-background/80 text-card-foreground border-border fixed z-999 flex h-10 items-center gap-0.5 rounded-full border px-2 shadow-lg backdrop-blur transition-opacity duration-200 data-[hidden=true]:pointer-events-none data-[hidden=true]:opacity-0 motion-reduce:transition-none"
     >
-      <AdminBarItem v-for="item in start" :key="item.id" :item :ctx />
-      <div class="flex-1" />
-      <template v-if="wide">
-        <AdminBarItem v-for="item in end" :key="item.id" :item :ctx align="end" />
-      </template>
-      <AdminBarSheet v-else-if="end.length" :items="end" :ctx />
+      <div
+        class="scroll-fade-x scroll-fade-4 flex min-w-0 scrollbar-none items-center gap-1 overflow-x-auto *:shrink-0"
+      >
+        <template v-for="(item, index) in ctx.items" :key="item.id">
+          <AdminBarItem :item :ctx />
+          <span
+            v-if="index < ctx.items.length - 1"
+            class="bg-muted-foreground/70 h-5 w-px"
+            aria-hidden="true"
+          />
+        </template>
+      </div>
+      <ToolbarButton as-child>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          :aria-label="ctx.mode === 'preview-tab' ? 'Exit preview' : 'Dismiss admin bar'"
+          @click="ctx.dismiss"
+          ><X
+        /></Button>
+      </ToolbarButton>
     </ToolbarRoot>
   </ConfigProvider>
 </template>

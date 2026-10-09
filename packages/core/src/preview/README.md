@@ -33,11 +33,13 @@ framework re-render and reports the bound documents. With `morph`, a `saved` mes
 
 `preview()` starts the bar when `admin` is not `false`, the page is not under the admin's path, and the
 `integral-session` hint cookie is set (`hasSessionHint()`). `startAdminBar()` asks the endpoint for the page's items
-(`loadAdminBar()`). The endpoint runs the items hooks over the built-in stubs (`builtIns("site")`) and answers
-`{ position, items }`. `fillItems()` turns the stubs into links for the page, and `composeItems()` appends the
-`addAdminBarItem()` items and sorts. The bar chunk loads only then, so visitors download nothing extra. It mounts into
-an open shadow root on a `<div data-cms-bar>` on `<html>`. The bar renders the context and calls its actions; the
-runtime owns all state and calls `update()` when the bound documents, the edit mode or the added items change.
+(`loadAdminBar()`, with the page `url` and the `mode`). The endpoint composes the built-in stubs (`builtIns()`) with the
+registered items from `admin.adminBar.items`, drops hidden ones, runs the loaders of the others and answers
+`{ position, items, branding }`. The endpoint sorts the items, and `fillItems()` turns the built-in stubs into links for the page. A `clientRef()` on an item (`onClick`, `mount`) resolves through the
+`#integral/client-registry` module, imported on the first item that needs it and only after the session check. The bar
+chunk loads only then, so visitors download nothing extra. It mounts into an open shadow root on a
+`<div data-cms-bar>` on `<html>`. The bar renders the context and calls its actions; the runtime owns all state and
+calls `update()` when the bound documents, the edit mode or an item's data change.
 
 ## Files
 
@@ -47,18 +49,19 @@ runtime owns all state and calls `update()` when the bound documents, the edit m
 | `vue.ts`                          | `useDraft()` using a Vue shallow ref.                                                              |
 | `react.ts`                        | `useDraft()` using React's external store.                                                         |
 | `config/types.ts`                 | `Preview`, `Drafts`, `PreviewMessage`, `PreviewOptions` and `Unsubscribe`.                         |
-| `config/admin-bar.ts`             | `AdminBarOptions`, `AdminBarItemsHook` and `runItemHooks()`.                                       |
+| `config/admin-bar.ts`             | `ADMIN_BAR_POSITIONS` and `checkAdminBarPosition()`.                                               |
 | `endpoints/`                      | `POST /preview` sets the preview cookie, `DELETE /preview` clears it.                              |
-| `endpoints/admin-bar.endpoint.ts` | `GET /admin-bar?url=`: the page's `{ position, items }`. Protected.                                |
+| `endpoints/admin-bar.endpoint.ts` | `GET /admin-bar?url=&mode=`: the page's `{ position, items, branding }`. Protected.                |
 | `server/resolve-url.ts`           | `previewUrl()`: runs the host's function, or fills a template after one relation hop.              |
 | `templates/placeholders.ts`       | `PLACEHOLDER` and `placeholders()`: the dot paths of a template.                                   |
 | `templates/resolve-template.ts`   | `resolveTemplate()`: fills a template, or `null` when a value is missing.                          |
+| `runtime/message.ts`              | Message-shape validation shared by the site and admin.                                             |
 | `runtime/preview.ts`              | `preview()`: mode, message channel and origin checks, observer, edit clicks and morph re-renders.  |
 | `runtime/store.ts`                | The singleton draft snapshot, `draftKey()` and subscriptions.                                      |
 | `runtime/merge-draft.ts`          | `merge()`: applies a draft, keeping populated values whose ids match.                              |
 | `runtime/bind-elements.ts`        | `edit()`, `parseBinding()`, DOM patches, highlights and `boundDocuments()`.                        |
 | `runtime/admin-bar.ts`            | `startAdminBar()`: loads the items, mounts the bar in a shadow root, `fillItems()`.                |
-| `runtime/admin-bar-items.ts`      | `builtIns()`, `composeItems()` and the `addAdminBarItem()` registry.                               |
+| `runtime/admin-bar-items.ts`      | `builtIns()` and `composeItems()`: built-in stubs and server-side composition.                     |
 | `runtime/site-api.ts`             | The site's calls and cookies: session hint, `loadAdminBar()`, `perspective()`, `setPerspective()`. |
 
 `index.ts`, `vue.ts` and `react.ts` run in the browser and in server bundles. They MUST NOT import zod or core
@@ -97,35 +100,46 @@ else from the value itself. Objects and arrays without `data-cms-attr` are left 
 | `integral-preview-…` | A preview the admin opened in a tab. Live preview and the bar in `preview-tab` mode.                   |
 | anything else        | The bar in `site` mode, with the hint cookie, a session and `admin` not `false`. Never on admin pages. |
 
-Built-in items (`builtIns()`):
+Built-in items (`builtIns()`), one flat row sorted by `order`:
 
-| Id             | Group   | Order | What it does                                                                                                                                       |
-| -------------- | ------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dashboard`    | `start` | 10    | Links to `admin`.                                                                                                                                  |
-| `edit`         | `end`   | 10    | One bound document: "Edit <collection>" to `<admin>/content/collections/<c>/<id>` (`…/content/globals/<name>`). Several: a dropdown. None: hidden. |
-| `live-edit`    | `end`   | 20    | Site: links to `<admin>/presentation?url=<page>`. Preview tab: the edit switch (`data-cms-edit`); a later `mode` message wins.                     |
-| `perspective`  | `end`   | 30    | The Drafts / Published menu, as in the admin's app bar. Reads the `integral-preview` cookie; `setPerspective()` sets it and reloads.               |
-| `exit-preview` | `end`   | 40    | Preview tab only, added on the client. Clears `window.name` and reloads.                                                                           |
+| Id            | Order | What it does                                             |
+| ------------- | ----- | -------------------------------------------------------- |
+| `dashboard`   | 10    | Links to `admin`.                                        |
+| `edit`        | 20    | Opens the visual editor with the current page URL.       |
+| `perspective` | 30    | The Drafts / Published menu; switching reloads the page. |
 
-Items compose in this order: built-in stubs, the plugins' `adminBar.items` hooks in plugin order, the host's
-`adminBar.items`, then `addAdminBarItem()` calls. A hook gets the whole list and returns a new one; one that throws is
-logged and skipped. An item replaces an earlier one with the same id. `start` sorts before `end`, then by `order`;
-items without `order` follow in insertion order. Server items MUST be JSON (`ServerAdminBarItem` has no `onClick` or `mount`). A `mount(el, ctx)` item renders itself
-with plain DOM inside the bar's shadow root.
-The server cannot see the page, so the client fills `dashboard`, `edit` and `live-edit` into the stubs the hooks
-leave, keeping their `group` and `order`. The bar renders `perspective` and the preview tab's `live-edit` as switches
-itself: hooks MAY move or drop them, not restyle them.
+Preview tabs use fixed controls: `edit` (order 10, Back to visual editor) and `live-edit` (order 20, Edit preview).
+Custom items and their loaders do not run there. The close icon calls `dismiss()`: it clears `window.name`, disconnects
+the live channel, removes overlays and restores the normal bar, including custom items, without reloading. Stopping the
+runtime still unmounts the bar after this transition. The iframe's live channel and controls are independent.
+Returning to the admin page also clears a preview tab's name and starts no site preview runtime.
+
+Items are registrations in `admin.adminBar.items` (see [admin](../admin/README.md)). They compose in this order:
+built-in stubs, the plugins' items in plugin order, then the host's items. An item replaces an
+earlier one with the same key in place and brings its own `order`. `false` instead of an item removes it, built-ins
+included, before its loader runs. Items sort by `order`; items without `order` follow in insertion order. There are no
+groups. A link or dropdown is rendered by the bar; its `load` may overlay `label`, `icon`, `href` and `children`, or
+return `null` to hide the item for the request. A button (`onClick`) or custom control (`mount`) gets the `load`
+result as `ctx.data`. Each item only gets its own data. A loader that throws or returns invalid output is logged and
+that item is skipped. A `mount(el, ctx)` item renders itself with plain DOM inside the bar's shadow root.
+The server cannot see the page, so the client fills `dashboard` and `edit` into the stubs, keeping their `order`. The
+normal pill renders the whole sorted list inline, so custom items can sit between built-ins.
+
+The runtime reloads item data when the page URL changes and on the existing focus/session check, drops stale
+responses, and does not reload on mutations or edit-mode toggles. `ctx.integral.reload()` reloads one item through
+`POST /admin/load` with `kind: "bar-item"` (`loadAdminBarItem()`).
 
 The session cookie is `HttpOnly`, so the page cannot see it. The auth middleware
 [`session-hint.middleware.ts`](../auth/middleware/session-hint.middleware.ts) mirrors it in `integral-session=1`, which
 page code can read. The hint grants nothing: the endpoint checks the real session, and a 401 clears the hint. Any
 other error or a failed chunk import shows no bar and keeps the hint.
 
-The bar is 30 px high and overlays the page at `position` (`top` by default, or `bottom`); the page keeps its layout.
+The pill is 44 px high and overlays the page at one of eight positions (`bottom-center` by default); the page keeps its layout.
 It hides on scroll down and shows on scroll up (`headroom()` in `packages/admin/src/admin-bar/headroom.ts`), and
-stays shown near the top and while focus or a menu is inside it. Below 640 px the `end` group moves into a sheet that
-opens from the right. The host `<div>` sits on `<html>`, not `<body>`, so a morph keeps it, with the highest
-`z-index`. The bar follows `prefers-color-scheme`. With `adminBar: false` on `defineCms()` core mounts no
+stays shown while editing or while focus or a menu is inside it. On phones the normal bar uses at most 95% of the
+viewport width. Its items scroll horizontally with `scroll-fade-x`; the dismiss button stays visible. Preview
+controls keep their separate layout. The host `<div>` sits on `<html>`, not `<body>`, so a morph keeps it, with the highest
+`z-index`. The bar follows `prefers-color-scheme`. With `admin: { adminBar: false }` core mounts no
 `/admin-bar` route, so no bar shows.
 
 ## Re-render (`morph`)
@@ -138,3 +152,5 @@ only get the patches. `idiomorph` is bundled into the entry.
 
 `merge()` replaces top-level keys with draft values, except a value of ids that match the ids of the current,
 populated value: the browser cannot populate, so it keeps what the page has.
+
+The bar supports the eight compass positions except center-center and defaults to bottom-center, with 16 px clearance and safe-area insets. Its toolbar keeps roving keyboard focus and places every menu/portal inside the same shadow root. The Edit button opens `<admin>/presentation?url=<current page>`. Normal site pages have no live preview channel or embedded editor. Preview tabs retain field selection and live updates. Dismiss hides the bar; session expiry removes it and its listeners. Published forms remain read-only; perspective changes still reload.

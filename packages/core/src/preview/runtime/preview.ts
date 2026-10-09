@@ -1,3 +1,4 @@
+import { isPreviewMessage } from "./message.ts";
 import { Idiomorph } from "idiomorph";
 import type { Unsubscribe, PreviewMessage, PreviewOptions } from "../config/types.ts";
 import { startAdminBar } from "./admin-bar.ts";
@@ -27,10 +28,14 @@ export const preview: (options?: PreviewOptions) => Unsubscribe = ({
   const name = globalThis.window?.name;
   if (name === undefined) return () => {};
 
-  if (name.startsWith("integral-preview")) return track(startLive(name, morph, admin));
   // The admin's own page MAY load this too (Astro injects it into every page).
   const onAdminPage = admin && (location.pathname + "/").startsWith(`${admin}/`);
-  if (!admin || onAdminPage || !hasSessionHint()) return () => {};
+  if (onAdminPage) {
+    if (name.startsWith("integral-preview-")) window.name = "";
+    return () => {};
+  }
+  if (name.startsWith("integral-preview")) return track(startLive(name, morph, admin));
+  if (!admin || !hasSessionHint()) return () => {};
   return track(startAdminBar("site", admin).stop);
 };
 
@@ -53,17 +58,28 @@ const startLive = (name: string, morph: boolean, admin: string | false): Unsubsc
 
   // The bar's switch and the admin's `mode` message both go through `setEditMode()`; the last one wins.
   const setEditMode = (edit: boolean) => {
+    if (!active) return;
     html.toggleAttribute("data-cms-edit", edit);
+    if (!edit) highlight(null, null);
     bar?.setEdit(edit);
+    channel.post({ type: "mode", edit });
   };
   const bar = name.startsWith("integral-preview-")
-    ? startAdminBar("preview-tab", admin || "", setEditMode)
+    ? startAdminBar("preview-tab", admin || "", setEditMode, {
+        onSessionEnd: () => cleanup(),
+        onExit: () => {
+          window.name = "";
+          cleanupLive();
+        },
+      })
     : undefined;
 
   const onMessage = (event: MessageEvent<PreviewMessage>) => {
-    if (!channel.accept(event)) return;
+    if (!isPreviewMessage(event.data) || !channel.accept(event)) return;
     const message = event.data;
-    if (message.type === "draft") {
+    if (message.type === "ready") {
+      channel.post({ type: "mode", edit: html.hasAttribute("data-cms-edit") });
+    } else if (message.type === "draft") {
       setDraft(message.collection, message.id, message.data);
       patchAll(document);
     } else if (message.type === "mode") {
@@ -84,7 +100,6 @@ const startLive = (name: string, morph: boolean, admin: string | false): Unsubsc
       for (const node of r.addedNodes) if (node instanceof Element) patchAll(node);
     }
     channel.report();
-    bar?.refresh();
   });
 
   const onClick = (e: MouseEvent) => {
@@ -96,27 +111,37 @@ const startLive = (name: string, morph: boolean, admin: string | false): Unsubsc
     channel.post({ type: "edit", ...parseBinding(bound.getAttribute("data-cms")!) });
   };
 
+  const onKey = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && html.hasAttribute("data-cms-edit")) setEditMode(false);
+  };
+  window.addEventListener("keydown", onKey);
   observer.observe(html, { childList: true, subtree: true, characterData: true });
   document.addEventListener("click", onClick, true);
   window.addEventListener("message", onMessage);
   channel.announce();
 
-  return () => {
+  const cleanupLive = () => {
+    if (!active) return;
     active = false;
+    window.removeEventListener("keydown", onKey);
     window.removeEventListener("message", onMessage);
     observer.disconnect();
     style.remove();
     html.removeAttribute("data-cms-edit");
     highlight(null, null);
     document.removeEventListener("click", onClick, true);
+  };
+  const cleanup = () => {
+    cleanupLive();
     bar?.stop();
   };
+  return cleanup;
 };
 
 // The admin is the page that holds the iframe or opened the tab. Only its origin is trusted, and nothing goes out
 // before its first message, so a page that frames the site learns nothing.
 const openChannel = (admin: string | false) => {
-  const host: Window | null = window.parent !== window ? window.parent : window.opener;
+  const host = window.parent !== window ? window.parent : window.opener;
   const origin = new URL(admin || "/", location.href).origin;
   let connected = false;
   let reported = "";
@@ -165,6 +190,7 @@ const createRerender = (isActive: () => boolean) => {
         });
         if (!res.ok || !isActive()) continue;
         const next = new DOMParser().parseFromString(await res.text(), "text/html");
+        if (!isActive()) continue;
         Idiomorph.morph(document.body, next.body);
         document.title = next.title;
         patchAll(document);
