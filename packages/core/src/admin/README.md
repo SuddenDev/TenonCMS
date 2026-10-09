@@ -1,26 +1,58 @@
 # admin
 
-The contract and page runtime of the admin UI and the admin bar, shipped in `dist/admin`. The UI itself is the Vue app in `packages/admin`; its build writes `index.js` and `bar.js` next to these files. How adapters serve the page (path, alias, favicon, build input, HTML) lives in `src/integrations/admin/`.
+The contract and page runtime of the admin UI and the admin bar, shipped in `dist/admin`. The UI itself is the Vue app in `packages/admin`; its build writes `mount.js` and `bar.js` next to these files. How adapters serve the page (path, favicon, build input, HTML, reference discovery) lives in `src/integrations/admin/`.
 
 ## Follow the admin page
 
 The page that `adminHtml()` renders loads:
 
-`entry.ts` → `#integral/admin` (`integral.admin.ts` or `default.ts`) → `mountAdmin()` in `index.js`
+`entry.ts` → `mountAdmin()` in `mount.js` → `GET /admin-brand` (public) → sign-in → `GET /schema` → `addAdminPages()`
 
-`entry.ts` reads the base path from `data-base` and the favicon from the `__INTEGRAL_FAVICON__` define, then mounts the admin with the host's options. Host fields and pages are `Mount` functions; `renderVue()` and `renderReact()` build one from a component.
+`entry.ts` reads the base path from `data-base`, the favicon from the `__INTEGRAL_FAVICON__` define and the browser exports from `#integral/client-registry`. There is no host options file. The admin shows the login branding from `/admin-brand`; fields and pages arrive in `/schema` after sign-in as a descriptor (`AdminDescriptor`): metadata, `clientRef()` values and a `load: true` flag, never a function.
+
+A field or page with a `load` asks `POST /admin/load` for its data (`load/`). `lazyMount()` (`browser/`) waits for the browser export and the data, passes the result as `ctx.data` and calls `update(ctx)` on refresh. The admin bar gets its items and their data from `GET /admin-bar` (`preview/`), which uses `load/bar-item.ts`.
+
+## Follow a registration
+
+`defineCms({ admin })` and each `plugin.admin` go through `merge/merge-options.ts` once at startup:
+
+`describe/describe-registration.ts` / `describe/describe-bar-item.ts` (validate, split loader from descriptor) → `merge/merge-options.ts` and `merge/merge-bar.ts` (plugins first, then the host; duplicate field or page keys throw; bar items replace by key, and `false` removes one) → `AdminRuntime` on `Core`
+
+Only `AdminRuntime.descriptor` is serialized. The loaders stay in the instance, in `Map`s keyed by registration. A request selects a registration by key; it never names a module or a function.
+
+## Follow a load
+
+`POST /admin/load` flows through:
+
+`endpoints/load.endpoint.ts` → `load/load-request.ts` → `load/load.operation.ts` → `load/field-target.ts` / `load/run-loader.ts` / `load/bar-item.ts`
+
+The endpoint checks the body and the session, then builds the caller's local API. `load()` picks the registration by key and runs its loader: a field is checked against the schema first, a page runs as is, a bar item goes through `loadBarItem()`. `run-loader.ts` and `bar-item.ts` check the result with `to-json.ts`.
 
 ## Files
 
-| Path                 | Responsibility                                                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.d.ts`         | Types of `integral-cms/admin`: `defineAdmin()`, `Nav`, `Mount`, page and field contexts, `AdminBarItem`, `ServerAdminBarItem`, `AdminBarContext`. |
-| `bar.d.ts`           | Types of `integral-cms/admin/bar`: `mountAdminBar()`. The preview runtime imports it dynamically.                                                 |
-| `entry.ts`           | The page script: mounts the admin.                                                                                                                |
-| `default.ts`         | Empty options, used when the host has no `integral.admin.ts`.                                                                                     |
-| `virtual.d.ts`       | Types the `#integral/admin-html` module (the page as a string).                                                                                   |
-| `icons.d.ts`         | Generated `IconName` union of the Lucide icons. Run the admin's `icons` script.                                                                   |
-| `vue.ts`, `react.ts` | `renderVue()` / `renderReact()`: wrap a host component as a `Mount`.                                                                              |
-| `menu.ts`            | `groupMenu()`: sorts items and groups them (fallback group `Content`, or the one given).                                                          |
+| Path                   | Responsibility                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.d.ts`           | Types of `integral-cms/admin`: `AdminOptions`, registrations, loader contexts, `Mount` contexts, `AdminBarItem`, descriptors.                                                                                                                                                                                                                                                                       |
+| `config.ts`            | `clientRef()`, with no application code. The `integral-cms/admin` entry.                                                                                                                                                                                                                                                                                                                            |
+| `entry.ts`             | The page script: mounts the admin.                                                                                                                                                                                                                                                                                                                                                                  |
+| `mount.d.ts`           | Types of the separate application renderer.                                                                                                                                                                                                                                                                                                                                                         |
+| `bar.d.ts`             | Types of `integral-cms/admin/bar`: `mountAdminBar()`. The preview runtime imports it dynamically.                                                                                                                                                                                                                                                                                                   |
+| `virtual.d.ts`         | Types the `#integral/admin-html` module (the page as a string).                                                                                                                                                                                                                                                                                                                                     |
+| `icons.d.ts`           | Generated `IconName` union of the Lucide icons. Run the admin's `icons` script.                                                                                                                                                                                                                                                                                                                     |
+| `registration.test.ts` | Type tests of the registration types in `index.d.ts`.                                                                                                                                                                                                                                                                                                                                               |
+| `test-registry.ts`     | Empty `#integral/client-registry` for Vitest (aliased in `vitest.config.ts`).                                                                                                                                                                                                                                                                                                                       |
+| `describe/`            | `describe-registration.ts` validates a field or page and splits its `load` from the JSON descriptor. `describe-bar-item.ts` does the same for a bar item and its children. `registration-checks.ts` holds the shared checks (`requireRef()`, `optionalLoad()`, `copyConfig()`) and the `Loader` type.                                                                                               |
+| `merge/`               | `merge-options.ts`: `mergeAdmin()` merges plugins and host into an `AdminRuntime`; `adminBrand()` keeps only the public branding. `merge-bar.ts`: `addBarItems()` checks the `adminBar` option of one source, `buildBar()` returns the `AdminBar` with unique item ids.                                                                                                                             |
+| `load/`                | `load.operation.ts` dispatches a field, page or bar item load. `load-request.ts` is the body of `POST /admin/load` and `isPageUrl()`. `field-target.ts` resolves the field and owner from the schema. `run-loader.ts` runs a loader and checks the result with `to-json.ts`. `bar-item.ts` has `loadBarItem()` and `FAILED`; `resolve-bar-item.ts` applies a result to an item (`ResolvedBarItem`). |
+| `endpoints/`           | `load.endpoint.ts`: `POST /admin/load`, behind the session middleware.                                                                                                                                                                                                                                                                                                                              |
+| `browser/`             | Code the admin app bundles by relative path, so it MUST stay browser-safe. `lazy-mount.ts`: export loading, pending updates, load errors and cleanup. `menu.ts`: `groupMenu()` sorts items and groups them (fallback group `Content`, or the one given).                                                                                                                                            |
+| `vue/, react/`         | `renderVue()` / `renderReact()`: wrap a host component as a `Mount`. Built to `integral-cms/admin/vue` and `integral-cms/admin/react`.                                                                                                                                                                                                                                                              |
 
-Extensions only use `mount(el, ctx)`, so no framework crosses the boundary. `entry.ts`, `default.ts` and the `.d.ts` files are copied to `dist/admin` as is, so they MUST keep their names. `menu.ts` MUST stay free of imports, because the admin bundles it by relative path. Core imports `integral-cms/admin/bar` by its own export and keeps it external in tsdown; tsconfig `paths` and a vitest alias point it at `bar.d.ts`.
+`integral-cms/admin` is a lightweight entry (`config.ts`): types and `clientRef()`, safe in server and browser code. `integral-cms/admin/mount` is the application renderer. Extensions only use `mount(el, ctx)`, so no framework crosses the boundary. `entry.ts` and the `.d.ts` files are copied to `dist/admin` as is, so they MUST keep their names and stay in this folder. `config.ts`, `vue/vue.ts` and `react/react.ts` are tsdown entries, and the `package.json` exports name their output files. `browser/menu.ts` MUST stay free of imports, because the admin bundles it by relative path; `browser/lazy-mount.ts` MUST import only types. Core imports `integral-cms/admin/bar` by its own export and keeps it external in tsdown; tsconfig `paths` and a vitest alias point it at `bar.d.ts`.
+
+## Rules
+
+- `load` runs on the server and MUST only read. Its result MUST be JSON; `to-json.ts` rejects functions, `bigint`, cycles and non-plain objects.
+- Loader input comes from the browser. Core validates the shape (`load-request.ts`), looks the registration up with `Map`s, takes field definitions from the schema, and checks that a document ID belongs to the requested collection.
+- `/schema` never runs a loader. `/admin-brand` returns branding only. Load responses are `Cache-Control: no-store`.
+- The plugin name `admin` is reserved: `/api/cms/admin/load` belongs to this module.

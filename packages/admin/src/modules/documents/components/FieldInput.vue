@@ -9,8 +9,15 @@ import {
   watch,
 } from "vue";
 import { client, type Field, type Fields, SLUG_PATTERN, schema, slugify } from "@/shared/api";
-import { active, focusKey, isEmpty, openRefKey, titleField } from "@/modules/documents/fields";
-import { optionsKey } from "@/shared/options";
+import {
+  active,
+  focusKey,
+  isEmpty,
+  openRefKey,
+  ownerKey,
+  titleField,
+} from "@/modules/documents/fields";
+import { useExtensionData } from "@/shared/composables/useExtensionData";
 import MediaField from "@/modules/media/components/MediaField.vue";
 import Icon from "@/shared/components/Icon.vue";
 import Mount from "@/shared/components/Mount.vue";
@@ -77,9 +84,23 @@ watch(
   },
   { immediate: true, flush: "post" },
 );
-const custom = props.field.type.startsWith("custom:")
-  ? inject(optionsKey, {}).fields?.[props.field.type.slice(7)]
-  : undefined;
+const customType = props.field.type.startsWith("custom:") ? props.field.type.slice(7) : undefined;
+const registered = schema.value.admin?.fields;
+const custom =
+  customType && registered && Object.hasOwn(registered, customType)
+    ? registered[customType]
+    : undefined;
+// The server data of a custom field loads on mount and when the document gets its id. Value edits never reload it.
+const owner = inject(ownerKey, undefined);
+const loader =
+  custom?.load && owner
+    ? useExtensionData(() => ({
+        kind: "field" as const,
+        type: customType!,
+        path: path.value,
+        owner: owner.value,
+      }))
+    : undefined;
 
 // ponytail: loads every document of the target collection; add search and paging when collections grow.
 const options = ref<{ id: string; label: string }[]>([]);
@@ -199,8 +220,9 @@ if (slug?.parent && relation?.type === "relation") {
     </component>
     <Mount
       v-if="custom"
-      :mount="custom"
+      :mount="custom.mount"
       :ctx="{ name, field, value: model, onChange: (v: any) => (model = v) }"
+      :loader="loader"
     />
     <textarea
       v-else-if="field.type === 'textarea'"

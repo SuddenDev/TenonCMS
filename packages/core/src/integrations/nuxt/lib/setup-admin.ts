@@ -2,19 +2,18 @@ import { resolve } from "node:path";
 import { addServerHandler, addVitePlugin } from "@nuxt/kit";
 import type {} from "@nuxt/nitro-server/augments";
 import type { Nuxt } from "@nuxt/schema";
-import { adminAlias, adminChunk, adminInput } from "../../admin/build.ts";
+import { adminChunk, adminInput } from "../../admin/build.ts";
 import { faviconDefine } from "../../admin/favicon.ts";
 import { adminHtml } from "../../admin/html.ts";
 
 /**
  * Serves the admin on `path`: a second browser entry in the host's Vite build, on a page of its own.
- * Sets the `#integral/admin` alias, the Vite plugin, the `#integral/admin-html` virtual module and the routes.
+ * Sets the Vite plugin, the `#integral/admin-html` virtual module and the routes.
  * @param runtime Absolute path of the module's `runtime/` folder.
  */
 export function setupAdmin(nuxt: Nuxt, path: string, runtime: string) {
-  const adminDir = resolve(runtime, "../../../admin");
-  const entry = resolve(adminDir, "entry.ts");
-  nuxt.options.alias["#integral/admin"] = adminAlias(nuxt.options.rootDir, adminDir);
+  // `runtime/` ships in `dist/integrations/nuxt/`, and the admin build in `dist/admin/`.
+  const entry = resolve(runtime, "../../../admin/entry.ts");
 
   // Dev serves the entry through Vite. A build replaces the page once the client manifest exists.
   const assets = nuxt.options.app.baseURL.replace(/\/$/, "") + nuxt.options.app.buildAssetsDir;

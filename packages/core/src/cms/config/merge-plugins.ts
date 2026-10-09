@@ -26,6 +26,7 @@ export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Requir
   Object.keys(collections).forEach(checkCollectionName);
 
   for (const plugin of plugins) {
+    if (plugin.name === "admin") fail(`plugin name "admin" is reserved for admin extension routes`);
     // the name becomes a route under /api/cms, so it must be a slug and must not clash with core routes
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(plugin.name) || reserved.includes(plugin.name))
       fail(`invalid plugin name "${plugin.name}"`);

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
-import { computed, ref } from "vue";
+import { computed, provide, ref } from "vue";
 import { useRoute } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
+import { ownerKey } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { Icon, Pane, usePerspective } from "@/shared";
@@ -24,6 +25,10 @@ withDefaults(
 const emit = defineEmits<{ saved: []; change: [data: Record<string, unknown>] }>();
 const name = useRoute().params.name as string;
 const global = computed(() => schema.value.globals?.[name]);
+provide(
+  ownerKey,
+  computed(() => ({ global: name })),
+);
 const drafts = computed(() => global.value?.drafts !== false);
 // The Published view shows the live version. An edit there would replace the pending draft, so the form is inert.
 const readOnly = computed(() => drafts.value && usePerspective().perspective === "published");

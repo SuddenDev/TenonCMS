@@ -1,3 +1,4 @@
+import type { AdminDescriptor } from "../../admin/index.d.ts";
 import type {
   Checked,
   Data,
@@ -213,6 +214,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     media?: { regenerate: boolean };
     /** The `site` option: the base of preview URLs. */
     site?: string;
+    admin?: AdminDescriptor;
   }>;
 
   /**

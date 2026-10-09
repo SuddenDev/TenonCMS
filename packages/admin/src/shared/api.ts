@@ -1,3 +1,4 @@
+import type { AdminDescriptor } from "../../../core/src/admin/index.d.ts";
 import { ref } from "vue";
 import { createClient } from "../../../core/src/client";
 import type { Schema } from "../../../core/src/schema";
@@ -9,4 +10,6 @@ export type { Data, Field, Fields, MediaRead } from "../../../core/src/schema";
 
 export const client = createClient<{ schema: Schema }>();
 
-export const schema = ref<Schema & { media?: { regenerate: boolean }; site?: string }>({});
+export const schema = ref<
+  Schema & { media?: { regenerate: boolean }; site?: string; admin?: AdminDescriptor }
+>({});

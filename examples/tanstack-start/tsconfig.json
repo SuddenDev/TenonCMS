@@ -10,5 +10,5 @@
     "types": ["vite/client", "node", "integral-cms/register"],
     "paths": { "#integral/config": ["./integral.config.ts"] }
   },
-  "include": ["src", "collections", "integral.config.ts", "integral.admin.ts", "vite.config.ts"]
+  "include": ["src", "collections", "integral.config.ts", "admin.ts", "vite.config.ts"]
 }

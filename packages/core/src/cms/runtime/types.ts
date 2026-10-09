@@ -1,7 +1,7 @@
+import type { AdminRuntime } from "../../admin/merge/merge-options.ts";
 import { type Database } from "../../db/types.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import { type Plugin } from "../../plugins/index.ts";
-import type { AdminBarOptions } from "../../preview/config/admin-bar.ts";
 import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
 import type { BetterAuthOptions, User } from "better-auth";
 import type { Kysely } from "kysely";
@@ -30,8 +30,11 @@ export type Core = {
   localApi: (scope: Scope) => LocalApi;
   /** The resolved `media` option. Missing without it. */
   media?: MediaCore;
-  /** The `adminBar` option. `false` mounts no `/admin-bar` route. */
-  adminBar: false | AdminBarOptions;
+  /**
+   * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the
+   * bar. `admin.bar` is `false` with `admin: { adminBar: false }`, which mounts no `/admin-bar` route.
+   */
+  admin: AdminRuntime;
 };
 export type Stage = keyof RootHooks;
 

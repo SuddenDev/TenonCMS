@@ -1,3 +1,4 @@
+import { clientRef } from "integral-cms/admin";
 import { defineCollection, definePlugin } from "../../index.ts";
 import type { LocalApi } from "../../schema/index.ts";
 
@@ -23,6 +24,15 @@ export type Redirect = { to: string; status: 301 | 302 };
 export function redirects({ collections = ["pages"], field = "path" }: RedirectsOptions = {}) {
   return definePlugin({
     name: "redirects",
+    admin: {
+      pages: {
+        "redirects-tools": {
+          title: "Redirect tools",
+          nav: { icon: "arrow-right-left", order: 11 },
+          mount: clientRef("integral-cms/plugins/redirects/admin#mountTools"),
+        },
+      },
+    },
     collections: {
       redirects: defineCollection({
         label: "Redirects",

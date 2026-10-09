@@ -1,4 +1,4 @@
-import type { Page } from "../../../../core/src/admin/index.d.ts";
+import type { PageDescriptor } from "../../../../core/src/admin/index.d.ts";
 import DefaultLayout from "./default.vue";
 
 export const layouts = { default: DefaultLayout };
@@ -11,7 +11,11 @@ declare module "vue-router" {
     panes?: boolean;
     /** The view is a page of its own: full width, without the menu or panes. The top bar stays. */
     full?: boolean;
-    /** The title bar of a host page. Defaults to the breadcrumbs. */
-    pageTitle?: Page["showPageTitle"];
+    /** The header of a host page. Defaults to the breadcrumbs. */
+    pageHeader?: PageDescriptor["pageHeader"];
+    /** Key of the host page this route shows. */
+    page?: string;
+    /** The host page has a server loader. */
+    load?: true;
   }
 }

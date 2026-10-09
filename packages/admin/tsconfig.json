@@ -10,7 +10,8 @@
     "jsx": "preserve",
     "types": ["vite/client"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "integral-cms": ["../core/src/index.ts"]
     }
   },
   "include": ["src"]

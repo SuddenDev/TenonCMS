@@ -4,6 +4,7 @@ import { redirects } from "integral-cms/plugins/redirects";
 import { authors } from "./collections/authors";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
+import { admin } from "./admin";
 
 export default defineCms({
   collections: { posts, authors, pages },
@@ -19,4 +20,5 @@ export default defineCms({
   database: { url: DATABASE_URL },
   secret: CMS_SECRET,
   site: SITE_URL,
+  admin,
 });

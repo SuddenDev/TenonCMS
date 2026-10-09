@@ -1,30 +1,11 @@
-import type { AdminPlugin, Mount, PageContext } from "../../admin/index.d.ts";
+import type { Mount, PageContext } from "../../admin/index.d.ts";
 import { CmsError, createClient } from "../../client/index.ts";
 import css from "./admin.css?raw";
 import type { Redirect } from "./index.ts";
 
-/**
- * The admin half of {@link redirects}: a page to test a path and to import redirects.
- * The `redirects` collection itself is edited like any other.
- * @example
- * defineAdmin({ plugins: [redirectsAdmin()] })
- */
-export function redirectsAdmin(): AdminPlugin {
-  return {
-    name: "redirects",
-    pages: {
-      "redirects-tools": {
-        title: "Redirect tools",
-        nav: { icon: "arrow-right-left", order: 11 },
-        mount: mountTools,
-      },
-    },
-  };
-}
-
 const client = createClient();
 
-const mountTools: Mount<PageContext> = (el, { integral }) => {
+export const mountTools: Mount<PageContext> = (el, { integral }) => {
   addStyles();
   el.innerHTML = page;
   const lookup = form(el, "lookup");

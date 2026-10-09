@@ -137,10 +137,10 @@ providePanes(row);
     <div ref="row" class="flex min-h-0 flex-1 overflow-x-auto">
       <div v-if="route.meta.full" class="flex min-w-0 flex-1 flex-col">
         <header
-          v-if="route.meta.pageTitle !== false"
+          v-if="route.meta.pageHeader !== false"
           class="border-border flex h-12 shrink-0 items-center border-b px-4"
         >
-          <PageTitle :value="route.meta.pageTitle ?? true" />
+          <PageTitle :value="route.meta.pageHeader ?? true" />
         </header>
         <main class="min-h-0 flex-1 overflow-auto"><slot /></main>
       </div>
@@ -148,7 +148,7 @@ providePanes(row);
         <MenuPane v-if="route.meta.menu !== false" />
         <slot v-if="route.meta.panes" />
         <Pane v-else title="Page" :min="448" grow :collapsible="false">
-          <template #header><PageTitle :value="route.meta.pageTitle ?? true" /></template>
+          <template #header><PageTitle :value="route.meta.pageHeader ?? true" /></template>
           <main class="h-full"><slot /></main>
         </Pane>
       </template>

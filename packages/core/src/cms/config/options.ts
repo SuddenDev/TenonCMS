@@ -1,8 +1,8 @@
+import type { AdminOptions } from "../../admin/index.d.ts";
 import type { AuthOptions } from "../../auth/config/options.ts";
 import type { mediaCollection } from "../../media/config/collection.ts";
 import type { MediaOptions } from "../../media/config/options.ts";
 import type { Plugin } from "../../plugins/index.ts";
-import type { AdminBarOptions } from "../../preview/config/admin-bar.ts";
 import type { settings } from "../../presets/settings.ts";
 import type { CheckRefs, Collection, Global, MediaApi, RootHooks } from "../../schema/index.ts";
 
@@ -85,6 +85,11 @@ export type CmsOptions<
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
   collections?: C & NoInfer<CheckRefs<C, C & PluginCollections<PL>> & Record<string, Collection>>;
   globals?: G & NoInfer<CheckRefs<G, C & PluginCollections<PL>> & Record<string, Global>>;
+  /**
+   * Branding, custom fields, custom pages and the admin bar. Inline or imported from your own module; check an
+   * extracted object with `satisfies AdminOptions` from `integral-cms/admin`. Plugins add their own.
+   */
+  admin?: AdminOptions;
   /** Plugins, from `definePlugin()`. Their collections, globals and hooks merge into the instance. */
   plugins?: PL;
   /** Defaults for reads that resolve relations. */
@@ -119,13 +124,4 @@ export type CmsOptions<
    * Defaults to the admin's own origin. Live preview on another origin needs the site to run `preview()` too.
    */
   site?: string;
-  /**
-   * The admin bar signed-in editors see on the site, with links into the admin.
-   * - omitted: the bar at the top with the built-in items.
-   * - `false`: no bar. Core adds no `/admin-bar` route.
-   * - an object: its `position` and an `items` hook.
-   * @example
-   * adminBar: { position: "bottom", items: (items) => [...items, { id: "help", label: "Help", href: "/help" }] }
-   */
-  adminBar?: false | AdminBarOptions;
 };

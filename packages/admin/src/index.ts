@@ -1,35 +1,59 @@
+import type { ClientRegistry } from "../../core/src/admin/browser/lazy-mount.ts";
+import { reactive, shallowRef } from "vue";
+import { client } from "./shared/api";
+import { configureKey, pageDataKey, registryKey, type Branding } from "./shared/options";
 import { createHead } from "@unhead/vue/client";
 import { createApp } from "vue";
-import type { AdminOptions, AdminPlugin, IntegralContext } from "../../core/src/admin/index.d.ts";
+import type { AdminDescriptor, IntegralContext } from "../../core/src/admin/index.d.ts";
 import App from "./App.vue";
-import { integralKey, mergeOptions, optionsKey } from "@/shared/options";
-import { createAdminRouter } from "./router";
+import { integralKey, optionsKey } from "@/shared/options";
+import { addAdminPages, createAdminRouter } from "./router";
 import css from "./style.css?inline";
 
-export function defineAdmin(options: AdminOptions): AdminOptions {
-  return options;
-}
-
-export function defineAdminPlugin(plugin: AdminPlugin): AdminPlugin {
-  return plugin;
-}
-
+/**
+ * Mounts the admin and returns the cleanup.
+ * @param base Path the admin is served at.
+ * @param hostFavicon Favicon of the host, used when the branding sets none.
+ * @param registry Browser exports found in the server configuration, by `clientRef()` specifier.
+ */
 export function mountAdmin(
   el: string | Element,
-  raw: AdminOptions = {},
   base = "/admin",
   hostFavicon?: string | null,
+  registry: ClientRegistry = {},
 ) {
-  const options = mergeOptions(raw);
-  options.favicon ??= options.icon ?? hostFavicon ?? undefined;
+  const options = reactive<Branding>({});
+  const brand = ({ name, logo, icon, favicon }: Branding) =>
+    Object.assign(options, {
+      name,
+      logo,
+      icon,
+      favicon: favicon ?? icon ?? hostFavicon ?? undefined,
+    });
+  brand({});
+  void client
+    .request<Branding>("/admin-brand")
+    .then(brand)
+    .catch(() => {});
   // The styles are global. The admin runs on a page of its own, so they never reach the host's pages.
   document.head.append(Object.assign(document.createElement("style"), { textContent: css }));
-  const router = createAdminRouter(base, options.pages);
-  const integral: IntegralContext = { base, navigate: (path: string) => void router.push(path) };
+  const router = createAdminRouter(base);
+  const configure = async (admin: AdminDescriptor) => {
+    brand(admin);
+    await addAdminPages(router, admin.pages);
+  };
+  const integral: IntegralContext = {
+    base,
+    navigate: (path: string) => void router.push(path),
+    reload: async () => {},
+  };
   const app = createApp(App)
     .use(router)
     .use(createHead())
+    .provide(configureKey, configure)
+    .provide(registryKey, registry)
     .provide(optionsKey, options)
+    .provide(pageDataKey, shallowRef())
     .provide(integralKey, integral);
   app.mount(el);
   return () => app.unmount();

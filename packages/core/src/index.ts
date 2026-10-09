@@ -1,4 +1,5 @@
 export { type Api, type Cms, defineCms } from "./cms/index.ts";
+export type { LocalApi } from "./cms/api/local-api.ts";
 export type { CmsOptions, PopulateOptions } from "./cms/config/options.ts";
 export type { ImageProvider, ImagesOptions, MediaOptions, Storage } from "./media/index.ts";
 export { defineCollection, defineGlobal } from "./schema/index.ts";

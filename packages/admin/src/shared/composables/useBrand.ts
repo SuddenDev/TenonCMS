@@ -1,8 +1,12 @@
-import { inject } from "vue";
+import { computed, inject } from "vue";
 import { optionsKey } from "@/shared/options";
 
-/** The name, logo and icon from `integral.admin.ts`. */
+/** Branding follows the public branding before sign-in and the admin registration after. */
 export function useBrand() {
-  const { name = "integral-cms", logo, icon } = inject(optionsKey, {});
-  return { name, logo, icon };
+  const options = inject(optionsKey, {});
+  return {
+    name: computed(() => options.name ?? "integral-cms"),
+    logo: computed(() => options.logo),
+    icon: computed(() => options.icon),
+  };
 }

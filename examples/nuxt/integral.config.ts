@@ -4,6 +4,7 @@ import { local } from "integral-cms/media/local";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
 import { authors } from "./collections/authors";
+import { admin } from "./admin";
 
 const { cmsSecret, databaseUrl, uploadsDir } = useRuntimeConfig();
 
@@ -13,4 +14,5 @@ export default defineCms({
   media: { storage: local({ dir: uploadsDir }), images: { provider: ipx({ prerender: true }) } },
   database: { url: databaseUrl },
   secret: cmsSecret,
+  admin,
 });

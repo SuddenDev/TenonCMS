@@ -1,13 +1,17 @@
-import { onMounted, onUnmounted, ref } from "vue";
+import { configureKey } from "@/shared/options";
+import { inject, onMounted, onUnmounted, ref } from "vue";
 import { client, schema, type Session } from "@/shared/api";
 import { readPerspective } from "@/shared/composables/usePerspective";
 
 /** The signed-in user and the schema. `schema` fills in once a session exists. */
 export function useSession() {
+  const configure = inject(configureKey, async () => {});
+  const error = ref("");
   const user = ref<Session["user"] | null>(null);
   const loading = ref(true);
 
   async function load() {
+    error.value = "";
     // `/schema` answers 401 without a session, so both requests can run at once.
     const [session, s] = await Promise.all([
       client.getSession(),
@@ -15,7 +19,15 @@ export function useSession() {
     ]);
     // The preview cookie lets the admin's reads, and every preview it opens, see drafts.
     // An existing cookie holds the editor's choice of perspective.
-    if (session?.user && !readPerspective()) await client.preview.enter().catch(console.error);
+    if (session?.user && !readPerspective())
+      await client.preview.enter("drafts").catch(console.error);
+    try {
+      if (session?.user && s?.admin) await configure(s.admin);
+    } catch (e) {
+      error.value = (e as Error).message;
+      loading.value = false;
+      return;
+    }
     user.value = session?.user ?? null;
     if (user.value && s) schema.value = s;
     loading.value = false;
@@ -36,11 +48,16 @@ export function useSession() {
     user.value = null;
   }
 
+  // A 401 from an authenticated route means the session is gone. The sign-in replaces the layout, which stops every extension.
+  function expire() {
+    user.value = null;
+  }
+
   onMounted(() => {
     load();
     window.addEventListener("focus", refreshSchema);
   });
   onUnmounted(() => window.removeEventListener("focus", refreshSchema));
 
-  return { user, loading, load, signOut };
+  return { user, loading, load, signOut, expire, error };
 }

@@ -9,10 +9,10 @@ import { useTheme } from "@/shared/composables/useTheme";
 import { useBrand } from "@/shared/composables/useBrand";
 import { optionsKey, sessionKey } from "@/shared/options";
 
-const { user, loading, load, signOut } = useSession();
+const { user, loading, load, signOut, expire, error } = useSession();
 const route = useRoute();
 
-provide(sessionKey, { user, signOut });
+provide(sessionKey, { user, signOut, expire });
 
 // Applied here, so the theme also holds on screens without the sidebar, like the login.
 useTheme();
@@ -29,23 +29,25 @@ const viewKey = computed(() =>
 );
 
 const { name } = useBrand();
-const favicon = inject(optionsKey, {}).favicon;
+const options = inject(optionsKey, {});
+const favicon = computed(() => options.favicon);
 
-useHead({
-  titleTemplate: (title) => (title ? `${title} · ${name}` : name),
-  link: !favicon
+useHead(() => ({
+  titleTemplate: (title) => (title ? `${title} · ${name.value}` : name.value),
+  link: !favicon.value
     ? []
-    : typeof favicon === "string"
-      ? [{ rel: "icon", href: favicon }]
+    : typeof favicon.value === "string"
+      ? [{ rel: "icon", href: favicon.value }]
       : [
-          { rel: "icon", href: favicon.light, media: "(prefers-color-scheme: light)" },
-          { rel: "icon", href: favicon.dark, media: "(prefers-color-scheme: dark)" },
+          { rel: "icon", href: favicon.value.light, media: "(prefers-color-scheme: light)" },
+          { rel: "icon", href: favicon.value.dark, media: "(prefers-color-scheme: dark)" },
         ],
-});
+}));
 </script>
 
 <template>
   <div v-if="loading" />
+  <p v-else-if="error" role="alert" class="p-4">{{ error }}</p>
   <Login v-else-if="!user" @done="load" />
   <component :is="layout" v-else>
     <RouterView :key="viewKey" />

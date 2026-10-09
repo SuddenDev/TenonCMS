@@ -1,9 +1,9 @@
-import { computed, inject } from "vue";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
-import { groupMenu } from "../../../../core/src/admin/menu";
+import { groupMenu } from "../../../../core/src/admin/browser/menu";
 import type { Nav } from "../../../../core/src/admin/index.d.ts";
 import { schema } from "@/shared/api";
-import { CONTENT, optionsKey, pagePath } from "@/shared/options";
+import { CONTENT, pagePath } from "@/shared/options";
 
 export type MenuItem = {
   label: string;
@@ -29,20 +29,18 @@ function entry(
 
 // Every collection, global and page with its `nav` defaults, wherever it is shown.
 function useEntries() {
-  const options = inject(optionsKey, {});
-  const pages = Object.entries(options.pages ?? {});
   return computed<Entry[]>(() => [
     ...Object.entries(schema.value.collections ?? {}).map(([name, c]) =>
       // `media` is the media library, with a page of its own.
       name === "media"
         ? entry(
             {
-              label: options.media?.label ?? "Media",
+              label: schema.value.admin?.media?.label ?? "Media",
               icon: "image",
               order: 15,
               to: `${CONTENT}/media`,
             },
-            options.media?.nav,
+            schema.value.admin?.media?.nav,
           )
         : entry(
             {
@@ -71,7 +69,7 @@ function useEntries() {
         g.nav,
       ),
     ),
-    ...pages.map(([key, p]) =>
+    ...Object.entries(schema.value.admin?.pages ?? {}).map(([key, p]) =>
       entry(
         {
           label: p.title ?? key,

@@ -1,3 +1,4 @@
+import { adminBrand } from "../admin/merge/merge-options.ts";
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { API_BASE } from "../client/constants.ts";
@@ -16,6 +17,8 @@ import { readEndpoint } from "../schema/endpoints/read.endpoint.ts";
 import { enterEndpoint } from "../preview/endpoints/enter.endpoint.ts";
 import { exitEndpoint } from "../preview/endpoints/exit.endpoint.ts";
 import { adminBarEndpoint } from "../preview/endpoints/admin-bar.endpoint.ts";
+import { loadEndpoint } from "../admin/endpoints/load.endpoint.ts";
+import { noStore } from "./middleware/no-store.middleware.ts";
 import { handleError } from "./errors.ts";
 
 /**
@@ -27,11 +30,13 @@ import { handleError } from "./errors.ts";
 export function createApp(core: Core, site?: string) {
   const { plugins } = core;
   const media = core.media && mediaRoutes(core);
-  const schemaEndpoint = readEndpoint(core.schema, media, site);
+  const schemaEndpoint = readEndpoint(core.schema, media, site, core.admin.descriptor);
   const collections = collectionsRoutes(core);
   const globals = globalsRoutes(core);
 
-  const reads = new Hono<Env>();
+  const reads = new Hono<Env>().get("/admin-brand", (c) =>
+    c.json(adminBrand(core.admin.descriptor)),
+  );
   mountRoutes(reads, plugins, "publicRoutes");
   if (media) reads.route("/media", media.reads);
   reads.route("/", collections.reads);
@@ -41,7 +46,8 @@ export function createApp(core: Core, site?: string) {
   writes.route("/", schemaEndpoint);
   writes.route("/", enterEndpoint());
   writes.route("/", exitEndpoint());
-  if (core.adminBar) writes.route("/", adminBarEndpoint(core.adminBar, plugins));
+  if (core.admin.bar) writes.route("/", adminBarEndpoint(core, core.admin.bar));
+  writes.route("/", loadEndpoint(core));
   mountRoutes(writes, plugins, "routes");
   if (media) writes.route("/media", media.writes);
   writes.route("/", collections.writes);
@@ -54,6 +60,8 @@ export function createApp(core: Core, site?: string) {
   api.use("/auth/*", sessionHint(core));
   api.route("/", providerEndpoint(core));
   api.route("/", reads);
+  api.use("/admin/*", noStore);
+  api.use("/admin-bar", noStore);
   api.use(csrf(), session(core), ...pluginMiddleware(plugins, "middleware"));
   api.route("/", writes);
   return api;

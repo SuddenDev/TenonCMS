@@ -1,8 +1,9 @@
 import type { FieldContext, PageContext } from "integral-cms/admin";
+import { renderReact } from "integral-cms/admin/react";
 import { createClient } from "integral-cms/client";
 import { useEffect, useState } from "react";
 import type { Doc } from "integral-cms";
-import type { posts } from "../collections/posts";
+import type { posts } from "../../collections/posts";
 
 const client = createClient();
 type Post = Doc<typeof posts.fields>;
@@ -51,3 +52,8 @@ export function PostReport({ params, query }: PageContext) {
     </>
   );
 }
+
+// Browser exports. `admin.ts` names them with `clientRef()`; the server config never imports this file.
+export const mountColor = renderReact(ColorInput);
+export const mountStats = renderReact(Stats);
+export const mountPostReport = renderReact(PostReport);

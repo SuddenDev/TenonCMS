@@ -1,16 +1,16 @@
 import { createElement, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
-import type { Mount } from "./index.d.ts";
+import type { Mount } from "../index";
 
-export type { FieldContext, IntegralContext, Mount, PageContext } from "./index.d.ts";
+export type { FieldContext, IntegralContext, Mount, PageContext } from "../index";
 
 /**
- * Turns a React component into a {@link Mount} for `integral.admin.ts`.
+ * Turns a React component into a {@link Mount}.
  *
  * The context arrives as props. The component re-renders on every context change, e.g. a new route.
  * @example
- * // integral.admin.ts
- * pages: { stats: { label: 'Stats', mount: renderReact(Stats) } }
+ * // stats.ts, registered with clientRef('./stats.ts#mountStats')
+ * export const mountStats = renderReact(Stats)
  *
  * // admin.tsx
  * export function Stats({ params, integral }: PageContext) { … }

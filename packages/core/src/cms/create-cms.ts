@@ -1,3 +1,4 @@
+import { mergeAdmin } from "../admin/merge/merge-options.ts";
 import type { User } from "better-auth";
 import { consola } from "consola";
 import { createApp } from "../http/index.ts";
@@ -61,7 +62,7 @@ export function defineCms<
   media: mediaOption,
   settings: settingsOption,
   site,
-  adminBar = {},
+  admin,
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S>) {
   type T = {
@@ -120,7 +121,7 @@ export function defineCms<
     getSession,
     localApi: (scope) => createLocalApi(core, scope),
     media: mediaOptions && createMediaCore(mediaOptions, schema),
-    adminBar,
+    admin: mergeAdmin(plugins, admin),
   };
 
   /* ── Instance ──────────────────────────────────────────────────────────────────────── */

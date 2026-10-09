@@ -4,7 +4,13 @@ import { useHead } from "@unhead/vue";
 import { computed, inject, provide, ref } from "vue";
 import { useRouter } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
-import { keepPaneKey, openRefKey, reloadKey, titleField } from "@/modules/documents/fields";
+import {
+  keepPaneKey,
+  openRefKey,
+  ownerKey,
+  reloadKey,
+  titleField,
+} from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { Pane, Icon, usePerspective } from "@/shared";
@@ -46,6 +52,11 @@ if (props.open) provide(openRefKey, props.open);
 // A new document gets its id from its first draft save and keeps this pane.
 const docId = ref(props.id);
 const isNew = computed(() => docId.value === "new");
+// Custom fields load their server data for this document. A new one has no id until its first draft save.
+provide(
+  ownerKey,
+  computed(() => ({ collection: props.name, ...(isNew.value ? {} : { id: docId.value }) })),
+);
 const collection = computed(() => schema.value.collections?.[props.name]);
 const drafts = computed(() => collection.value?.drafts !== false);
 // The Published view shows the live version. An edit there would replace the pending draft, so the form is inert.

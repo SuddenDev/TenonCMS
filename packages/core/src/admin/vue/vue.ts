@@ -1,16 +1,16 @@
 import { createApp, h, reactive, Suspense, type Component } from "vue";
-import type { Mount } from "./index.d.ts";
+import type { Mount } from "../index";
 
-export type { FieldContext, IntegralContext, Mount, PageContext } from "./index.d.ts";
+export type { FieldContext, IntegralContext, Mount, PageContext } from "../index";
 
 /**
- * Turns a Vue component into a {@link Mount} for `integral.admin.ts`.
+ * Turns a Vue component into a {@link Mount}.
  *
  * The context arrives as props and stays reactive: watch `params.id` to refetch on route changes.
  * The component runs in its own Vue app inside `<Suspense>`, so top-level `await` works.
  * @example
- * // integral.admin.ts
- * pages: { stats: { label: 'Stats', mount: renderVue(Stats) } }
+ * // stats.ts, registered with clientRef('./stats.ts#mountStats')
+ * export const mountStats = renderVue(Stats)
  *
  * // Stats.vue
  * const props = defineProps<PageContext>()

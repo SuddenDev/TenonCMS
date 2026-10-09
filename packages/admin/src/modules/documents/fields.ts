@@ -35,3 +35,7 @@ export const openRefKey: InjectionKey<(collection: string, id: string) => void> 
 
 /** Dot path of the field to focus. The matching `FieldInput` scrolls to its input, focuses it and clears the path. */
 export const focusKey: InjectionKey<Ref<string | null>> = Symbol("focus");
+
+/** The document or global that holds the form's fields, for the server loaders of custom fields. A new document has no `id`. */
+export type Owner = { collection: string; id?: string } | { global: string };
+export const ownerKey: InjectionKey<Readonly<Ref<Owner>>> = Symbol("owner");
