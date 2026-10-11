@@ -10,7 +10,6 @@ export const posts = defineCollection({
     publishedAt: { type: "date", label: "Published at" },
     category: { type: "select", options: ["news", "guide"] },
     featured: { type: "boolean" },
-    color: { type: "custom:color", label: "Accent color" },
     body: { type: "textarea" },
   },
 });

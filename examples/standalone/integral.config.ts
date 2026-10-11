@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { defineCms } from "integral-cms";
+import { ExamplePlugin } from "integral-cms/plugins/example";
 import { ipx } from "integral-cms/media/ipx";
 import { local } from "integral-cms/media/local";
 import { pages } from "./collections/pages";
@@ -12,6 +13,7 @@ export default defineCms({
     maxSize: 5 * 1024 ** 3,
     images: { provider: ipx() },
   },
+  plugins: [ExamplePlugin()],
   database: { url: process.env.DATABASE_URL ?? "file:./cms.db" },
   secret: process.env.CMS_SECRET!,
 });

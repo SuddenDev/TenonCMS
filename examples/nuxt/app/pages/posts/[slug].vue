@@ -20,14 +20,7 @@ useHead({ title: post.value.title });
 <template>
   <main v-if="post">
     <NuxtLink to="/">← Home</NuxtLink>
-    <h1
-      :data-cms="edit('posts', post.id, 'title')"
-      :style="
-        post.color ? { borderLeft: `4px solid ${post.color}`, paddingLeft: '8px' } : undefined
-      "
-    >
-      {{ post.title }}
-    </h1>
+    <h1 :data-cms="edit('posts', post.id, 'title')">{{ post.title }}</h1>
     <time v-if="post.publishedAt" :datetime="post.publishedAt">{{ post.publishedAt }}</time>
     <img
       v-if="post.hero"

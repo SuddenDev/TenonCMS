@@ -21,12 +21,7 @@ const { post } = Astro.props as InferGetStaticPropsType<typeof getStaticPaths>;
   </head>
   <body>
     <a href="/">← Home</a>
-    <h1
-      style={post.color ? `border-left: 4px solid ${post.color}; padding-left: 8px` : undefined}
-      data-cms={edit("posts", post.id, "title")}
-    >
-      {post.title}
-    </h1>
+    <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
     {post.author && (
       <p style="color:blue" data-cms={edit("authors", post.author.id, "name")}>
         {post.author.name}

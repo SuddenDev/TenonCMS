@@ -1,10 +1,10 @@
 import { CMS_SECRET, DATABASE_URL, SITE_URL } from "astro:env/server";
 import { defineCms, defineGlobal } from "integral-cms";
-import { redirects } from "integral-cms/plugins/redirects";
+import { ExamplePlugin } from "integral-cms/plugins/example";
+import { RedirectsPlugin } from "integral-cms/plugins/redirects";
 import { authors } from "./collections/authors";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
-import { admin } from "./admin";
 
 export default defineCms({
   collections: { posts, authors, pages },
@@ -16,9 +16,12 @@ export default defineCms({
       fields: { copyright: { type: "text" } },
     }),
   },
-  plugins: [redirects()],
+  plugins: [RedirectsPlugin(), ExamplePlugin({ renderer: "html" })],
   database: { url: DATABASE_URL },
   secret: CMS_SECRET,
   site: SITE_URL,
-  admin,
+  admin: {
+    name: "Example site",
+    media: { nav: { group: "Blog", icon: "images" } },
+  },
 });

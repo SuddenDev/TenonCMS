@@ -26,12 +26,7 @@ function Post() {
   return (
     <main>
       <Link to="/">← Home</Link>
-      <h1
-        data-cms={edit("posts", post.id, "title")}
-        style={post.color ? { borderLeft: `4px solid ${post.color}`, paddingLeft: 8 } : undefined}
-      >
-        {post.title}
-      </h1>
+      <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
       {post.publishedAt && <time dateTime={post.publishedAt}>{post.publishedAt}</time>}
       <p data-cms={edit("posts", post.id, "body")} style={{ whiteSpace: "pre-wrap" }}>
         {post.body}
