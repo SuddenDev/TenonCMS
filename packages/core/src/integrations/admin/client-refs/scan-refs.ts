@@ -66,7 +66,19 @@ function walk(scan: Scan, node: AstNode, site: boolean) {
   }
   if (isClientRefCall(scan.info, node)) record(scan, node, site);
 
-  eachChild(node, (child) => walk(scan, child, site));
+  eachChild(node, (child) => {
+    if (!isName(node, child)) walk(scan, child, site);
+  });
+}
+
+// A property key or member name is a label, not a reference to a declaration.
+function isName(parent: AstNode, child: AstNode) {
+  return (
+    child.type === "Identifier" &&
+    !parent.computed &&
+    ((parent.type === "Property" && parent.key === child && parent.value !== child) ||
+      (parent.type === "MemberExpression" && parent.property === child))
+  );
 }
 
 // An identifier that names an import, or `ns.name` / `ns["name"]` on a namespace import.

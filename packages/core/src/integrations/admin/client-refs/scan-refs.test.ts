@@ -50,6 +50,27 @@ it("follows local declarations that adminBar uses, and survives a declaration th
   expect(found.refs.get("./unused.ts")).toBe(false);
 });
 
+it("does not follow a declaration that only shares its name with a property key", () => {
+  const found = scan(
+    `${ADMIN}
+     function plugin() {
+       const mount = { page: clientRef('./page.ts') };
+       return { pages: { mount }, adminBar: { items: { a: { mount: clientRef('./bar.ts'), x: mount.page } } } };
+     }`,
+  );
+  expect(found.refs.get("./bar.ts")).toBe(true);
+  expect(found.refs.get("./page.ts")).toBe(true);
+
+  const keys = scan(
+    `${ADMIN}
+     function plugin() {
+       const mount = { page: clientRef('./page.ts') };
+       return { adminBar: { items: { a: { mount: clientRef('./bar.ts') } } } };
+     }`,
+  );
+  expect(keys.refs.get("./page.ts")).toBe(false);
+});
+
 it("reports the imports that adminBar uses, once each", () => {
   const found = scan(
     `import { items, items as again } from './items.ts'; import * as ns from './ns.ts'; import def from './def.ts'; import './side.ts';
