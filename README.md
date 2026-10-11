@@ -583,7 +583,7 @@ const trail = breadcrumbs(page); // [{ title: 'About', path: '/about' }, …, { 
 
 Each example has a catch-all route that reads by `path`. Static routes win over it, so a CMS page at `/` (or `/about` in Astro) never shows:
 
-- Astro: `src/pages/[...path].astro` with `Astro.locals.integral.findOne`, `select` and breadcrumbs
+- Astro: `src/pages/[...path].astro` with `Astro.locals.integral.findOne` and `select`
 - Nuxt: `app/pages/[...path].vue` with `useIntegral().findOne` and `useSeoMeta`
 - TanStack Start: `src/routes/$.tsx` with a server function and `head`
 
@@ -733,7 +733,7 @@ defineCms({
 
 The bar is one flat row sorted by `order`, then by registration order; items without `order` follow. Built-ins: `dashboard` 10, `edit` 20, `perspective` 30. Plugins add items with `admin.adminBar.items`, see [Plugins](#plugins). They compose in this order: built-ins, plugins in plugin order, the host. Preview tabs show the fixed `edit` (10) and `live-edit` (20) controls; custom items and their loaders do not run there. `position` and `adminBar: false` belong to the host.
 
-An item with `mount(el, ctx)` renders its own element with plain DOM, like the admin's extension slots. It returns a cleanup function or `{ update(ctx), unmount() }`; `update` gets the new context, e.g. after a perspective change. `el` sits in the bar's shadow root, so the page's CSS does not reach it: style it inline. See `examples/astro/admin.ts` and `examples/astro/src/admin/bar.ts`.
+An item with `mount(el, ctx)` renders its own element with plain DOM, like the admin's extension slots. It returns a cleanup function or `{ update(ctx), unmount() }`; `update` gets the new context, e.g. after a perspective change. `el` sits in the bar's shadow root, so the page's CSS does not reach it: style it inline. See the example plugin, `packages/plugins/src/example/`.
 
 ### Drafts
 
@@ -1100,7 +1100,7 @@ Not available yet: switching between Drafts and Published without a reload, and 
 - Settings: the sidebar has a "Settings" entry under "Admin" when any item has `display: "settings"`. It opens `/content/settings`, a page with one section of cards per `group`, and each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", group: "Site", order: 3 }, fields })`.
 - `name` shows in the sidebar header, on the login and in the page title (default `integral-cms`). `logo` (sidebar header and login) and `icon` (collapsed sidebar) are URLs, or `{ light, dark }` pairs that follow the admin's theme. The admin links the files and does not bundle them: put them in the host's `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
 - The favicon is `favicon` if set, else `icon`, else the host's `favicon.svg`, `.ico` or `.png` in its public folder. `favicon` takes a URL or a `{ light, dark }` pair.
-- `title` is metadata: the navigation label, the default breadcrumb and the document title. The visible header area above a page is `pageHeader`: `true` (default) shows the breadcrumbs, `false` nothing, an array of `{ label, to }` your own breadcrumbs, and `clientRef()` of a function `(crumbs, { params, query, data, integral })` returns new breadcrumbs or an HTML string. The function MUST be synchronous. The string is not escaped, so escape untrusted values like `params`, and prefix links with `integral.base`.
+- `title` is the navigation label, the document title and the default header text. The visible header area above a page is `pageHeader`: `true` (default) shows the title as text, `false` nothing, an array of `{ label, to }` breadcrumbs, and `clientRef()` of a function `(crumbs, { params, query, data, integral })` returns an HTML string or breadcrumbs (`crumbs` are the route's). The function MUST be synchronous. The string is not escaped, so escape untrusted values like `params`, and prefix links with `integral.base`.
 - A page on a built-in path replaces that view: `route: '/'` with `display: 'main'` replaces the redirect from `/` to `/content` (the admin has no dashboard of its own), and `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
 - Plugins contribute the same `admin` object through [`definePlugin({ admin })`](#plugins).
 
@@ -1147,7 +1147,7 @@ Contexts: fields get `{ name, field, value, onChange, data }`. Pages get `{ para
 - A bar item loads with the bar request, again when the page URL changes and on the existing focus check.
 - Responses that arrive after cleanup or after a newer request are dropped. A 401 ends the session as usual.
 
-There are no extra events (`onSave`, subscriptions). `update(ctx)`, the field setter, your framework's watchers and the server hooks cover those cases. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. All three examples have a `post` page that does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
+There are no extra events (`onSave`, subscriptions). `update(ctx)`, the field setter, your framework's watchers and the server hooks cover those cases. Navigating between two URLs of the same page, say `/reports/posts/1` to `/reports/posts/2?tab=body`, calls `update` with the new context instead of remounting. `renderVue` and `renderReact` turn that into prop changes, so watch `params` or put it in an effect's dependencies to refetch. The `example` plugin's `quote` page does this. The admin wraps a field in its label; the input only renders the control, in the admin's light DOM, so the shared `.input` and `.btn` classes apply.
 
 To serve the admin elsewhere, pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `integralAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
 
@@ -1192,6 +1192,84 @@ export const onRequest = defineMiddleware(async (context, next) => {
 });
 ```
 
+The bundled plugins live in `packages/plugins` and ship inside `integral-cms` as `integral-cms/plugins/<name>`. They import core only through its public exports, the same way a third-party plugin does.
+
+### Publishing a plugin
+
+A plugin on npm is an ordinary package with two halves: the server half (`definePlugin()`) and the browser half (the modules behind its `clientRef()`s). The bundled plugins use a repo-specific build, so start from this instead.
+
+```jsonc
+// package.json
+{
+  "name": "cms-plugin-quotes",
+  "type": "module",
+  "exports": {
+    ".": { "types": "./dist/index.d.mts", "default": "./dist/index.mjs" },
+    "./admin": { "types": "./dist/admin/index.d.mts", "default": "./dist/admin/index.mjs" },
+    "./admin/bar": { "types": "./dist/admin/bar.d.mts", "default": "./dist/admin/bar.mjs" },
+  },
+  "files": ["dist"],
+  "peerDependencies": { "integral-cms": "^0.10.0" },
+}
+```
+
+```ts
+// src/index.ts
+export const quotes = () =>
+  definePlugin({
+    name: "quotes",
+    admin: {
+      pages: {
+        stats: { mount: clientRef("cms-plugin-quotes/admin#mountStats") },
+      },
+      adminBar: {
+        items: {
+          count: { label: "Quotes", mount: clientRef("cms-plugin-quotes/admin/bar#mountCount") },
+        },
+      },
+    },
+  });
+```
+
+```ts
+// tsdown.config.ts
+import { defineConfig } from "tsdown";
+import Vue from "unplugin-vue/rolldown"; // only for Vue components
+
+// Bundled into the admin chunks, so the host installs neither Vue nor React.
+const bundled = /^(vue|react|react-dom|scheduler)(\/|$)|^@vue\/|^integral-cms\/admin\/(vue|react)$/;
+
+export default defineConfig({
+  plugins: [Vue({ isProduction: true })],
+  entry: ["src/index.ts", "src/admin/index.ts", "src/admin/bar.ts"],
+  platform: "neutral",
+  fixedExtension: true,
+  // Everything else (`integral-cms`, `hono`, ...) comes from the host.
+  external: (id, importer) => !!importer && !id.startsWith(".") && !bundled.test(id),
+  // Keeps CSS imports in the output, one file per chunk, so only styled entries load CSS.
+  css: { inject: true, splitting: true },
+  define: {
+    "process.env.NODE_ENV": '"production"',
+    __VUE_OPTIONS_API__: "true",
+    __VUE_PROD_DEVTOOLS__: "false",
+  },
+  dts: { vue: true },
+});
+```
+
+What every published plugin MUST get right:
+
+- **`integral-cms` is a peer dependency and stays external.** Bundling it would give the host two copies of the core and break the `clientRef()` and type matching. `integral-cms/admin` is the only core import the browser code needs.
+- **Ship the admin half compiled.** The host's Vite may not compile `.vue`, JSX or TypeScript from `node_modules`. Bundle the framework into the admin chunks (`bundled` above) or write plain DOM. Either way, the host installs no extra package.
+- **`clientRef()` takes a package path, and it MUST be a literal string.** `clientRef("cms-plugin-quotes/admin#mountStats")` resolves from the host's project root, so the plugin has to be installed there. The adapters find the call by reading the module graph of the host's `integral.config.ts`, which has to import the plugin statically.
+- **Give the admin bar its own entry.** The bar loads on every page of the site, so everything it reaches (`adminBar` items, and every key of an object or map they touch) MUST be free of CSS and of Vue `<style>` blocks. Keep the bar mounts in a separate file such as `admin/bar` and style them inline, because the bar's shadow root gets no page CSS. The adapters reject a plugin that breaks this at startup.
+- **Style pages with the plugin's own CSS.** The admin's Tailwind does not scan plugin code; only `.input` and `.btn` are shared. Scope your selectors, because the CSS lands in the admin's page. See `packages/plugins/src/example` for a plain `?raw` file, a Vue `<style scoped>` and compiled Tailwind.
+- **Build the types.** `definePlugin()` keeps the literal collection and global names, so a host gets `cms.find('quotes')` typed. If the declaration build fails with a missing type, the type is missing from core's public exports.
+
+Before you publish, run `npm pack`, install the tarball in one of the examples and start its dev server once. A wrong `exports` entry, a bundled copy of `integral-cms` or CSS in the bar's graph all show up there.
+
+`example({ admin: '/admin' })` is a starting point to copy, not a feature. It uses every plugin option once: a `quotes` collection with a custom `rating` field, a `quoteSettings` global, a root hook, both middlewares, `GET /api/cms/example/random` (a random quote as text), `GET /api/cms/example/quotes.csv` for admins, a stats page with a `load` and a `pageHeader`, a detail page, and four bar items (a link, a loaded dropdown, a button and a custom control). Its browser code exists in plain DOM, Vue and React; `renderer: 'html' | 'vue' | 'react'` picks one for the field and pages. Vue and React are bundled into its admin chunks, so hosts install neither. Its `admin` option is the admin path, for the bar links.
+
 `redirects({ collections: ['pages'], field: 'path' })` adds the `redirects` collection (`from`, `to`, `permanent`), a hook that creates a redirect when a listed document's path changes and keeps chains one hop long, `GET /api/cms/redirects/lookup?path=` for everyone, `POST /api/cms/redirects/import` (an array of redirects) for admins, and a "Redirect tools" admin page to test paths and import.
 
 ## Environment and deployment
@@ -1234,7 +1312,7 @@ Working:
 - Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
 - `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `breadcrumbs()` / `slugify()`
 - Media library: chunked uploads to the local disk or S3/R2, folders, `image` and `file` fields, responsive images through IPX or Cloudflare, media hooks
-- Plugins with collections, globals, root hooks, routes and admin registrations (fields, pages, bar items); `integral-cms/plugins/redirects` as the first one
+- Plugins with collections, globals, root hooks, routes and admin registrations (fields, pages, bar items); `integral-cms/plugins/redirects`, and `integral-cms/plugins/example` to copy from
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions
