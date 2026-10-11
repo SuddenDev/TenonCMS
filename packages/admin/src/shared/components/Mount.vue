@@ -12,6 +12,7 @@ const props = defineProps<{
   mount: Mount<any> | ClientRef<Mount<any>>;
   ctx: Record<string, unknown>;
   loader?: ExtensionData<any>;
+  elClass?: string;
 }>();
 const el = useTemplateRef("el");
 const registry = inject(registryKey, {});
@@ -110,6 +111,6 @@ function onClick(e: MouseEvent) {
       <span>{{ loader.error.value.message }}</span>
       <Button type="button" variant="outline" size="sm" @click="loader.reload()">Retry</Button>
     </div>
-    <div ref="el" class="min-h-0 w-full flex-1" />
+    <div ref="el" :class="['min-h-0 w-full flex-1', elClass]" />
   </div>
 </template>

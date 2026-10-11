@@ -38,6 +38,20 @@ it("resolves a custom home page after the initial built-in redirect", async () =
   expect(router.currentRoute.value.path).toBe("/");
 });
 
+it("shows the page title as text by default, without breadcrumbs", async () => {
+  const router = createAdminRouter("/admin");
+  await router.push("/content/stats");
+  await addAdminPages(router, { stats: { title: "Stats", mount: { clientRef: "stats" } } });
+  const root = document.createElement("div");
+  app = createApp({ render: () => h(PageTitle, { value: true }) })
+    .use(router)
+    .provide(integralKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} });
+  app.mount(root);
+  await nextTick();
+  expect(root.textContent).toBe("Stats");
+  expect(root.querySelector("[data-slot=breadcrumb]")).toBeNull();
+});
+
 type Call = { body: any; resolve: (data: unknown) => void; reject: (error: unknown) => void };
 
 // A custom page with a server loader and a header callback, mounted next to its title like the layout does.

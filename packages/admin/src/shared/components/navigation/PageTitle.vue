@@ -13,7 +13,8 @@ import Mount from "@/shared/components/Mount.vue";
 import { useBreadcrumbs } from "@/shared/composables/useBreadcrumbs";
 import { integralKey, pageDataKey, registryKey } from "@/shared/options";
 
-// `true`: the breadcrumbs, `false`: nothing, an array: these breadcrumbs, a `clientRef`: a callback that returns either.
+// `true`: the title as text, `false`: nothing, an array: these breadcrumbs, a `clientRef`: a callback that returns
+// HTML or breadcrumbs.
 const props = defineProps<{ value: boolean | Crumb[] | ClientRef<PageHeader<any>> }>();
 const route = useRoute();
 const trail = useBreadcrumbs();
@@ -41,7 +42,7 @@ watch(
 );
 
 // The callback gets the context of the page: with a server loader, the params, query and data of the last
-// finished load. Until that exists, and without the callback, the default breadcrumbs show.
+// finished load. Until that exists, and without the callback, the title shows.
 const context = computed(() => {
   if (!route.meta.load)
     return { params: route.params, query: route.query, data: undefined, integral };
@@ -56,11 +57,11 @@ const context = computed(() => {
   };
 });
 
-// A string is HTML, anything else is a list of crumbs.
+// A string is HTML, an array is a list of crumbs, `undefined` is the title.
 const shown = computed(() => {
   if (Array.isArray(props.value)) return props.value;
   const ctx = context.value;
-  if (!header.value || !ctx) return trail.value;
+  if (!header.value || !ctx) return undefined;
   try {
     return header.value(
       trail.value.map((c) => ({ ...c })),
@@ -68,9 +69,10 @@ const shown = computed(() => {
     );
   } catch (error) {
     console.error(error);
-    return trail.value;
+    return undefined;
   }
 });
+const title = computed(() => trail.value.at(-1)?.label);
 
 // `Mount` also opens links under the admin path without a reload.
 const renderHtml: MountFn<{ html: string }> = (el, { html }) => {
@@ -84,7 +86,9 @@ const renderHtml: MountFn<{ html: string }> = (el, { html }) => {
     v-if="typeof shown === 'string'"
     :mount="renderHtml"
     :ctx="{ html: shown }"
-    class="w-full min-w-0"
+    class="min-w-0"
+    el-class="flex items-center text-sm"
   />
-  <AppBreadcrumbs v-else-if="value !== false" :crumbs="shown" />
+  <AppBreadcrumbs v-else-if="shown" :crumbs="shown" />
+  <span v-else-if="value !== false" class="text-foreground truncate text-sm">{{ title }}</span>
 </template>

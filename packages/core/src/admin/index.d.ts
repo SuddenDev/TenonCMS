@@ -208,8 +208,8 @@ export type Crumb = {
 };
 
 /**
- * The visible header of a custom page. Synchronous. Gets the default breadcrumbs (a copy) and the page
- * context, and returns new breadcrumbs or an HTML string.
+ * The visible header of a custom page. Synchronous. Gets the breadcrumbs of the route (a copy) and the page
+ * context, and returns an HTML string or breadcrumbs.
  */
 export type PageHeader<D = unknown> = (crumbs: Crumb[], ctx: PageContext<D>) => string | Crumb[];
 
@@ -300,8 +300,7 @@ export type FieldRegistration<D = any> = {
  */
 export type PageRegistration<D = any> = {
   /**
-   * Metadata: the name in the navigation, the default breadcrumb and the document title. Defaults to the page
-   * key. It does not control the visible header: use `pageHeader`.
+   * The name in the navigation, the document title and the default header text. Defaults to the page key.
    */
   title?: string;
   /** Short text under the name on the Settings page. */
@@ -319,17 +318,15 @@ export type PageRegistration<D = any> = {
   /** Placement in the navigation. Defaults to the content sidebar. Use `{ display: 'none' }` for detail routes with params. */
   nav?: Nav;
   /**
-   * The visible header area above the page. It shows the breadcrumbs: for pages with `nav.display` `content`
-   * or `settings` in the header of the page's pane, otherwise in a bar above the page. `title` only provides
-   * the default breadcrumb text.
-   * - `true`: the breadcrumbs (default).
+   * The visible header area above the page: for pages with `nav.display` `content` or `settings` the header of
+   * the page's pane, otherwise a bar above the page.
+   * - `true`: the `title` as text (default).
    * - `false`: no header.
    * - `Crumb[]`: these breadcrumbs.
-   * - `clientRef()` of a {@link PageHeader}: gets the default breadcrumbs and the page context, and returns new
-   *   breadcrumbs or an HTML string. Links in the HTML under `integral.base` open without a reload. The admin
+   * - `clientRef()` of a {@link PageHeader}: gets the breadcrumbs of the route and the page context, and returns
+   *   an HTML string or breadcrumbs. Links in the HTML under `integral.base` open without a reload. The admin
    *   does not escape the string: escape every untrusted value, e.g. `params`.
    * @example
-   * pageHeader: [{ label: 'Reports', to: '/content/reports' }]
    * pageHeader: clientRef('./src/admin/reports.ts#header')
    */
   pageHeader?: boolean | Crumb[] | ClientRef<PageHeader<D>>;
