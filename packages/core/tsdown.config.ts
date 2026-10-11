@@ -1,20 +1,6 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
 import { defineConfig } from "tsdown";
 
-// Rolldown has no `?raw` imports. This inlines the file as a string, as Vite does, for plugin CSS.
-const raw = {
-  name: "raw",
-  resolveId: (id: string, importer?: string) =>
-    id.endsWith("?raw") && importer ? resolve(dirname(importer), id) : undefined,
-  load: (id: string) =>
-    id.endsWith("?raw")
-      ? `export default ${JSON.stringify(readFileSync(id.slice(0, -4), "utf8"))}`
-      : undefined,
-};
-
 export default defineConfig({
-  plugins: [raw],
   entry: [
     "src/index.ts",
     "src/client/index.ts",
@@ -28,8 +14,6 @@ export default defineConfig({
     "src/preview/react.ts",
     "src/integrations/vite/index.ts",
     "src/presets/index.ts",
-    "src/plugins/redirects/index.ts",
-    "src/plugins/redirects/admin.ts",
     // Own entries, so `node:fs`, `ipx` and `aws4fetch` stay out of bundles that do not use them.
     "src/media/storage/local/index.ts",
     "src/media/storage/s3/index.ts",

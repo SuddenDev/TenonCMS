@@ -1,0 +1,33 @@
+{
+  "name": "@integral-cms/plugins",
+  "version": "0.10.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@tsdown/css": "^0.23.1",
+    "@types/node": "^24.13.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "integral-cms": "workspace:*",
+    "postcss": "^8.5.29",
+    "postcss-import": "^17.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "4.3.3",
+    "tsdown": "^0.23.0",
+    "typescript": "^6.0.3",
+    "unplugin-vue": "^8.0.0",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "vue": "^3.5.43",
+    "vue-tsc": "^3.3.11"
+  }
+}

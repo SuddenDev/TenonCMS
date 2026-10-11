@@ -5,6 +5,9 @@ export type { ImageProvider, ImagesOptions, MediaOptions, Storage } from "./medi
 export { defineCollection, defineGlobal } from "./schema/index.ts";
 export type {
   Collection,
+  CollectionHooks,
+  GlobalHooks,
+  RootHooks,
   Schema,
   Data,
   Doc,

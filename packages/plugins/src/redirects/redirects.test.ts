@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createClient } from "../../client/index.ts";
-import { defineCms, defineCollection } from "../../index.ts";
-import { page } from "../../presets/index.ts";
+import { createClient } from "integral-cms/client";
+import { defineCms, defineCollection } from "integral-cms";
+import { page } from "integral-cms/presets";
 import { redirects, resolveRedirect } from "./index.ts";
 
 const origin = "http://localhost";

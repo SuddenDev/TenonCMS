@@ -1,6 +1,5 @@
 import { clientRef } from "integral-cms/admin";
-import { defineCollection, definePlugin } from "../../index.ts";
-import type { LocalApi } from "../../schema/index.ts";
+import { defineCollection, definePlugin, type LocalApi } from "integral-cms";
 
 export type RedirectsOptions = {
   /** Collections whose documents get a redirect from their old path when it changes. Default `['pages']`. */
@@ -19,9 +18,12 @@ export type Redirect = { to: string; status: 301 | 302 };
  * path changes, `GET /api/cms/redirects/lookup?path=` for everyone and `POST /api/cms/redirects/import`
  * for admins. Resolve them in your own middleware with {@link resolveRedirect}.
  * @example
- * defineCms({ plugins: [redirects()] })
+ * defineCms({ plugins: [RedirectsPlugin()] })
  */
-export function redirects({ collections = ["pages"], field = "path" }: RedirectsOptions = {}) {
+export function RedirectsPlugin({
+  collections = ["pages"],
+  field = "path",
+}: RedirectsOptions = {}) {
   return definePlugin({
     name: "redirects",
     admin: {

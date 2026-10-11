@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { defineCms, definePlugin } from "../index.ts";
 import { clientRef } from "../admin/config.ts";
-import { redirects } from "../plugins/redirects/index.ts";
 import { admin, base, origin, setup } from "./setup.ts";
 
 describe("admin registration", () => {
@@ -89,13 +88,6 @@ describe("admin registration", () => {
     expect((await b.fetch(`${origin}/api/cms/admin-bar?url=/&mode=site`)).status).toBe(404);
   });
 
-  it("registers redirects admin automatically from the server plugin", async () => {
-    const { client } = setup(defineCms({ ...base, plugins: [redirects()] }));
-    await client.signUp(admin);
-    expect((await client.getSchema()).admin?.pages?.["redirects-tools"].mount).toEqual({
-      clientRef: "integral-cms/plugins/redirects/admin#mountTools",
-    });
-  });
   it("throws at startup for a bad registration", () => {
     expect(() => defineCms({ ...base, admin: { fields: { color: {} } } } as never)).toThrow(
       "admin.fields.color.mount",

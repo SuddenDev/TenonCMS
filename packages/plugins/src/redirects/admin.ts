@@ -1,5 +1,5 @@
-import type { Mount, PageContext } from "../../admin/index.d.ts";
-import { CmsError, createClient } from "../../client/index.ts";
+import type { Mount, PageContext } from "integral-cms/admin";
+import { CmsError, createClient } from "integral-cms/client";
 import css from "./admin.css?raw";
 import type { Redirect } from "./index.ts";
 

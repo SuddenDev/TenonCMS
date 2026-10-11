@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "paths": {
+      "integral-cms": ["../core/src/index.ts"],
+      "integral-cms/admin": ["../core/src/admin/config.ts"],
+      "integral-cms/client": ["../core/src/client/index.ts"],
+      "integral-cms/presets": ["../core/src/presets/index.ts"],
+      "integral-cms/media/default": ["../core/src/media/default.ts"],
+      "integral-cms/admin/bar": ["../core/src/admin/bar.d.ts"],
+      "integral-cms/admin/vue": ["../core/src/admin/vue/vue.ts"],
+      "integral-cms/admin/react": ["../core/src/admin/react/react.ts"]
+    }
+  },
+  "include": ["src", "*.config.ts"]
+}

@@ -74,6 +74,34 @@
       "types": "./dist/plugins/redirects/admin.d.mts",
       "default": "./dist/plugins/redirects/admin.mjs"
     },
+    "./plugins/example": {
+      "types": "./dist/plugins/example/index.d.mts",
+      "default": "./dist/plugins/example/index.mjs"
+    },
+    "./plugins/example/admin/html": {
+      "types": "./dist/plugins/example/admin/html/index.d.mts",
+      "default": "./dist/plugins/example/admin/html/index.mjs"
+    },
+    "./plugins/example/admin/html/bar": {
+      "types": "./dist/plugins/example/admin/html/bar.d.mts",
+      "default": "./dist/plugins/example/admin/html/bar.mjs"
+    },
+    "./plugins/example/admin/vue": {
+      "types": "./dist/plugins/example/admin/vue/index.d.mts",
+      "default": "./dist/plugins/example/admin/vue/index.mjs"
+    },
+    "./plugins/example/admin/vue/bar": {
+      "types": "./dist/plugins/example/admin/vue/bar.d.mts",
+      "default": "./dist/plugins/example/admin/vue/bar.mjs"
+    },
+    "./plugins/example/admin/react": {
+      "types": "./dist/plugins/example/admin/react/index.d.mts",
+      "default": "./dist/plugins/example/admin/react/index.mjs"
+    },
+    "./plugins/example/admin/react/bar": {
+      "types": "./dist/plugins/example/admin/react/bar.d.mts",
+      "default": "./dist/plugins/example/admin/react/bar.mjs"
+    },
     "./media/local": {
       "types": "./dist/media/storage/local/index.d.mts",
       "workerd": "./dist/media/workerd.mjs",
