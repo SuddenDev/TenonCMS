@@ -10,7 +10,7 @@ export function RatingField({ value, onChange, field }: FieldContext) {
           type="button"
           aria-label={`${n} of 5`}
           disabled={field.readOnly}
-          className="text-xl"
+          className="ex:text-xl"
           onClick={() => onChange(value === String(n) ? null : String(n))}
         >
           {n <= Number(value ?? 0) ? "★" : "☆"}

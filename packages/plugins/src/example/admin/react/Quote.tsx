@@ -15,8 +15,8 @@ export function Quote({ params, integral }: PageContext) {
     client.findById("quotes", String(params.id)).then(setQuote);
   }, [params.id]);
   return (
-    <div className="mx-auto my-5 max-w-200">
-      <p className="flex justify-between gap-2">
+    <div className="ex:mx-auto ex:my-5 ex:max-w-200">
+      <p className="ex:flex ex:justify-between ex:gap-2">
         <a className="btn" href={`${integral.base}/quote-stats`}>
           ← Quote stats
         </a>
@@ -29,9 +29,9 @@ export function Quote({ params, integral }: PageContext) {
       {quote && (
         <>
           <Divider />
-          <blockquote className="text-2xl">“{quote.text}”</blockquote>
-          <p className="mt-2 opacity-70">{quote.author}</p>
-          <p className="mt-2 tracking-widest text-amber-500">{stars(quote.rating)}</p>
+          <blockquote className="ex:text-2xl">“{quote.text}”</blockquote>
+          <p className="ex:mt-2 ex:opacity-70">{quote.author}</p>
+          <p className="ex:mt-2 ex:tracking-widest ex:text-amber-500">{stars(quote.rating)}</p>
         </>
       )}
     </div>
