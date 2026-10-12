@@ -36,7 +36,9 @@ export function mountAdmin(
     .then(brand)
     .catch(() => {});
   // The styles are global. The admin runs on a page of its own, so they never reach the host's pages.
-  document.head.append(Object.assign(document.createElement("style"), { textContent: css }));
+  // They MUST come first: the first sheet fixes the cascade layer order, and a host bundler may put plugin CSS into
+  // the page (Astro inlines CSS of dynamic imports). Plugin CSS that declared `utilities` first would lose to `base`.
+  document.head.prepend(Object.assign(document.createElement("style"), { textContent: css }));
   const router = createAdminRouter(base);
   const configure = async (admin: AdminDescriptor) => {
     brand(admin);
