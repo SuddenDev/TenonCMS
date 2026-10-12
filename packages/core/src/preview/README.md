@@ -17,9 +17,9 @@ server render shows drafts only when the site shares the admin's cookies (same s
 
 `preview()` in the admin's iframe flows through:
 
-`runtime/preview.ts` → `runtime/store.ts` → `runtime/bind-elements.ts`
+`runtime/preview.ts` → `runtime/live.ts` → `runtime/store.ts` → `runtime/bind-elements.ts`
 
-`preview()` picks the mode from `window.name`. `startLive()` opens the channel to the admin (`openChannel()`), which
+`preview()` picks the mode from `window.name` and loads `live.ts` (with idiomorph) on demand. `startLive()` opens the channel to the admin (`openChannel()`), which
 connects on the admin's first message. A `draft` message goes to `setDraft()`, which notifies `useDraft()`
 subscribers, and `patchAll()` writes the new values into bound elements. A `MutationObserver` patches again after a
 framework re-render and reports the bound documents. With `morph`, a `saved` message runs `createRerender()`.
@@ -56,7 +56,8 @@ calls `update()` when the bound documents, the edit mode or an item's data chang
 | `templates/placeholders.ts`       | `PLACEHOLDER` and `placeholders()`: the dot paths of a template.                                   |
 | `templates/resolve-template.ts`   | `resolveTemplate()`: fills a template, or `null` when a value is missing.                          |
 | `runtime/message.ts`              | Message-shape validation shared by the site and admin.                                             |
-| `runtime/preview.ts`              | `preview()`: mode, message channel and origin checks, observer, edit clicks and morph re-renders.  |
+| `runtime/preview.ts`              | `preview()`: picks the mode and loads `live.ts` only when needed.                                  |
+| `runtime/live.ts`                 | `startLive()`: message channel and origin checks, observer, edit clicks and morph re-renders.      |
 | `runtime/store.ts`                | The singleton draft snapshot, `draftKey()` and subscriptions.                                      |
 | `runtime/merge-draft.ts`          | `merge()`: applies a draft, keeping populated values whose ids match.                              |
 | `runtime/bind-elements.ts`        | `edit()`, `parseBinding()`, DOM patches, highlights and `boundDocuments()`.                        |

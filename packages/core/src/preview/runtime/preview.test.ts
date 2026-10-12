@@ -57,12 +57,13 @@ describe("preview", () => {
     handle.unmount.mockClear();
   });
 
-  it("talks only to the admin's origin in the window that opened it, after its first message", () => {
+  it("talks only to the admin's origin in the window that opened it, after its first message", async () => {
     window.name = "integral-preview-posts:1";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `<h1 data-cms="posts:1:title">Old</h1>`;
     stop = preview({ admin: "https://admin.test/admin" });
+    await vi.dynamicImportSettled();
     expect(opener.postMessage).toHaveBeenCalledWith({ type: "ready" }, "*");
     const draft = { type: "draft", collection: "posts", id: "1", data: { title: "New" } };
     window.dispatchEvent(
@@ -101,6 +102,7 @@ describe("preview", () => {
       <p data-cms="pages:p1:body">C</p>
       <footer data-cms="footer::copyright">D</footer>`;
     stop = preview();
+    await vi.dynamicImportSettled();
     const hello = { data: { type: "mode", edit: true }, origin: location.origin, source: opener };
     window.dispatchEvent(new MessageEvent("message", hello as never));
     expect(opener.postMessage).toHaveBeenCalledWith(
@@ -121,12 +123,13 @@ describe("preview", () => {
     expect(opener.postMessage.mock.calls[0]![0].documents).toHaveLength(4);
   });
 
-  it("highlights the elements of a document the admin points at", () => {
+  it("highlights the elements of a document the admin points at", async () => {
     window.name = "integral-preview";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `<h1 data-cms="posts:1:title">A</h1><p data-cms="posts:12:title">B</p>`;
     stop = preview();
+    await vi.dynamicImportSettled();
     const send = (data: unknown) =>
       window.dispatchEvent(
         new MessageEvent("message", { data, origin: location.origin, source: opener as never }),
