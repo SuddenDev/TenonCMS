@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createClient } from "integral-cms/client";
 import { defineCms, defineCollection } from "integral-cms";
 import { page } from "integral-cms/presets";
-import { redirects, resolveRedirect } from "./index.ts";
+import { RedirectsPlugin, resolveRedirect } from "./index.ts";
 
 const origin = "http://localhost";
 const admin = { name: "Admin", email: "a@b.co", password: "password123" };
@@ -13,7 +13,7 @@ function make() {
       pages: defineCollection({ fields: page.fields, hooks: page.hooks }),
       posts: defineCollection({ fields: { title: { type: "text" }, path: { type: "text" } } }),
     },
-    plugins: [redirects()],
+    plugins: [RedirectsPlugin()],
     database: { url: ":memory:" },
     secret: "x".repeat(32),
   });
