@@ -291,8 +291,14 @@ export function fillItems(items: AdminBarItem[], { admin }: { admin: string }): 
   return items.map((item) => {
     if (!(item as { builtIn?: true }).builtIn) return item;
     if (item.id === "dashboard") return { ...item, href: admin };
-    if (item.id === "edit")
-      return { ...item, href: `${admin}/presentation?url=${encodeURIComponent(location.href)}` };
+    if (item.id === "edit") {
+      const lang = document.documentElement.lang;
+      const locale = lang ? `&locale=${encodeURIComponent(lang)}` : "";
+      return {
+        ...item,
+        href: `${admin}/presentation?url=${encodeURIComponent(location.href)}${locale}`,
+      };
+    }
     return item;
   });
 }

@@ -25,21 +25,21 @@ withCms → plugins' publicMiddleware → auth/* or public reads
 
 ## Files
 
-| Path                                | Responsibility                                                                       |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| `index.ts`                          | Exports `createApp()`.                                                               |
-| `app.ts`                            | `createApp()`: mounts public and protected routes in order.                          |
-| `errors.ts`                         | `notFound()` and `handleError()`, which hides unexpected messages.                   |
-| `parse-body.ts`                     | `parseBody()`: JSON bodies; malformed JSON reads as `undefined`.                     |
-| `read-request.ts`                   | `readRequest()`: visibility and scoped local API of a public read.                   |
-| `strip-private-fields.ts`           | `stripPrivateFields()`: removes private fields, also in groups, relations and joins. |
-| `visibility.ts`                     | `Visibility` (`public` / `admin`) and `visible()`.                                   |
-| `middleware/types.ts`               | `Env`: the Hono context variables `cms` and `user`.                                  |
-| `middleware/with-cms.middleware.ts` | `withCms()`: binds the userless local API.                                           |
-| `query/read-options.ts`             | `readOptions()`: `populate`, `depth` and `select`, or a 400 message.                 |
-| `query/parse-populate.ts`           | `parsePopulate()`: checks paths and hops against the schema.                         |
-| `query/parse-select.ts`             | `parseSelect()`: the selection tree; `badSelectPath()` checks its keys.              |
-| `query/path-tree.ts`                | `treeOf()`: dot paths to a null-prototype tree.                                      |
-| `query/where-from-query.ts`         | `whereFromQuery()`: query keys to typed equality filters.                            |
+| Path                                | Responsibility                                                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `index.ts`                          | Exports `createApp()`.                                                                                   |
+| `app.ts`                            | `createApp()`: mounts public and protected routes in order.                                              |
+| `errors.ts`                         | `notFound()` and `handleError()`, which hides unexpected messages.                                       |
+| `parse-body.ts`                     | `parseBody()`: JSON bodies; malformed JSON reads as `undefined`.                                         |
+| `read-request.ts`                   | `readRequest()`: visibility and scoped local API of a public read.                                       |
+| `strip-private-fields.ts`           | `stripPrivateFields()`: removes private fields, also in groups, relations and joins.                     |
+| `visibility.ts`                     | `Visibility` (`public` / `admin`) and `visible()`.                                                       |
+| `middleware/types.ts`               | `Env`: the Hono context variables `cms` and `user`.                                                      |
+| `middleware/with-cms.middleware.ts` | `withCms()`: binds the userless local API.                                                               |
+| `query/read-options.ts`             | `readOptions()`: `populate`, `depth`, `select`, `locale`, `fallback` and `alternates`, or a 400 message. |
+| `query/parse-populate.ts`           | `parsePopulate()`: checks paths and hops against the schema.                                             |
+| `query/parse-select.ts`             | `parseSelect()`: the selection tree; `badSelectPath()` checks its keys.                                  |
+| `query/path-tree.ts`                | `treeOf()`: dot paths to a null-prototype tree.                                                          |
+| `query/where-from-query.ts`         | `whereFromQuery()`: query keys to typed equality filters.                                                |
 
 Reads are public. A session sees private fields; the preview cookie reads drafts only with a valid session. Writes MUST stay behind the CSRF and session checks. Private fields cannot be public filters, and public responses are stripped after selection. Query trees MUST use null-prototype nodes, so a `__proto__` segment cannot pollute `Object.prototype`. Media parses its own bodies and keeps `{}` for malformed JSON.

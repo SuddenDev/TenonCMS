@@ -3,7 +3,7 @@ import type { Fields } from "../schema/index.ts";
 import { nestedPaths } from "./nested-paths.ts";
 
 /**
- * Pages with nested URLs. Spread `page.fields` into a collection's fields and use `page.hooks` stage by stage. `page.preview` opens a page at its `path`.
+ * Pages with nested URLs. Spread `page.fields` into a collection's fields and use `page.hooks` stage by stage. `page.permalink` is the URL of a page, its `path`.
  * `parent` points to `pages`; for another collection name, override it: `parent: { ...page.fields.parent, collection: 'docs' }`.
  */
 export const page = {
@@ -15,5 +15,5 @@ export const page = {
     path: { type: "text", readOnly: true },
   },
   hooks: nestedPaths(),
-  preview: "{path}",
-} as const satisfies { fields: Fields; hooks: object; preview: string };
+  permalink: "{path}",
+} as const satisfies { fields: Fields; hooks: object; permalink: string };

@@ -8,6 +8,11 @@ export function discardEndpoint(core: Core) {
 
   return new Hono<Env>().delete("/globals/:name/draft", async (c) => {
     const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
-    return c.json(await c.var.cms.discardGlobal(name));
+    return c.json(
+      await c.var.cms.discardGlobal(name, {
+        locale: c.req.query("locale"),
+        all: c.req.query("all") === "true",
+      }),
+    );
   });
 }

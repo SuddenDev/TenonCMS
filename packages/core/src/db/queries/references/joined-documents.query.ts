@@ -1,10 +1,19 @@
-import { type Db, dataOf, visible, rawRowColumns } from "../document-sql.ts";
+import {
+  type Db,
+  type Loc,
+  DOCUMENT_LOCALES,
+  jsonAt,
+  localeJoins,
+  rawRowColumns,
+  visible,
+} from "../document-sql.ts";
 import { type Row } from "../../types.ts";
 import { sql } from "kysely";
 
 /**
  * Documents of `collection` whose relation at `on` points to one of `ids`, newest first. Each row carries the id it
  * points to as `ref`; a document with a `many` relation returns one row per matching id.
+ * A localized `loc` follows the relation of the locale that a read returns.
  */
 export async function joinedDocs(
   db: Db,
@@ -13,21 +22,24 @@ export async function joinedDocs(
   many: boolean | undefined,
   ids: string[],
   drafts = false,
+  loc?: Loc,
 ) {
-  const path = `$.${on}`;
   const list = JSON.stringify(ids);
-  const data = sql.raw(dataOf(drafts, "d."));
-  const where = sql`d.collection = ${collection} AND ${visible(drafts, "d.")}`;
+  const value = jsonAt(on, drafts, loc, "d.");
+  const from = loc
+    ? sql`cms_documents d ${localeJoins(drafts, loc, DOCUMENT_LOCALES, "d.id")}`
+    : sql`cms_documents d`;
+  const where = sql`d.collection = ${collection} AND ${visible(drafts, "d.", loc)}`;
   const query = many
     ? sql<
         Row & { ref: string }
-      >`SELECT ${rawRowColumns(drafts, "d.")}, j.value AS ref FROM cms_documents d, json_each(${data}, ${path}) j
+      >`SELECT ${rawRowColumns(drafts, "d.", loc)}, j.value AS ref FROM ${from}, json_each(${value}) j
         WHERE ${where} AND j.value IN (SELECT value FROM json_each(${list}))
         ORDER BY d.created_at DESC, d.rowid DESC`
     : sql<
         Row & { ref: string }
-      >`SELECT ${rawRowColumns(drafts, "d.")}, json_extract(${data}, ${path}) AS ref FROM cms_documents d
-        WHERE ${where} AND json_extract(${data}, ${path}) IN (SELECT value FROM json_each(${list}))
+      >`SELECT ${rawRowColumns(drafts, "d.", loc)}, ${value} AS ref FROM ${from}
+        WHERE ${where} AND ${value} IN (SELECT value FROM json_each(${list}))
         ORDER BY d.created_at DESC, d.rowid DESC`;
   return (await query.execute(db)).rows;
 }

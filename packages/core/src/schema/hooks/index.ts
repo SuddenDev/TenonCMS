@@ -44,4 +44,6 @@ export type HookArgs = {
   global?: string;
   /** True on a draft save, which runs no `validate`, `afterChange` or integrity checks. False otherwise, publish included. */
   draft: boolean;
+  /** The locale of the operation. Nested calls inherit it. Missing without `localization`. */
+  locale?: string;
 };

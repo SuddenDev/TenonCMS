@@ -1,6 +1,7 @@
 import { type Database } from "../../db/types.ts";
 import { toDoc } from "../../db/map-document.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
+import { type Loc } from "../../db/queries/document-sql.ts";
 import { joinedDocs } from "../../db/queries/references/joined-documents.query.ts";
 import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
 import { relationPaths } from "../../schema/traversal/relation-paths.ts";
@@ -22,6 +23,8 @@ type Collections = Record<string, Collection>;
 export type ReadHooks = {
   /** Loads targets in the drafts perspective. */
   drafts: boolean;
+  /** How a localized target collection reads, in the locale of the outer read. */
+  loc?(collection: string): Loc | undefined;
   before(collection: string, docs: Docs): Promise<Docs>;
   after(collection: string, docs: Docs): Promise<Docs>;
   /** Adds the computed URLs of a media document, with the options of the field that holds it. */
@@ -70,7 +73,11 @@ export async function populate(
 async function resolveRef(ctx: Hop, docs: Docs, key: string, field: RefField) {
   const to = targetOf(field);
   const ids = [...new Set(docs.flatMap((d) => d[key] ?? []))];
-  const found = await hop(ctx, to, await loadByIds(ctx.db, to, ids, ctx.read.drafts));
+  const found = await hop(
+    ctx,
+    to,
+    await loadByIds(ctx.db, to, ids, ctx.read.drafts, ctx.read.loc?.(to)),
+  );
 
   const { media } = ctx.read;
   const value = (id: string) => {
@@ -90,6 +97,7 @@ async function resolveJoin(ctx: Hop, docs: Docs, key: string, field: JoinField) 
   const source = relationPaths(target).find((r) => r.path.join(".") === field.on)!.field;
 
   const ids = docs.map((d) => d.id);
+  const loc = ctx.read.loc?.(field.collection);
   const rows = await joinedDocs(
     ctx.db,
     field.collection,
@@ -97,8 +105,9 @@ async function resolveJoin(ctx: Hop, docs: Docs, key: string, field: JoinField) 
     source.many,
     ids,
     ctx.read.drafts,
+    loc,
   );
-  const unique = [...new Map(rows.map((r) => [r.id, toDoc(r)])).values()];
+  const unique = [...new Map(rows.map((r) => [r.id, toDoc(r, loc)])).values()];
   const found = await hop(ctx, field.collection, unique);
 
   for (const d of docs)

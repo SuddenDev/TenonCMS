@@ -116,3 +116,27 @@ describe("defineCms", () => {
     expect(await res.json()).toEqual(unpublished);
   });
 });
+
+describe("localized settings", () => {
+  const base = { database: { url: ":memory:" }, secret: "x".repeat(32), media: false } as const;
+  const localization = { locales: ["en", "de"], defaultLocale: "en" };
+
+  it("localizes the default globals only with localization", () => {
+    const on = defineCms({ ...base, localization });
+    expect(on.schema.globals).toMatchObject({
+      general: { localized: true },
+      seo: { localized: true },
+    });
+    expect(defineCms(base).schema.globals?.general).not.toHaveProperty("localized");
+  });
+
+  it("takes a replacement as is", () => {
+    const cms = defineCms({
+      ...base,
+      localization,
+      settings: { general: { fields: { title: { type: "text" } } } },
+    });
+    expect(cms.schema.globals?.general).not.toHaveProperty("localized");
+    expect(cms.schema.globals?.seo).toMatchObject({ localized: true });
+  });
+});

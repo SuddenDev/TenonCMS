@@ -14,6 +14,12 @@ export type Common = {
   condition?: Condition;
   /** Sent over HTTP only with a session, so the admin sees it and public reads do not. Not filterable without a session. On a group, it applies to the whole group. */
   private?: boolean;
+  /**
+   * Collection or global must have `localized: true`. Then enabled by default.
+   * `false` shares the field between locales in a localized collection or global. Only valid on a top-level field
+   * of a localized entry. A group is localized as a whole, so its children MUST NOT set it.
+   */
+  localized?: false;
 };
 
 /** Options of every stored field. `V` is the value hooks see. `S` is the stored value, which `default` and `validate` get. */

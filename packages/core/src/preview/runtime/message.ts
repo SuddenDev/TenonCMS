@@ -5,6 +5,7 @@ export function isPreviewMessage(value: unknown): value is PreviewMessage {
   if (!value || typeof value !== "object") return false;
   const m = value as Record<string, unknown>;
   const identity = typeof m.collection === "string" && typeof m.id === "string";
+  const locale = m.locale === undefined || typeof m.locale === "string";
   switch (m.type) {
     case "ready":
       return true;
@@ -22,9 +23,9 @@ export function isPreviewMessage(value: unknown): value is PreviewMessage {
     case "edit":
       return identity && typeof m.path === "string";
     case "saved":
-      return identity;
+      return identity && locale;
     case "draft":
-      return identity && !!m.data && typeof m.data === "object" && !Array.isArray(m.data);
+      return identity && locale && !!m.data && typeof m.data === "object" && !Array.isArray(m.data);
     default:
       return false;
   }

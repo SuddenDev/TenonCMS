@@ -1,4 +1,13 @@
-import type { Fields, PopulateOf, ReadDoc, Schema, SelectOf } from "../../schema/index.ts";
+import type {
+  AlternatesOf,
+  Fields,
+  Locale,
+  LocaleMeta,
+  PopulateOf,
+  ReadDoc,
+  Schema,
+  SelectOf,
+} from "../../schema/index.ts";
 import type { Register } from "../index.ts";
 
 // Fields as the HTTP API sends them: private fields optional.
@@ -49,4 +58,10 @@ export type ReadCollection<
   C extends { schema: Schema },
   K extends keyof Collections<C>,
   O,
-> = ReadDoc<Collections<C>, CollectionFields<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>;
+> = ReadDoc<
+  Collections<C>,
+  CollectionFields<C, K>,
+  PopulateOf<O, Depth<C>>,
+  SelectOf<O>,
+  LocaleMeta<Collections<C>[K], Locale<C>, SelectOf<O>, AlternatesOf<O>>
+>;

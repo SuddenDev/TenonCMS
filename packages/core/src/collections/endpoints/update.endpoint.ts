@@ -11,7 +11,9 @@ export function updateEndpoint(core: Core) {
   return new Hono<Env>()
     .put("/collections/:name/:id", async (c) => {
       const { name } = collectionOf(collections, c.req.param("name"));
-      const doc = await c.var.cms.update(name, c.req.param("id"), await parseBody(c.req));
+      const doc = await c.var.cms.update(name, c.req.param("id"), await parseBody(c.req), {
+        locale: c.req.query("locale"),
+      });
       if (!doc) throw notFound();
       return c.json(doc);
     })
@@ -19,6 +21,7 @@ export function updateEndpoint(core: Core) {
       const { name } = collectionOf(collections, c.req.param("name"));
       const doc = await c.var.cms.update(name, c.req.param("id"), await parseBody(c.req), {
         draft: true,
+        locale: c.req.query("locale"),
       });
       if (!doc) throw notFound();
       return c.json(doc);

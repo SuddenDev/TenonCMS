@@ -1,11 +1,13 @@
 import { clientRef } from "integral-cms/admin";
-import { defineCollection, definePlugin, type LocalApi } from "integral-cms";
+import { defineCollection, definePlugin, type LocalApi, ValidationError } from "integral-cms";
 
 export type RedirectsOptions = {
   /** Collections whose documents get a redirect from their old path when it changes. Default `['pages']`. */
   collections?: string[];
   /** Name of the path field in those collections. Default `'path'`. */
   field?: string;
+  /** Locales offered in the `locale` field of a redirect, shown as a dropdown. Default: a free text field. */
+  locales?: string[];
 };
 
 /** A redirect as {@link resolveRedirect} returns it. */
@@ -23,6 +25,7 @@ export type Redirect = { to: string; status: 301 | 302 };
 export function RedirectsPlugin({
   collections = ["pages"],
   field = "path",
+  locales,
 }: RedirectsOptions = {}) {
   return definePlugin({
     name: "redirects",
@@ -43,7 +46,6 @@ export function RedirectsPlugin({
           from: {
             type: "text",
             required: true,
-            unique: true,
             pattern: "/\\S*",
             description: "Old path, e.g. /old-page",
           },
@@ -54,24 +56,43 @@ export function RedirectsPlugin({
             description: "New path, e.g. /new-page, or an http(s) URL",
           },
           permanent: { type: "boolean", default: true, description: "301 instead of 302" },
+          locale: {
+            ...(locales
+              ? ({ type: "select", options: locales } as const)
+              : ({ type: "text" } as const)),
+            description: "Locale the redirect applies to. Empty: every locale",
+          },
+        },
+        hooks: {
+          // `from` is unique per locale: the same old path MAY redirect differently in each locale.
+          beforeChange: [
+            async ({ data, id, cms }) => {
+              const locale = data.locale || null;
+              const taken = await cms.findOne("redirects", { where: { from: data.from, locale } });
+              if (taken && taken.id !== id) throw new ValidationError({ from: "Already used" });
+              return { ...data, locale };
+            },
+          ],
         },
       }),
     },
     hooks: {
       afterChange: [
-        async ({ collection, doc, previousDoc, cms }) => {
+        async ({ collection, doc, previousDoc, cms, locale }) => {
           if (!collection || !collections.includes(collection)) return;
           const from = previousDoc?.[field];
           const to = doc[field];
           if (typeof from !== "string" || typeof to !== "string" || from === to) return;
+          // Only localized documents carry `locales`. The hook's locale is the default one for the rest.
+          const scope = Array.isArray(doc.locales) && locale ? locale : null;
           // Redirects that pointed at the old path follow it, so a chain stays one hop.
-          for (const r of await cms.find("redirects", { where: { to: from } })) {
+          for (const r of await cms.find("redirects", { where: { to: from, locale: scope } })) {
             if (r.from === to) await cms.delete("redirects", r.id);
             else await cms.update("redirects", r.id, { to });
           }
-          const existing = await cms.findOne("redirects", { where: { from } });
+          const existing = await cms.findOne("redirects", { where: { from, locale: scope } });
           if (existing) await cms.update("redirects", existing.id, { to });
-          else await cms.create("redirects", { from, to, permanent: true });
+          else await cms.create("redirects", { from, to, permanent: true, locale: scope });
         },
       ],
     },
@@ -88,7 +109,7 @@ export function RedirectsPlugin({
       api.get("/lookup", async (c) => {
         const path = c.req.query("path");
         if (!path) return c.json({ message: "Missing path" }, 400);
-        const redirect = await resolveRedirect(c.var.cms, path);
+        const redirect = await resolveRedirect(c.var.cms, path, c.req.query("locale"));
         return redirect ? c.json(redirect) : c.notFound();
       }),
   });
@@ -103,7 +124,10 @@ export function RedirectsPlugin({
 export async function resolveRedirect(
   cms: Pick<LocalApi, "findOne">,
   path: string,
+  locale?: string,
 ): Promise<Redirect | undefined> {
-  const doc = await cms.findOne("redirects", { where: { from: path } });
+  const doc =
+    (locale && (await cms.findOne("redirects", { where: { from: path, locale } }))) ||
+    (await cms.findOne("redirects", { where: { from: path, locale: null } }));
   return doc && { to: String(doc.to), status: doc.permanent === false ? 302 : 301 };
 }

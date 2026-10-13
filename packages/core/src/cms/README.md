@@ -9,11 +9,11 @@ Application code imports `defineCms`, `Cms` and `Api` from `integral-cms`. See t
 
 Construction happens in this order:
 
-1. **Resolve options.** Validate options and set defaults.
-2. **Assemble the schema.** Merge host and plugin collections/globals, add site settings, then add the built-in `media` collection when media is enabled. Duplicate plugin names and duplicate names within collections or globals throw instead of overwriting definitions.
-3. **Validate the completed schema.** [check-schema.ts](../schema/validation/check-schema.ts) checks the assembled definitions before any database connection opens.
-4. **Create the shared core.** Prepare lazy database/auth functions, store the schema, plugins, root hooks and population defaults, and create the optional media core.
-5. **Create the entry points.** Build the Hono app and return a typed local API with `schema`, `populate`, `auth()`, `withDrafts()`, `withSession(request)` and `fetch(request)`.
+1. **Resolve options.** Validate options and set defaults. `localization` gets `fallback: true` and `routing: { prefix: "except-default" }`.
+2. **Assemble the schema.** Merge host and plugin collections/globals, add site settings (localized with `localization`), then add the built-in `media` collection when media is enabled. Duplicate plugin names and duplicate names within collections or globals throw instead of overwriting definitions.
+3. **Validate the completed schema.** [check-schema.ts](../schema/validation/check-schema.ts) checks the assembled definitions and the `localization` config before any database connection opens.
+4. **Create the shared core.** Prepare lazy database/auth functions (with the localized keys of every collection and global, which the database syncs after its migrations), store the schema, plugins, root hooks, population defaults and the normalized `localization`, and create the optional media core.
+5. **Create the entry points.** Build the Hono app and return a typed local API with `schema`, `populate`, `localization`, `auth()`, `withDrafts()`, `withSession(request)` and `fetch(request)`.
 
 ## Default Collections and Globals
 
@@ -23,13 +23,13 @@ Construction happens in this order:
 | `seo`     | Global     | `settings.seo`: `Global` or `false`     | Enabled                                 | Title separator, social image, verification codes and indexing preference.                       |
 | `media`   | Collection | `media`: `MediaOptions` or `boolean`    | Enabled on Node.js; disabled on Workers | Uploads and file metadata. Defaults to `./.uploads` storage and IPX image processing on Node.js. |
 
-`settings: false` disables both settings globals. A `Global` replaces the corresponding [preset](../presets/settings.ts); duplicate global names throw. Without media, the presets omit `favicon` and `image`.
+`settings: false` disables both settings globals. A `Global` replaces the corresponding [preset](../presets/settings.ts); duplicate global names throw. Without media, the presets omit `favicon` and `image`. With `localization`, the default globals are localized; a replacement is taken as is.
 
 `media: false` disables the library; a `MediaOptions` object supplies custom providers and options. On Workers, `media: true` throws. See the [media README](../media/README.md).
 
 ### Database and auth are lazy
 
-`defineCms()` validates and assembles configuration immediately, but does not open the database. The first `db()` call creates the connection, builds auth options and runs migrations. Concurrent callers share the same initialization promise.
+`defineCms()` validates and assembles configuration immediately, but does not open the database. The first `db()` call creates the connection, builds auth options, runs migrations and then `syncLocalized()`, which moves values between shared data and locale rows when the localized fields changed. Concurrent callers share the same initialization promise.
 
 The first `auth()` call checks that `secret` has at least 32 characters, initializes the database if needed, and creates the shared better-auth instance. `getSession(headers)` uses that instance to resolve a request's session. Database queries and migrations belong to [db](../db/README.md); auth configuration and caller lookup belong to [auth](../auth/README.md).
 
@@ -37,13 +37,13 @@ The first `auth()` call checks that `secret` has at least 32 characters, initial
 
 These three internal types explain how calls keep the right user, draft perspective and transaction:
 
-| Type    | Lifetime and contents                                                                                                                                                                                       |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Core`  | Shared by every instance created from one `defineCms()` call. Holds the assembled schema, plugins, hooks, defaults, lazy runtime, optional media core, the `adminBar` option and `localApi(scope)` factory. |
-| `Scope` | Carries a caller's `user`, read `perspective`, optional transaction, hook `context` and `nested` flag.                                                                                                      |
-| `Inner` | A scope used inside an operation, with a `cms` API bound to that scope. Hooks receive this API.                                                                                                             |
+| Type    | Lifetime and contents                                                                                                                                                                                                       |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Core`  | Shared by every instance created from one `defineCms()` call. Holds the assembled schema, plugins, hooks, defaults, `localization`, lazy runtime, optional media core, the `adminBar` option and `localApi(scope)` factory. |
+| `Scope` | Carries a caller's `user`, read `perspective`, `locale` and `fallback`, optional transaction, hook `context` and `nested` flag.                                                                                             |
+| `Inner` | A scope used inside an operation, with a `cms` API bound to that scope. Hooks receive this API.                                                                                                                             |
 
-An ordinary server call starts with `user: null` and the published perspective. Each outer operation gets a fresh `context` object. A call through a hook's `cms` inherits the current user, perspective, context and transaction, and runs its own hooks.
+An ordinary server call starts with `user: null`, the published perspective and no locale; a `locale` option or the default locale applies per call (`withLocale()` in [content](../content/README.md)). Each outer operation gets a fresh `context` object. A call through a hook's `cms` inherits the current user, perspective, locale, context and transaction, and runs its own hooks.
 
 `Core.localApi(scope)` lets the content engine create these nested APIs without importing all feature operations. [local-api.ts](api/local-api.ts) is the untyped contract that hooks, HTTP routes, plugins and preview functions get as `cms`, and that each `*.local.ts` implements one method of. [create-local-api.ts](api/create-local-api.ts) owns the method assembly; each feature owns its method implementation.
 

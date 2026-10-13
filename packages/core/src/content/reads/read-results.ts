@@ -7,11 +7,14 @@ import { type ReadOpts } from "./read-documents.ts";
 import { decorate } from "../../media/images/decorate.ts";
 import { type PopulatePlan, toPopulatePlan } from "../population/populate-plan.ts";
 import { type SelectSpec, pick } from "../population/select-fields.ts";
-import { badSelectPath } from "../population/validate-select.ts";
+import { badSelectPath, metaKeys } from "../population/validate-select.ts";
 import { populate } from "../population/populate.ts";
+import { addAlternates } from "./alternates.ts";
+import { locOf } from "./loc-of.ts";
 
 /**
- * Runs `beforeRead` on the loaded documents, then population, then `afterRead`, then media URLs, then `select`.
+ * Runs `beforeRead` on the loaded documents, then population, then `afterRead`, then media URLs, then `alternates`
+ * when asked for and selected, then `select`.
  * @returns The documents as the read returns them.
  */
 export async function readDocs(
@@ -21,6 +24,7 @@ export async function readDocs(
   docs: Record<string, any>[],
   plan: PopulatePlan,
   select: SelectSpec | undefined,
+  alternates = false,
 ) {
   const { collections } = core.schema;
   const { fields } = target(core, name);
@@ -31,6 +35,7 @@ export async function readDocs(
 
   await populate(await q(core, s), collections, fields, before, plan, {
     drafts: s.perspective === "drafts",
+    loc: (collection) => locOf(core, s, collections[collection]),
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
     before: (collection, docs) => beforeRead(core, s, col(collection), docs, "read"),
     after: (collection, docs) => afterRead(core, s, col(collection), docs, "read"),
@@ -41,6 +46,8 @@ export async function readDocs(
 
   let result = await afterRead(core, s, name, before, operation);
   if (media && isMedia(name)) result = result.map((d) => decorate(media, d));
+  if (alternates && name.kind === "collection" && (!select || select.alternates))
+    result = await addAlternates(core, s, name.name, result);
 
   return select ? result.map((d) => pick(collections, fields, d, select)) : result;
 }
@@ -52,11 +59,16 @@ export async function readDocs(
  * @returns The populate plan and the checked `select`.
  * @throws {Error} For a `select` path that does not fit.
  */
-export function readPlan(core: Core, fields: Fields, options: ReadOpts, doc = true) {
+export function readPlan(
+  core: Core,
+  fields: Fields,
+  options: ReadOpts,
+  meta: readonly string[] | false = metaKeys(),
+) {
   const plan = toPopulatePlan(options, core.populate.depth);
   const select = options.select as SelectSpec | undefined;
 
-  const error = select && badSelectPath(core.schema.collections, fields, select, plan, "", doc);
+  const error = select && badSelectPath(core.schema.collections, fields, select, plan, "", meta);
   if (error) throw new Error(`Invalid select: ${error}`);
 
   return { plan, select };

@@ -92,6 +92,24 @@ describe("preview", () => {
     );
   });
 
+  it("stores the locale of a draft with its data", async () => {
+    window.name = "integral-preview-posts:9";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    stop = preview({ admin: "https://admin.test/admin" });
+    await vi.dynamicImportSettled();
+    const message = (locale?: string) =>
+      new MessageEvent("message", {
+        data: { type: "draft", collection: "posts", id: "9", data: { title: "N" }, locale },
+        origin: "https://admin.test",
+        source: opener as never,
+      });
+    window.dispatchEvent(message());
+    window.dispatchEvent(message("de"));
+    const { getDrafts } = await import("./store.ts");
+    expect(getDrafts()["posts:9"]).toEqual({ title: "N", locale: "de" });
+  });
+
   it("reports the documents on the page in page order, and again when they change", async () => {
     window.name = "integral-preview";
     const opener = { postMessage: vi.fn() };

@@ -5,6 +5,8 @@ import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { col } from "../targets.ts";
 import { q } from "../../cms/runtime/transaction.ts";
 import { readDocs, readPlan } from "./read-results.ts";
+import { locOf } from "./loc-of.ts";
+import { metaKeys } from "../population/validate-select.ts";
 
 export type ReadOpts = NonNullable<Parameters<LocalApi["find"]>[1]> & { id?: string };
 
@@ -13,15 +15,17 @@ export type ReadOpts = NonNullable<Parameters<LocalApi["find"]>[1]> & { id?: str
  * @returns The matching documents after read hooks, population and `select`.
  */
 export async function read(core: Core, s: Inner, collection: string, options: ReadOpts) {
-  const { fields } = core.schema.collections[collection];
-  const { plan, select } = readPlan(core, fields, options);
+  const entry = core.schema.collections[collection];
+  const { fields } = entry;
+  const { plan, select } = readPlan(core, fields, options, metaKeys(entry.localized));
   checkWhere(fields, options.where);
 
   const docs = await findDocs(await q(core, s), collection, {
     ...options,
     drafts: s.perspective === "drafts",
+    loc: locOf(core, s, entry),
   });
-  return readDocs(core, s, col(collection), docs, plan, select);
+  return readDocs(core, s, col(collection), docs, plan, select, options.alternates);
 }
 
 // Ensures that all fields used in the `where` clause exist and are filterable.

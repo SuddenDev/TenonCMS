@@ -11,10 +11,19 @@ export function createEndpoint(core: Core) {
   return new Hono<Env>()
     .post("/collections/:name", async (c) => {
       const { name } = collectionOf(collections, c.req.param("name"));
-      return c.json(await c.var.cms.create(name, await parseBody(c.req)), 201);
+      return c.json(
+        await c.var.cms.create(name, await parseBody(c.req), { locale: c.req.query("locale") }),
+        201,
+      );
     })
     .post("/collections/:name/draft", async (c) => {
       const { name } = collectionOf(collections, c.req.param("name"));
-      return c.json(await c.var.cms.create(name, await parseBody(c.req), { draft: true }), 201);
+      return c.json(
+        await c.var.cms.create(name, await parseBody(c.req), {
+          draft: true,
+          locale: c.req.query("locale"),
+        }),
+        201,
+      );
     });
 }

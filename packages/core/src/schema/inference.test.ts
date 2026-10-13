@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { createClient } from "../client/index.ts";
 import { defineCms, definePlugin } from "../index.ts";
 import { page } from "../presets/index.ts";
@@ -11,6 +11,7 @@ import {
   type Fields,
   type File,
   type Image,
+  type Locale,
   type Populate,
   type Resolve,
   type Select,
@@ -685,5 +686,161 @@ describe("admin.adminBar option", () => {
     expect(() => defineCms({ ...base, admin: { adminBar: { position: "left" } } })).toThrow(
       "adminBar.position",
     );
+  });
+});
+
+describe("localization types", () => {
+  const base = { database: { url: ":memory:" }, secret: "" };
+  const cms = defineCms({
+    ...base,
+    collections: {
+      posts: {
+        localized: true,
+        fields: {
+          title: { type: "text", required: true },
+          hero: { type: "text", localized: false },
+        },
+      },
+      tags: { fields: { name: { type: "text" } } },
+    },
+    globals: { footer: { localized: true, fields: { note: { type: "text" } } } },
+    localization: { locales: ["en", "de"], defaultLocale: "en" },
+  });
+  const plain = defineCms({
+    ...base,
+    collections: { tags: { fields: { name: { type: "text" } } } },
+  });
+
+  it("types the locale options by the configured locales", async () => {
+    const run = async () => {
+      await cms.find("posts", { locale: "de", fallback: false });
+      await cms.findById("posts", "x", { locale: "en" });
+      // @ts-expect-error not a configured locale
+      await cms.find("posts", { locale: "fr" });
+      await cms.create("posts", { title: "x" }, { locale: "de" });
+      // @ts-expect-error not a configured locale
+      await cms.update("posts", "x", {}, { locale: "fr" });
+      await cms.publish("posts", "x", { locale: "de" });
+      await cms.discard("posts", "x", { all: true });
+      await cms.getGlobal("footer", { locale: "de" });
+      // @ts-expect-error not a configured locale
+      await cms.getGlobal("footer", { locale: "fr" });
+      const client = createClient<typeof cms>();
+      await client.find("posts", { locale: "de", fallback: true, alternates: true });
+      await client.findOne("posts", { where: { title: "x" }, locale: "de" });
+      // @ts-expect-error not a configured locale
+      await client.findById("posts", "x", { locale: "fr" });
+      await client.create("posts", { title: "x" }, { locale: "de" });
+      await client.updateDraft("posts", "x", {}, { locale: "de" });
+      await client.publish("posts", "x", { locale: "de" });
+      await client.discard("posts", "x", { all: true });
+      // @ts-expect-error `all` is a flag, not a locale
+      await client.discard("posts", "x", { all: false });
+      await client.setGlobal("footer", {}, { locale: "de" });
+      await client.copyLocale("posts", "x", { from: "en", to: "de" });
+      // @ts-expect-error not a configured locale
+      await client.copyLocale("posts", "x", { from: "en", to: "fr" });
+      await client.removeLocale("posts", "x", "de");
+      await client.copyGlobalLocale("footer", { from: "en", to: "de" });
+      await client.removeGlobalLocale("footer", "de");
+      await client.discardGlobal("footer", { all: true });
+      const l = await client.localization();
+      l?.defaultLocale satisfies "en" | "de" | undefined;
+      l?.locales satisfies readonly ("en" | "de")[] | undefined;
+    };
+    expect(run).toBeTypeOf("function");
+  });
+
+  it("makes locale `never` without localization", async () => {
+    const run = async () => {
+      // @ts-expect-error the instance has no locales
+      await plain.find("tags", { locale: "en" });
+      // @ts-expect-error the instance has no locales
+      await plain.create("tags", {}, { locale: "en" });
+      await createClient<typeof plain>().find("tags", { where: { name: "x" } });
+      // @ts-expect-error the instance has no locales
+      await createClient<typeof plain>().find("tags", { locale: "en" });
+      // @ts-expect-error the instance has no locales
+      await createClient<typeof plain>().create("tags", {}, { locale: "en" });
+      // @ts-expect-error the instance has no locales
+      await createClient<typeof plain>().copyLocale("tags", "x", { from: "en", to: "de" });
+      const l = await createClient<typeof plain>().localization();
+      l satisfies null;
+    };
+    expect(run).toBeTypeOf("function");
+    expectTypeOf<Locale<typeof plain>>().toBeNever();
+    expectTypeOf<Locale<typeof cms>>().toEqualTypeOf<"en" | "de">();
+  });
+
+  it("adds locale metadata to localized collections only", async () => {
+    const run = async () => {
+      const local = await cms.findById("posts", "x");
+      local?.locale satisfies "en" | "de" | undefined;
+      local?.locales satisfies ("en" | "de")[] | undefined;
+      // @ts-expect-error alternates need the option
+      local?.alternates;
+      const tag = await cms.findById("tags", "x");
+      // @ts-expect-error not localized
+      tag?.locale;
+      // @ts-expect-error not localized
+      tag?.locales;
+
+      const client = createClient<typeof cms>();
+      const post = await client.findById("posts", "x");
+      post.locale satisfies "en" | "de";
+      post.locales satisfies ("en" | "de")[];
+      // @ts-expect-error alternates need the option
+      post.alternates;
+      // @ts-expect-error not localized
+      (await client.findById("tags", "x")).locale;
+      const footer = await client.getGlobal("footer");
+      footer.locale satisfies "en" | "de";
+      // @ts-expect-error globals have no alternates
+      footer.alternates;
+    };
+    expect(run).toBeTypeOf("function");
+  });
+
+  it("adds alternates only with `alternates: true`", async () => {
+    const run = async () => {
+      const client = createClient<typeof cms>();
+      const on = await client.findById("posts", "x", { alternates: true });
+      on.alternates satisfies Partial<Record<"en" | "de" | "x-default", string>>;
+      // @ts-expect-error not a locale
+      on.alternates.fr;
+      // @ts-expect-error without the option
+      (await client.findById("posts", "x", { alternates: false })).alternates;
+      const [first] = await cms.find("posts", { alternates: true });
+      first.alternates satisfies Partial<Record<"en" | "de" | "x-default", string>>;
+      // @ts-expect-error tags have no permalink or locales
+      (await client.findById("tags", "x", { alternates: true })).alternates;
+    };
+    expect(run).toBeTypeOf("function");
+  });
+
+  it("lets `select` list the locale metadata", async () => {
+    const run = async () => {
+      const client = createClient<typeof cms>();
+      const only = await client.findById("posts", "x", { select: { title: true } });
+      // @ts-expect-error not selected
+      only.locale;
+      const picked = await client.findById("posts", "x", { select: { locale: true } });
+      picked.locale satisfies "en" | "de";
+      // @ts-expect-error not selected
+      picked.locales;
+      const alt = await client.findById("posts", "x", {
+        alternates: true,
+        select: { alternates: true, locales: true },
+      });
+      alt.alternates satisfies object;
+      alt.locales satisfies ("en" | "de")[];
+      // @ts-expect-error selected, but the option is off
+      (await client.findById("posts", "x", { select: { alternates: true } })).alternates;
+      // @ts-expect-error not a field or metadata key
+      await client.findById("posts", "x", { select: { language: true } });
+      // @ts-expect-error without localization, `locale` is not a metadata key
+      await createClient<typeof plain>().findById("tags", "x", { select: { locale: true } });
+    };
+    expect(run).toBeTypeOf("function");
   });
 });

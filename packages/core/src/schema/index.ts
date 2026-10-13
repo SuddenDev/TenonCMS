@@ -13,6 +13,7 @@ export type {
   SelectArg,
   SelectOf,
 } from "./inference/options.ts";
+export type { AlternatesOf, GlobalLocaleMeta, Locale, LocaleMeta } from "./inference/locale.ts";
 export type { Read, ReadDoc, Resolve } from "./inference/read.ts";
 
 export { defineCollection } from "../collections/config/define-collection.ts";

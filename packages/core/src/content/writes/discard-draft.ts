@@ -8,14 +8,21 @@ import { discardGlobalDraft } from "../../db/queries/drafts/discard-global-draft
 import { loadGlobal } from "../../db/queries/globals/load-global.query.ts";
 import { loadDoc } from "../../db/queries/documents/load-document.query.ts";
 import { discardDraft } from "../../db/queries/drafts/discard-draft.query.ts";
+import { target } from "../targets.ts";
+import { locOf } from "../reads/loc-of.ts";
+import { discardLocalized } from "./discard-locale.ts";
 
 /**
  * Drops the draft. A document that was never published is deleted, with its `onDelete` effects.
+ * A localized entry drops the draft of the scope's locale, or with `all` every draft. See `discardLocalized()`.
  * @returns The published document after discarding the draft, or `undefined` if it was deleted or missing.
  */
-export const discard = (core: Core, scope: Scope, name: Name, id?: string) => {
+export const discard = (core: Core, scope: Scope, name: Name, id?: string, all = false) => {
+  const loc = locOf(core, { ...scope, fallback: false }, target(core, name));
+
   if (name.kind === "global")
     return run(core, scope, "setGlobal", name, { global: name.name }, async (s) => {
+      if (loc) return discardLocalized(core, s, name, name.name, loc, all);
       const db = await q(core, s);
       await discardGlobalDraft(db, name.name);
       const doc = (await loadGlobal(db, name.name)) ?? { publishedAt: null, hasDraft: false };
@@ -23,6 +30,7 @@ export const discard = (core: Core, scope: Scope, name: Name, id?: string) => {
     });
 
   return run(core, scope, "update", name, { collection: name.name, id }, async (s, args) => {
+    if (loc) return discardLocalized(core, s, name, args.id, loc, all);
     const db = await q(core, s);
     const doc = await loadDoc(db, name.name, args.id, true);
     if (!doc) return undefined;

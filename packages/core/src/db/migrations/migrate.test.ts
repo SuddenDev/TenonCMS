@@ -18,6 +18,10 @@ it("runs CMS migrations once", async () => {
       "cms_kysely_migration",
       "cms_uploads",
       "cms_media_key_idx",
+      "cms_document_locales",
+      "cms_global_locales",
+      "cms_schema_state",
+      "cms_document_locales_locale_idx",
     ]),
   );
 });

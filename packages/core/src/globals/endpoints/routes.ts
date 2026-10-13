@@ -6,6 +6,8 @@ import { previewUrlEndpoint } from "./preview-url.endpoint.ts";
 import { setEndpoint } from "./set.endpoint.ts";
 import { publishEndpoint } from "./publish.endpoint.ts";
 import { discardEndpoint } from "./discard.endpoint.ts";
+import { copyLocaleEndpoint } from "./copy-locale.endpoint.ts";
+import { removeLocaleEndpoint } from "./remove-locale.endpoint.ts";
 
 export function globalsRoutes(core: Core) {
   return {
@@ -14,6 +16,8 @@ export function globalsRoutes(core: Core) {
       .route("/", previewUrlEndpoint(core))
       .route("/", setEndpoint(core))
       .route("/", publishEndpoint(core))
-      .route("/", discardEndpoint(core)),
+      .route("/", discardEndpoint(core))
+      .route("/", copyLocaleEndpoint(core))
+      .route("/", removeLocaleEndpoint(core)),
   };
 }

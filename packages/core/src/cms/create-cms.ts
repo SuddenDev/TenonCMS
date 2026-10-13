@@ -13,6 +13,7 @@ import type { AuthOptions } from "../auth/config/options.ts";
 import type {
   CmsOptions,
   DefaultDepth,
+  Localization,
   MediaCollections,
   MediaOf,
   PluginCollections,
@@ -26,6 +27,7 @@ import { createSiteSettings } from "./config/site-settings.ts";
 import { checkSchema } from "../schema/validation/check-schema.ts";
 import { defaultMedia } from "integral-cms/media/default";
 import { mediaCollection } from "../media/config/collection.ts";
+import { localizedKeys } from "../schema/traversal/localized-fields.ts";
 import { createRuntime } from "./runtime/create-runtime.ts";
 import type { Core, Perspective } from "./runtime/types.ts";
 import { outerScope } from "./runtime/operation-context.ts";
@@ -52,6 +54,7 @@ export function defineCms<
   const PL extends readonly Plugin[] = [],
   const M extends MediaOptions | boolean | undefined = undefined,
   const S extends SettingsOptions | false | undefined = undefined,
+  const L extends string = never,
 >({
   database,
   secret,
@@ -61,10 +64,11 @@ export function defineCms<
   plugins = [] as unknown as PL,
   media: mediaOption,
   settings: settingsOption,
+  localization: localizationOption,
   site,
   admin,
   ...own
-}: CmsOptions<C, G, A, P, PL, M, S>) {
+}: CmsOptions<C, G, A, P, PL, M, S, L>) {
   type T = {
     collections?: C & PluginCollections<PL> & MediaCollections<M>;
     globals?: G & PluginGlobals<PL> & SettingsGlobals<S>;
@@ -80,6 +84,11 @@ export function defineCms<
     depth: populateOptions.depth ?? 2,
     maxDepth: populateOptions.maxDepth ?? 5,
   };
+  const localization: Localization<L> | undefined = localizationOption && {
+    fallback: true,
+    routing: { prefix: "except-default" },
+    ...localizationOption,
+  };
   const mediaOptions =
     typeof mediaOption === "object"
       ? mediaOption
@@ -90,7 +99,12 @@ export function defineCms<
   /* ── Schema creation + validation ────────────────────────────────────────────────────── */
 
   const pluginsSchema = mergePlugins(plugins, own);
-  const settingsSchema = createSiteSettings(pluginsSchema, settingsOption, !!mediaOptions);
+  const settingsSchema = createSiteSettings(
+    pluginsSchema,
+    settingsOption,
+    !!mediaOptions,
+    !!localization,
+  );
   const mediaSchema = mediaOptions ? { collections: { media: mediaCollection } } : undefined;
   const schema = {
     ...settingsSchema,
@@ -98,7 +112,7 @@ export function defineCms<
   };
 
   // check if the schema is valid before proceeding
-  checkSchema(schema, populateOption);
+  checkSchema(schema, populateOption, localization);
 
   const count = (o: object) => Object.keys(o).length;
   consola
@@ -109,13 +123,26 @@ export function defineCms<
 
   /* ── Core, Runtime(db, auth) ────────────────────────────────────────────── */
 
-  const { db, auth, getSession } = createRuntime<A>(database, secret, host);
+  const entries: Array<[string, Collection | Global]> = [
+    ...Object.entries<Collection>(schema.collections).map(([n, e]): [string, Collection] => [
+      `collection:${n}`,
+      e,
+    ]),
+    ...Object.entries<Global>(schema.globals).map(([n, e]): [string, Global] => [`global:${n}`, e]),
+  ];
+  const { db, auth, getSession } = createRuntime<A>(database, secret, host, {
+    current: Object.fromEntries(
+      entries.map(([id, e]) => [id, e.localized ? localizedKeys(e) : null]),
+    ),
+    defaultLocale: localization?.defaultLocale ?? "",
+  });
 
   const core: Core = {
     schema,
     plugins,
     rootHooks,
     populate: populateOption,
+    localization,
     db,
     auth,
     getSession,
@@ -138,8 +165,10 @@ export function defineCms<
       schema: schema as unknown as T,
       auth,
       populate: populateOption as { depth: D; maxDepth: number },
+      /** The `localization` option with defaults, or `undefined`. `locales` keeps its literal types. */
+      localization,
       // The local API is untyped. `Api` adds the schema's types.
-      ...(createLocalApi(core, outerScope(user, perspective)) as unknown as Api<T, D>),
+      ...(createLocalApi(core, outerScope(user, perspective)) as unknown as Api<T, D, L>),
 
       /** Returns a copy whose reads include drafts. */
       withDrafts<S>(this: S): S {
@@ -170,6 +199,7 @@ export type Cms<T extends Schema> = ReturnType<
     {},
     [],
     undefined,
-    false
+    false,
+    string
   >
 >;

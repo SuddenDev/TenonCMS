@@ -1,10 +1,20 @@
 import type { Schema } from "../schema/index.ts";
 import { createRequest } from "./create-request.ts";
 import { readQuery, type ReadQuery } from "./read-query.ts";
-import type { Client, ClientOptions, Perspective, RegisteredCms } from "./types/index.ts";
+import type {
+  Client,
+  ClientOptions,
+  DiscardOption,
+  LocaleOption,
+  Perspective,
+  RegisteredCms,
+} from "./types/index.ts";
 import { createUpload } from "./upload.ts";
 
 type FindQuery = ReadQuery & { where?: object; limit?: number };
+// The implementation is untyped, so the locale is a plain string.
+type Write = LocaleOption<{ localization: { locales: string[] } }>;
+type Discard = DiscardOption<{ localization: { locales: string[] } }>;
 
 /**
  * Typed HTTP client for `/api/cms`. It has the same methods as the local API, so code reads the same on
@@ -33,6 +43,8 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
   const doc = (name: string, id: string) => `${collection(name)}/${enc(id)}`;
   const global = (name: string) => `/globals/${enc(name)}`;
   const user = async (path: string, data: object) => (await request("POST", path, data)).user;
+  // Kept per client, so a language switch asks once.
+  let localization: Promise<unknown> | undefined;
 
   // The implementation is untyped; `Client` types it for the host.
   const client = {
@@ -49,40 +61,66 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     findById: (name: string, id: string, options: ReadQuery = {}) =>
       request("GET", doc(name, id), undefined, readQuery(options)),
 
-    create: (name: string, data: unknown) => request("POST", collection(name), data),
+    create: (name: string, data: unknown, { locale }: Write = {}) =>
+      request("POST", collection(name), data, { locale }),
 
-    update: (name: string, id: string, data: unknown) => request("PUT", doc(name, id), data),
+    update: (name: string, id: string, data: unknown, { locale }: Write = {}) =>
+      request("PUT", doc(name, id), data, { locale }),
 
-    createDraft: (name: string, data: unknown) =>
-      request("POST", `${collection(name)}/draft`, data),
+    createDraft: (name: string, data: unknown, { locale }: Write = {}) =>
+      request("POST", `${collection(name)}/draft`, data, { locale }),
 
-    updateDraft: (name: string, id: string, data: unknown) =>
-      request("PUT", `${doc(name, id)}/draft`, data),
+    updateDraft: (name: string, id: string, data: unknown, { locale }: Write = {}) =>
+      request("PUT", `${doc(name, id)}/draft`, data, { locale }),
 
-    publish: (name: string, id: string) => request("POST", `${doc(name, id)}/publish`),
+    publish: (name: string, id: string, { locale }: Write = {}) =>
+      request("POST", `${doc(name, id)}/publish`, undefined, { locale }),
 
-    discard: (name: string, id: string) => request("DELETE", `${doc(name, id)}/draft`),
+    discard: (name: string, id: string, options: Discard = {}) =>
+      request("DELETE", `${doc(name, id)}/draft`, undefined, options),
+
+    copyLocale: (name: string, id: string, { from, to }: { from: string; to: string }) =>
+      request("POST", `${doc(name, id)}/locales/${enc(to)}/copy`, { from }),
+
+    removeLocale: (name: string, id: string, locale: string) =>
+      request("DELETE", `${doc(name, id)}/locales/${enc(locale)}`),
 
     delete: (name: string, id: string) => request("DELETE", doc(name, id)),
 
     getGlobal: (name: string, options: ReadQuery = {}) =>
       request("GET", global(name), undefined, readQuery(options)),
 
-    setGlobal: (name: string, data: unknown) => request("PUT", global(name), data),
+    setGlobal: (name: string, data: unknown, { locale }: Write = {}) =>
+      request("PUT", global(name), data, { locale }),
 
-    setGlobalDraft: (name: string, data: unknown) => request("PUT", `${global(name)}/draft`, data),
+    setGlobalDraft: (name: string, data: unknown, { locale }: Write = {}) =>
+      request("PUT", `${global(name)}/draft`, data, { locale }),
 
-    publishGlobal: (name: string) => request("POST", `${global(name)}/publish`),
+    publishGlobal: (name: string, { locale }: Write = {}) =>
+      request("POST", `${global(name)}/publish`, undefined, { locale }),
 
-    discardGlobal: (name: string) => request("DELETE", `${global(name)}/draft`),
+    discardGlobal: (name: string, options: Discard = {}) =>
+      request("DELETE", `${global(name)}/draft`, undefined, options),
 
-    previewUrl: async (name: string, data: unknown) =>
-      (await request("POST", `${collection(name)}/preview-url`, data)).url,
+    copyGlobalLocale: (name: string, { from, to }: { from: string; to: string }) =>
+      request("POST", `${global(name)}/locales/${enc(to)}/copy`, { from }),
 
-    previewGlobalUrl: async (name: string, data: unknown) =>
-      (await request("POST", `${global(name)}/preview-url`, data)).url,
+    removeGlobalLocale: (name: string, locale: string) =>
+      request("DELETE", `${global(name)}/locales/${enc(locale)}`),
+
+    previewUrl: async (name: string, data: unknown, { locale }: { locale?: string } = {}) =>
+      (await request("POST", `${collection(name)}/preview-url`, data, { locale })).url,
+
+    previewGlobalUrl: async (name: string, data: unknown, { locale }: { locale?: string } = {}) =>
+      (await request("POST", `${global(name)}/preview-url`, data, { locale })).url,
 
     getSchema: () => request("GET", "/schema"),
+
+    localization: () =>
+      (localization ??= request("GET", "/localization").catch((error) => {
+        localization = undefined;
+        throw error;
+      })),
 
     signUp: (data: object) => user("/auth/sign-up/email", data),
 

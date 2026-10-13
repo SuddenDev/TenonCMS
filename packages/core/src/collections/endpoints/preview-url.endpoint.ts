@@ -5,7 +5,7 @@ import type { Collection } from "../../schema/index.ts";
 import { collectionOf } from "./get-target.ts";
 import { notFound } from "../../http/errors.ts";
 import { parseBody } from "../../http/parse-body.ts";
-import { previewUrl } from "../../preview/server/resolve-url.ts";
+import { previewUrl, urlLocale } from "../../preview/server/resolve-url.ts";
 
 export function previewUrlEndpoint(core: Core) {
   const collections: Record<string, Collection> = core.schema.collections ?? {};
@@ -13,10 +13,15 @@ export function previewUrlEndpoint(core: Core) {
   return new Hono<Env>().post("/collections/:name/preview-url", async (c) => {
     const { name } = collectionOf(collections, c.req.param("name"));
     const entry = collections[name]!;
-    if (!entry.preview) throw notFound();
+    if (!entry.preview && !entry.permalink) throw notFound();
 
     return c.json({
-      url: await previewUrl(entry, await parseBody(c.req), c.var.cms),
+      url: await previewUrl(
+        entry,
+        await parseBody(c.req),
+        c.var.cms,
+        urlLocale(core, c.req.query("locale")),
+      ),
     });
   });
 }

@@ -4,6 +4,7 @@ import type { Core } from "../../cms/runtime/types.ts";
 import { globalOf } from "./get-target.ts";
 import { readRequest } from "../../http/read-request.ts";
 import { readOptions } from "../../http/query/read-options.ts";
+import { globalMetaKeys } from "../../content/population/validate-select.ts";
 import { stripPrivateFields } from "../../http/strip-private-fields.ts";
 
 export function getEndpoint(core: Core) {
@@ -12,7 +13,13 @@ export function getEndpoint(core: Core) {
 
   return new Hono<Env>().get("/globals/:name", async (c) => {
     const { name, fields } = globalOf(schema.globals ?? {}, c.req.param("name"));
-    const read = readOptions(collections, core.populate, fields, c.req.query(), false);
+    const read = readOptions(
+      collections,
+      core.populate,
+      fields,
+      c.req.query(),
+      globalMetaKeys(schema.globals![name]!.localized),
+    );
     if (typeof read === "string") return c.json({ message: read }, 400);
     const { visibility, api } = await readRequest(core, c.req.raw);
     return c.json(

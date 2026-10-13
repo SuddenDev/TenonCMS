@@ -4,7 +4,7 @@ import type { Core } from "../../cms/runtime/types.ts";
 import { globalOf } from "./get-target.ts";
 import { notFound } from "../../http/errors.ts";
 import { parseBody } from "../../http/parse-body.ts";
-import { previewUrl } from "../../preview/server/resolve-url.ts";
+import { previewUrl, urlLocale } from "../../preview/server/resolve-url.ts";
 
 export function previewUrlEndpoint(core: Core) {
   const { schema } = core;
@@ -12,9 +12,14 @@ export function previewUrlEndpoint(core: Core) {
   return new Hono<Env>().post("/globals/:name/preview-url", async (c) => {
     const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
     const entry = schema.globals![name]!;
-    if (!entry.preview) throw notFound();
+    if (!entry.preview && !entry.permalink) throw notFound();
     return c.json({
-      url: await previewUrl(entry, await parseBody(c.req), c.var.cms),
+      url: await previewUrl(
+        entry,
+        await parseBody(c.req),
+        c.var.cms,
+        urlLocale(core, c.req.query("locale")),
+      ),
     });
   });
 }

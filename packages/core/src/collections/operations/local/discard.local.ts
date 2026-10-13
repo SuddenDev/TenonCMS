@@ -3,11 +3,13 @@ import type { LocalApi } from "../../../cms/api/local-api.ts";
 import { col, draftable } from "../../../content/targets.ts";
 import { discard } from "../discard.operation.ts";
 import { writable } from "./check-writable.ts";
+import { withLocale } from "../../../content/locale.ts";
 
 export const discardLocal =
   (core: Core, scope: Scope): LocalApi["discard"] =>
-  async (collection, id) => {
+  async (collection, id, options = {}) => {
+    const { all = false } = options;
     writable(core, collection);
     draftable(core, col(collection));
-    return discard(core, scope, collection, id);
+    return discard(core, withLocale(core, scope, options), collection, id, all);
   };

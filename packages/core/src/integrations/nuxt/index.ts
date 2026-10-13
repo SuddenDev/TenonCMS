@@ -47,7 +47,12 @@ const integralCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>
       clientReferences(options.entry!, nuxt.options.rootDir) as Parameters<typeof addVitePlugin>[0],
     );
 
-    addImports({ name: "useIntegral", from: `${runtime}/composables` });
+    addImports(
+      ["useIntegral", "useLocale", "useAlternates"].map((name) => ({
+        name,
+        from: `${runtime}/composables`,
+      })),
+    );
 
     // The preview runtime reads the admin path for the bars' links; `false` renders no admin bar.
     nuxt.options.runtimeConfig.public.integral = { admin: path ?? false };

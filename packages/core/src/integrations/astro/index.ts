@@ -90,13 +90,15 @@ export default function integralCms({
   };
 }
 
-// Types `Astro.locals.integral` and the client's `Register`.
+// Types `Astro.locals.integral`, `locale`, `path` and the client's `Register`.
 // `export {}` makes it a module, so `declare module` augments the client instead of replacing it.
 function appTypes(module: string) {
   return `declare global {
   namespace App {
     interface Locals {
       integral: typeof import(${module}).default
+      locale: import('integral-cms/client').Locale<typeof import(${module}).default> | undefined
+      path: string
     }
   }
 }

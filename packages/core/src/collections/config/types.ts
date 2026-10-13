@@ -14,8 +14,12 @@ export type Collection<F extends Fields = Fields> = {
   fields: F;
   /** Field shown in the admin list view. Defaults to the first field. */
   titleField?: string;
-  /** The page of a document in the admin's live preview. See {@link Preview}. */
+  /** Template / link structure of the document's public URL. The host's routes MUST serve it. Used to generate alternative language urls and as default for the admin preview option {@link Preview} */
+  permalink?: Preview;
+  /** The page of a document in the admin's live preview. Defaults to `permalink`. See {@link Preview}. */
   preview?: Preview;
+  /** Enable localization for this collection. Default `false`. Fields can be overriden with `localized: false` to selecitvly disable localization. */
+  localized?: boolean;
   /** Documents keep a draft next to the published data, saved with `{ draft: true }` and published with `publish()`. Default `true`. */
   drafts?: boolean;
   /** Functions that run on every read, write and delete of this collection. Typed only through `defineCollection()`. */

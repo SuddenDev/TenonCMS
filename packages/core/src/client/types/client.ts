@@ -1,8 +1,11 @@
 import type { AdminDescriptor } from "../../admin/index.d.ts";
+import type { Localization } from "../../cms/config/options.ts";
 import type {
   Checked,
   Data,
   Doc,
+  GlobalLocaleMeta,
+  Locale,
   Read,
   ReadOptions,
   Schema,
@@ -41,6 +44,20 @@ export type Session = {
   session: { id: string; userId: string; expiresAt: string; createdAt: string; updatedAt: string };
 };
 
+/** Options of a write, and of `publish()` and `discard()`: the locale they act on. */
+export type LocaleOption<C> = {
+  /** The locale to write. Default: the default locale. Collections and globals that are not `localized` ignore it. */
+  locale?: Locale<C>;
+};
+
+/** Options of `discard()` and `discardGlobal()`: one locale's draft, or every draft with `all`. */
+export type DiscardOption<C> =
+  | LocaleOption<C>
+  | {
+      /** Drops the shared draft and the draft of every locale. A document or locale that was never published is deleted. Ignores `locale`. Sent as `?all=true`. */
+      all: true;
+    };
+
 /** The HTTP client. Names and document types come from `C`, the registered `cms`. See {@link RegisteredCms}. */
 export type Client<C extends { schema: Schema } = RegisteredCms> = {
   /**
@@ -49,13 +66,13 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   find<K extends keyof Collections<C> & string, const O extends FindOptions<C, K> = {}>(
     collection: K,
-    options?: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>>,
+    options?: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>, true, Locale<C>>,
   ): Promise<ReadCollection<C, K, O>[]>;
 
   /** Returns the newest document that matches `where`, or `undefined`. */
   findOne<K extends keyof Collections<C> & string, const O extends FindOptions<C, K>>(
     collection: K,
-    options: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>>,
+    options: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>, true, Locale<C>>,
   ): Promise<ReadCollection<C, K, O> | undefined>;
 
   /**
@@ -64,11 +81,11 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   findById<
     K extends keyof Collections<C> & string,
-    const O extends ReadOptions<Collections<C>, CollectionFields<C, K>> = {},
+    const O extends ReadOptions<Collections<C>, CollectionFields<C, K>, true, Locale<C>> = {},
   >(
     collection: K,
     id: string,
-    options?: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>>,
+    options?: Checked<O, Collections<C>, CollectionFields<C, K>, Depth<C>, true, Locale<C>>,
   ): Promise<ReadCollection<C, K, O>>;
 
   /**
@@ -78,6 +95,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   create<K extends keyof Collections<C> & string>(
     collection: K,
     data: Data<CollectionFields<C, K>>,
+    options?: LocaleOption<C>,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
@@ -88,6 +106,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     collection: K,
     id: string,
     data: Partial<Data<CollectionFields<C, K>>>,
+    options?: LocaleOption<C>,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
@@ -98,6 +117,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   createDraft<K extends keyof Collections<C> & string>(
     collection: K,
     data: Partial<Data<CollectionFields<C, K>>>,
+    options?: LocaleOption<C>,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
@@ -108,6 +128,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     collection: K,
     id: string,
     data: Partial<Data<CollectionFields<C, K>>>,
+    options?: LocaleOption<C>,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
@@ -118,17 +139,43 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   publish<K extends keyof Collections<C> & string>(
     collection: K,
     id: string,
+    options?: LocaleOption<C>,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
    * Drops the draft of a document and returns the published one. A document that was never published is deleted and
-   * the result is `null`. Needs a session.
+   * the result is `null`. In a localized collection it drops the draft of one locale (`locale`); the shared draft
+   * stays until a publish. `{ all: true }` drops every draft. Needs a session.
    * `DELETE /api/cms/collections/:collection/:id/draft`
    */
   discard<K extends keyof Collections<C> & string>(
     collection: K,
     id: string,
+    options?: DiscardOption<C>,
   ): Promise<Doc<CollectionFields<C, K>> | null>;
+
+  /**
+   * Fills the localized fields of `to` with those of `from`, as a draft in `to` (straight to the data with
+   * `drafts: false`). It replaces the pending draft of `to`. Throws a `CmsError` with status `400` for an unknown or
+   * equal locale, or a collection that is not localized. Needs a session.
+   * `POST /api/cms/collections/:collection/:id/locales/:to/copy`
+   */
+  copyLocale<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    locales: { from: Locale<C>; to: Locale<C> },
+  ): Promise<Doc<CollectionFields<C, K>>>;
+
+  /**
+   * Deletes the translation of one locale. Throws a `CmsError` with status `400` for the default locale and for the
+   * document's last locale. Needs a session.
+   * `DELETE /api/cms/collections/:collection/:id/locales/:locale`
+   */
+  removeLocale<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    locale: Locale<C>,
+  ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
    * Deletes a document. Needs a session.
@@ -142,12 +189,13 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   getGlobal<
     K extends keyof Globals<C> & string,
-    const O extends ReadOptions<Collections<C>, GlobalFields<C, K>, false> = {},
+    const O extends ReadOptions<Collections<C>, GlobalFields<C, K>, false, Locale<C>> = {},
   >(
     name: K,
-    options?: Checked<O, Collections<C>, GlobalFields<C, K>, Depth<C>, false>,
+    options?: Checked<O, Collections<C>, GlobalFields<C, K>, Depth<C>, false, Locale<C>>,
   ): Promise<
-    Partial<Read<Collections<C>, GlobalFields<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>>
+    Partial<Read<Collections<C>, GlobalFields<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>> &
+      GlobalLocaleMeta<Globals<C>[K], Locale<C>, SelectOf<O>>
   >;
 
   /**
@@ -157,6 +205,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   setGlobal<K extends keyof Globals<C> & string>(
     name: K,
     data: Partial<Data<GlobalFields<C, K>>>,
+    options?: LocaleOption<C>,
   ): Promise<Data<GlobalFields<C, K>>>;
 
   /**
@@ -166,30 +215,55 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   setGlobalDraft<K extends keyof Globals<C> & string>(
     name: K,
     data: Partial<Data<GlobalFields<C, K>>>,
+    options?: LocaleOption<C>,
   ): Promise<Partial<Data<GlobalFields<C, K>>>>;
 
   /**
    * Publishes the draft of a global. Throws a `CmsError` with status `400` for invalid data. Needs a session.
    * `POST /api/cms/globals/:name/publish`
    */
-  publishGlobal<K extends keyof Globals<C> & string>(name: K): Promise<Data<GlobalFields<C, K>>>;
+  publishGlobal<K extends keyof Globals<C> & string>(
+    name: K,
+    options?: LocaleOption<C>,
+  ): Promise<Data<GlobalFields<C, K>>>;
 
   /**
-   * Drops the draft of a global and returns the published one. Needs a session.
+   * Drops the draft of a global and returns the published one. Like {@link Client.discard}, it takes `locale` or
+   * `{ all: true }`. Needs a session.
    * `DELETE /api/cms/globals/:name/draft`
    */
   discardGlobal<K extends keyof Globals<C> & string>(
     name: K,
+    options?: DiscardOption<C>,
+  ): Promise<Partial<Data<GlobalFields<C, K>>>>;
+
+  /**
+   * Fills the localized fields of `to` with those of `from`, like {@link Client.copyLocale}. Needs a session.
+   * `POST /api/cms/globals/:name/locales/:to/copy`
+   */
+  copyGlobalLocale<K extends keyof Globals<C> & string>(
+    name: K,
+    locales: { from: Locale<C>; to: Locale<C> },
+  ): Promise<Partial<Data<GlobalFields<C, K>>>>;
+
+  /**
+   * Deletes the translation of one locale, like {@link Client.removeLocale}. Needs a session.
+   * `DELETE /api/cms/globals/:name/locales/:locale`
+   */
+  removeGlobalLocale<K extends keyof Globals<C> & string>(
+    name: K,
+    locale: Locale<C>,
   ): Promise<Partial<Data<GlobalFields<C, K>>>>;
 
   /**
    * The live preview URL of a document from its unsaved form state, relative to the site origin. `null`: no preview
-   * for this document. Throws a `CmsError` with status `404` when the collection has no `preview`. Needs a session.
+   * for this document. Throws a `CmsError` with status `404` when the collection has neither `preview` nor `permalink`. Needs a session.
    * `POST /api/cms/collections/:collection/preview-url`
    */
   previewUrl(
     collection: keyof Collections<C> & string,
     data: Record<string, unknown>,
+    options?: LocaleOption<C>,
   ): Promise<string | null>;
 
   /**
@@ -199,6 +273,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   previewGlobalUrl(
     name: keyof Globals<C> & string,
     data: Record<string, unknown>,
+    options?: LocaleOption<C>,
   ): Promise<string | null>;
 
   /**
@@ -216,6 +291,13 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     site?: string;
     admin?: AdminDescriptor;
   }>;
+
+  /**
+   * The `localization` option with its defaults, or `null` without it. Public. The first call fetches it; the client
+   * keeps the result, so later calls make no request.
+   * `GET /api/cms/localization`
+   */
+  localization(): Promise<[Locale<C>] extends [never] ? null : Localization<Locale<C>> | null>;
 
   /**
    * Creates the first admin and signs them in. Throws a `CmsError` with status `403` once an admin exists.

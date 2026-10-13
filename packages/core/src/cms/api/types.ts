@@ -1,8 +1,11 @@
 import type {
+  AlternatesOf,
   Checked,
   Data,
   Doc,
   FilterKey,
+  GlobalLocaleMeta,
+  LocaleMeta,
   PopulateOf,
   Read,
   ReadDoc,
@@ -19,9 +22,11 @@ type CollectionDoc<T extends Schema, K extends keyof Collections<T>> = Doc<
   Collections<T>[K]["fields"]
 >;
 type GlobalData<T extends Schema, K extends keyof Globals<T>> = Data<Globals<T>[K]["fields"]>;
-type FindOptions<T extends Schema, K extends keyof Collections<T>> = ReadOptions<
+type FindOptions<T extends Schema, K extends keyof Collections<T>, L extends string> = ReadOptions<
   Collections<T>,
-  Collections<T>[K]["fields"]
+  Collections<T>[K]["fields"],
+  true,
+  L
 > & {
   /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
   where?: Partial<Record<FilterKey<Collections<T>[K]["fields"]>, string | number | boolean | null>>;
@@ -33,43 +38,69 @@ type ReadCollection<
   K extends keyof Collections<T>,
   O,
   D extends number,
-> = ReadDoc<Collections<T>, Collections<T>[K]["fields"], PopulateOf<O, D>, SelectOf<O>>;
-type ReadGlobal<T extends Schema, K extends keyof Globals<T>, O, D extends number> = Partial<
-  Read<Collections<T>, Globals<T>[K]["fields"], PopulateOf<O, D>, SelectOf<O>>
-> &
-  GlobalMeta<SelectOf<O>>;
+  L extends string,
+> = ReadDoc<
+  Collections<T>,
+  Collections<T>[K]["fields"],
+  PopulateOf<O, D>,
+  SelectOf<O>,
+  LocaleMeta<Collections<T>[K], L, SelectOf<O>, AlternatesOf<O>>
+>;
+type ReadGlobal<
+  T extends Schema,
+  K extends keyof Globals<T>,
+  O,
+  D extends number,
+  L extends string,
+> = Partial<Read<Collections<T>, Globals<T>[K]["fields"], PopulateOf<O, D>, SelectOf<O>>> &
+  GlobalMeta<SelectOf<O>> &
+  GlobalLocaleMeta<Globals<T>[K], L, SelectOf<O>>;
+
+/** `locale` of a write, and of `publish()` and `discard()`. */
+type LocaleOption<L extends string> = {
+  /** The locale to write. Default: the default locale. Collections and globals that are not `localized` ignore it. */
+  locale?: L;
+};
+/** Options of `discard()`: one locale's draft, or with `all` every draft of the document, shared fields included. */
+type DiscardOptions<L extends string> =
+  | LocaleOption<L>
+  | {
+      /** Drops the shared draft and the draft of every locale. A document or locale that was never published is deleted. Ignores `locale`. */
+      all: true;
+    };
 
 /**
- * The typed local API of `defineCms()`. `D` is the default populate depth.
+ * The typed local API of `defineCms()`. `D` is the default populate depth, `L` the union of the configured locales
+ * (`never` without `localization`).
  */
-export type Api<T extends Schema, D extends number> = {
+export type Api<T extends Schema, D extends number, L extends string = string> = {
   /**
    * Lists documents of a collection, newest first.
    * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
    */
-  find<K extends keyof Collections<T> & string, const O extends FindOptions<T, K> = {}>(
+  find<K extends keyof Collections<T> & string, const O extends FindOptions<T, K, L> = {}>(
     collection: K,
-    options?: Checked<O, Collections<T>, Collections<T>[K]["fields"], D>,
-  ): Promise<ReadCollection<T, K, O, D>[]>;
+    options?: Checked<O, Collections<T>, Collections<T>[K]["fields"], D, true, L>,
+  ): Promise<ReadCollection<T, K, O, D, L>[]>;
 
   /**
    * Returns the newest document that matches `where`, or `undefined`.
    * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
    */
-  findOne<K extends keyof Collections<T> & string, const O extends FindOptions<T, K>>(
+  findOne<K extends keyof Collections<T> & string, const O extends FindOptions<T, K, L>>(
     collection: K,
-    options: Checked<O, Collections<T>, Collections<T>[K]["fields"], D>,
-  ): Promise<ReadCollection<T, K, O, D> | undefined>;
+    options: Checked<O, Collections<T>, Collections<T>[K]["fields"], D, true, L>,
+  ): Promise<ReadCollection<T, K, O, D, L> | undefined>;
   /** Returns one document, or `undefined`. */
 
   findById<
     K extends keyof Collections<T> & string,
-    const O extends ReadOptions<Collections<T>, Collections<T>[K]["fields"]> = {},
+    const O extends ReadOptions<Collections<T>, Collections<T>[K]["fields"], true, L> = {},
   >(
     collection: K,
     id: string,
-    options?: Checked<O, Collections<T>, Collections<T>[K]["fields"], D>,
-  ): Promise<ReadCollection<T, K, O, D> | undefined>;
+    options?: Checked<O, Collections<T>, Collections<T>[K]["fields"], D, true, L>,
+  ): Promise<ReadCollection<T, K, O, D, L> | undefined>;
 
   /**
    * Creates a document. Throws a `ValidationError` for invalid `data`.
@@ -78,7 +109,7 @@ export type Api<T extends Schema, D extends number> = {
   create<K extends keyof Collections<T> & string>(
     collection: K,
     data: Record<string, unknown>,
-    options?: WriteOptions,
+    options?: WriteOptions & LocaleOption<L>,
   ): Promise<CollectionDoc<T, K>>;
 
   /**
@@ -90,7 +121,7 @@ export type Api<T extends Schema, D extends number> = {
     collection: K,
     id: string,
     data: Record<string, unknown>,
-    options?: WriteOptions,
+    options?: WriteOptions & LocaleOption<L>,
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /**
@@ -101,15 +132,39 @@ export type Api<T extends Schema, D extends number> = {
   publish<K extends keyof Collections<T> & string>(
     collection: K,
     id: string,
+    options?: LocaleOption<L>,
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /**
    * Drops the draft of a document and returns the published one. A document that was never published is deleted, with
-   * its `onDelete` effects, and the result is `undefined`.
+   * its `onDelete` effects, and the result is `undefined`. In a localized collection it drops the draft of one locale;
+   * the shared draft stays. `{ all: true }` drops every draft.
    */
   discard<K extends keyof Collections<T> & string>(
     collection: K,
     id: string,
+    options?: DiscardOptions<L>,
+  ): Promise<CollectionDoc<T, K> | undefined>;
+
+  /**
+   * Fills the localized fields of `to` with those of `from`, as a draft (straight to the data with `drafts: false`).
+   * It replaces the pending draft of `to`. `from` is read without fallback. Throws a `ValidationError` for an unknown
+   * or equal locale, or when the collection is not localized. Returns `undefined` if the document does not exist.
+   */
+  copyLocale<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+    locales: { from: L; to: L },
+  ): Promise<CollectionDoc<T, K> | undefined>;
+
+  /**
+   * Deletes the translation of one locale. Throws a `ValidationError` for the default locale and for the document's
+   * last locale. Returns `undefined` if the document does not exist.
+   */
+  removeLocale<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+    locale: L,
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
@@ -118,11 +173,11 @@ export type Api<T extends Schema, D extends number> = {
   /** Returns a global. Fields that were never saved are missing. */
   getGlobal<
     K extends keyof Globals<T> & string,
-    const O extends ReadOptions<Collections<T>, Globals<T>[K]["fields"], false> = {},
+    const O extends ReadOptions<Collections<T>, Globals<T>[K]["fields"], false, L> = {},
   >(
     name: K,
-    options?: Checked<O, Collections<T>, Globals<T>[K]["fields"], D, false>,
-  ): Promise<ReadGlobal<T, K, O, D>>;
+    options?: Checked<O, Collections<T>, Globals<T>[K]["fields"], D, false, L>,
+  ): Promise<ReadGlobal<T, K, O, D, L>>;
 
   /**
    * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Throws a `ValidationError` for invalid data.
@@ -131,14 +186,32 @@ export type Api<T extends Schema, D extends number> = {
   setGlobal<K extends keyof Globals<T> & string>(
     name: K,
     data: Record<string, unknown>,
-    options?: WriteOptions,
+    options?: WriteOptions & LocaleOption<L>,
   ): Promise<GlobalData<T, K>>;
 
   /** Publishes the draft of a global, like `publish()`. */
-  publishGlobal<K extends keyof Globals<T> & string>(name: K): Promise<GlobalData<T, K>>;
+  publishGlobal<K extends keyof Globals<T> & string>(
+    name: K,
+    options?: LocaleOption<L>,
+  ): Promise<GlobalData<T, K>>;
 
-  /** Drops the draft of a global and returns the published one. */
-  discardGlobal<K extends keyof Globals<T> & string>(name: K): Promise<GlobalData<T, K>>;
+  /** Drops the draft of a global and returns the published one. Like {@link Api.discard}, it takes `locale` or `{ all: true }`. */
+  discardGlobal<K extends keyof Globals<T> & string>(
+    name: K,
+    options?: DiscardOptions<L>,
+  ): Promise<GlobalData<T, K>>;
+
+  /** Fills the localized fields of `to` with those of `from`, like {@link Api.copyLocale}. */
+  copyGlobalLocale<K extends keyof Globals<T> & string>(
+    name: K,
+    locales: { from: L; to: L },
+  ): Promise<GlobalData<T, K>>;
+
+  /** Deletes the translation of one locale, like {@link Api.removeLocale}. */
+  removeGlobalLocale<K extends keyof Globals<T> & string>(
+    name: K,
+    locale: L,
+  ): Promise<GlobalData<T, K>>;
 
   /**
    * Returns a copy of this API whose reads use the drafts perspective: they see documents that were never published,

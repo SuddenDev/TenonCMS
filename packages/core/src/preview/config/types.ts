@@ -4,17 +4,17 @@ import type { LocalApi } from "../../cms/api/local-api.ts";
  * Where the live preview opens a document, relative to the site origin.
  * - A template with `{dot.path}` placeholders. A placeholder walks into groups and through one relation, whose
  *   target is read with `findById`. A value that is missing or empty means no preview.
- * - A function of the unsaved form state and the local API. `null` means no preview for this document.
+ * - A function of the unsaved form state and `{ cms, locale }`, the local API and the document's locale. `null` means no preview for this document.
  * @example
- * preview: '/posts/{slug}'
- * preview: '/{category.slug}/{slug}'
- * preview: (doc) => (doc.slug ? `/posts/${doc.slug}` : null)
+ * permalink: '/posts/{slug}'
+ * permalink: '/{category.slug}/{slug}'
+ * permalink: (doc) => (doc.slug ? `/posts/${doc.slug}` : null)
  */
 export type Preview =
   | string
   | ((
       doc: Record<string, unknown>,
-      ctx: { cms: LocalApi },
+      ctx: { cms: LocalApi; locale?: string },
     ) => string | null | Promise<string | null>);
 
 /** Unsaved form state by `<collection>:<id>`. Globals are keyed `<name>:`. */
@@ -25,13 +25,20 @@ export type Unsubscribe = () => void;
 /** Messages between the admin and the site, sent with `postMessage`. */
 export type PreviewMessage =
   | { type: "ready" }
-  | { type: "draft"; collection: string; id: string; data: Record<string, unknown> }
+  | {
+      type: "draft";
+      collection: string;
+      id: string;
+      data: Record<string, unknown>;
+      /** The locale of the edited document. A draft applies only to page data of the same locale. */
+      locale?: string;
+    }
   | { type: "mode"; edit: boolean }
   | { type: "highlight"; collection: string | null; id: string | null }
   | { type: "edit"; collection: string; id: string; path: string }
   | { type: "url"; href: string }
   | { type: "documents"; documents: { collection: string; id: string }[] }
-  | { type: "saved"; collection: string; id: string };
+  | { type: "saved"; collection: string; id: string; locale?: string };
 
 /** Options of `preview()`. */
 export type PreviewOptions = {

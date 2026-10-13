@@ -43,27 +43,27 @@ calls `update()` when the bound documents, the edit mode or an item's data chang
 
 ## Files
 
-| Path                              | Responsibility                                                                                     |
-| --------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `index.ts`                        | Browser-safe public exports.                                                                       |
-| `vue.ts`                          | `useDraft()` using a Vue shallow ref.                                                              |
-| `react.ts`                        | `useDraft()` using React's external store.                                                         |
-| `config/types.ts`                 | `Preview`, `Drafts`, `PreviewMessage`, `PreviewOptions` and `Unsubscribe`.                         |
-| `config/admin-bar.ts`             | `ADMIN_BAR_POSITIONS` and `checkAdminBarPosition()`.                                               |
-| `endpoints/`                      | `POST /preview` sets the preview cookie, `DELETE /preview` clears it.                              |
-| `endpoints/admin-bar.endpoint.ts` | `GET /admin-bar?url=&mode=`: the page's `{ position, items, branding }`. Protected.                |
-| `server/resolve-url.ts`           | `previewUrl()`: runs the host's function, or fills a template after one relation hop.              |
-| `templates/placeholders.ts`       | `PLACEHOLDER` and `placeholders()`: the dot paths of a template.                                   |
-| `templates/resolve-template.ts`   | `resolveTemplate()`: fills a template, or `null` when a value is missing.                          |
-| `runtime/message.ts`              | Message-shape validation shared by the site and admin.                                             |
-| `runtime/preview.ts`              | `preview()`: picks the mode and loads `live.ts` only when needed.                                  |
-| `runtime/live.ts`                 | `startLive()`: message channel and origin checks, observer, edit clicks and morph re-renders.      |
-| `runtime/store.ts`                | The singleton draft snapshot, `draftKey()` and subscriptions.                                      |
-| `runtime/merge-draft.ts`          | `merge()`: applies a draft, keeping populated values whose ids match.                              |
-| `runtime/bind-elements.ts`        | `edit()`, `parseBinding()`, DOM patches, highlights and `boundDocuments()`.                        |
-| `runtime/admin-bar.ts`            | `startAdminBar()`: loads the items, mounts the bar in a shadow root, `fillItems()`.                |
-| `runtime/admin-bar-items.ts`      | `builtIns()` and `composeItems()`: built-in stubs and server-side composition.                     |
-| `runtime/site-api.ts`             | The site's calls and cookies: session hint, `loadAdminBar()`, `perspective()`, `setPerspective()`. |
+| Path                              | Responsibility                                                                                                                                                                                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`                        | Browser-safe public exports.                                                                                                                                                                                                                                                |
+| `vue.ts`                          | `useDraft()` using a Vue shallow ref.                                                                                                                                                                                                                                       |
+| `react.ts`                        | `useDraft()` using React's external store.                                                                                                                                                                                                                                  |
+| `config/types.ts`                 | `Preview`, `Drafts`, `PreviewMessage`, `PreviewOptions` and `Unsubscribe`.                                                                                                                                                                                                  |
+| `config/admin-bar.ts`             | `ADMIN_BAR_POSITIONS` and `checkAdminBarPosition()`.                                                                                                                                                                                                                        |
+| `endpoints/`                      | `POST /preview` sets the preview cookie, `DELETE /preview` clears it.                                                                                                                                                                                                       |
+| `endpoints/admin-bar.endpoint.ts` | `GET /admin-bar?url=&mode=`: the page's `{ position, items, branding }`. Protected.                                                                                                                                                                                         |
+| `server/resolve-url.ts`           | `previewUrl()` (`preview`, else `permalink`) and `permalinkUrl()`: run the host's function, or fill a template after one relation hop. With `routing`, the `permalink` result gets the locale prefix; without it, `{locale}` is filled. `urlLocale()` validates `?locale=`. |
+| `templates/placeholders.ts`       | `PLACEHOLDER` and `placeholders()`: the dot paths of a template.                                                                                                                                                                                                            |
+| `templates/resolve-template.ts`   | `resolveTemplate()`: fills a template, or `null` when a value is missing.                                                                                                                                                                                                   |
+| `runtime/message.ts`              | Message-shape validation shared by the site and admin.                                                                                                                                                                                                                      |
+| `runtime/preview.ts`              | `preview()`: picks the mode and loads `live.ts` only when needed.                                                                                                                                                                                                           |
+| `runtime/live.ts`                 | `startLive()`: message channel and origin checks, observer, edit clicks and morph re-renders.                                                                                                                                                                               |
+| `runtime/store.ts`                | The singleton draft snapshot, `draftKey()` and subscriptions.                                                                                                                                                                                                               |
+| `runtime/merge-draft.ts`          | `merge()`: applies a draft, keeping populated values whose ids match.                                                                                                                                                                                                       |
+| `runtime/bind-elements.ts`        | `edit()`, `parseBinding()`, DOM patches, highlights and `boundDocuments()`.                                                                                                                                                                                                 |
+| `runtime/admin-bar.ts`            | `startAdminBar()`: loads the items, mounts the bar in a shadow root, `fillItems()`.                                                                                                                                                                                         |
+| `runtime/admin-bar-items.ts`      | `builtIns()` and `composeItems()`: built-in stubs and server-side composition.                                                                                                                                                                                              |
+| `runtime/site-api.ts`             | The site's calls and cookies: session hint, `loadAdminBar()`, `perspective()`, `setPerspective()`.                                                                                                                                                                          |
 
 `index.ts`, `vue.ts` and `react.ts` run in the browser and in server bundles. They MUST NOT import zod or core
 runtime code. `runtime/` imports only types from `admin/index.d.ts` and loads the bar with a dynamic
@@ -72,16 +72,22 @@ only from each other.
 
 ## Messages
 
-| Message                                   | From  | What it does                                                                                                                                                                                        |
-| ----------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `{ type: 'ready' }`                       | site  | Sent to `"*"` when the runtime starts. The admin answers with `mode` and the current draft.                                                                                                         |
-| `{ type: 'draft', collection, id, data }` | admin | The form state of a document. `id` is `''` for a global. Stored by `<collection>:<id>`.                                                                                                             |
-| `{ type: 'mode', edit }`                  | admin | Sets or removes `data-cms-edit` on `<html>`. In edit mode, bound elements outline on hover.                                                                                                         |
-| `{ type: 'highlight', collection, id }`   | admin | Marks the elements of that document with `data-cms-highlight` (outlined); `collection: null` clears it.                                                                                             |
-| `{ type: 'edit', collection, id, path }`  | site  | A click on a bound element in edit mode. The admin focuses that field.                                                                                                                              |
-| `{ type: 'url', href }`                   | site  | Sent after the admin's first message, so the admin knows the current page.                                                                                                                          |
-| `{ type: 'documents', documents }`        | site  | `{ collection, id }` of every bound document, once each, in page order. Sent after the admin's first message and on every DOM change that changes the list. The admin lists them as "On this page". |
-| `{ type: 'saved', collection, id }`       | admin | A draft save. With `morph`, the page re-renders from the server; otherwise ignored.                                                                                                                 |
+| Message                                            | From  | What it does                                                                                                                                                                                        |
+| -------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{ type: 'ready' }`                                | site  | Sent to `"*"` when the runtime starts. The admin answers with `mode` and the current draft.                                                                                                         |
+| `{ type: 'draft', collection, id, data, locale? }` | admin | The form state of a document. `id` is `''` for a global. Stored by `<collection>:<id>`. `locale`: the language of a localized document.                                                             |
+| `{ type: 'mode', edit }`                           | admin | Sets or removes `data-cms-edit` on `<html>`. In edit mode, bound elements outline on hover.                                                                                                         |
+| `{ type: 'highlight', collection, id }`            | admin | Marks the elements of that document with `data-cms-highlight` (outlined); `collection: null` clears it.                                                                                             |
+| `{ type: 'edit', collection, id, path }`           | site  | A click on a bound element in edit mode. The admin focuses that field.                                                                                                                              |
+| `{ type: 'url', href }`                            | site  | Sent after the admin's first message, so the admin knows the current page.                                                                                                                          |
+| `{ type: 'documents', documents }`                 | site  | `{ collection, id }` of every bound document, once each, in page order. Sent after the admin's first message and on every DOM change that changes the list. The admin lists them as "On this page". |
+| `{ type: 'saved', collection, id, locale? }`       | admin | A draft save. With `morph`, the page re-renders from the server; otherwise ignored.                                                                                                                 |
+
+## Locales
+
+URLs come from two options. `permalink` is the public URL of a document, `preview` the page the admin's frame shows; `preview` defaults to `permalink`, and `/schema` reports `preview: true` when either is set. `permalinkUrl()` is `alternates`, `hreflang` and the language switch; it never uses a `preview` that differs. A function gets `(doc, { cms, locale })`. A template fills `{locale}` only with `routing: false`; with `routing`, the resolved `permalink` (also as the `preview` default) goes through `localizePath()`, and an explicit `preview` is used as it is. `POST …/preview-url?locale=` resolves in that locale (`urlLocale()` validates it; the default locale otherwise).
+
+The admin sends `locale` with `draft` and `saved` for a localized document. `merge()` in `merge-draft.ts` applies a draft only to reported data with the same `locale`, or to data without one, so a German draft never lands in the English page. The admin bar's Edit link adds `&locale=` from `<html lang>`, and the admin reads it into its language menu.
 
 ## Binding elements
 

@@ -73,6 +73,29 @@ type ExactSettings<S> = [S] extends [never]
     ? { [K in Exclude<keyof S, keyof SettingsOptions>]: never }
     : unknown;
 
+/**
+ * Content localization. Collections and globals opt in with `localized: true`; their fields are then localized unless
+ * a field sets `localized: false`.
+ */
+export type LocalizationOptions<L extends string = string> = {
+  /** The locale codes of the site, like `["en", "de"]`. MUST NOT be empty or hold duplicates. */
+  locales: readonly L[];
+  /** The locale that reads use without a `locale` option, and the one a missing value falls back to. MUST be in `locales`. */
+  defaultLocale: NoInfer<L>;
+  /** A missing value or locale reads as the default locale's. Default `true`. */
+  fallback?: boolean;
+  /**
+   * How URLs carry the locale. Default `{ prefix: "except-default" }`.
+   * - `{ prefix: "except-default" }`: `/de/about`, and `/about` for the default locale.
+   * - `{ prefix: "always" }`: `/en/about` and `/de/about`.
+   * - `false`: the host routes on its own.
+   */
+  routing?: { prefix: "except-default" | "always" } | false;
+};
+
+/** The `localization` option with its defaults applied. */
+export type Localization<L extends string = string> = Required<LocalizationOptions<L>>;
+
 export type CmsOptions<
   C extends Record<string, Collection>,
   G extends Record<string, Global>,
@@ -81,6 +104,7 @@ export type CmsOptions<
   PL extends readonly Plugin[] = [],
   M extends MediaOptions | boolean | undefined = undefined,
   S extends false | SettingsOptions | undefined = undefined,
+  L extends string = string,
 > = {
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
   collections?: C & NoInfer<CheckRefs<C, C & PluginCollections<PL>> & Record<string, Collection>>;
@@ -119,6 +143,8 @@ export type CmsOptions<
    * A collection or global named `general` or `seo` throws while that default is on.
    */
   settings?: S & NoInfer<ExactSettings<S>>;
+  /** Content in several languages. Without it, nothing is localized and `localized` options throw. See {@link LocalizationOptions}. */
+  localization?: LocalizationOptions<L>;
   /**
    * The URL of the site, like `https://example.com`. The admin's preview resolves relative preview URLs against it.
    * Defaults to the admin's own origin. Live preview on another origin needs the site to run `preview()` too.

@@ -22,9 +22,11 @@ const options = {
       fields: { post: { type: "relation", collection: "posts" } },
     },
     plain: { fields: { title: { type: "text" } } },
+    linked: { permalink: "/linked/{slug}", fields: { slug: { type: "text" } } },
   },
   globals: {
     home: { preview: "/", fields: { title: { type: "text" } } },
+    linkedGlobal: { permalink: "/linked", fields: { title: { type: "text" } } },
     plainGlobal: { fields: { title: { type: "text" } } },
   },
   media: false,
@@ -59,7 +61,7 @@ describe("preview", () => {
         secret: options.secret,
       }),
     ).not.toThrow();
-    expect(page.preview).toBe("{path}");
+    expect(page.permalink).toBe("{path}");
   });
 
   it("sends `preview: true` in the schema", async () => {
@@ -87,6 +89,15 @@ describe("preview", () => {
     const p = await cms.create("posts", { slug: "hello" });
     expect(await client.previewUrl("notes", { post: p.id })).toBe("/notes/hello");
     expect(await client.previewUrl("notes", {})).toBeNull();
+  });
+
+  it("answers a collection or global that has only `permalink`", async () => {
+    const { client } = await signedIn();
+    expect(await client.previewUrl("linked", { slug: "a" })).toBe("/linked/a");
+    expect(await client.previewGlobalUrl("linkedGlobal", {})).toBe("/linked");
+    const schema = await client.getSchema();
+    expect(schema.collections?.linked).toMatchObject({ preview: true });
+    expect(schema.globals?.linkedGlobal).toMatchObject({ preview: true });
   });
 
   it("resolves a global", async () => {

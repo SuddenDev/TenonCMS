@@ -1,5 +1,6 @@
 import type { AdminRuntime } from "../../admin/merge/merge-options.ts";
 import { type Database } from "../../db/types.ts";
+import type { Localization } from "../config/options.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import { type Plugin } from "../../plugins/index.ts";
 import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
@@ -28,6 +29,8 @@ export type Core = {
    * every operation, which would be an import cycle.
    */
   localApi: (scope: Scope) => LocalApi;
+  /** The `localization` option with defaults. Missing without it. */
+  localization?: Localization;
   /** The resolved `media` option. Missing without it. */
   media?: MediaCore;
   /**
@@ -54,6 +57,10 @@ export type Scope = {
   nested: boolean;
   /** Default: `published`. */
   perspective?: Perspective;
+  /** The locale of the call. Default: `localization.defaultLocale`. Missing without `localization`. */
+  locale?: string;
+  /** Whether a missing value or locale reads as the default locale's. Default: `localization.fallback`. */
+  fallback?: boolean;
 };
 /** The scope hooks and nested calls get, with its bound API. */
 export type Inner = Scope & { cms: LocalApi };

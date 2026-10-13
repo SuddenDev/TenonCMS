@@ -59,6 +59,41 @@ const cmsMigrations: Record<string, Migration> = {
       }
     },
   },
+  // Localized values live in locale rows, shared ones stay in the document row.
+  // `cms_schema_state` records the localized keys per entry, so config changes can move data.
+  "005_cms_locales": {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_document_locales (
+        document_id text NOT NULL,
+        locale text NOT NULL,
+        data text NOT NULL,
+        draft text,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL,
+        published_at integer,
+        PRIMARY KEY (document_id, locale)
+      )`.execute(db);
+      await sql`CREATE INDEX IF NOT EXISTS cms_document_locales_locale_idx ON cms_document_locales (locale)`.execute(
+        db,
+      );
+      await sql`CREATE TABLE IF NOT EXISTS cms_global_locales (
+        name text NOT NULL,
+        locale text NOT NULL,
+        data text NOT NULL,
+        draft text,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL,
+        published_at integer,
+        PRIMARY KEY (name, locale)
+      )`.execute(db);
+      await sql`CREATE TABLE IF NOT EXISTS cms_schema_state (
+        kind text NOT NULL,
+        name text NOT NULL,
+        localized text,
+        PRIMARY KEY (kind, name)
+      )`.execute(db);
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables, with its own migration tables. */

@@ -18,11 +18,13 @@ function sameIds(draft: unknown, current: unknown) {
 /**
  * Applies the draft of `doc` to it: draft values replace top-level keys. For a global, pass its name as `collection`.
  * A relation whose ids did not change keeps its populated value.
+ * A draft with a `locale` applies only to a `doc` of that locale. A `doc` without a `locale` takes any draft.
  */
 export function merge<T>(collection: string, doc: T, drafts: Drafts): T {
   if (!isObject(doc)) return doc;
   const draft = drafts[draftKey(collection, String(doc.id ?? ""))];
   if (!draft) return doc;
+  if (typeof doc.locale === "string" && draft.locale !== doc.locale) return doc;
   const out: Record<string, unknown> = { ...doc };
   for (const [key, value] of Object.entries(draft))
     out[key] = sameIds(value, doc[key]) ? doc[key] : value;

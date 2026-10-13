@@ -31,6 +31,23 @@ describe("merge", () => {
     expect(merged.tags).toEqual(["t2"]);
   });
 
+  describe("with a locale", () => {
+    const de = { ...doc, locale: "de" };
+
+    it("merges a draft of the same locale", () => {
+      expect(merge("posts", de, { "posts:1": { title: "Neu", locale: "de" } }).title).toBe("Neu");
+    });
+
+    it("skips a draft of another locale", () => {
+      expect(merge("posts", de, { "posts:1": { title: "New", locale: "en" } })).toBe(de);
+      expect(merge("posts", de, { "posts:1": { title: "New" } })).toBe(de);
+    });
+
+    it("merges into data without a locale", () => {
+      expect(merge("posts", doc, { "posts:1": { title: "New", locale: "en" } }).title).toBe("New");
+    });
+  });
+
   it("keys globals by name and an empty id", () => {
     expect(merge("general", { title: "A" }, { "general:": { title: "B" } })).toEqual({
       title: "B",

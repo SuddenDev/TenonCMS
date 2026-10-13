@@ -3,13 +3,21 @@ import { fieldAt } from "../traversal/field-at.ts";
 import { isRef, targetOf } from "../traversal/reference-fields.ts";
 import { relationPaths } from "../traversal/relation-paths.ts";
 import { placeholders } from "../../preview/templates/placeholders.ts";
+import type { Localization } from "../../cms/config/options.ts";
 import { type Collection, type Fields, type Preview, type Schema } from "../index.ts";
 import { dataSchema } from "./build-data-schema.ts";
 
 type Collections = Record<string, Collection>;
 
 /** A collection or global with the parts the checks need. */
-type Owner = { name: string; fields: Fields; preview?: Preview; global: boolean };
+type Owner = {
+  name: string;
+  fields: Fields;
+  localized?: boolean;
+  preview?: Preview;
+  permalink?: Preview;
+  global: boolean;
+};
 
 const uniqueTypes = [
   "text",
@@ -26,10 +34,16 @@ const uniqueTypes = [
 /**
  * Checks that the schema can work. Runs once while the instance is built.
  * @throws {Error} For a populate depth above the limit, a relation or join that does not fit, a condition on an unknown
- * field, `unique` where it cannot apply, an invalid `pattern`, or a `preview` placeholder on an unknown field.
+ * field, `unique` where it cannot apply, an invalid `pattern`, a `preview` placeholder on an unknown field, or
+ * a `localized` option or `localization` config that does not fit.
  */
-export function checkSchema(schema: Schema, populate: { depth: number; maxDepth: number }) {
+export function checkSchema(
+  schema: Schema,
+  populate: { depth: number; maxDepth: number },
+  localization?: Localization,
+) {
   const collections = schema.collections ?? {};
+  checkLocalization(localization);
   if (populate.depth > populate.maxDepth)
     fail(`populate.depth (${populate.depth}) is above populate.maxDepth (${populate.maxDepth})`);
 
@@ -37,7 +51,8 @@ export function checkSchema(schema: Schema, populate: { depth: number; maxDepth:
     checkRelations(collections, owner);
     checkJoins(collections, owner);
     checkFields(owner.fields, owner.fields, owner.name, !owner.global);
-    checkPreview(collections, owner);
+    checkPreview(collections, owner, localization?.routing === false);
+    checkLocalized(owner, !!localization);
 
     // Compiles every `pattern`, so an invalid one throws here.
     dataSchema(owner.fields);
@@ -54,16 +69,54 @@ function owners(schema: Schema): Owner[] {
     ...Object.entries(schema.collections ?? {}).map(([name, c]) => ({
       name,
       fields: c.fields,
+      localized: c.localized,
       preview: c.preview,
+      permalink: c.permalink,
       global: false,
     })),
     ...Object.entries(schema.globals ?? {}).map(([name, g]) => ({
       name,
       fields: g.fields,
+      localized: g.localized,
       preview: g.preview,
+      permalink: g.permalink,
       global: true,
     })),
   ];
+}
+
+function checkLocalization(localization?: Localization) {
+  if (!localization) return;
+  const { locales, defaultLocale } = localization;
+  if (!locales.length) fail("localization.locales MUST NOT be empty");
+  const seen = new Set<string>();
+  for (const locale of locales) {
+    if (seen.has(locale)) fail(`duplicate locale "${locale}" in localization.locales`);
+    seen.add(locale);
+  }
+  if (!seen.has(defaultLocale))
+    fail(`localization.defaultLocale "${defaultLocale}" is not in locales`);
+}
+
+// `localized` needs the `localization` option. A field sets it only at the top level of a localized entry.
+function checkLocalized({ name, fields, localized, global }: Owner, enabled: boolean) {
+  if (localized && !enabled)
+    fail(
+      `${global ? "global" : "collection"} "${name}" is localized but the \`localization\` option is missing`,
+    );
+  if (localized && name === "media" && !global) fail(`collection "media" cannot be localized`);
+  const walk = (fs: Fields, where: string, inGroup: boolean) => {
+    for (const [key, f] of Object.entries(fs)) {
+      const at = `${where}.${key}`;
+      if (f.localized !== undefined) {
+        if (inGroup) fail(`field "${at}" cannot set localized inside a group`);
+        if (!localized)
+          fail(`field "${at}" sets localized outside a localized collection or global`);
+      }
+      if (f.type === "group") walk(f.fields, at, true);
+    }
+  };
+  walk(fields, name, false);
 }
 
 // Every reference MUST point to a known collection and use an `onDelete` that fits it.
@@ -132,12 +185,21 @@ function conditionPaths(condition: Condition): string[] {
   );
 }
 
-// Each placeholder of a `preview` template MUST name a stored field.
-function checkPreview(collections: Collections, { name, fields, preview }: Owner) {
-  if (typeof preview !== "string") return;
-  for (const path of placeholders(preview))
-    if (!previewField(collections, fields, path))
-      fail(`preview of "${name}" names unknown field "${path}"`);
+// Each placeholder of a `preview` or `permalink` template MUST name a stored field. `{locale}` is allowed without routing.
+function checkPreview(
+  collections: Collections,
+  { name, fields, preview, permalink }: Owner,
+  locale: boolean,
+) {
+  for (const [option, template] of [
+    ["preview", preview],
+    ["permalink", permalink],
+  ] as const) {
+    if (typeof template !== "string") continue;
+    for (const path of placeholders(template))
+      if (!(locale && path === "locale") && !previewField(collections, fields, path))
+        fail(`${option} of "${name}" names unknown field "${path}"`);
+  }
 }
 
 // A stored field through groups and at most one relation that is not `many`.

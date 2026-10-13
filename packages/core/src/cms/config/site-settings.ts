@@ -7,12 +7,14 @@ import type { SettingsOptions } from "./options.ts";
  * @param schema The generated schema that contains the collections and globals
  * @param option Disable all or individual preset setting schemas
  * @param hasMedia Indicates whether the media fields should be included in the default site settings (e.g. favicon or social media images)
+ * @param localized Localizes the default globals. A replacement is taken as is.
  * @returns
  */
 export function createSiteSettings(
   schema: Required<Schema>,
   option: false | SettingsOptions | undefined,
   hasMedia: boolean,
+  localized = false,
 ) {
   if (option === false) return schema;
 
@@ -29,7 +31,8 @@ export function createSiteSettings(
     if (chosen === false) continue;
     if (Object.hasOwn(schema.globals, name))
       throw new Error(`integral-cms: duplicate global "${name}"`);
-    schema.globals[name] = chosen ?? globals[name]!;
+    schema.globals[name] =
+      chosen ?? (localized ? { ...globals[name]!, localized } : globals[name]!);
   }
 
   return schema;

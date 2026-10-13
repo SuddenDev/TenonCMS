@@ -192,3 +192,125 @@ export function withMedia(media: Partial<MediaOptions> = {}, extra: object = {})
     s.fetch(`${origin}/api/cms${path}`, init);
   return { ...s, dir, fetchWithSession };
 }
+
+/**
+ * A `:memory:` instance with `en` and `de`, a localized `posts`, a localized `notes` without drafts, an unlocalized
+ * `authors` and a localized `site` global. `author` and `editor` are shared relations with different `onDelete`
+ * rules; `related` is a localized relation. `extra` goes into `defineCms()`; `extra.collections.posts` merges into `posts`, other
+ * entries add collections.
+ */
+export function localized(
+  extra: { collections?: { [name: string]: object | undefined }; [key: string]: unknown } = {},
+) {
+  const { collections: { posts: override, ...more } = {}, ...rest } = extra;
+  const cms = defineCms({
+    collections: {
+      authors: { fields: { name: { type: "text", required: true } } },
+      posts: {
+        localized: true,
+        fields: {
+          title: { type: "text", required: true },
+          slug: { type: "text", unique: true },
+          body: { type: "text" },
+          secret: { type: "text", private: true },
+          views: { type: "number", localized: false },
+          author: {
+            type: "relation",
+            collection: "authors",
+            localized: false,
+            onDelete: "cascade",
+          },
+          editor: {
+            type: "relation",
+            collection: "authors",
+            localized: false,
+            onDelete: "set-null",
+          },
+          related: { type: "relation", collection: "authors" },
+          seo: { type: "group", fields: { description: { type: "text" } } },
+        },
+        ...override,
+      },
+      notes: {
+        localized: true,
+        drafts: false,
+        fields: { text: { type: "text", required: true } },
+      },
+      ...more,
+    },
+    globals: {
+      site: {
+        localized: true,
+        fields: { tagline: { type: "text" }, email: { type: "text", localized: false } },
+      },
+    },
+    localization: { locales: ["en", "de"], defaultLocale: "en" },
+    database: { url: ":memory:" },
+    secret: "x".repeat(32),
+    media: false,
+    ...rest,
+  });
+  const s = setup(cms);
+  const fetchWithSession = (path: string, init?: RequestInit) =>
+    s.fetch(`${origin}/api/cms${path}`, init);
+  return { ...s, fetchWithSession };
+}
+
+type Stored = { data: object; draft?: object | null; published?: boolean };
+
+/**
+ * `localized()` on a file database, with helpers that insert rows the way a write stores them: `doc()` for a
+ * `posts` document with its locale rows, `global()` for the `site` global. Used by tests of reads.
+ */
+export function seeded(extra: Parameters<typeof localized>[0] = {}) {
+  const url = tmpDb();
+  const s = localized({ ...extra, database: { url } });
+  const raw = createLibsql({ url });
+  // Reading once connects and migrates, so the tables exist.
+  const ready = s.cms.find("authors");
+  let clock = 1_000;
+  const time = () => ++clock;
+  const at = (published: boolean | undefined) => (published === false ? null : time());
+  const json = (v: object | null | undefined) => (v ? JSON.stringify(v) : null);
+
+  async function doc(
+    id: string,
+    shared: Stored,
+    locales: Record<string, Stored> = {},
+    collection = "posts",
+  ) {
+    await ready;
+    await raw.execute({
+      sql: `INSERT INTO cms_documents (id, collection, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        id,
+        collection,
+        json(shared.data),
+        json(shared.draft),
+        time(),
+        time(),
+        at(shared.published),
+      ],
+    });
+    for (const [locale, r] of Object.entries(locales))
+      await raw.execute({
+        sql: `INSERT INTO cms_document_locales (document_id, locale, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [id, locale, json(r.data), json(r.draft), time(), time(), at(r.published)],
+      });
+  }
+
+  async function global(name: string, shared: Stored, locales: Record<string, Stored> = {}) {
+    await ready;
+    await raw.execute({
+      sql: `INSERT INTO cms_globals (name, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [name, json(shared.data), json(shared.draft), time(), time(), at(shared.published)],
+    });
+    for (const [locale, r] of Object.entries(locales))
+      await raw.execute({
+        sql: `INSERT INTO cms_global_locales (name, locale, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [name, locale, json(r.data), json(r.draft), time(), time(), at(r.published)],
+      });
+  }
+
+  return { ...s, doc, global };
+}

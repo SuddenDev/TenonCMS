@@ -8,6 +8,8 @@ import { previewUrlEndpoint } from "./preview-url.endpoint.ts";
 import { updateEndpoint } from "./update.endpoint.ts";
 import { publishEndpoint } from "./publish.endpoint.ts";
 import { discardEndpoint } from "./discard.endpoint.ts";
+import { copyLocaleEndpoint } from "./copy-locale.endpoint.ts";
+import { removeLocaleEndpoint } from "./remove-locale.endpoint.ts";
 import { deleteEndpoint } from "./delete.endpoint.ts";
 
 export function collectionsRoutes(core: Core) {
@@ -19,6 +21,8 @@ export function collectionsRoutes(core: Core) {
       .route("/", updateEndpoint(core))
       .route("/", publishEndpoint(core))
       .route("/", discardEndpoint(core))
+      .route("/", copyLocaleEndpoint(core))
+      .route("/", removeLocaleEndpoint(core))
       .route("/", deleteEndpoint(core)),
   };
 }

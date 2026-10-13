@@ -7,10 +7,25 @@ import { type SelectSpec } from "./select-fields.ts";
 type Collections = Record<string, Collection>;
 
 const META = ["id", "createdAt", "updatedAt", "publishedAt", "hasDraft"];
+const LOCALE_META = ["locale", "locales", "sharedDraft", "alternates"];
+
+/**
+ * The meta keys a document of a collection has. A localized collection adds the locale keys.
+ * @returns The keys that `select` MAY name next to the fields.
+ */
+export const metaKeys = (localized?: boolean): readonly string[] =>
+  localized ? [...META, ...LOCALE_META] : META;
+
+/**
+ * The meta keys of a global: none, except `locale`, `locales` and `sharedDraft` on a localized one.
+ * @returns The keys that `select` MAY name next to the fields, or `false` for none.
+ */
+export const globalMetaKeys = (localized?: boolean): readonly string[] | false =>
+  localized ? ["locale", "locales", "sharedDraft"] : false;
 
 /**
  * Checks `select` against `fields` and the populate `plan`, with the same resolution rules as `populate()`.
- * `doc`: this level is a document, so it has meta keys. Groups and globals have none.
+ * `meta`: the meta keys of this level, `false` when it has none, as groups and globals.
  *
  * @returns The first path that does not fit, or `undefined`.
  */
@@ -20,12 +35,12 @@ export function badSelectPath(
   select: SelectSpec,
   plan: PopulatePlan | true,
   prefix = "",
-  doc = true,
+  meta: readonly string[] | false = META,
 ): string | undefined {
   for (const [key, s] of Object.entries(select)) {
     const path = prefix + key;
 
-    if (doc && s === true && META.includes(key)) continue;
+    if (meta && s === true && meta.includes(key)) continue;
     if (!Object.hasOwn(fields, key) || (s !== true && !isObject(s))) return path;
     if (s === true) continue;
 
@@ -34,7 +49,11 @@ export function badSelectPath(
     const { on, child } = step(plan, key, f);
     if (!inner || !on) return path;
 
-    const error = badSelectPath(collections, inner, s, child, `${path}.`, f.type !== "group");
+    const nested =
+      f.type === "relation" || f.type === "join"
+        ? metaKeys(collections[f.collection].localized)
+        : false;
+    const error = badSelectPath(collections, inner, s, child, `${path}.`, nested);
     if (error) return error;
   }
 }

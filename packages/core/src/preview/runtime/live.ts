@@ -43,7 +43,8 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
     if (message.type === "ready") {
       channel.post({ type: "mode", edit: html.hasAttribute("data-cms-edit") });
     } else if (message.type === "draft") {
-      setDraft(message.collection, message.id, message.data);
+      const { collection, id, data, locale } = message;
+      setDraft(collection, id, locale ? { ...data, locale } : data);
       patchAll(document);
     } else if (message.type === "mode") {
       setEditMode(message.edit);

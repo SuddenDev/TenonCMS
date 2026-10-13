@@ -12,6 +12,7 @@ export function hookArgs<E extends object>(s: Inner, name: Name, extra: E) {
     context: s.context,
     [name.kind]: name.name,
     draft: false,
+    locale: s.locale,
     ...extra,
   };
 }

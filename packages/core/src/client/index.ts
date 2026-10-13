@@ -2,15 +2,19 @@ export { createClient } from "./create-client.ts";
 export { CmsError } from "./errors.ts";
 export { API_BASE } from "./constants.ts";
 export type * from "./types/index.ts";
-export type { Checked, ReadOptions } from "../schema/index.ts";
+export type { Checked, Locale, ReadOptions } from "../schema/index.ts";
+export type { Localization, LocalizationOptions } from "../cms/config/options.ts";
 
 // Helpers have no imports, so this file stays safe in the browser.
 export {
   type BreadcrumbsOptions,
   breadcrumbs,
+  localeFromPath,
+  localizePath,
   SLUG_PATTERN,
   seoMeta,
   slugify,
+  switchTarget,
 } from "../helpers/index.ts";
 
 /**

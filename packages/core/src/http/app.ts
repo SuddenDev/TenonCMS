@@ -14,6 +14,7 @@ import { mountRoutes } from "../plugins/http/mount-routes.ts";
 import { collectionsRoutes } from "../collections/endpoints/routes.ts";
 import { globalsRoutes } from "../globals/endpoints/routes.ts";
 import { readEndpoint } from "../schema/endpoints/read.endpoint.ts";
+import { localizationEndpoint } from "../schema/endpoints/localization.endpoint.ts";
 import { enterEndpoint } from "../preview/endpoints/enter.endpoint.ts";
 import { exitEndpoint } from "../preview/endpoints/exit.endpoint.ts";
 import { adminBarEndpoint } from "../preview/endpoints/admin-bar.endpoint.ts";
@@ -30,13 +31,20 @@ import { handleError } from "./errors.ts";
 export function createApp(core: Core, site?: string) {
   const { plugins } = core;
   const media = core.media && mediaRoutes(core);
-  const schemaEndpoint = readEndpoint(core.schema, media, site, core.admin.descriptor);
+  const schemaEndpoint = readEndpoint(
+    core.schema,
+    media,
+    site,
+    core.admin.descriptor,
+    core.localization,
+  );
   const collections = collectionsRoutes(core);
   const globals = globalsRoutes(core);
 
   const reads = new Hono<Env>().get("/admin-brand", (c) =>
     c.json(adminBrand(core.admin.descriptor)),
   );
+  reads.route("/", localizationEndpoint(core.localization));
   mountRoutes(reads, plugins, "publicRoutes");
   if (media) reads.route("/media", media.reads);
   reads.route("/", collections.reads);

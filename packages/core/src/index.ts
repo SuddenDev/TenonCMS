@@ -1,6 +1,11 @@
 export { type Api, type Cms, defineCms } from "./cms/index.ts";
 export type { LocalApi } from "./cms/api/local-api.ts";
-export type { CmsOptions, PopulateOptions } from "./cms/config/options.ts";
+export type {
+  CmsOptions,
+  Localization,
+  LocalizationOptions,
+  PopulateOptions,
+} from "./cms/config/options.ts";
 export type { ImageProvider, ImagesOptions, MediaOptions, Storage } from "./media/index.ts";
 export { defineCollection, defineGlobal } from "./schema/index.ts";
 export type {
@@ -16,6 +21,7 @@ export type {
   File,
   Global,
   Image,
+  Locale,
   MediaApi,
   MediaDoc,
   MediaHooks,
@@ -30,7 +36,10 @@ export { ConflictError, type Reference, ValidationError } from "./errors.ts";
 export {
   type BreadcrumbsOptions,
   breadcrumbs,
+  localeFromPath,
+  localizePath,
   SLUG_PATTERN,
   seoMeta,
   slugify,
+  switchTarget,
 } from "./helpers/index.ts";

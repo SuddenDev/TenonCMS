@@ -65,19 +65,32 @@ export function nestedPaths({
       },
     },
     afterChange: {
-      /** When the path changes, saves each direct child again with no changes. Its own `buildPath` then updates it, down the tree. */
+      /**
+       * When the path changes, saves each direct child again with no changes. Its own `buildPath` then updates it, down the tree.
+       * In a locale, children without a row in it are skipped: saving them would add an empty translation.
+       */
       async updateChildPaths({
         doc,
         previousDoc,
         collection,
         cms,
-      }: Omit<Args, "data"> & { doc: Record<string, any>; previousDoc?: Record<string, any> }) {
+        locale,
+      }: Omit<Args, "data"> & {
+        locale?: string;
+        doc: Record<string, any>;
+        previousDoc?: Record<string, any>;
+      }) {
         if (doc[path] === previousDoc?.[path]) return;
         for (const { id } of await cms.find(collection!, {
           where: { [parent]: doc.id },
           populate: false,
-        }))
+        })) {
+          // Only localized documents have `locales`. The drafts view lists every row.
+          const { locales } =
+            (await cms.withDrafts().findById(collection!, id, { populate: false })) ?? {};
+          if (locale && Array.isArray(locales) && !locales.includes(locale)) continue;
           await cms.update(collection!, id, {});
+        }
       },
     },
   };

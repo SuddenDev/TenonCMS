@@ -7,13 +7,18 @@ import { RedirectsPlugin, resolveRedirect } from "./index.ts";
 const origin = "http://localhost";
 const admin = { name: "Admin", email: "a@b.co", password: "password123" };
 
-function make() {
+function make(localizedPages = false, collections = ["pages"], locales?: string[]) {
   const cms = defineCms({
+    localization: { locales: ["en", "de"], defaultLocale: "en" },
     collections: {
-      pages: defineCollection({ fields: page.fields, hooks: page.hooks }),
+      pages: defineCollection({
+        fields: page.fields,
+        hooks: page.hooks,
+        localized: localizedPages,
+      }),
       posts: defineCollection({ fields: { title: { type: "text" }, path: { type: "text" } } }),
     },
-    plugins: [RedirectsPlugin()],
+    plugins: [RedirectsPlugin({ collections, locales })],
     database: { url: ":memory:" },
     secret: "x".repeat(32),
   });
@@ -98,5 +103,73 @@ describe("redirects", () => {
       client.request("/redirects/import", { method: "POST", body: [{ from: "x" }] }),
     ).rejects.toMatchObject({ status: 400 });
     expect(await cms.find("redirects")).toHaveLength(2);
+  });
+
+  describe("with localization", () => {
+    it("stores the locale of a localized collection and scopes chains to it", async () => {
+      const { cms } = make(true);
+      const about = await cms.create("pages", { title: "About", slug: "about" });
+      await cms.update("pages", about.id, { title: "Ueber", slug: "ueber" }, { locale: "de" });
+      await cms.update("pages", about.id, { slug: "ueber-uns" }, { locale: "de" });
+      expect(await cms.find("redirects")).toEqual([
+        expect.objectContaining({ from: "/ueber", to: "/ueber-uns", locale: "de" }),
+      ]);
+      // English is untouched and no redirect applies without a locale.
+      expect(await resolveRedirect(cms, "/ueber")).toBeUndefined();
+      expect(await resolveRedirect(cms, "/ueber", "de")).toEqual({ to: "/ueber-uns", status: 301 });
+      expect(await resolveRedirect(cms, "/ueber", "en")).toBeUndefined();
+      // Each locale keeps its own redirects.
+      await cms.update("pages", about.id, { slug: "about-us" });
+      await cms.update("pages", about.id, { slug: "about-new" });
+      expect(await resolveRedirect(cms, "/about", "en")).toEqual({ to: "/about-new", status: 301 });
+      expect(await resolveRedirect(cms, "/about", "de")).toBeUndefined();
+    });
+
+    it("stores no locale for an unlocalized collection and finds it in every locale", async () => {
+      const { cms } = make(true, ["posts"]);
+      const post = await cms.create("posts", { title: "a", path: "/a" });
+      await cms.update("posts", post.id, { path: "/b" });
+      const [redirect] = await cms.find("redirects");
+      expect(redirect.locale ?? null).toBeNull();
+      expect(await resolveRedirect(cms, "/a")).toEqual({ to: "/b", status: 301 });
+      expect(await resolveRedirect(cms, "/a", "de")).toEqual({ to: "/b", status: 301 });
+    });
+
+    it("keeps `from` unique per locale", async () => {
+      const { cms } = make(true);
+      await cms.create("redirects", { from: "/team", to: "/crew", locale: "en" });
+      await cms.create("redirects", { from: "/team", to: "/mannschaft", locale: "de" });
+      await cms.create("redirects", { from: "/team", to: "/all" });
+      await expect(
+        cms.create("redirects", { from: "/team", to: "/x", locale: "de" }),
+      ).rejects.toMatchObject({ errors: { from: "Already used" } });
+      await expect(cms.create("redirects", { from: "/team", to: "/x" })).rejects.toMatchObject({
+        errors: { from: "Already used" },
+      });
+      const [en] = await cms.find("redirects", { where: { locale: "en" } });
+      await cms.update("redirects", en!.id, { to: "/crew-2" });
+    });
+
+    it("limits `locale` to the `locales` option", async () => {
+      const { cms } = make(true, ["pages"], ["en", "de"]);
+      await cms.create("redirects", { from: "/a", to: "/b", locale: "de" });
+      await cms.create("redirects", { from: "/c", to: "/d" });
+      await expect(
+        cms.create("redirects", { from: "/e", to: "/f", locale: "fr" }),
+      ).rejects.toMatchObject({ errors: { locale: expect.anything() } });
+    });
+
+    it("looks up by locale over HTTP", async () => {
+      const { cms, client } = make();
+      await cms.create("redirects", { from: "/x", to: "/en-x", locale: "en" });
+      await cms.create("redirects", { from: "/y", to: "/any" });
+      const lookup = (query: Record<string, string>) =>
+        client.request("/redirects/lookup", { query });
+      expect(await lookup({ path: "/x", locale: "en" })).toEqual({ to: "/en-x", status: 301 });
+      await expect(lookup({ path: "/x", locale: "de" })).rejects.toMatchObject({ status: 404 });
+      await expect(lookup({ path: "/x" })).rejects.toMatchObject({ status: 404 });
+      expect(await lookup({ path: "/y", locale: "de" })).toEqual({ to: "/any", status: 301 });
+      expect(await lookup({ path: "/y" })).toEqual({ to: "/any", status: 301 });
+    });
   });
 });

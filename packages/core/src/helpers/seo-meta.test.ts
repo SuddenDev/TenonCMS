@@ -9,6 +9,7 @@ it("seoMeta falls back to the title", () => {
     canonical: undefined,
     image: undefined,
     verification: [],
+    alternates: [],
   });
   expect(seoMeta({ title: "About" })).toEqual({
     title: "About",
@@ -17,6 +18,7 @@ it("seoMeta falls back to the title", () => {
     canonical: undefined,
     image: undefined,
     verification: [],
+    alternates: [],
   });
   expect(seoMeta({ title: "About", seo: { title: "", description: "D", noindex: true } })).toEqual({
     title: "About",
@@ -25,6 +27,7 @@ it("seoMeta falls back to the title", () => {
     canonical: undefined,
     image: undefined,
     verification: [],
+    alternates: [],
   });
   expect(seoMeta({ title: "About", seo: { title: "Custom" } }).title).toBe("Custom");
 });
@@ -59,6 +62,44 @@ it("seoMeta builds the canonical URL", () => {
   );
   expect(seoMeta({ path: "/about" }).canonical).toBeUndefined();
   expect(seoMeta({}, { general: { url: "https://a.b" } }).canonical).toBeUndefined();
+});
+
+it("seoMeta lists the alternates as hreflang links", () => {
+  const alternates = { en: "/posts/a", de: "/de/posts/b", "x-default": "/posts/a" };
+  const general = { url: "https://a.b/" };
+  expect(seoMeta({ alternates }, { general }).alternates).toEqual([
+    { hreflang: "en", href: "https://a.b/posts/a" },
+    { hreflang: "de", href: "https://a.b/de/posts/b" },
+    { hreflang: "x-default", href: "https://a.b/posts/a" },
+  ]);
+  expect(seoMeta({ alternates: { de: "/de/x" } }).alternates).toEqual([
+    { hreflang: "de", href: "/de/x" },
+  ]);
+  expect(seoMeta({ alternates: { de: "https://cdn.x/de" } }, { general }).alternates[0]!.href).toBe(
+    "https://cdn.x/de",
+  );
+  expect(seoMeta({ alternates: null }, { general }).alternates).toEqual([]);
+  expect(seoMeta({}, { general }).alternates).toEqual([]);
+});
+
+it("seoMeta keeps a subpath of general.url in alternates, like canonical", () => {
+  const general = { url: "https://a.b/site/" };
+  expect(seoMeta({ alternates: { de: "/de/x" } }, { general }).alternates[0]!.href).toBe(
+    "https://a.b/site/de/x",
+  );
+});
+
+it("seoMeta takes the canonical of the document's locale from its alternates", () => {
+  const general = { url: "https://a.b" };
+  const alternates = { en: "/posts/a", de: "/de/posts/b" };
+  expect(seoMeta({ locale: "de", path: "/x", alternates }, { general }).canonical).toBe(
+    "https://a.b/de/posts/b",
+  );
+  expect(seoMeta({ locale: "de", alternates }).canonical).toBe("/de/posts/b");
+  expect(seoMeta({ locale: "fr", path: "/x", alternates }, { general }).canonical).toBe(
+    "https://a.b/x",
+  );
+  expect(seoMeta({ path: "/x", alternates }, { general }).canonical).toBe("https://a.b/x");
 });
 
 it("seoMeta picks the image", () => {
@@ -104,6 +145,9 @@ it("helpers come from the main and the browser-safe client entry", async () => {
       seoMeta,
       breadcrumbs: expect.any(Function),
       slugify: expect.any(Function),
+      localeFromPath: expect.any(Function),
+      localizePath: expect.any(Function),
+      switchTarget: expect.any(Function),
       SLUG_PATTERN: expect.any(String),
     });
   }

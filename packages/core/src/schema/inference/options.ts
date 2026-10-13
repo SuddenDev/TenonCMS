@@ -68,10 +68,20 @@ type SelectField<Collections, FieldType, PopulateSpec, Key> = FieldType extends 
  * Keys a `select` object may name: fields, and on a document the meta keys.
  * Nested keys are allowed under groups and populated relations or joins.
  */
-export type Select<Collections, F extends Fields, PopulateSpec, Document extends boolean = true> = {
+export type Select<
+  Collections,
+  F extends Fields,
+  PopulateSpec,
+  Document extends boolean = true,
+  L extends string = string,
+> = {
   [K in keyof F]?: SelectField<Collections, F[K], PopulateSpec, K>;
 } & (Document extends true
-  ? { id?: true; createdAt?: true; updatedAt?: true; publishedAt?: true; hasDraft?: true }
+  ? { id?: true; createdAt?: true; updatedAt?: true; publishedAt?: true; hasDraft?: true } & ([
+      L,
+    ] extends [never]
+      ? {}
+      : { locale?: true; locales?: true; sharedDraft?: true; alternates?: true })
   : {});
 
 /** {@link Select}, or a plain record for an untyped schema. */
@@ -80,10 +90,11 @@ export type SelectArg<
   F extends Fields,
   PopulateSpec,
   Document extends boolean = true,
+  L extends string = string,
 > =
   Wide<Collections> extends true
     ? Record<string, any>
-    : Select<Collections, F, PopulateSpec, Document>;
+    : Select<Collections, F, PopulateSpec, Document, L>;
 
 /**
  * `Provided` with every key that `Allowed` lacks mapped to `never`, at every level. Generic inference skips excess
@@ -100,8 +111,16 @@ export type Exact<Provided, Allowed> = Provided extends object
       }
   : Provided;
 
-/** Read options of `find`, `findOne`, `findById` and `getGlobal`. Globals have no `id`, `createdAt` or `updatedAt`. */
-export type ReadOptions<Collections, F extends Fields, Document extends boolean = true> = {
+/**
+ * Read options of `find`, `findOne`, `findById` and `getGlobal`. Globals have no `id`, `createdAt` or `updatedAt`.
+ * `L` is the instance's locale union, `never` without `localization`.
+ */
+export type ReadOptions<
+  Collections,
+  F extends Fields,
+  Document extends boolean = true,
+  L extends string = string,
+> = {
   /** `false` returns ids. An object resolves only the listed paths, `true` one hop. Default: every relation up to `depth`. */
   populate?: boolean | PopulateArg<Collections, F>;
   /** Hops resolved when `populate` is not an object. */
@@ -112,20 +131,27 @@ export type ReadOptions<Collections, F extends Fields, Document extends boolean 
    * join that `populate` resolves. `{}` returns only `id`. Hooks see the full documents; `afterOperation` sees the result.
    * Default: every field.
    */
-  select?: SelectArg<Collections, F, number, Document>;
+  select?: SelectArg<Collections, F, number, Document, L>;
+  /** The locale to read. Default: the default locale. Collections and globals that are not `localized` ignore it. Without `localization`, the type is `never`. */
+  locale?: L;
+  /** Whether a missing value or locale reads as the default locale's. Default: `localization.fallback`. */
+  fallback?: boolean;
+  /** Adds `alternates` to documents of localized collections with a `permalink`: the URL of each published locale, and `"x-default"`. Costs one read per locale. */
+  alternates?: boolean;
 };
 
 /** Checks the `populate` and `select` literals at every level. */
 export type Checked<
-  Options extends ReadOptions<Collections, F, Document>,
+  Options extends ReadOptions<Collections, F, Document, L>,
   Collections,
   F extends Fields,
   DefaultDepth extends number = 2,
   Document extends boolean = true,
+  L extends string = string,
 > = Options & {
   populate?: Exact<Options["populate"], PopulateArg<Collections, F>>;
   select?: Exact<
     Options["select"],
-    SelectArg<Collections, F, PopulateOf<Options, DefaultDepth>, Document>
+    SelectArg<Collections, F, PopulateOf<Options, DefaultDepth>, Document, L>
   >;
 };

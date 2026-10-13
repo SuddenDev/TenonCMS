@@ -61,6 +61,8 @@ For `GET /api/cms/globals/general`, follow:
 
 Globals retain their own lifecycle: they skip collection `beforeOperation` and `afterOperation`. A never-saved global returns publication metadata with no saved field values.
 
+With `?locale=de`, `readOptions()` in [read-options.ts](http/query/read-options.ts) passes it on, `withLocale()` in [locale.ts](content/locale.ts) validates it and puts it on the scope and `locOf()` in [loc-of.ts](content/reads/loc-of.ts) turns it into the `Loc` that the queries use. The queries join the locale rows, and [merge-locale.ts](content/reads/merge-locale.ts) merges shared and localized fields.
+
 ## Complete an upload
 
 For `POST /api/cms/media/uploads/:id/complete`, follow:
@@ -77,7 +79,7 @@ The operation retains cleanup on validation/write failure. Upload-table queries 
 For `POST /api/cms/collections/posts/preview-url`, follow:
 
 1. [collections/endpoints/preview-url.endpoint.ts](collections/endpoints/preview-url.endpoint.ts) checks the configured target and passes unsaved form state plus the session-bound API to the resolver. Globals have their corresponding feature endpoint.
-2. [preview/server/resolve-url.ts](preview/server/resolve-url.ts) clones the form state, calls a configured preview function, or resolves template fields. A relation placeholder loads one target hop through the local `findById()` with `populate: false`.
+2. [preview/server/resolve-url.ts](preview/server/resolve-url.ts) clones the form state, calls the configured `preview` (else `permalink`) function, or resolves template fields. A relation placeholder loads one target hop through the local `findById()` with `populate: false`. With `?locale=`, the function gets the locale and, with `routing`, a `permalink` result gets the locale prefix.
 3. [placeholders.ts](preview/templates/placeholders.ts) identifies template paths, and [resolve-template.ts](preview/templates/resolve-template.ts) `resolveTemplate()` returns the filled URL or `null` for missing values.
 
 There is no extra public local preview method. The browser entry [preview/index.ts](preview/index.ts) exports DOM/draft runtime helpers and does not import the server URL resolver.

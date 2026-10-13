@@ -1,13 +1,20 @@
 import { type Database } from "../../db/types.ts";
 import { type Schema } from "../../schema/index.ts";
 import { ConflictError } from "../../errors.ts";
-import { type Ref, owner, references } from "./find-references.ts";
+import { type Ref, owner, references, row } from "./find-references.ts";
+import { DOCUMENT_LOCALES, GLOBAL_LOCALES } from "../../db/queries/document-sql.ts";
+import { saveLocaleDraft } from "../../db/queries/locales/save-locale-draft.query.ts";
 import type { Kysely } from "kysely";
 
-/** Local API calls of the current operation, with all their hooks. */
+/** Local API calls of the current operation, with all their hooks. A `locale` writes that locale's row. */
 export type Effects = {
-  update(collection: string, id: string, data: Record<string, unknown>): Promise<unknown>;
-  setGlobal(name: string, data: Record<string, unknown>): Promise<unknown>;
+  update(
+    collection: string,
+    id: string,
+    data: Record<string, unknown>,
+    locale?: string,
+  ): Promise<unknown>;
+  setGlobal(name: string, data: Record<string, unknown>, locale?: string): Promise<unknown>;
   delete(collection: string, id: string): Promise<unknown>;
 };
 
@@ -31,10 +38,11 @@ export async function onDelete(
 
   // `set-null` runs before `cascade`: the scanned data is still current then.
   const cleared = refs.filter((r) => rule(r) === "set-null");
-  await clear(cleared, id, effects);
+  await clear(db, cleared, id, effects);
 
   // Globals cannot cascade (checked at startup), so `collection` and `id` are set.
-  for (const r of refs.filter((r) => rule(r) === "cascade"))
+  const cascading = refs.filter((r) => rule(r) === "cascade");
+  for (const r of new Map(cascading.map((r) => [owner(r), r])).values())
     await effects.delete(r.collection!, r.id!);
 }
 
@@ -54,16 +62,20 @@ function conflict(blocking: Ref[]) {
   );
 }
 
-// References of one owner share one `data` object, so each owner is written once with all its edits.
-async function clear(refs: Ref[], id: string, effects: Effects) {
+// References of one stored row share one `data` object, so each row is written once with all its edits.
+// A pending draft of a locale row is rewritten without hooks, as a draft save runs none of the write checks.
+async function clear(db: Kysely<Database>, refs: Ref[], id: string, effects: Effects) {
   for (const r of refs) {
     const parent = r.path.slice(0, -1).reduce<any>((o, k) => o?.[k], r.data);
     const key = r.path.at(-1)!;
     parent[key] = r.field.many ? parent[key].filter((x: string) => x !== id) : null;
   }
 
-  for (const r of new Map(refs.map((r) => [owner(r), r])).values()) {
-    if (r.global) await effects.setGlobal(r.global, r.data);
-    else await effects.update(r.collection!, r.id!, r.data);
+  for (const r of new Map(refs.map((r) => [row(r), r])).values()) {
+    if (r.draft) {
+      const locales = r.global ? GLOBAL_LOCALES : DOCUMENT_LOCALES;
+      await saveLocaleDraft(db, locales, r.global ?? r.id!, r.locale!, r.data);
+    } else if (r.global) await effects.setGlobal(r.global, r.data, r.locale);
+    else await effects.update(r.collection!, r.id!, r.data, r.locale);
   }
 }

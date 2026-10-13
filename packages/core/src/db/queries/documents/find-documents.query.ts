@@ -1,4 +1,4 @@
-import { type Db, selectDocs, jsonAt } from "../document-sql.ts";
+import { type Db, type Loc, selectDocs, jsonAt } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 import { sql } from "kysely";
 
@@ -14,19 +14,29 @@ export async function findDocs(
     where = {},
     limit,
     drafts = false,
-  }: { id?: string; where?: Record<string, unknown>; limit?: number; drafts?: boolean },
+    loc,
+  }: {
+    id?: string;
+    where?: Record<string, unknown>;
+    limit?: number;
+    drafts?: boolean;
+    /** Reads a localized collection in a locale. A filter on a localized key matches the value a read returns. */
+    loc?: Loc;
+  },
 ) {
-  let query = selectDocs(db, collection, drafts);
-  if (id !== undefined) query = query.where("id", "=", id);
+  let query = selectDocs(db, collection, drafts, loc);
+  if (id !== undefined) query = query.where("cms_documents.id", "=", id);
   for (const [key, value] of Object.entries(where)) {
     if (value === undefined) continue;
-    const field = jsonAt(key, drafts);
+    const field = jsonAt(key, drafts, loc);
     query = query.where(
       value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`,
     );
   }
   // `rowid` orders documents created in the same millisecond.
-  query = query.orderBy("created_at", "desc").orderBy(sql`rowid`, "desc");
+  query = query
+    .orderBy("cms_documents.created_at", "desc")
+    .orderBy(sql`cms_documents.rowid`, "desc");
   if (limit) query = query.limit(limit);
-  return (await query.execute()).map(toDoc);
+  return (await query.execute()).map((r) => toDoc(r, loc));
 }

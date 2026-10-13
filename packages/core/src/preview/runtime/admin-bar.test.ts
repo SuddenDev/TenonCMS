@@ -143,6 +143,19 @@ describe("loading", () => {
     ]);
   });
 
+  it("adds the page's language to the Edit link", async () => {
+    document.documentElement.lang = "de";
+    try {
+      await start();
+      await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
+      expect(shownItem("edit").href).toBe(
+        `/cms/presentation?url=${encodeURIComponent(location.href)}&locale=de`,
+      );
+    } finally {
+      document.documentElement.removeAttribute("lang");
+    }
+  });
+
   it("fills only the marked built-ins, not an item that replaced one by id", async () => {
     bar = () =>
       answer([

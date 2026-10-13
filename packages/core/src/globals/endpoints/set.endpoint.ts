@@ -10,10 +10,17 @@ export function setEndpoint(core: Core) {
   return new Hono<Env>()
     .put("/globals/:name", async (c) => {
       const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
-      return c.json(await c.var.cms.setGlobal(name, await parseBody(c.req)));
+      return c.json(
+        await c.var.cms.setGlobal(name, await parseBody(c.req), { locale: c.req.query("locale") }),
+      );
     })
     .put("/globals/:name/draft", async (c) => {
       const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
-      return c.json(await c.var.cms.setGlobal(name, await parseBody(c.req), { draft: true }));
+      return c.json(
+        await c.var.cms.setGlobal(name, await parseBody(c.req), {
+          draft: true,
+          locale: c.req.query("locale"),
+        }),
+      );
     });
 }

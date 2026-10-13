@@ -112,10 +112,14 @@ type SelectedMeta<SelectSpec> = [SelectSpec] extends [true]
   ? Meta
   : Pick<Meta, "id" | Extract<keyof SelectSpec, keyof Meta>>;
 
-/** A document as a read returns it: {@link Read} plus the selected metadata. */
-export type ReadDoc<Collections, F extends Fields, PopulateSpec, SelectSpec = true> = Simplify<
-  Read<Collections, F, PopulateSpec, SelectSpec> & SelectedMeta<SelectSpec>
->;
+/** A document as a read returns it: {@link Read} plus the selected metadata. `Extra` is more metadata, like the locale keys. */
+export type ReadDoc<
+  Collections,
+  F extends Fields,
+  PopulateSpec,
+  SelectSpec = true,
+  Extra = {},
+> = Simplify<Read<Collections, F, PopulateSpec, SelectSpec> & SelectedMeta<SelectSpec> & Extra>;
 
 /** `Value` with only `id` and the keys in `SelectSpec`. */
 type SelectedObject<Value, SelectSpec> = Simplify<{

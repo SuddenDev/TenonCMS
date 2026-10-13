@@ -48,30 +48,30 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 
 ## Files
 
-| Path                                       | Responsibility                                                                                                                     |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `admin/types.ts`                           | `AdminOption` and `AdapterOptions`. `integral-cms/nuxt` exports the latter as `Options`.                                           |
-| `admin/path.ts`                            | `adminPath()`: validates the `admin` option.                                                                                       |
-| `admin/client-refs/client-references.ts`   | `clientReferences()`: the Vite plugin that serves `#integral/client-registry`.                                                     |
-| `admin/client-refs/collect-client-refs.ts` | `collectClientRefs()`: walks the static import graph of `integral.config.ts` and resolves every `clientRef()` specifier to a file. |
-| `admin/client-refs/scan-refs.ts`           | `scanModule()` and `scanExport()`: find the `clientRef()` calls of one module and mark the ones `adminBar` reaches.                |
-| `admin/client-refs/module-syntax.ts`       | `parseModule()` and `describeModule()`: parse a script or Vue file and read its imports, exports and declarations.                 |
-| `admin/client-refs/resolve-import.ts`      | `resolveImport()`: skips Node built-ins and the package's own entries.                                                             |
-| `admin/client-refs/check-site-styles.ts`   | `checkSiteStyles()`: rejects CSS and Vue `<style>` blocks in the admin bar's graph.                                                |
-| `admin/client-refs/types.ts`               | `Resolver`, `ClientRef`, `Binding` and the AST aliases.                                                                            |
-| `admin/client-refs/test-project.ts`        | Test helper: a temporary project and a relative-import resolver.                                                                   |
-| `admin/build.ts`                           | `adminInput()` and `adminChunk`: the admin's client input.                                                                         |
-| `admin/favicon.ts`                         | `findFavicon()` and `faviconDefine()`: the host favicon as a Vite define.                                                          |
-| `admin/html.ts`                            | `adminHtml()`: the standalone admin page.                                                                                          |
-| `astro/index.ts`                           | `integralCms()`: routes, aliases, middleware, preview script and injected types.                                                   |
-| `astro/route.ts`                           | The `/api/cms` route.                                                                                                              |
-| `astro/middleware.ts`                      | Sets `Astro.locals.integral` to the instance of the request's user.                                                                |
-| `astro/admin.astro`                        | The admin page.                                                                                                                    |
-| `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                     |
-| `nuxt/runtime/composables.ts`              | `useIntegral()`: the client's read methods in `useAsyncData`, with preview drafts merged in.                                       |
-| `nuxt/runtime/plugin.client.ts`            | Starts the preview runtime.                                                                                                        |
-| `nuxt/runtime/server/handler.ts`           | The `/api/cms` handler.                                                                                                            |
-| `nuxt/runtime/server/admin.ts`             | Serves the admin page from `#integral/admin-html`.                                                                                 |
-| `vite/index.ts`                            | `integralAdmin()`: the admin entry and `#integral/admin-html` for frameworks without an adapter.                                   |
+| Path                                       | Responsibility                                                                                                                                           |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin/types.ts`                           | `AdminOption` and `AdapterOptions`. `integral-cms/nuxt` exports the latter as `Options`.                                                                 |
+| `admin/path.ts`                            | `adminPath()`: validates the `admin` option.                                                                                                             |
+| `admin/client-refs/client-references.ts`   | `clientReferences()`: the Vite plugin that serves `#integral/client-registry`.                                                                           |
+| `admin/client-refs/collect-client-refs.ts` | `collectClientRefs()`: walks the static import graph of `integral.config.ts` and resolves every `clientRef()` specifier to a file.                       |
+| `admin/client-refs/scan-refs.ts`           | `scanModule()` and `scanExport()`: find the `clientRef()` calls of one module and mark the ones `adminBar` reaches.                                      |
+| `admin/client-refs/module-syntax.ts`       | `parseModule()` and `describeModule()`: parse a script or Vue file and read its imports, exports and declarations.                                       |
+| `admin/client-refs/resolve-import.ts`      | `resolveImport()`: skips Node built-ins and the package's own entries.                                                                                   |
+| `admin/client-refs/check-site-styles.ts`   | `checkSiteStyles()`: rejects CSS and Vue `<style>` blocks in the admin bar's graph.                                                                      |
+| `admin/client-refs/types.ts`               | `Resolver`, `ClientRef`, `Binding` and the AST aliases.                                                                                                  |
+| `admin/client-refs/test-project.ts`        | Test helper: a temporary project and a relative-import resolver.                                                                                         |
+| `admin/build.ts`                           | `adminInput()` and `adminChunk`: the admin's client input.                                                                                               |
+| `admin/favicon.ts`                         | `findFavicon()` and `faviconDefine()`: the host favicon as a Vite define.                                                                                |
+| `admin/html.ts`                            | `adminHtml()`: the standalone admin page.                                                                                                                |
+| `astro/index.ts`                           | `integralCms()`: routes, aliases, middleware, preview script and injected types.                                                                         |
+| `astro/route.ts`                           | The `/api/cms` route.                                                                                                                                    |
+| `astro/middleware.ts`                      | Sets `Astro.locals.integral` to the instance of the request's user, and `locals.locale` and `locals.path` (the path without the locale prefix).          |
+| `astro/admin.astro`                        | The admin page.                                                                                                                                          |
+| `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                                           |
+| `nuxt/runtime/composables.ts`              | `useIntegral()`: the client's read methods in `useAsyncData`, in the route's locale, with preview drafts merged in. `useLocale()` and `useAlternates()`. |
+| `nuxt/runtime/plugin.client.ts`            | Starts the preview runtime.                                                                                                                              |
+| `nuxt/runtime/server/handler.ts`           | The `/api/cms` handler.                                                                                                                                  |
+| `nuxt/runtime/server/admin.ts`             | Serves the admin page from `#integral/admin-html`.                                                                                                       |
+| `vite/index.ts`                            | `integralAdmin()`: the admin entry and `#integral/admin-html` for frameworks without an adapter.                                                         |
 
 Files the host compiles (`route.ts`, `middleware.ts`, `admin.astro`, `nuxt/runtime/`) ship as `.ts` source in `dist/`. Server runtime files MUST import from `h3`, not `#imports`. The admin path MUST NOT be `/` or sit under `API_BASE`. Builds keep core external in SSR, because bundling it breaks libsql's native binding; Nitro 2 also needs the libsql binaries in `traceInclude`.

@@ -9,7 +9,10 @@ export function discardEndpoint(core: Core) {
 
   return new Hono<Env>().delete("/collections/:name/:id/draft", async (c) => {
     const { name } = collectionOf(collections, c.req.param("name"));
-    const doc = await c.var.cms.discard(name, c.req.param("id"));
+    const doc = await c.var.cms.discard(name, c.req.param("id"), {
+      locale: c.req.query("locale"),
+      all: c.req.query("all") === "true",
+    });
     return doc ? c.json(doc) : c.body(null, 204);
   });
 }

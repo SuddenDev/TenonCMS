@@ -6,6 +6,9 @@ type Image = unknown;
 type SeoDoc = {
   title?: unknown;
   path?: unknown;
+  locale?: unknown;
+  /** The `alternates` metadata of a read with `alternates: true`. */
+  alternates?: Record<string, string> | null;
   seo?: {
     title?: string | null;
     description?: string | null;
@@ -25,6 +28,11 @@ type SeoSettings = {
   } | null;
 };
 
+const join = (base: string, path: string) => base.replace(/\/$/, "") + path;
+
+// Absolute against `base` when it is set.
+const absolute = (url: string, base?: string) => (base ? new URL(url, base).href : url);
+
 function urlOf(image: Image) {
   const url = (image as { url?: unknown } | null | undefined)?.url;
   return typeof url === "string" && url ? url : undefined;
@@ -35,7 +43,8 @@ function urlOf(image: Image) {
  * - `title`: `seo.title`, or the document's `title` when it is empty, so the fallback follows title changes. With `general.title`, it follows after `seo.separator` (default `" · "`).
  * - `description`: `seo.description`, or `undefined`. There is no fallback.
  * - `noindex`: `true` when the document's or the site's `seo.noindex` is `true`.
- * - `canonical`: `general.url` joined with the document's `path`. `undefined` unless both exist.
+ * - `canonical`: the URL of the document's own locale in `alternates`, else `general.url` joined with the document's `path`. `undefined` unless one of them exists.
+ * - `alternates`: `{ hreflang, href }[]` for the `<link rel="alternate">` tags, from `doc.alternates` (`x-default` included). Absolute against `general.url` when it is set. Empty without `doc.alternates`.
  * - `image`: URL of the document's `seo.image`, else of the site's. Absolute against `general.url` when it is set. Only a populated media document counts; an id string is ignored.
  * - `verification`: `{ name, content }` meta tags for the filled `seo.verification` fields.
  */
@@ -47,13 +56,19 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
   const image = urlOf(doc.seo?.image) ?? urlOf(seo?.image);
   const path = typeof doc.path === "string" && doc.path ? doc.path : undefined;
   const { google, bing } = seo?.verification ?? {};
+  const alternates = Object.entries(doc.alternates ?? {}).map(([hreflang, href]) => ({
+    hreflang,
+    href: base && href.startsWith("/") ? join(base, href) : href,
+  }));
+  const own = alternates.find((a) => a.hreflang === doc.locale)?.href;
 
   return {
     title: site ? page + (seo?.separator ?? " · ") + site : page,
     description: doc.seo?.description || undefined,
     noindex: doc.seo?.noindex === true || seo?.noindex === true,
-    canonical: base && path ? base.replace(/\/$/, "") + path : undefined,
-    image: image && base ? new URL(image, base).href : image,
+    canonical: own ?? (base && path ? join(base, path) : undefined),
+    alternates,
+    image: image && absolute(image, base),
     verification: [
       google && { name: "google-site-verification", content: google },
       bing && { name: "msvalidate.01", content: bing },
