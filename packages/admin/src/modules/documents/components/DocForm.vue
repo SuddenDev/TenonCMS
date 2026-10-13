@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { CmsError, type Data, type Fields } from "@/shared/api";
+import { CmsError, type Data, type Field, type Fields } from "@/shared/api";
+import { onLocaleFlush } from "@/shared/composables/useLocale";
 import { active, isEmpty } from "@/modules/documents/fields";
 import { ago } from "@/shared/utils";
 import { Button } from "@/shared/components/ui/button";
@@ -13,6 +14,7 @@ import {
 } from "@/shared/components/ui/card";
 import { FieldError } from "@/shared/components/ui/field";
 import FieldInput from "./FieldInput.vue";
+import SharedMarker from "./SharedMarker.vue";
 import { useAutosave } from "@/modules/documents/composables/useAutosave";
 
 // `isNew`: plain `default` values pre-fill the form, and slugs follow their `from` field. Function defaults are not in the schema; the server fills them.
@@ -22,6 +24,9 @@ import { useAutosave } from "@/modules/documents/composables/useAutosave";
 // Without it, `save` runs on submit.
 // `doc`: the latest saved document, for the status bar. Defaults to `initial`.
 // `global`: the form edits a global. A discard never deletes it.
+// `localized`: the entry has languages. Its fields marked `localized: false` are labeled as shared.
+// `defaults`: the default language's data. Empty localized fields show its values as placeholders.
+// `missing`: the active language has no version yet, so there is nothing to publish before the first edit.
 const props = defineProps<{
   id?: string;
   fields: Fields;
@@ -33,6 +38,9 @@ const props = defineProps<{
   doc?: Record<string, unknown>;
   isNew?: boolean;
   global?: boolean;
+  localized?: boolean;
+  defaults?: Record<string, unknown>;
+  missing?: boolean;
 }>();
 // `change`: the form state as it would be saved, on every edit and once on load.
 const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
@@ -80,6 +88,15 @@ const autosave = useAutosave(async () => {
   await props.saveDraft!(body);
 });
 const { pending, saving } = autosave;
+// A language switch saves the pending edit first.
+if (drafts)
+  onLocaleFlush(async () => {
+    await autosave.flush();
+    return !autosave.pending.value;
+  });
+const shared = (f: Field) => !!props.localized && f.localized === false;
+const inherited = (f: Field) =>
+  props.localized && f.localized !== false ? props.defaults : undefined;
 // The saved document MAY differ from the input, e.g. when hooks change it, so the form shows what was stored.
 watch(
   () => props.initial,
@@ -114,8 +131,13 @@ const busy = ref(false);
 
 // Not disabled while a draft saves: the blur of a click on Publish starts a save, which would swallow the click.
 // Publish waits for that save instead.
+// Pending shared fields are published with any language.
 const canPublish = computed(
-  () => pending.value || !!current.value.hasDraft || current.value.publishedAt === null,
+  () =>
+    pending.value ||
+    !!current.value.hasDraft ||
+    current.value.sharedDraft === true ||
+    (current.value.publishedAt === null && !props.missing),
 );
 
 // Runs `action` with the busy state. A 400 marks the fields by path.
@@ -154,7 +176,9 @@ async function discard() {
   const message =
     current.value.publishedAt || props.global
       ? "Discard the unpublished changes?"
-      : "Discard this draft? It was never published, so the entry is deleted.";
+      : props.localized
+        ? "Discard this draft? This language was never published, so it is removed."
+        : "Discard this draft? It was never published, so the entry is deleted.";
   if (!confirm(message)) return;
   await attempt(async () => {
     await autosave.flush();
@@ -183,6 +207,8 @@ async function discard() {
               :siblings="{ fields, data }"
               :is-new="isNew"
               :errors="errors"
+              :shared="shared(field)"
+              :placeholders="inherited(field)"
             />
           </template>
         </CardContent>
@@ -194,6 +220,7 @@ async function discard() {
               <CardTitle>
                 {{ field.label ?? name }}
                 <span v-if="field.required" class="text-destructive" aria-hidden="true">*</span>
+                <SharedMarker v-if="shared(field)" />
               </CardTitle>
               <CardDescription v-if="field.description">{{ field.description }}</CardDescription>
               <FieldError v-if="errors[name]">{{ errors[name] }}</FieldError>
@@ -211,6 +238,7 @@ async function discard() {
                   :loose="!field.required && isEmpty(data[name] as Record<string, unknown>)"
                   :path="`${name}.${key}`"
                   :errors="errors"
+                  :placeholders="inherited(field)?.[name] as Record<string, unknown> | undefined"
                 />
               </template>
             </CardContent>

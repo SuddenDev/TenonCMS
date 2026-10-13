@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
-import { computed, inject, provide, ref } from "vue";
+import { computed, inject, provide, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import {
@@ -12,8 +12,10 @@ import {
   titleField,
 } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
+import LocaleActions from "@/modules/documents/components/LocaleActions.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
-import { Pane, Icon, usePerspective } from "@/shared";
+import { useTranslations } from "@/modules/documents/composables/useTranslations";
+import { Pane, Icon, useLocale, usePerspective } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
 // `closable`: a reference pane. It shows a close button and leaves the page title alone.
@@ -64,6 +66,17 @@ const readOnly = computed(() => drafts.value && usePerspective().perspective ===
 const formId = `doc-${props.name}-${props.id}`;
 const error = ref("");
 
+const { locale, defaultLocale, flush } = useLocale();
+// The languages of a localized collection. A new document has no languages to compare until its first save.
+const tr = useTranslations(
+  () => collection.value,
+  () => (isNew.value ? null : { collection: props.name, id: docId.value }),
+  () => doc.value,
+);
+const languages = computed(() =>
+  tr.localized.value && tr.loaded.value ? tr.status.value : undefined,
+);
+
 // Joins are read-only. One request resolves all of them.
 const joins = computed(() =>
   Object.entries(collection.value?.fields ?? {}).flatMap(([key, f]) =>
@@ -79,7 +92,12 @@ const label = (collection: string, d: Record<string, any>) => {
 const title = () =>
   isNew.value
     ? `New ${collection.value?.label ?? props.name}`
-    : String((collection.value && doc.value?.[titleField(collection.value)]) || "Untitled");
+    : String(
+        (collection.value &&
+          (doc.value?.[titleField(collection.value)] ||
+            tr.defaults.value?.[titleField(collection.value)])) ||
+          "Untitled",
+      );
 
 if (!props.closable) useHead({ title });
 
@@ -88,31 +106,51 @@ function show(d: Record<string, unknown>) {
   initial.value = d;
 }
 
-if (isNew.value) doc.value = {};
-else {
-  client.findById(props.name, props.id, { populate: false }).then(show);
+// Loads the document in the active language. A later load wins, so a quick language switch shows the last one.
+let loads = 0;
+async function load() {
+  const at = ++loads;
+  if (isNew.value) {
+    doc.value = {};
+    return;
+  }
+  const id = docId.value;
+  const d = await client.findById(props.name, id, { populate: false, ...tr.read() });
+  if (at !== loads) return;
+  show(d);
+  tr.refresh();
   if (joins.value.length) {
     const populate = Object.fromEntries(joins.value.map((j) => [j.key, true]));
-    client.findById(props.name, props.id, { populate }).then((d) => (joined.value = d));
+    client.findById(props.name, id, { populate, ...tr.read() }).then((j) => {
+      if (at === loads) joined.value = j;
+    });
   }
 }
+load();
+
+// The form unmounts meanwhile, so no edit lands in the wrong language.
+watch(tr.active, () => {
+  doc.value = null;
+  load();
+});
 
 async function save(data: Data<Fields>) {
   if (isNew.value) {
-    const created = await client.create(props.name, data);
+    const created = await client.create(props.name, data, tr.write());
     reload();
     emit("saved");
     await router.replace(`${CONTENT}/collections/${props.name}/${created.id}`);
   } else {
-    show(await client.update(props.name, docId.value, data));
+    show(await client.update(props.name, docId.value, data, tr.write()));
     reload();
     emit("saved");
   }
 }
 
 async function saveDraft(data: Data<Fields>) {
+  const first = isNew.value || (languages.value?.active ?? "") === "missing";
   if (isNew.value) {
-    doc.value = await client.createDraft(props.name, data);
+    doc.value = await client.createDraft(props.name, data, tr.write());
     docId.value = doc.value.id as string;
     // The save MAY resolve after the user left, e.g. through the flush on blur or unmount. Then the route stays.
     const { params } = router.currentRoute.value;
@@ -120,25 +158,63 @@ async function saveDraft(data: Data<Fields>) {
       keepPane(docId.value);
       await router.replace(`${CONTENT}/collections/${props.name}/${docId.value}`);
     }
-  } else doc.value = await client.updateDraft(props.name, docId.value, data);
+  } else doc.value = await client.updateDraft(props.name, docId.value, data, tr.write());
+  // The first save of a language creates its row.
+  if (first) tr.refresh();
   reload();
   emit("saved");
 }
 
 async function publish() {
-  show(await client.publish(props.name, docId.value));
+  show(await client.publish(props.name, docId.value, tr.write()));
+  tr.refresh();
   reload();
   emit("saved");
 }
 
 // A document that was never published is deleted.
 async function discard() {
-  const kept = await client.discard(props.name, docId.value);
+  const kept = await client.discard(props.name, docId.value, tr.write());
   reload();
   emit("saved");
-  if (kept) show(kept);
-  else emit("deleted");
+  if (kept) {
+    show(kept);
+    tr.refresh();
+  } else emit("deleted");
 }
+
+// A language action saves the pending edit first, so no autosave lands after it.
+async function translate(action: () => Promise<void>) {
+  error.value = "";
+  try {
+    await flush();
+    await action();
+    reload();
+    emit("saved");
+  } catch (e) {
+    error.value = (e as Error).message;
+  }
+}
+
+const copy = (from: string, to: string) =>
+  translate(async () => {
+    await tr.copy(from, to);
+    if (to === tr.active.value) await load();
+    else await tr.refresh();
+  });
+
+const removeLocale = (l: string) =>
+  translate(async () => {
+    await tr.remove(l);
+    // The active language is gone: the switch loads the default one.
+    locale.value = defaultLocale.value;
+  });
+
+const discardAll = () =>
+  translate(async () => {
+    if ((await tr.discardAll()) === null) emit("deleted");
+    else await load();
+  });
 
 async function remove() {
   if (!confirm("Delete this entry?")) return;
@@ -177,6 +253,15 @@ async function remove() {
           ><Icon name="eye"
         /></RouterLink>
       </Button>
+      <LocaleActions
+        v-if="languages && !readOnly"
+        :languages="languages"
+        :locale="tr.active.value!"
+        :default-locale="defaultLocale!"
+        @copy="copy"
+        @remove="removeLocale"
+        @discard-all="discardAll"
+      />
       <slot name="actions" />
       <Button
         v-if="closable"
@@ -192,7 +277,7 @@ async function remove() {
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
         <p class="text-muted-foreground text-xs">{{ collection.label ?? name }}</p>
         <h1 class="mt-1 text-2xl font-semibold">{{ title() }}</h1>
-        <StatusBadges v-if="drafts" :doc="doc" />
+        <StatusBadges v-if="drafts" :doc="doc" :languages="languages" />
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           Published version. Switch to Drafts to edit.
         </p>
@@ -229,6 +314,9 @@ async function remove() {
         :inert="readOnly"
         v-bind="drafts ? { saveDraft, publish, discard } : { save }"
         :is-new="props.id === 'new'"
+        :localized="tr.localized.value"
+        :defaults="tr.defaults.value"
+        :missing="languages?.active === 'missing'"
         @change="emit('change', $event)"
       >
         <Button v-if="!isNew" type="button" variant="ghost" size="sm" @click="remove">

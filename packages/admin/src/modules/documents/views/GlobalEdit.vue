@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
-import { computed, provide, ref } from "vue";
+import { computed, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import { ownerKey } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
+import LocaleActions from "@/modules/documents/components/LocaleActions.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
-import { Icon, Pane, usePerspective } from "@/shared";
+import { useTranslations } from "@/modules/documents/composables/useTranslations";
+import { Icon, Pane, useLocale, usePerspective } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
 // `previewing`: the pane sits next to the preview, so it shows no preview button.
@@ -38,22 +40,89 @@ const data = ref<Record<string, unknown>>({});
 
 useHead({ title: () => global.value?.label ?? name });
 
+const error = ref("");
+const { locale, defaultLocale, flush } = useLocale();
+const tr = useTranslations(
+  () => global.value,
+  () => ({ global: name }),
+  () => doc.value,
+);
+const languages = computed(() =>
+  tr.localized.value && tr.loaded.value ? tr.status.value : undefined,
+);
+
 function show(d: Record<string, unknown>) {
   doc.value = d;
   data.value = d;
   emit("saved");
 }
 
-client.getGlobal(name, { populate: false }).then((d) => (doc.value = data.value = d));
+// A later load wins, so a quick language switch shows the last one.
+let loads = 0;
+async function load() {
+  const at = ++loads;
+  const d = await client.getGlobal(name, { populate: false, ...tr.read() });
+  if (at !== loads) return;
+  doc.value = data.value = d;
+  tr.refresh();
+}
+load();
 
-const save = async (body: Data<Fields>) => show(await client.setGlobal(name, body));
-const publish = async () => show(await client.publishGlobal(name));
-const discard = async () => show(await client.discardGlobal(name));
+// The form unmounts meanwhile, so no edit lands in the wrong language.
+watch(tr.active, () => {
+  doc.value = null;
+  load();
+});
+
+const save = async (body: Data<Fields>) => show(await client.setGlobal(name, body, tr.write()));
+const publish = async () => {
+  show(await client.publishGlobal(name, tr.write()));
+  tr.refresh();
+};
+const discard = async () => {
+  show(await client.discardGlobal(name, tr.write()));
+  tr.refresh();
+};
 
 async function saveDraft(body: Data<Fields>) {
-  doc.value = await client.setGlobalDraft(name, body);
+  // The first save of a language creates its row.
+  const first = languages.value?.active === "missing";
+  doc.value = await client.setGlobalDraft(name, body, tr.write());
+  if (first) tr.refresh();
   emit("saved");
 }
+
+// A language action saves the pending edit first, so no autosave lands after it.
+async function translate(action: () => Promise<void>) {
+  error.value = "";
+  try {
+    await flush();
+    await action();
+    emit("saved");
+  } catch (e) {
+    error.value = (e as Error).message;
+  }
+}
+
+const copy = (from: string, to: string) =>
+  translate(async () => {
+    await tr.copy(from, to);
+    if (to === tr.active.value) await load();
+    else await tr.refresh();
+  });
+
+const removeLocale = (l: string) =>
+  translate(async () => {
+    await tr.remove(l);
+    // The active language is gone: the switch loads the default one.
+    locale.value = defaultLocale.value;
+  });
+
+const discardAll = () =>
+  translate(async () => {
+    await tr.discardAll();
+    await load();
+  });
 </script>
 
 <template>
@@ -77,13 +146,23 @@ async function saveDraft(body: Data<Fields>) {
       >
         <RouterLink :to="`/presentation/globals/${name}`"><Icon name="eye" /></RouterLink>
       </Button>
+      <LocaleActions
+        v-if="languages && !readOnly"
+        :languages="languages"
+        :locale="tr.active.value!"
+        :default-locale="defaultLocale!"
+        @copy="copy"
+        @remove="removeLocale"
+        @discard-all="discardAll"
+      />
       <slot name="actions" />
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
         <p class="text-muted-foreground text-xs">Global</p>
         <h1 class="mt-1 text-2xl font-semibold">{{ global.label ?? name }}</h1>
-        <StatusBadges v-if="drafts" :doc="doc" />
+        <StatusBadges v-if="drafts" :doc="doc" :languages="languages" />
+        <p v-if="error" class="text-destructive mt-2 text-sm" role="alert">{{ error }}</p>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           Published version. Switch to Drafts to edit.
         </p>
@@ -99,6 +178,9 @@ async function saveDraft(body: Data<Fields>) {
         :doc="doc"
         :inert="readOnly"
         global
+        :localized="tr.localized.value"
+        :defaults="tr.defaults.value"
+        :missing="languages?.active === 'missing'"
         v-bind="drafts ? { saveDraft, publish, discard } : { save }"
         @change="emit('change', $event)"
       />

@@ -20,6 +20,7 @@ import {
 import { useExtensionData } from "@/shared/composables/useExtensionData";
 import MediaField from "@/modules/media/components/MediaField.vue";
 import Icon from "@/shared/components/Icon.vue";
+import SharedMarker from "@/modules/documents/components/SharedMarker.vue";
 import Mount from "@/shared/components/Mount.vue";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -38,6 +39,8 @@ import {
 // `root`: the whole form data, for conditions of group children.
 // `siblings`: the fields and data of the object that holds this field. A slug reads `from` and `parent` there.
 // `isNew`: the document is not saved yet.
+// `shared`: the field is the same in all languages of a localized entry, which the label says.
+// `placeholders`: the default language's data of the object that holds the field. An empty field shows its value muted.
 const props = defineProps<{
   name: string;
   field: Field;
@@ -47,6 +50,8 @@ const props = defineProps<{
   loose?: boolean;
   path?: string;
   errors?: Record<string, string>;
+  shared?: boolean;
+  placeholders?: Record<string, unknown>;
 }>();
 const model = defineModel<any>();
 const id = useId();
@@ -57,10 +62,14 @@ const required = computed(() => props.field.required && !props.loose);
 // Built-in checks and `readOnly` as HTML attributes. Vue drops `undefined` ones, and browsers ignore those an input does not support.
 const attrs = computed(() => {
   const f = props.field as Record<string, any>;
+  const inherited = props.placeholders?.[props.name];
   return {
     required: required.value,
     disabled: f.readOnly,
-    placeholder: f.placeholder,
+    placeholder:
+      typeof inherited === "string" || typeof inherited === "number"
+        ? String(inherited)
+        : f.placeholder,
     minlength: f.minLength,
     maxlength: f.maxLength,
     pattern: f.pattern,
@@ -159,6 +168,7 @@ if (slug?.parent && relation?.type === "relation") {
     <FieldLegend variant="label" class="mb-0 px-1">
       {{ field.label ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+      <SharedMarker v-if="shared" />
     </FieldLegend>
     <FieldDescription v-if="field.description" class="-mt-2">{{
       field.description
@@ -175,6 +185,7 @@ if (slug?.parent && relation?.type === "relation") {
         :loose="loose || (!field.required && isEmpty(model))"
         :path="`${path}.${key}`"
         :errors="errors"
+        :placeholders="placeholders?.[name] as Record<string, unknown> | undefined"
       />
     </template>
     <FieldError v-if="message">{{ message }}</FieldError>
@@ -188,6 +199,7 @@ if (slug?.parent && relation?.type === "relation") {
     <FieldTitle>
       {{ field.label ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+      <SharedMarker v-if="shared" />
     </FieldTitle>
     <MediaField v-model="model" :field="field" :invalid="invalid" />
     <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
@@ -208,7 +220,7 @@ if (slug?.parent && relation?.type === "relation") {
       :aria-invalid="invalid"
     />
     <FieldContent>
-      <FieldLabel :for="id">{{ field.label ?? name }}</FieldLabel>
+      <FieldLabel :for="id">{{ field.label ?? name }}<SharedMarker v-if="shared" /></FieldLabel>
       <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
       <FieldError v-if="message">{{ message }}</FieldError>
     </FieldContent>
@@ -217,6 +229,7 @@ if (slug?.parent && relation?.type === "relation") {
     <component :is="custom ? FieldTitle : FieldLabel" :for="custom ? undefined : id">
       {{ field.label ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+      <SharedMarker v-if="shared" />
     </component>
     <Mount
       v-if="custom"

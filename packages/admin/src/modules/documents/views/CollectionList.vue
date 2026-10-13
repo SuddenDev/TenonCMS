@@ -13,6 +13,7 @@ import {
   PaneMenuSkeleton,
   PaneSearch,
   Icon,
+  useLocale,
   type PaneLayout,
   type PaneSort,
 } from "@/shared";
@@ -22,6 +23,9 @@ import { ago } from "@/shared/utils";
 const route = useRoute();
 const name = route.params.name as string;
 const collection = computed(() => schema.value.collections?.[name]);
+const { locale } = useLocale();
+// A localized collection lists the active language with fallback, so every row has a title.
+const active = computed(() => (collection.value?.localized ? locale.value : undefined));
 const docs = ref<Record<string, any>[]>([]);
 const loading = ref(true);
 const search = ref("");
@@ -43,6 +47,8 @@ const rows = computed(() => {
       title: title(d) || "(untitled)",
       updatedAt: d.updatedAt as string,
       createdAt: d.createdAt as string,
+      // `locales` lists the languages with a version.
+      translated: !active.value || !Array.isArray(d.locales) || d.locales.includes(active.value),
       draft: d.hasDraft || d.publishedAt === null,
     }))
     .sort((a, b) =>
@@ -52,13 +58,23 @@ const rows = computed(() => {
 
 useHead({ title: () => collection.value?.label ?? name });
 
-const load = () =>
-  client
-    .find(name, { populate: false })
-    .then((d) => (docs.value = d))
+// A later load wins, so a quick language switch shows the last one.
+let loads = 0;
+const load = () => {
+  const at = ++loads;
+  return client
+    .find(name, {
+      populate: false,
+      ...(active.value && { locale: active.value, fallback: true }),
+    })
+    .then((d) => {
+      if (at === loads) docs.value = d;
+    })
     .finally(() => (loading.value = false));
+};
 load();
 provide(reloadKey, load);
+watch(active, load);
 
 // The document pane remounts when the id changes, except once for the id a new document got.
 const pane = ref(0);
@@ -100,8 +116,18 @@ provide(keepPaneKey, (id) => (kept = id));
             :subtitle="ago(doc.updatedAt)"
             :active="route.params.id === doc.id"
           >
-            <template v-if="doc.draft" #end>
-              <span class="size-2 rounded-full bg-amber-500" role="img" aria-label="Draft" />
+            <template v-if="doc.draft || !doc.translated" #end>
+              <span class="flex items-center gap-2">
+                <span v-if="!doc.translated" class="text-muted-foreground text-xs">
+                  Not translated
+                </span>
+                <span
+                  v-else
+                  class="size-2 rounded-full bg-amber-500"
+                  role="img"
+                  aria-label="Draft"
+                />
+              </span>
             </template>
           </PaneMenuItem>
           <p v-if="!loading && !rows.length" class="text-muted-foreground px-2 py-2 text-sm">

@@ -2,10 +2,16 @@ import { isPreviewMessage } from "../../../../../core/src/preview/runtime/messag
 import { onScopeDispose } from "vue";
 import { schema } from "@/shared/api";
 
-/** What the admin sends. `id` is `''` for a global. */
+/** What the admin sends. `id` is `''` for a global. `locale`: the language of a localized document. */
 export type AdminMessage =
-  | { type: "draft"; collection: string; id: string; data: Record<string, unknown> }
-  | { type: "saved"; collection: string; id: string }
+  | {
+      type: "draft";
+      collection: string;
+      id: string;
+      data: Record<string, unknown>;
+      locale?: string;
+    }
+  | { type: "saved"; collection: string; id: string; locale?: string }
   | { type: "mode"; edit: boolean }
   | { type: "highlight"; collection: string | null; id: string | null };
 

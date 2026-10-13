@@ -29,6 +29,9 @@ import {
   Pane,
   usePerspective,
   useAppBar,
+  useLocale,
+  useLocaleFromRoute,
+  localeLabel,
   type Perspective,
 } from "@/shared";
 
@@ -36,6 +39,8 @@ const route = useRoute();
 const { name, logo, icon } = useBrand();
 const tools = useAppBar();
 const { perspective, set } = usePerspective();
+useLocaleFromRoute();
+const { locales, defaultLocale, locale, select } = useLocale();
 const perspectives = [
   { value: "drafts", label: "Drafts" },
   { value: "published", label: "Published" },
@@ -104,6 +109,24 @@ providePanes(row);
             ><Icon name="globe" class="" /><span>Go to site</span></a
           >
         </Button>
+        <DropdownMenu v-if="locales.length">
+          <DropdownMenuTrigger as-child>
+            <Button variant="ghost" size="sm" class="gap-1.5 text-xs" aria-label="Language">
+              {{ locale?.toUpperCase() }}
+              <Icon name="chevron-down" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuRadioGroup
+              :model-value="locale"
+              @update:model-value="(l) => select(l as string)"
+            >
+              <DropdownMenuRadioItem v-for="l in locales" :key="l" :value="l">
+                {{ localeLabel(l) }}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <Button variant="ghost" size="sm" class="gap-1.5 text-xs">

@@ -8,7 +8,7 @@ import { focusKey } from "@/modules/documents/fields";
 import { useRefs } from "@/modules/documents/composables/useRefs";
 import DocPane from "@/modules/documents/components/DocPane.vue";
 import GlobalEdit from "@/modules/documents/views/GlobalEdit.vue";
-import { Icon } from "@/shared";
+import { Icon, useLocale } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 import PageDocuments, { type PageDocument } from "@/modules/preview/components/PageDocuments.vue";
 import PreviewPane from "@/modules/preview/components/PreviewPane.vue";
@@ -30,6 +30,17 @@ const entry = computed(() =>
   id.value ? schema.value.collections?.[name.value] : schema.value.globals?.[name.value],
 );
 const fields = computed<Fields>(() => entry.value?.fields ?? {});
+const { locale } = useLocale();
+// The language of a localized collection or global, for URLs and messages.
+const localeOf = (collection: string, global = false) =>
+  (global ? schema.value.globals?.[collection] : schema.value.collections?.[collection])?.localized
+    ? locale.value
+    : undefined;
+const active = computed(() => localeOf(name.value, !id.value));
+const saved = (collection: string, id: string, global = false) => {
+  const l = localeOf(collection, global);
+  send({ type: "saved", collection, id, ...(l && { locale: l }) });
+};
 const { refs, openAt, closeAt } = useRefs();
 
 const focus = ref<string | null>(null);
@@ -84,15 +95,20 @@ const send = usePreviewChannel(async (message: PageMessage) => {
 });
 watch(edit, (value) => send({ type: "mode", edit: value }));
 
+function previewUrl(data: Record<string, unknown>): Promise<string | null> {
+  const options = { locale: active.value || undefined };
+  return id.value
+    ? client.previewUrl(name.value, data, options)
+    : client.previewGlobalUrl(name.value, data, options);
+}
+
 // A failed request shows the same "no preview" state as a `null` URL.
 async function load() {
   const at = key.value;
   const data = draft.value ?? {};
   url.value = undefined;
   href.value = "";
-  const next = await (
-    id.value ? client.previewUrl(name.value, data) : client.previewGlobalUrl(name.value, data)
-  ).catch(() => null);
+  const next = await previewUrl(data).catch(() => null);
   if (at === key.value) url.value = safe(next);
 }
 // A new document loads its URL with its first form state. Typing never changes the `src`.
@@ -101,6 +117,8 @@ watch(key, () => {
   draft.value = undefined;
   send({ type: "highlight", collection: null, id: null });
 });
+// The form of the new language loads its own URL with its first state.
+watch(active, () => (draft.value = undefined));
 
 // The `?url=` page shows first, else the site root. Only a page of the site MAY load, so a link cannot frame another one.
 const start = typeof route.query.url === "string" ? safe(route.query.url) : null;
@@ -143,7 +161,12 @@ const broadcast = useDebounceFn(async () => {
   const data = await withMedia(fields.value, draft.value);
   if (n !== sent) return;
   // The form state holds Vue proxies, which `postMessage` cannot clone.
-  send({ type: "draft", ...at, data: JSON.parse(JSON.stringify(data)) });
+  send({
+    type: "draft",
+    ...at,
+    data: JSON.parse(JSON.stringify(data)),
+    ...(active.value && { locale: active.value }),
+  });
 }, 50);
 
 // A document without `preview`, like an author, is edited on the page that shows now.
@@ -191,7 +214,7 @@ function close() {
       handle="left"
       :grow="false"
       @change="change"
-      @saved="send({ type: 'saved', collection: name, id })"
+      @saved="saved(name, id)"
       @deleted="router.push('/presentation')"
     >
       <template #actions>
@@ -208,7 +231,7 @@ function close() {
       :open="openAt(i)"
       closable
       previewing
-      @saved="send({ type: 'saved', collection: r.collection, id: r.id })"
+      @saved="saved(r.collection, r.id)"
       @close="closeAt(i)"
       @deleted="closeAt(i)"
     />
@@ -223,7 +246,7 @@ function close() {
     handle="left"
     :grow="false"
     @change="change"
-    @saved="send({ type: 'saved', collection: name, id: '' })"
+    @saved="saved(name, '', true)"
   >
     <template #actions>
       <Button as-child variant="ghost" size="icon-sm" aria-label="Documents on this page">
