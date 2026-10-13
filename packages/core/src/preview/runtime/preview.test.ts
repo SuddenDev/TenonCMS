@@ -110,6 +110,35 @@ describe("preview", () => {
     expect(getDrafts()["posts:9"]).toEqual({ title: "N", locale: "de" });
   });
 
+  it("patches only drafts in the language of the page", async () => {
+    window.name = "integral-preview-posts:9";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    document.documentElement.lang = "de";
+    document.body.innerHTML = `<h1 data-cms="posts:9:title">Hallo</h1>`;
+    stop = preview({ admin: "https://admin.test/admin" });
+    await vi.dynamicImportSettled();
+    const send = (title: string, locale?: string) =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: "draft", collection: "posts", id: "9", data: { title }, locale },
+          origin: "https://admin.test",
+          source: opener as never,
+        }),
+      );
+    const h1 = () => document.querySelector("h1")!.textContent;
+    send("Hello", "en");
+    expect(h1()).toBe("Hallo");
+    send("Hallo Welt", "de");
+    expect(h1()).toBe("Hallo Welt");
+    send("Hallo Welt!");
+    expect(h1()).toBe("Hallo Welt!");
+    document.documentElement.lang = "de-AT";
+    send("Servus", "de");
+    expect(h1()).toBe("Servus");
+    document.documentElement.removeAttribute("lang");
+  });
+
   it("reports the documents on the page in page order, and again when they change", async () => {
     window.name = "integral-preview";
     const opener = { postMessage: vi.fn() };

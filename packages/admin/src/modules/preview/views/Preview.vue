@@ -37,6 +37,8 @@ const localeOf = (collection: string, global = false) =>
     ? locale.value
     : undefined;
 const active = computed(() => localeOf(name.value, !id.value));
+// The document and language the form edits. A request started for another one is dropped.
+const scope = computed(() => `${key.value}:${active.value ?? ""}`);
 const saved = (collection: string, id: string, global = false) => {
   const l = localeOf(collection, global);
   send({ type: "saved", collection, id, ...(l && { locale: l }) });
@@ -104,12 +106,12 @@ function previewUrl(data: Record<string, unknown>): Promise<string | null> {
 
 // A failed request shows the same "no preview" state as a `null` URL.
 async function load() {
-  const at = key.value;
+  const at = scope.value;
   const data = draft.value ?? {};
   url.value = undefined;
   href.value = "";
   const next = await previewUrl(data).catch(() => null);
-  if (at === key.value) url.value = safe(next);
+  if (at === scope.value) url.value = safe(next);
 }
 // A new document loads its URL with its first form state. Typing never changes the `src`.
 // Back on the list, the page stays where it is.
@@ -157,13 +159,14 @@ let sent = 0;
 const broadcast = useDebounceFn(async () => {
   if (!name.value || !draft.value) return;
   const n = ++sent;
-  const at = { collection: name.value, id: id.value };
+  const at = scope.value;
   const data = await withMedia(fields.value, draft.value);
-  if (n !== sent) return;
+  if (n !== sent || at !== scope.value) return;
   // The form state holds Vue proxies, which `postMessage` cannot clone.
   send({
     type: "draft",
-    ...at,
+    collection: name.value,
+    id: id.value,
     data: JSON.parse(JSON.stringify(data)),
     ...(active.value && { locale: active.value }),
   });

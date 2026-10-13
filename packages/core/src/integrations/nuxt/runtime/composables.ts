@@ -104,13 +104,17 @@ export function useIntegral() {
     const config = cached.value !== undefined ? cached.value : await localization(client);
     return config ? { ...options, locale: localeFromPath(route.path, config).locale } : options;
   }
+  // A read without a `locale` follows the route's prefix, so its key holds the route. Otherwise `/about` and
+  // `/de/about` would share one cached result.
+  const keyOf = (key: string, options: object) =>
+    `${key}:${JSON.stringify(options)}${"locale" in options ? "" : `@${route.path}`}`;
 
   return {
     find<K extends keyof Collections & string, const O extends FindOptions<typeof cms, K> = {}>(
       collection: K,
       options: Checked<O, Collections, Fields<K>, Depth> = {} as never,
     ) {
-      return load(collection, `${collection}:${JSON.stringify(options)}`, async () =>
+      return load(collection, keyOf(collection, options), async () =>
         client.find<K, O>(collection, (await withLocale(options)) as never),
       );
     },
@@ -121,7 +125,7 @@ export function useIntegral() {
     ) {
       return load(
         collection,
-        `${collection}:one:${JSON.stringify(options)}`,
+        keyOf(`${collection}:one`, options),
         async () =>
           (await client.findOne<K, O>(collection, (await withLocale(options)) as never)) ?? null,
       );
@@ -135,7 +139,7 @@ export function useIntegral() {
       id: string,
       options: Checked<O, Collections, Fields<K>, Depth, true, L> = {} as never,
     ) {
-      return load(collection, `${collection}:${id}:${JSON.stringify(options)}`, async () =>
+      return load(collection, keyOf(`${collection}:${id}`, options), async () =>
         client.findById<K, O>(collection, id, (await withLocale(options)) as never),
       );
     },
@@ -147,7 +151,7 @@ export function useIntegral() {
       name: K,
       options: Checked<O, Collections, Globals[K]["fields"], Depth, false, L> = {} as never,
     ) {
-      return load(name, `global:${name}:${JSON.stringify(options)}`, async () =>
+      return load(name, keyOf(`global:${name}`, options), async () =>
         client.getGlobal<K, O>(name, (await withLocale(options)) as never),
       );
     },

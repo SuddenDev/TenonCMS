@@ -87,7 +87,7 @@ only from each other.
 
 URLs come from two options. `permalink` is the public URL of a document, `preview` the page the admin's frame shows; `preview` defaults to `permalink`, and `/schema` reports `preview: true` when either is set. `permalinkUrl()` is `alternates`, `hreflang` and the language switch; it never uses a `preview` that differs. A function gets `(doc, { cms, locale })`. A template fills `{locale}` only with `routing: false`; with `routing`, the resolved `permalink` (also as the `preview` default) goes through `localizePath()`, and an explicit `preview` is used as it is. `POST …/preview-url?locale=` resolves in that locale (`urlLocale()` validates it; the default locale otherwise).
 
-The admin sends `locale` with `draft` and `saved` for a localized document. `merge()` in `merge-draft.ts` applies a draft only to reported data with the same `locale`, or to data without one, so a German draft never lands in the English page. The admin bar's Edit link adds `&locale=` from `<html lang>`, and the admin reads it into its language menu.
+The admin sends `locale` with `draft` and `saved` for a localized document. `merge()` in `merge-draft.ts` applies a draft only to reported data with the same `locale`, or to data without one, so a German draft never lands in the English page. `patch()` in `bind-elements.ts` applies the same rule to bound elements, with the page's `<html lang>` as its language (`de-AT` matches `de`; no `lang` takes any draft). The admin bar's Edit link adds `&locale=` from `<html lang>`, and the admin reads it into its language menu.
 
 ## Binding elements
 

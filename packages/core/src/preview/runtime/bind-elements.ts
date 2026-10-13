@@ -26,13 +26,22 @@ export function parseBinding(binding: string) {
 export function patch(el: Element) {
   const { collection, id, path } = parseBinding(el.getAttribute("data-cms") ?? "");
   const draft = getDrafts()[draftKey(collection, id)];
-  if (!draft) return;
+  if (!draft || !inPageLanguage(draft.locale)) return;
 
   const value = valueAt(draft, path);
   const attrs = el.getAttribute("data-cms-attr");
   if (attrs) patchAttributes(el, attrs, value);
   else if (typeof value === "string" || typeof value === "number" || value === null)
     patchText(el, value === null ? "" : String(value));
+}
+
+// A page MAY switch language while the admin edits another one. `<html lang>` names the page's language; without
+// it, any draft applies.
+function inPageLanguage(locale: unknown) {
+  const lang = document.documentElement.lang.toLowerCase();
+  if (typeof locale !== "string" || !lang) return true;
+  const l = locale.toLowerCase();
+  return lang === l || lang.startsWith(`${l}-`);
 }
 
 // From the value's keys when it is an object (a media document), else from the value itself.
