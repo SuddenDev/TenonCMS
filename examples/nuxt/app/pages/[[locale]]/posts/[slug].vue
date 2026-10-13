@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { edit } from "integral-cms/preview";
 
+// `[[locale]]` is empty for the default locale (`/posts/x`) and the locale code otherwise (`/de/posts/x`).
+// `path` drops a valid prefix only, so `/xx/posts/x` keeps it and is a 404.
 const route = useRoute();
+const slug = String(route.params.slug);
+const { path } = useLocale();
 const { data: post } = await useIntegral().findOne("posts", {
-  where: { slug: String(route.params.slug) },
+  where: { slug },
+  alternates: true,
   populate: true,
   depth: 1,
 });
-if (!post.value)
+useAlternates(() => post.value?.alternates);
+if (!post.value || path.value !== `/posts/${slug}`)
   throw createError({
     statusCode: 404,
     statusMessage: "Post not found",

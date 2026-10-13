@@ -14,5 +14,6 @@ export default defineCms({
   media: { storage: local({ dir: uploadsDir }), images: { provider: ipx({ prerender: true }) } },
   plugins: [ExamplePlugin({ renderer: "vue" })],
   database: { url: databaseUrl },
+  localization: { locales: ["en", "de"], defaultLocale: "en", fallback: false },
   secret: cmsSecret,
 });

@@ -2,14 +2,16 @@
 import { seoMeta } from "integral-cms/client";
 import { edit } from "integral-cms/preview";
 
-// `index.vue` and `posts/[slug].vue` win over this route, so a CMS page at `/` never shows.
-const route = useRoute();
-const path = `/${[route.params.path ?? []].flat().join("/")}`;
+// `index.vue` and `[[locale]]/posts/[slug].vue` win over this route, so a CMS page at `/` never shows.
+// `path` is the route's path without the locale prefix; `useIntegral()` reads in the route's locale.
+const { path } = useLocale();
 const cms = useIntegral();
 const { data: page } = await cms.findOne("pages", {
-  where: { path },
+  where: { path: path.value },
+  alternates: true,
   populate: { seo: { image: true } },
 });
+useAlternates(() => page.value?.alternates);
 if (!page.value)
   throw createError({ statusCode: 404, statusMessage: "Page not found", fatal: true });
 
@@ -25,7 +27,14 @@ useSeoMeta({
   ogImage: meta.image,
 });
 useHead({
-  link: meta.canonical ? [{ rel: "canonical", href: meta.canonical }] : [],
+  link: [
+    ...(meta.canonical ? [{ rel: "canonical" as const, href: meta.canonical }] : []),
+    ...meta.alternates.map((a) => ({
+      rel: "alternate" as const,
+      hreflang: a.hreflang,
+      href: a.href,
+    })),
+  ],
   meta: meta.verification,
 });
 </script>

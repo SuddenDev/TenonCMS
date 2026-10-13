@@ -2,6 +2,7 @@ import { defineCollection, ValidationError } from "integral-cms";
 
 export const posts = defineCollection({
   label: "Posts",
+  localized: true,
   titleField: "title",
   permalink: "/posts/{slug}",
   fields: {
@@ -29,7 +30,7 @@ export const posts = defineCollection({
       required: true,
       condition: { featured: true },
     },
-    hero: { type: "image", folder: "posts", image: { sizes: [480, 960, 1440] } },
+    hero: { type: "image", localized: false, folder: "posts", image: { sizes: [480, 960, 1440] } },
     body: { type: "textarea" },
   },
   hooks: {
