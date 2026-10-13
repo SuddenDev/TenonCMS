@@ -3,6 +3,7 @@ import { page, seo } from "integral-cms/presets";
 
 export const pages = defineCollection({
   label: "Pages",
+  localized: true,
   titleField: "title",
   fields: {
     ...page.fields,
@@ -11,5 +12,5 @@ export const pages = defineCollection({
     hero: { type: "image" },
   },
   hooks: page.hooks,
-  preview: page.preview,
+  permalink: page.permalink,
 });

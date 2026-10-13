@@ -1,14 +1,17 @@
 ---
 import { seoMeta } from "integral-cms";
 import { edit } from "integral-cms/preview";
+import LocaleSwitch from "../components/LocaleSwitch.astro";
 
 export const prerender = false;
 
 // Static routes like `/` and `/about` win over this one, so CMS pages at those paths never show.
-const path = `/${Astro.params.path ?? ""}`;
-const { integral: cms } = Astro.locals;
+// `locals.path` is the URL path without the locale prefix.
+const { integral: cms, locale, path } = Astro.locals;
 const page = await cms.findOne("pages", {
   where: { path },
+  locale,
+  alternates: true,
   populate: { hero: true, seo: { image: true } },
   select: {
     title: true,
@@ -16,20 +19,28 @@ const page = await cms.findOne("pages", {
     body: true,
     seo: true,
     hero: true,
+    locale: true,
+    alternates: true,
   },
 });
 if (!page) return new Response("Not found", { status: 404 });
-const [general, seo] = await Promise.all([cms.getGlobal("general"), cms.getGlobal("seo")]);
+const [general, seo] = await Promise.all([
+  cms.getGlobal("general", { locale }),
+  cms.getGlobal("seo", { locale }),
+]);
 const meta = seoMeta(page, { general, seo });
 ---
 
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <title>{meta.title}</title>
     {meta.description && <meta name="description" content={meta.description} />}
     {meta.noindex && <meta name="robots" content="noindex" />}
     {meta.canonical && <link rel="canonical" href={meta.canonical} />}
+    {meta.alternates.map((a) => (
+      <link rel="alternate" hreflang={a.hreflang} href={a.href} />
+    ))}
     {meta.image && <meta property="og:image" content={meta.image} />}
     {meta.verification.map((tag) => (
       <meta name={tag.name} content={tag.content} />
@@ -37,6 +48,7 @@ const meta = seoMeta(page, { general, seo });
   </head>
   <body>
     <a href="/">← Home</a>
+    {locale && <LocaleSwitch locale={locale} path={path} alternates={page.alternates} />}
     <h1 data-cms={edit("pages", page.id, "title")}>{page.title}</h1>
     {page.hero && (
       <img

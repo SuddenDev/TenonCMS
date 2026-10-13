@@ -3,8 +3,9 @@ import { defineCollection, ValidationError } from "integral-cms";
 export const posts = defineCollection({
   label: "Posts",
   nav: { group: "Blog", icon: "newspaper" },
+  localized: true,
   titleField: "title",
-  preview: "/posts/{slug}",
+  permalink: "/posts/{slug}",
   fields: {
     title: {
       type: "text",
@@ -21,7 +22,7 @@ export const posts = defineCollection({
       description: "Lowercase letters, digits and dashes. Filled from the title when empty.",
     },
     author: { type: "relation", collection: "authors", label: "Author" },
-    publishedAt: { type: "date", label: "Published at" },
+    // publishedAt: { type: "date", label: "Published at" },
     category: { type: "select", options: ["news", "guide"], default: "news" },
     featured: { type: "boolean" },
     featuredNote: {
@@ -30,7 +31,7 @@ export const posts = defineCollection({
       required: true,
       condition: { featured: true },
     },
-    hero: { type: "image", folder: "posts", image: { sizes: [480, 960, 1440] } },
+    hero: { type: "image", localized: false, folder: "posts", image: { sizes: [480, 960, 1440] } },
     body: { type: "textarea" },
   },
   hooks: {

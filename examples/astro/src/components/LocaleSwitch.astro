@@ -1,0 +1,26 @@
+---
+import { switchTarget } from "integral-cms";
+import cms from "../../integral.config";
+
+interface Props {
+  locale: string;
+  /** Current path without the locale prefix. */
+  path: string;
+  alternates?: Record<string, string> | null;
+}
+
+const { locale, path, alternates } = Astro.props;
+const l = cms.localization!;
+---
+
+<nav aria-label="Language">
+  {l.locales.map((code) =>
+    code === locale ? (
+      <strong>{code}</strong>
+    ) : (
+      <a href={switchTarget(l, path, code, alternates)} hreflang={code}>
+        {code}
+      </a>
+    ),
+  )}
+</nav>

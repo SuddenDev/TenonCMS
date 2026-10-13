@@ -3,7 +3,7 @@ import { defineCollection, ValidationError } from "integral-cms";
 export const posts = defineCollection({
   label: "Posts",
   titleField: "title",
-  preview: "/posts/{slug}",
+  permalink: "/posts/{slug}",
   fields: {
     title: {
       type: "text",

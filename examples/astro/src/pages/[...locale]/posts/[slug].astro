@@ -1,26 +1,34 @@
 ---
-import type { InferGetStaticPropsType } from "astro";
+import { seoMeta } from "integral-cms";
 import { edit } from "integral-cms/preview";
-import cms from "../../../integral.config";
+import LocaleSwitch from "../../../components/LocaleSwitch.astro";
 
-// Built once per post. Edits show after the next build; images stay live, served by /api/cms/media.
-export const prerender = true;
+export const prerender = false;
 
-export async function getStaticPaths() {
-  const posts = await cms.find("posts");
-  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
-}
-
-const { post } = Astro.props as InferGetStaticPropsType<typeof getStaticPaths>;
+// `[...locale]` is empty for the default locale (`/posts/x`) and the locale code otherwise (`/de/posts/x`).
+// `locals.path` drops a valid prefix only, so `/xx/posts/x` keeps it and is a 404.
+const { integral: cms, locale, path } = Astro.locals;
+const slug = Astro.params.slug!;
+const post =
+  path === `/posts/${slug}`
+    ? await cms.findOne("posts", { where: { slug }, locale, alternates: true })
+    : undefined;
+if (!post) return new Response("Not found", { status: 404 });
+const general = await cms.getGlobal("general", { locale });
+const meta = seoMeta(post, { general });
 ---
 
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <title>{post.title}</title>
+    {meta.alternates.map((a) => (
+      <link rel="alternate" hreflang={a.hreflang} href={a.href} />
+    ))}
   </head>
   <body>
     <a href="/">← Home</a>
+    {locale && <LocaleSwitch locale={locale} path={path} alternates={post.alternates} />}
     <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
     {post.author && (
       <p style="color:blue" data-cms={edit("authors", post.author.id, "name")}>

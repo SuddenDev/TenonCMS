@@ -6,5 +6,5 @@ export const pages = defineCollection({
   titleField: "title",
   fields: { ...page.fields, ...seo.fields, body: { type: "textarea" } },
   hooks: page.hooks,
-  preview: page.preview,
+  permalink: page.permalink,
 });

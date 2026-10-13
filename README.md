@@ -527,7 +527,7 @@ const doc = await cms.findOne("pages", {
   where: { path: "/about/team" },
   populate: { seo: { image: true } },
 });
-const { title, description, noindex, canonical, image, verification } = seoMeta(doc, {
+const { title, description, noindex, canonical, alternates, image, verification } = seoMeta(doc, {
   general,
   seo,
 });
@@ -539,7 +539,8 @@ The second argument is optional. It takes the [settings](#settings) globals `gen
 - `title` is `seo.title`, or the page's `title` when it is empty, then the separator (default `·`) and the site title. Nothing is stored, so the fallback follows title changes. Without a site title, it is only the page title.
 - `description` is `seo.description` or `undefined`. There is no fallback, so pages do not share one description.
 - `noindex` is `true` when the page's or the site's `seo.noindex` is.
-- `canonical` is the site `url` plus the page's `path`. `undefined` unless both exist.
+- `canonical` is the site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](#localization)). `undefined` unless one exists.
+- `alternates` is a list of `{ hreflang, href }` for the `hreflang` tags, from the read option `alternates: true`. Empty without it.
 - `image` is the page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Only a populated image counts, so populate it.
 - `verification` is a list of `{ name, content }` meta tags for the filled `google` and `bing` codes.
 - `seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `integral-cms`. In browser code, import them from `integral-cms/client`, which pulls no server code.
@@ -622,24 +623,24 @@ defineCms({
 
 ### Live preview
 
-`preview` on a collection or global tells the admin where a document renders. The admin opens that page next to the form and pushes every unsaved edit into it.
+`permalink` on a collection or global is the template of the document's public URL; your routes MUST serve it. `preview` defaults to it and tells the admin where a document renders. The admin opens that page next to the form and pushes every unsaved edit into it. Set `preview` only when the iframe shows another page.
 
 In the admin, "Visual Editor" in the top bar opens `/presentation`: the site in a frame, with edit mode on. A click on a bound element opens its document next to the page (`/presentation/collections/:name/:id`, `/presentation/globals/:name`); the eye button on a document opens the same view. The perspective menu in the top bar switches the admin and its previews between drafts and published documents.
 
 ```ts
 posts: {
   // Placeholders walk into groups and through one relation. A missing value means no preview.
-  preview: "/{category.slug}/{slug}",
+  permalink: "/{category.slug}/{slug}",
   fields: { ... },
 },
 notes: {
   // Or a function of the unsaved form state and the local API. `null`: no preview.
-  preview: async (doc, { cms }) => (doc.slug ? `/notes/${doc.slug}` : null),
+  permalink: async (doc, { cms }) => (doc.slug ? `/notes/${doc.slug}` : null),
   fields: { ... },
 },
 ```
 
-The pages preset has `page.preview` (`"{path}"`): add `preview: page.preview` to the collection. A placeholder that names no stored field throws at startup.
+The pages preset has `page.permalink` (`"{path}"`): add `permalink: page.permalink` to the collection. A placeholder that names no stored field throws at startup.
 
 On the site, mark what a field renders with `edit()` and start the runtime with `preview()`. It is safe on every page: visitors without a session see nothing.
 
@@ -777,6 +778,136 @@ A draft save runs defaults, slugs, `beforeValidate` and `beforeChange`, and chec
 Over HTTP, with a session: `POST /api/cms/collections/:name/draft`, `PUT /api/cms/collections/:name/:id/draft`, `POST /api/cms/collections/:name/:id/publish`, `DELETE /api/cms/collections/:name/:id/draft` (204 when it deleted), `PUT /api/cms/globals/:name/draft`, `POST /api/cms/globals/:name/publish` and `DELETE /api/cms/globals/:name/draft`. The client has `createDraft`, `updateDraft`, `publish`, `discard`, `setGlobalDraft`, `publishGlobal` and `discardGlobal`.
 
 The preview cookie (`integral-preview`) holds the perspective: `drafts` or `published`. `POST /api/cms/preview` sets it, with an optional body `{ "perspective": "published" }` (default `drafts`), and `DELETE /api/cms/preview` clears it; both need a session. It is not `HttpOnly`, so the preview runtime can read it. In the browser, call `client.preview.enter(perspective?)` and `client.preview.exit()`. HTTP reads follow the same rule: drafts only with `integral-preview=drafts` and a session, so the cookie alone shows nothing.
+
+### Localization
+
+Editors write a document in several languages. Each locale has its own draft and publish state. Fields that do not change per language are stored once.
+
+```ts
+defineCms({
+  localization: {
+    locales: ["en", "de"],
+    defaultLocale: "en",
+    // Default true. A missing value or locale reads as the default locale's.
+    fallback: true,
+    // Default { prefix: "except-default" }: /about and /de/about. "always": /en/about too. `false`: you route on your own.
+    routing: { prefix: "except-default" },
+  },
+  collections: {
+    posts: defineCollection({
+      // Fields are localized unless they set `localized: false`.
+      localized: true,
+      permalink: "/posts/{slug}",
+      fields: {
+        title: { type: "text", required: true },
+        slug: { type: "slug", from: "title", required: true },
+        hero: { type: "image", localized: false }, // shared by all locales
+      },
+    }),
+  },
+});
+```
+
+- `localized: true` on a collection or global turns it on. It needs `localization`, or startup throws. The `media` collection MUST NOT be localized.
+- `localized: false` on a field shares it. A group is localized as a whole: its children MUST NOT set `localized`. Joins are never stored, so they are never localized.
+- Relation, image and file fields MAY be localized.
+- With `localization` set, the default `general` and `seo` globals are localized.
+- `defaultLocale` MUST be one of `locales`; `locales` MUST NOT be empty or hold duplicates.
+- Collections and globals without `localized` behave as before and ignore `locale`. A `locale` without `localization` throws a `ValidationError`.
+
+#### Reads
+
+```ts
+await cms.find("posts", { locale: "de" });
+await cms.findOne("posts", { where: { slug: "hallo" }, locale: "de", fallback: false });
+await cms.getGlobal("general", { locale: "de" });
+// HTTP: GET /api/cms/collections/posts?locale=de&fallback=false
+```
+
+- `locale` defaults to `defaultLocale`, `fallback` to the config. An unknown locale throws a `ValidationError` (400).
+- With `fallback`, a missing value (or `null`) reads as the default locale's, and a document published only in the default locale is still visible. Without it, a document needs a published version in the requested locale.
+- `where` filters and `unique` follow the same fallback: a filter matches the value the read returns.
+- `populate` reads related documents in the same locale. Hooks and their nested `cms` calls inherit it; every hook gets `locale`.
+- Documents of a localized collection carry `locale` (the locale of the read), `locales` (the locales with a version: published ones, or every one with a row in the drafts perspective) and `sharedDraft` (the shared fields have a pending draft). Globals get the same three. `select` lists them like `id`.
+- `alternates: true` adds `alternates` to a document, one URL per published locale and `"x-default"`, the default locale's. It needs a `permalink` on the collection, costs one batched read per locale and is typed only when the option is set.
+
+#### Writes, drafts and publishing
+
+```ts
+const post = await cms.create("posts", { title: "Hello" }, { locale: "en", draft: true });
+await cms.update("posts", post.id, { title: "Hallo" }, { locale: "de", draft: true });
+await cms.publish("posts", post.id, { locale: "de" });
+await cms.discard("posts", post.id, { locale: "de" }); // only the German draft
+await cms.discard("posts", post.id, { all: true }); // every draft, shared fields included
+```
+
+- Writes default to `defaultLocale`. A document MAY be created in any locale.
+- Defaults, hooks and validation run on the whole document: the shared fields plus the fields of the written locale.
+- Shared fields live on the document, localized ones in one row per locale. A draft is saved per locale. A publish publishes that locale and the pending shared fields, so `required` is checked for the published locale only.
+- `discard` drops one locale's draft and keeps the shared draft, because another locale MAY have edited it. A locale that was never published loses its row, and a never-published document is deleted. `{ all: true }` ignores `locale`.
+- Over HTTP, every write route takes `?locale=`; `DELETE …/draft?all=true` drops all drafts.
+
+Copy the fields of one locale into another as a draft, or delete a translation:
+
+```ts
+await cms.copyLocale("posts", id, { from: "en", to: "de" }); // replaces the pending German draft
+await cms.removeLocale("posts", id, "de"); // the default locale and the last locale stay
+await cms.copyGlobalLocale("general", { from: "en", to: "de" });
+await cms.removeGlobalLocale("general", "de");
+// HTTP: POST /collections/:name/:id/locales/:to/copy { "from": "en" }, DELETE /collections/:name/:id/locales/:locale
+```
+
+References that point to a document are found in locale rows too, so `onDelete` (`restrict`, `set-null`, `cascade`) and media usage see every locale.
+
+#### Changing the config
+
+`localized` options and `defaultLocale` MAY change later. On the first database access, the CMS compares the localized fields with the last run and moves the values: shared to the default locale's row, or back. Other locales keep their rows, and reads ignore their values while a field is shared, so switching back restores them. Each move is logged, for example `moved posts.title to locale rows (12 documents)`. A changed `defaultLocale` moves nothing and logs a warning with the number of documents that have no row in it. A locale removed from `locales` keeps its rows; reads ignore them.
+
+#### URLs, `hreflang` and the language switch
+
+`permalink` is the template of a document's public URL, with the same forms as `preview`. Your routes MUST serve it. With `routing`, keep templates free of the locale: the CMS adds the prefix (`/posts/{slug}` becomes `/de/posts/hallo`). With `routing: false`, a template MAY use `{locale}`.
+
+Pure helpers, from `integral-cms` and `integral-cms/client`:
+
+```ts
+import { localeFromPath, localizePath, switchTarget } from "integral-cms/client";
+
+localeFromPath("/de/about", localization); // { locale: "de", path: "/about" }
+localizePath("/about", "de", localization); // "/de/about"
+switchTarget(localization, "/about", "de", page.alternates); // page.alternates.de, else "/de/about"
+```
+
+`localization` is `cms.localization` on the server. In the browser, `await client.localization()` fetches the public `GET /api/cms/localization` once per client (`null` without `localization`), so the browser never imports `integral.config.ts`.
+
+`seoMeta()` turns `alternates` into `hreflang` tags: `alternates` is a list of `{ hreflang, href }`, absolute against the site `url`, and `canonical` is the URL of the page's own locale.
+
+```astro
+---
+const { canonical, alternates } = seoMeta(page, { general, seo });
+---
+<html lang={Astro.locals.locale}>
+  <head>
+    <link rel="canonical" href={canonical} />
+    {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
+  </head>
+</html>
+```
+
+- **Astro**: the middleware sets `Astro.locals.locale` and `Astro.locals.path` (the path without the prefix) from the URL. Read with `{ where: { path: Astro.locals.path }, locale: Astro.locals.locale, alternates: true }`. The catch-all route serves prefixed URLs as they are. Other routes MUST exist for the prefixed URLs too, for example under `src/pages/[...locale]/`; the integration adds no route folder.
+- **Nuxt**: `useLocale()` returns `locales`, `defaultLocale`, `locale`, `path`, `localePath(path, locale?)` and `switchLocale(locale)`. `useAlternates(() => page.value?.alternates)` registers the page's translations, so `switchLocale()` leads to them. `useIntegral()` reads in the route's locale unless the options set one.
+- **TanStack Start and others**: `client.localization()` plus the helpers above.
+
+#### Admin
+
+When `localization` is set, the top bar has a language menu next to the perspective menu. The choice is kept in the browser and reloads nothing; an admin URL with `?locale=` sets it. Collections and globals that are not localized ignore it.
+
+- The form edits the active language. Empty localized fields show the default language's value as a placeholder, and shared fields carry a "Same in all languages" marker.
+- The document header shows the active language's state (Published, Draft, Not translated) and a row of language codes with status dots; a click switches the language.
+- The "…" menu has "Copy from…", "Copy to…", "Remove translation" and "Discard all changes". Each asks first.
+- Lists show the active language with fallback and mark rows that have no translation.
+- Live preview opens the page of the active language, and the admin bar's Edit link on a site page carries the page's `<html lang>`.
+
+The `redirects` plugin has a `locale` field. A redirect without one applies to every locale, `from` is unique per locale, and `resolveRedirect(cms, path, locale?)` and `GET …/redirects/lookup?path=&locale=` prefer the locale's redirect.
 
 ### Media
 
@@ -1175,7 +1306,7 @@ A plugin is an object from `definePlugin()`:
 | `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set                                                         |
 | `admin`            | Fields, pages and admin bar `items`, like the host's [`admin`](#customize-the-admin). A plugin sets no bar `position` and never turns the bar off. Merged before the host's, in plugin order |
 
-Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `admin`, `auth`, `collections`, `globals`, `media`, `preview` and `schema` are reserved names.
+Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` 409, anything else 500. `admin`, `auth`, `collections`, `globals`, `localization`, `media`, `preview` and `schema` are reserved names.
 
 The redirects plugin registers its tools page this way. Pages call plugin routes with `client.request()`. A plugin that ships browser code MUST keep `clientRef()` calls literal and keep `integral-cms/admin` external, so the adapters can find them.
 
@@ -1270,7 +1401,7 @@ Before you publish, run `npm pack`, install the tarball in one of the examples a
 
 `example({ admin: '/admin' })` is a starting point to copy, not a feature. It uses every plugin option once: a `quotes` collection with a custom `rating` field, a `quoteSettings` global, a root hook, both middlewares, `GET /api/cms/example/random` (a random quote as text), `GET /api/cms/example/quotes.csv` for admins, a stats page with a `load` and a `pageHeader`, a detail page, and four bar items (a link, a loaded dropdown, a button and a custom control). Its browser code exists in plain DOM, Vue and React; `renderer: 'html' | 'vue' | 'react'` picks one for the field and pages. Vue and React are bundled into its admin chunks, so hosts install neither. Its `admin` option is the admin path, for the bar links.
 
-`redirects({ collections: ['pages'], field: 'path' })` adds the `redirects` collection (`from`, `to`, `permanent`), a hook that creates a redirect when a listed document's path changes and keeps chains one hop long, `GET /api/cms/redirects/lookup?path=` for everyone, `POST /api/cms/redirects/import` (an array of redirects) for admins, and a "Redirect tools" admin page to test paths and import.
+`redirects({ collections: ['pages'], field: 'path', locales: ['en', 'de'] })` adds the `redirects` collection (`from`, `to`, `permanent`, `locale`; `locales` makes `locale` a dropdown, else it is free text), a hook that creates a redirect when a listed document's path changes and keeps chains one hop long, `GET /api/cms/redirects/lookup?path=` (with `&locale=` for a locale, see [Localization](#localization)) for everyone, `POST /api/cms/redirects/import` (an array of redirects) for admins, and a "Redirect tools" admin page to test paths and import.
 
 ## Environment and deployment
 
@@ -1311,6 +1442,7 @@ Working:
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
 - Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
 - `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `breadcrumbs()` / `slugify()`
+- Content localization: per-collection `localized`, per-locale drafts and publishing, fallback, `permalink`, `hreflang`, a language menu in the admin (see [Localization](#localization))
 - Media library: chunked uploads to the local disk or S3/R2, folders, `image` and `file` fields, responsive images through IPX or Cloudflare, media hooks
 - Plugins with collections, globals, root hooks, routes and admin registrations (fields, pages, bar items); `integral-cms/plugins/redirects`, and `integral-cms/plugins/example` to copy from
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
@@ -1319,7 +1451,7 @@ Working:
 
 Roadmap, roughly in order:
 
-1. Live preview: `preview` per collection, iframe in the editor (in progress: core done, see [Live preview](#live-preview))
+1. Live preview: `permalink` / `preview` per collection, iframe in the editor (in progress: core done, see [Live preview](#live-preview))
 2. Drafts and published versions
 3. ~~Media uploads with a storage adapter (local disk, S3/R2)~~ Done, see [Media](#media)
 4. Rich text (format still open: Tiptap JSON or Markdown)

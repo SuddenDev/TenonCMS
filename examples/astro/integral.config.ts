@@ -7,6 +7,7 @@ import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
 
 export default defineCms({
+  localization: { locales: ["en", "de"], defaultLocale: "en", fallback: false },
   collections: { posts, authors, pages },
   globals: {
     footer: defineGlobal({
@@ -16,7 +17,7 @@ export default defineCms({
       fields: { copyright: { type: "text" } },
     }),
   },
-  plugins: [RedirectsPlugin(), ExamplePlugin({ renderer: "html" })],
+  plugins: [RedirectsPlugin({ locales: ["en", "de"] }), ExamplePlugin({ renderer: "html" })],
   database: { url: DATABASE_URL },
   secret: CMS_SECRET,
   site: SITE_URL,
