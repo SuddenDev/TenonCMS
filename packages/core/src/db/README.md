@@ -14,6 +14,8 @@ A localized collection or global reads with a `Loc` (`document-sql.ts`): the req
 
 A joined query reads two tables with the same column names, so conditions and `ORDER BY` on `cms_documents` MUST be qualified (`cms_documents.created_at`, `cms_documents.id`). `jsonAt(path, drafts, loc)` reads a localized key as `COALESCE(requested, default)` with fallback, so a filter matches the value a read returns.
 
+`holdsAt(source, path, many, id)` asks whether a relation at a `Step[]` path in a JSON column holds `id`. Each array or blocks step adds one nested `json_each` over the items, filtered by `blockType` for a block; a `many` relation adds one more. JSON paths, block names and the id are parameters. `referencingDocs()`, `referencingGlobal()` and `referencingLocales()` (on `l.data` and `l.draft`) use it.
+
 ## Files
 
 | Path                           | Responsibility                                                                                      |
@@ -26,7 +28,7 @@ A joined query reads two tables with the same column names, so conditions and `O
 | `migrations/cms.ts`            | CMS migration keys/bodies and Kysely migrator. Shipped migrations MUST NOT change.                  |
 | `migrations/migrate.ts`        | Run CMS migrations, then better-auth migrations.                                                    |
 | `migrations/sync-localized.ts` | `syncLocalized()`: moves values between shared data and locale rows when the localized keys change. |
-| `queries/document-sql.ts`      | Shared perspective, JSON, row-column and ID expressions.                                            |
+| `queries/document-sql.ts`      | Shared perspective, JSON, row-column and ID expressions, and `holdsAt()` for reference scans.       |
 | `queries/documents/`           | Find, load, batched ID reads, insert, update and delete.                                            |
 | `queries/globals/`             | Load and publish globals.                                                                           |
 | `queries/drafts/`              | Insert/save/discard pending document and global versions.                                           |

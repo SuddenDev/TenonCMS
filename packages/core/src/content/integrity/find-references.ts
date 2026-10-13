@@ -1,6 +1,6 @@
 import { type Database } from "../../db/types.ts";
 import { type RefField, type Schema } from "../../schema/index.ts";
-import { relationPaths } from "../../schema/traversal/relation-paths.ts";
+import { type Step, relationPaths } from "../../schema/traversal/relation-paths.ts";
 import { targetOf } from "../../schema/traversal/reference-fields.ts";
 import { referencingDocs } from "../../db/queries/references/referencing-documents.query.ts";
 import { referencingGlobal } from "../../db/queries/references/referencing-global.query.ts";
@@ -18,7 +18,7 @@ export type Ref = {
   /** Whether the reference is in the pending draft of the locale row. */
   draft?: boolean;
   data: Record<string, any>;
-  path: string[];
+  path: Step[];
   field: RefField;
 };
 
@@ -61,15 +61,8 @@ export async function references(
     for (const { path, field } of relationPaths(c.fields)) {
       if (targetOf(field) !== collection) continue;
 
-      if (keys.includes(path[0])) {
-        const found = await referencingLocales(
-          db,
-          DOCUMENT_LOCALES,
-          name,
-          path.join("."),
-          field.many,
-          id,
-        );
+      if (keys.includes(path[0] as string)) {
+        const found = await referencingLocales(db, DOCUMENT_LOCALES, name, path, field.many, id);
         for (const r of found) {
           const at = { collection: name, id: r.owner, locale: r.locale, path, field };
           if (r.inData) add(at, r.data);
@@ -78,7 +71,7 @@ export async function references(
         continue;
       }
 
-      const rows = await referencingDocs(db, name, path.join("."), field.many, id);
+      const rows = await referencingDocs(db, name, path, field.many, id);
       for (const r of rows) add({ collection: name, id: r.id, path, field }, r.data);
     }
   }
@@ -88,15 +81,8 @@ export async function references(
     for (const { path, field } of relationPaths(g.fields)) {
       if (targetOf(field) !== collection) continue;
 
-      if (keys.includes(path[0])) {
-        const found = await referencingLocales(
-          db,
-          GLOBAL_LOCALES,
-          name,
-          path.join("."),
-          field.many,
-          id,
-        );
+      if (keys.includes(path[0] as string)) {
+        const found = await referencingLocales(db, GLOBAL_LOCALES, name, path, field.many, id);
         for (const r of found) {
           const at = { global: name, locale: r.locale, path, field };
           if (r.inData) add(at, r.data);
@@ -105,7 +91,7 @@ export async function references(
         continue;
       }
 
-      const json = await referencingGlobal(db, name, path.join("."), field.many, id);
+      const json = await referencingGlobal(db, name, path, field.many, id);
       if (json) add({ global: name, path, field }, json);
     }
   }

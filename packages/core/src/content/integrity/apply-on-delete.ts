@@ -3,6 +3,7 @@ import { type Schema } from "../../schema/index.ts";
 import { ConflictError } from "../../errors.ts";
 import { type Ref, owner, references, row } from "./find-references.ts";
 import { DOCUMENT_LOCALES, GLOBAL_LOCALES } from "../../db/queries/document-sql.ts";
+import { holdersAt } from "../../schema/traversal/holders-at.ts";
 import { saveLocaleDraft } from "../../db/queries/locales/save-locale-draft.query.ts";
 import type { Kysely } from "kysely";
 
@@ -63,13 +64,15 @@ function conflict(blocking: Ref[]) {
 }
 
 // References of one stored row share one `data` object, so each row is written once with all its edits.
+// Every item that holds the id is cleared; the items stay.
 // A pending draft of a locale row is rewritten without hooks, as a draft save runs none of the write checks.
 async function clear(db: Kysely<Database>, refs: Ref[], id: string, effects: Effects) {
-  for (const r of refs) {
-    const parent = r.path.slice(0, -1).reduce<any>((o, k) => o?.[k], r.data);
-    const key = r.path.at(-1)!;
-    parent[key] = r.field.many ? parent[key].filter((x: string) => x !== id) : null;
-  }
+  for (const r of refs)
+    for (const { parent, key } of holdersAt(r.data, r.path)) {
+      const value = parent[key];
+      if (r.field.many && Array.isArray(value)) parent[key] = value.filter((x) => x !== id);
+      else if (value === id) parent[key] = null;
+    }
 
   for (const r of new Map(refs.map((r) => [row(r), r])).values()) {
     if (r.draft) {

@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { type StoredField, type GroupField } from "./index.ts";
+import { type StoredField, type GroupField, type ArrayField, type BlocksField } from "./index.ts";
 import { textSchema } from "./text.ts";
 import { dateSchema } from "./date.ts";
 import { numberSchema } from "./number.ts";
@@ -10,11 +10,14 @@ import { relationSchema } from "./relation.ts";
 import { customSchema } from "./custom.ts";
 
 /**
- * Picks the validator of one stored field that is not a group.
+ * Picks the validator of one stored field that is not a group, an array or a blocks field.
  * @param on Whether the field's condition matches. When `false`, only the type is checked.
  * @returns The field's zod schema, without `optional` or `nullable`.
  */
-export function fieldSchema(field: Exclude<StoredField, GroupField>, on: boolean): z.ZodType {
+export function fieldSchema(
+  field: Exclude<StoredField, GroupField | ArrayField | BlocksField>,
+  on: boolean,
+): z.ZodType {
   switch (field.type) {
     case "text":
     case "textarea":

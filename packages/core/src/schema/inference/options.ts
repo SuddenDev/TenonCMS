@@ -16,22 +16,29 @@ export type PopulateOf<Options, DefaultDepth extends number> = Options extends {
 /** The select spec of `Options`. `true` selects everything. */
 export type SelectOf<Options> = Options extends { select: infer Spec extends object } ? Spec : true;
 
-/** Paths a `populate` object may name: groups, relations and joins, nested along their targets. Images and files are leaves. */
+/**
+ * Paths a `populate` object may name: groups, arrays, blocks by block name, relations and joins, nested along their
+ * targets. Images and files are leaves.
+ */
 type PopulateField<Collections, FieldType> = FieldType extends {
-  type: "group";
+  type: "group" | "array";
   fields: infer Group extends Fields;
 }
   ? true | Populate<Collections, Group>
-  : FieldType extends { collection: infer Collection }
-    ? true | Populate<Collections, FieldsOf<Collections, Collection>>
-    : true;
+  : FieldType extends {
+        type: "blocks";
+        blocks: infer Blocks extends Record<string, { fields: Fields }>;
+      }
+    ? true | { [K in keyof Blocks]?: true | Populate<Collections, Blocks[K]["fields"]> }
+    : FieldType extends { collection: infer Collection }
+      ? true | Populate<Collections, FieldsOf<Collections, Collection>>
+      : true;
 
 /** The keys a `populate` object may name at each level. */
 export type Populate<Collections, F extends Fields> = {
-  [K in Keys<F, { type: "group" | "relation" | "join" | "image" | "file" }>]?: PopulateField<
-    Collections,
-    F[K]
-  >;
+  [
+    K in Keys<F, { type: "group" | "array" | "blocks" | "relation" | "join" | "image" | "file" }>
+  ]?: PopulateField<Collections, F[K]>;
 };
 
 /** {@link Populate}, or a plain record for an untyped schema. */
@@ -41,6 +48,16 @@ export type PopulateArg<Collections, F extends Fields> =
 type SelectGroup<Collections, Group extends Fields, Spec> =
   | true
   | Select<Collections, Group, Spec extends true ? 1 : Spec, false>;
+/** Each block selects like a group, with the populate spec of its block name. */
+type SelectBlocks<Collections, Blocks extends Record<string, { fields: Fields }>, Spec> =
+  | true
+  | {
+      [K in keyof Blocks]?: SelectGroup<
+        Collections,
+        Blocks[K]["fields"],
+        Sub<Spec extends true ? 1 : Spec, K>
+      >;
+    };
 type SelectRelation<Collections, Collection, Spec> =
   Off<Spec> extends true
     ? true
@@ -54,19 +71,24 @@ type SelectJoin<Collections, Collection, PopulateSpec, Key, Spec> = PopulateSpec
     : true;
 
 type SelectField<Collections, FieldType, PopulateSpec, Key> = FieldType extends {
-  type: "group";
+  type: "group" | "array";
   fields: infer Group extends Fields;
 }
   ? SelectGroup<Collections, Group, Sub<PopulateSpec, Key>>
-  : FieldType extends { type: "relation"; collection: infer Collection }
-    ? SelectRelation<Collections, Collection, Sub<PopulateSpec, Key>>
-    : FieldType extends { type: "join"; collection: infer Collection }
-      ? SelectJoin<Collections, Collection, PopulateSpec, Key, Sub<PopulateSpec, Key>>
-      : true;
+  : FieldType extends {
+        type: "blocks";
+        blocks: infer Blocks extends Record<string, { fields: Fields }>;
+      }
+    ? SelectBlocks<Collections, Blocks, Sub<PopulateSpec, Key>>
+    : FieldType extends { type: "relation"; collection: infer Collection }
+      ? SelectRelation<Collections, Collection, Sub<PopulateSpec, Key>>
+      : FieldType extends { type: "join"; collection: infer Collection }
+        ? SelectJoin<Collections, Collection, PopulateSpec, Key, Sub<PopulateSpec, Key>>
+        : true;
 
 /**
  * Keys a `select` object may name: fields, and on a document the meta keys.
- * Nested keys are allowed under groups and populated relations or joins.
+ * Nested keys are allowed under groups, array items, block names and populated relations or joins.
  */
 export type Select<
   Collections,

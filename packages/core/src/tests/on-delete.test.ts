@@ -1,8 +1,9 @@
+import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CmsError } from "../client/index.ts";
 import { ConflictError, defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, relational, seed, setup, status, type Env } from "./setup.ts";
+import { admin, fresh, relational, seed, setup, status, tmpDb, type Env } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -242,5 +243,213 @@ describe("onDelete hooks", () => {
       a: null,
       b: null,
     });
+  });
+});
+
+describe("onDelete inside array items", () => {
+  const ids0 = { populate: false } as const;
+  const link = (onDelete: "restrict" | "set-null" | "cascade") =>
+    ({
+      type: "array",
+      fields: {
+        label: { type: "text" },
+        page: { type: "relation", collection: "pages", onDelete },
+      },
+    }) as const;
+  const make = () =>
+    defineCms({
+      collections: {
+        pages: { fields: { title: { type: "text" } } },
+        menus: {
+          fields: {
+            links: {
+              type: "array",
+              fields: {
+                label: { type: "text" },
+                page: { type: "relation", collection: "pages" },
+                also: { type: "relation", collection: "pages", many: true },
+                subs: {
+                  type: "array",
+                  fields: { page: { type: "relation", collection: "pages" } },
+                },
+              },
+            },
+          },
+        },
+        strict: { fields: { links: link("restrict") } },
+        owned: { fields: { links: link("cascade") } },
+      },
+      globals: { nav: { fields: { links: link("set-null") } } },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+      media: false,
+    });
+
+  it("set-null clears the field in every item that holds it and keeps the items", async () => {
+    const cms = make();
+    const [p, q] = [await cms.create("pages", {}), await cms.create("pages", {})];
+    const menu = await cms.create("menus", {
+      links: [
+        { label: "a", page: p.id, also: [p.id, q.id], subs: [{ page: q.id }, { page: p.id }] },
+        { label: "b", page: q.id },
+        { label: "c", page: p.id },
+      ],
+    });
+    await cms.delete("pages", p.id);
+    expect((await cms.findById("menus", menu.id, ids0))?.links).toMatchObject([
+      { label: "a", page: null, also: [q.id], subs: [{ page: q.id }, { page: null }] },
+      { label: "b", page: q.id },
+      { label: "c", page: null },
+    ]);
+  });
+
+  it("restrict from inside an item answers 409", async () => {
+    const { cms, client } = setup(make());
+    await client.signUp(admin);
+    const p = await cms.create("pages", {});
+    await cms.create("strict", { links: [{ label: "x" }, { page: p.id }] });
+    expect(await status(client.delete("pages", p.id))).toBe(409);
+    expect(await cms.findById("pages", p.id)).toBeTruthy();
+  });
+
+  it("cascade from inside an item deletes the owner", async () => {
+    const cms = make();
+    const p = await cms.create("pages", {});
+    await cms.create("owned", { links: [{ label: "x" }, { page: p.id }] });
+    await cms.delete("pages", p.id);
+    expect(await cms.find("owned")).toEqual([]);
+  });
+
+  it("set-null clears items of a global", async () => {
+    const cms = make();
+    const p = await cms.create("pages", {});
+    await cms.setGlobal("nav", { links: [{ page: p.id }, { label: "x" }] });
+    await cms.delete("pages", p.id);
+    expect((await cms.getGlobal("nav", ids0)).links).toMatchObject([
+      { page: null },
+      { label: "x" },
+    ]);
+  });
+
+  it("set-null clears items in localized published data and in a pending locale draft", async () => {
+    const cms = defineCms({
+      collections: {
+        pages: { fields: { title: { type: "text" } } },
+        menus: { localized: true, fields: { links: link("set-null") } },
+      },
+      localization: { locales: ["en", "de"], defaultLocale: "en" },
+      database: { url: ":memory:" },
+      secret: "",
+      media: false,
+    });
+    const p = await cms.create("pages", {});
+    const menu = await cms.create("menus", { links: [{ label: "en", page: p.id }] });
+    await cms.update("menus", menu.id, { links: [{ label: "de", page: p.id }] }, {
+      draft: true,
+      locale: "de",
+    } as never);
+    await cms.delete("pages", p.id);
+
+    const read = (locale: "en" | "de") =>
+      cms.withDrafts().findById("menus", menu.id, { locale, fallback: false, populate: false });
+    expect((await read("en"))?.links).toMatchObject([{ label: "en", page: null }]);
+    expect(await read("de")).toMatchObject({
+      links: [{ label: "de", page: null }],
+      hasDraft: true,
+    });
+  });
+});
+
+describe("onDelete inside block items", () => {
+  const ids0 = { populate: false } as const;
+  const make = (url = ":memory:") =>
+    defineCms({
+      collections: {
+        pages: { fields: { title: { type: "text" } } },
+        posts: { fields: { title: { type: "text" } } },
+        landing: {
+          fields: {
+            content: {
+              type: "blocks",
+              blocks: {
+                link: {
+                  fields: {
+                    ref: { type: "relation", collection: "pages", onDelete: "set-null" },
+                    also: { type: "relation", collection: "pages", many: true },
+                  },
+                },
+                post: {
+                  fields: { ref: { type: "relation", collection: "posts", onDelete: "restrict" } },
+                },
+                strict: {
+                  fields: { page: { type: "relation", collection: "pages", onDelete: "restrict" } },
+                },
+                owned: {
+                  fields: { page: { type: "relation", collection: "pages", onDelete: "cascade" } },
+                },
+              },
+            },
+          },
+        },
+      },
+      database: { url },
+      secret: "x".repeat(32),
+      media: false,
+    });
+
+  it("set-null clears the field in every block item that holds it", async () => {
+    const cms = make();
+    const [p, q] = [await cms.create("pages", {}), await cms.create("pages", {})];
+    const doc = await cms.create("landing", {
+      content: [
+        { blockType: "link", ref: p.id, also: [p.id, q.id] },
+        { blockType: "link", ref: q.id },
+      ],
+    });
+    await cms.delete("pages", p.id);
+    expect((await cms.findById("landing", doc.id, ids0))?.content).toMatchObject([
+      { blockType: "link", ref: null, also: [q.id] },
+      { blockType: "link", ref: q.id },
+    ]);
+  });
+
+  it("restrict from a block item answers 409", async () => {
+    const { cms, client } = setup(make());
+    await client.signUp(admin);
+    const p = await cms.create("pages", {});
+    await cms.create("landing", { content: [{ blockType: "strict", page: p.id }] });
+    expect(await status(client.delete("pages", p.id))).toBe(409);
+  });
+
+  it("cascade from a block item deletes the owner", async () => {
+    const cms = make();
+    const p = await cms.create("pages", {});
+    await cms.create("landing", { content: [{ blockType: "owned", page: p.id }] });
+    await cms.delete("pages", p.id);
+    expect(await cms.find("landing")).toEqual([]);
+  });
+
+  it("leaves a relation of another block under the same key alone", async () => {
+    const url = tmpDb();
+    const cms = make(url);
+    const [p, post] = [await cms.create("pages", {}), await cms.create("posts", {})];
+    const doc = await cms.create("landing", {
+      content: [
+        { blockType: "link", ref: p.id },
+        { blockType: "post", ref: post.id },
+      ],
+    });
+    // The `post` block's relation holds the page's id, so only the block filter tells them apart.
+    const db = createLibsql({ url });
+    await db.execute({
+      sql: "UPDATE cms_documents SET data = json_set(data, '$.content[1].ref', ?) WHERE id = ?",
+      args: [p.id, doc.id],
+    });
+    db.close();
+    await cms.delete("pages", p.id);
+    expect((await cms.findById("landing", doc.id, ids0))?.content).toMatchObject([
+      { blockType: "link", ref: null },
+      { blockType: "post", ref: p.id },
+    ]);
   });
 });

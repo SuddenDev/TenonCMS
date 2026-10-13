@@ -10,6 +10,17 @@ export const pages = defineCollection({
     ...seo.fields,
     body: { type: "textarea" },
     hero: { type: "image" },
+    content: {
+      type: "blocks",
+      blocks: {
+        hero: {
+          label: "Hero",
+          icon: "image",
+          fields: { title: { type: "text" }, image: { type: "image" } },
+        },
+        text: { label: "Text", icon: "type", fields: { body: { type: "textarea" } } },
+      },
+    },
   },
   hooks: page.hooks,
   permalink: page.permalink,

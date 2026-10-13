@@ -1,4 +1,5 @@
-import { type Db, type LocaleOwner } from "../document-sql.ts";
+import { type Db, type LocaleOwner, holdsAt } from "../document-sql.ts";
+import type { Step } from "../../../schema/traversal/relation-paths.ts";
 import { sql } from "kysely";
 
 export type LocaleReference = {
@@ -13,23 +14,17 @@ export type LocaleReference = {
 
 /**
  * Locale rows of `collection` (or the global `name`) whose relation at `path` holds `id` in the published data or in the
- * pending draft, with the raw JSON of both. A `many` relation is an array.
+ * pending draft, with the raw JSON of both.
  */
 export async function referencingLocales(
   db: Db,
   locales: LocaleOwner,
   name: string,
-  path: string,
+  path: Step[],
   many: boolean | undefined,
   id: string,
 ) {
-  const at = `$.${path}`;
-  const holds = (column: "data" | "draft") => {
-    const ref = sql.ref(`l.${column}`);
-    return many
-      ? sql<boolean>`EXISTS (SELECT 1 FROM json_each(${ref}, ${at}) WHERE value = ${id})`
-      : sql<boolean>`json_extract(${ref}, ${at}) = ${id}`;
-  };
+  const holds = (column: "data" | "draft") => holdsAt(`l.${column}`, path, many, id);
   const scope =
     locales.key === "document_id"
       ? sql`JOIN cms_documents d ON d.id = l.document_id WHERE d.collection = ${name}`

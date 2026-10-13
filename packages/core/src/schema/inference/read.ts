@@ -47,6 +47,20 @@ type GroupValue<Collections, Group extends Fields, Spec> = Resolve<
   Group,
   Spec extends true ? 1 : Spec
 >;
+/** Array items read like a group, and every item has its `id`. */
+type ArrayValue<Collections, Item extends Fields, Spec> = Simplify<
+  { id: string } & GroupValue<Collections, Item, Spec>
+>[];
+/** Each block reads like a group with the spec of its block name. A number or `true` passes to every block. */
+type BlocksValue<Collections, Blocks extends Record<string, { fields: Fields }>, Spec> = {
+  [K in keyof Blocks & string]: Simplify<
+    { id: string; blockType: K } & GroupValue<
+      Collections,
+      Blocks[K]["fields"],
+      Sub<Spec extends true ? 1 : Spec, K>
+    >
+  >;
+}[keyof Blocks & string][];
 type RelationValue<Collections, Relation, Spec> = Relation extends {
   collection: infer Collection;
 }
@@ -68,15 +82,22 @@ type FieldReadValue<Collections, FieldType, Spec> = FieldType extends {
   fields: infer Group extends Fields;
 }
   ? GroupValue<Collections, Group, Spec>
-  : FieldType extends { type: "relation" }
-    ? RelationValue<Collections, FieldType, Spec>
-    : FieldType extends { type: "image" | "file" }
-      ? MediaFieldValue<FieldType, Spec>
-      : FieldType extends { type: "join" }
-        ? JoinValue<Collections, FieldType, Spec>
-        : FieldType extends Field
-          ? FieldValue<FieldType>
-          : never;
+  : FieldType extends { type: "array"; fields: infer Item extends Fields }
+    ? ArrayValue<Collections, Item, Spec>
+    : FieldType extends {
+          type: "blocks";
+          blocks: infer Blocks extends Record<string, { fields: Fields }>;
+        }
+      ? BlocksValue<Collections, Blocks, Spec>
+      : FieldType extends { type: "relation" }
+        ? RelationValue<Collections, FieldType, Spec>
+        : FieldType extends { type: "image" | "file" }
+          ? MediaFieldValue<FieldType, Spec>
+          : FieldType extends { type: "join" }
+            ? JoinValue<Collections, FieldType, Spec>
+            : FieldType extends Field
+              ? FieldValue<FieldType>
+              : never;
 
 type OptionalReadFields<Collections, F extends Fields, Spec> = {
   [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: FieldReadValue<
@@ -128,11 +149,34 @@ type SelectedObject<Value, SelectSpec> = Simplify<{
     : Value[K];
 }>;
 
+/**
+ * Whether `Item` is a block item that `SelectSpec` selects by block name: every item has an `id` and a literal
+ * `blockType`, and every key of the spec is one of the block names.
+ */
+type SelectsBlocks<Item, SelectSpec> = [Item] extends [{ id: string; blockType: infer T }]
+  ? string extends T
+    ? false
+    : [keyof SelectSpec] extends [T]
+      ? true
+      : false
+  : false;
+
+/** A block item with the spec of its block name: `true` keeps it, an object picks fields, none leaves `id` and `blockType`. */
+type SelectedBlock<Item, SelectSpec> = Item extends { blockType: infer K }
+  ? K extends keyof SelectSpec
+    ? SelectSpec[K] extends true
+      ? Item
+      : Simplify<{ id: string; blockType: K } & SelectedObject<Item, SelectSpec[K]>>
+    : { id: string; blockType: K }
+  : never;
+
 /** `Value` with only the selected keys at each object level. */
 type Selected<Value, SelectSpec> = [SelectSpec] extends [true]
   ? Value
   : Value extends (infer Item)[]
-    ? Selected<Item, SelectSpec>[]
+    ? SelectsBlocks<Item, SelectSpec> extends true
+      ? SelectedBlock<Item, SelectSpec>[]
+      : Selected<Item, SelectSpec>[]
     : Value extends object
       ? string extends keyof Value
         ? Value

@@ -17,7 +17,8 @@ export function toPopulatePlan(
 }
 
 /**
- * A group passes the plan through, one hop at least. A join resolves only when a populate object names it.
+ * A group, an array or a blocks field passes the plan through, one hop at least, and is always on: its values are
+ * inline. A join resolves only when a populate object names it.
  * The type-level twins are `Sub` and `Next` in `schema/inference/read.ts`.
  *
  * @returns Whether the value of `key` resolves at all (`on`), and the plan its value continues with (`child`).
@@ -29,7 +30,8 @@ export function step(
 ): { on: boolean; child: PopulatePlan | true } {
   const sub: PopulatePlan | true = typeof plan === "object" ? (plan[key] ?? false) : plan;
 
-  if (field.type === "group") return { on: Boolean(sub), child: sub === true ? 1 : sub };
+  if (field.type === "group" || field.type === "array" || field.type === "blocks")
+    return { on: true, child: sub === true ? 1 : sub };
   if (field.type === "join" && typeof plan !== "object") return { on: false, child: false };
 
   if (sub === true) return { on: true, child: false };

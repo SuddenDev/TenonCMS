@@ -1,4 +1,6 @@
+import type { ArrayField, ItemLabels } from "./array.ts";
 import type { BooleanField } from "./boolean.ts";
+import type { Block, BlocksField } from "./blocks.ts";
 import type { CustomField } from "./custom.ts";
 import type { DateField } from "./date.ts";
 import type { FileField, MediaFieldOptions } from "./file.ts";
@@ -13,6 +15,10 @@ import type { TextField } from "./text.ts";
 
 export type { Base, Common } from "./common.ts";
 export type {
+  ArrayField,
+  ItemLabels,
+  Block,
+  BlocksField,
   BooleanField,
   CustomField,
   DateField,
@@ -40,6 +46,8 @@ export type Field =
   | CustomField
   | SlugField
   | GroupField
+  | ArrayField
+  | BlocksField
   | RelationField
   | ImageField
   | FileField

@@ -4,7 +4,8 @@ import type { Collection, Fields } from "../../schema/index.ts";
 import type { PopulatePlan } from "../../content/population/populate-plan.ts";
 import { treeOf } from "./path-tree.ts";
 
-// The prefix of `path` up to the first key that is not a group, relation or join, or the hop above `maxDepth`.
+// The prefix of `path` up to the first key that is not a group, array, blocks, block name, relation or join, or the hop
+// above `maxDepth`. Groups, arrays, blocks and block names count no hop.
 function badPopulatePath(
   collections: Record<string, Collection>,
   fields: Fields,
@@ -16,7 +17,7 @@ function badPopulatePath(
   for (const [i, key] of keys.entries()) {
     const field = Object.hasOwn(fields, key) ? fields[key] : undefined;
     const inner = field && innerFields(collections, field);
-    if (field?.type !== "group") hops++;
+    if (field?.type !== "group" && field?.type !== "array" && field?.type !== "blocks") hops++;
     // `image` and `file` resolve but end the path.
     const leaf = field && isRef(field) && i === keys.length - 1;
     if ((!inner && !leaf) || hops > maxDepth) return keys.slice(0, i + 1).join(".");

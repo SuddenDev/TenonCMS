@@ -18,6 +18,25 @@ const collections: Record<string, Collection> = {
       author: { type: "relation", collection: "authors" },
       tags: { type: "relation", collection: "tags", many: true },
       seo: { type: "group", fields: { image: { type: "relation", collection: "assets" } } },
+      links: {
+        type: "array",
+        fields: {
+          label: { type: "text" },
+          author: { type: "relation", collection: "authors" },
+        },
+      },
+      content: {
+        type: "blocks",
+        blocks: {
+          hero: {
+            fields: {
+              title: { type: "text" },
+              author: { type: "relation", collection: "authors" },
+            },
+          },
+          text: { fields: { body: { type: "text" } } },
+        },
+      },
     },
   },
 };
@@ -65,6 +84,54 @@ describe("pick", () => {
       { id: "t1", name: "one" },
       { id: "t2", name: "two" },
     ]);
+  });
+
+  it("picks block items by their block type", () => {
+    const content = [
+      { id: "h", blockType: "hero", title: "Hi", author: post.author },
+      { id: "t", blockType: "text", body: "B" },
+      { id: "x", blockType: "nope", other: 1 },
+    ];
+    const doc = { ...post, content };
+    expect(p({ content: true }, doc).content).toBe(content);
+    expect(p({ content: { hero: { title: true } } }, doc).content).toEqual([
+      { id: "h", blockType: "hero", title: "Hi" },
+      { id: "t", blockType: "text" },
+      { id: "x", blockType: "nope" },
+    ]);
+    expect(p({ content: { hero: { author: { name: true } } }, text: true }, doc).content).toEqual([
+      { id: "h", blockType: "hero", author: { id: "a", name: "Ann" } },
+      { id: "t", blockType: "text" },
+      { id: "x", blockType: "nope" },
+    ]);
+    expect(p({ content: { text: true, hero: {} } }, doc).content).toEqual([
+      { id: "h", blockType: "hero" },
+      content[1],
+      { id: "x", blockType: "nope" },
+    ]);
+    expect(p({ content: { toString: true } }, doc).content).toEqual([
+      { id: "h", blockType: "hero" },
+      { id: "t", blockType: "text" },
+      { id: "x", blockType: "nope" },
+    ]);
+  });
+
+  it("keeps the id of every array item and no other meta", () => {
+    const links = [
+      { id: "l1", label: "A", author: post.author },
+      { id: "l2", label: "B", author: null },
+    ];
+    const doc = { ...post, links };
+    expect(p({ links: true }, doc).links).toBe(links);
+    expect(p({ links: { label: true } }, doc).links).toEqual([
+      { id: "l1", label: "A" },
+      { id: "l2", label: "B" },
+    ]);
+    expect(p({ links: { author: { name: true } } }, doc).links).toEqual([
+      { id: "l1", author: { id: "a", name: "Ann" } },
+      { id: "l2", author: null },
+    ]);
+    expect(p({ links: {} }, doc).links).toEqual([{ id: "l1" }, { id: "l2" }]);
   });
 
   it("takes a join item by item and skips missing keys", () => {

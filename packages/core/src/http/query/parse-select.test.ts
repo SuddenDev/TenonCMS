@@ -15,6 +15,18 @@ describe("parseSelect", () => {
     expect(parseSelect("title,,path")).toEqual({ title: true, path: true });
   });
 
+  it("reads paths into array items like group paths", () => {
+    expect(parseSelect("links.label,links.page.title")).toEqual({
+      links: { label: true, page: { title: true } },
+    });
+  });
+
+  it("reads paths into blocks by block name", () => {
+    expect(parseSelect("content.hero.title,content.text")).toEqual({
+      content: { hero: { title: true }, text: true },
+    });
+  });
+
   it("never writes to Object.prototype", () => {
     const select = parseSelect("__proto__.polluted,constructor.prototype.polluted");
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();

@@ -14,6 +14,13 @@ const schema = {
           type: "group",
           fields: { accent: { type: "custom:color" }, note: { type: "text" } },
         },
+        content: {
+          type: "blocks",
+          blocks: {
+            hero: { fields: { accent: { type: "custom:color" } } },
+            text: { fields: { body: { type: "text" } } },
+          },
+        },
       },
     },
   },
@@ -178,6 +185,21 @@ describe("field loaders", () => {
     const res = await post(field({ path: "theme", owner: { global: "site" } }));
     expect(await res.json()).toEqual({ data: "ok" });
     expect((load.mock.calls[1] as any)[0].owner).toEqual({ global: "site" });
+  });
+
+  it("finds a field inside a block by the stored block type", async () => {
+    const load = vi.fn(() => "ok");
+    const { post, cms } = await boot(color(load));
+    const doc = await cms.create("posts", {
+      content: [{ blockType: "text" }, { blockType: "hero" }],
+    });
+    const owner = { collection: "posts", id: doc.id };
+    expect((await post(field({ path: "content.1.accent", owner }))).status).toBe(200);
+    expect((load.mock.calls[0] as any)[0].field).toBe(
+      schema.collections.posts.fields.content.blocks.hero.fields.accent,
+    );
+    expect((await post(field({ path: "content.0.accent", owner }))).status).toBe(400);
+    expect((await post(field({ path: "content.1.accent" }))).status).toBe(400);
   });
 
   it("answers 404 for an unknown collection, global or document", async () => {

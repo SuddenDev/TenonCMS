@@ -97,7 +97,7 @@ export default defineCms({
 });
 ```
 
-Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `slug`, `group`, `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
+Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `slug`, `group`, `array`, `blocks` (see [Lists and blocks](#lists-and-blocks)), `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
 
 A `slug` is a URL part such as `about-us`:
 
@@ -140,6 +140,10 @@ seo: {
 | `default`                           | all but `join`                                                                      | Value on `create` when the field is `undefined`             |
 | `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                  | String length, and a regular expression for the whole value |
 | `min`, `max`                        | `number`                                                                            | Number range                                                |
+| `fields`                            | `group`, `array`                                                                    | The fields of the group, or of each item                    |
+| `blocks`                            | `blocks`                                                                            | The item types, keyed by block name                         |
+| `minRows`, `maxRows`                | `array`, `blocks`                                                                   | Fewest and most items                                       |
+| `labels`                            | `array`, `blocks`                                                                   | `{ singular, plural }`, item labels in the admin            |
 | `validate`                          | all but `join`                                                                      | Your check, on the server                                   |
 | `condition`                         | all                                                                                 | The field applies only when this matches                    |
 | `unique`                            | top-level `text`, `textarea`, `number`, `date`, `select`, `slug`, single `relation` | No two documents MAY have the same value                    |
@@ -180,10 +184,10 @@ color: { type: 'text', condition: { '/settings.mode': 'advanced' } },
 ```
 
 - A plain value means `eq`. Operators: `eq`, `ne`, `in`, `notIn`, `gt`, `gte`, `lt`, `lte`, `exists`. Several keys MUST all match. `$every` and `$some` take lists of conditions and nest.
-- A key without `/` is a sibling field: a field of the document at the top level, a field of the same group inside a group. A leading `/` starts at the document root; dots walk into groups.
+- A key without `/` is a sibling field: a field of the document at the top level, a field of the same group inside a group, a field of the same item inside an array or block item. A leading `/` starts at the document root; dots walk into groups, never into items.
 - The admin hides fields whose condition is false and saves them as `null`. Values survive toggling until you save.
 - The server skips `required`, the built-in checks and `validate` for them, but still checks the type. It never changes or clears values. Reads ignore conditions.
-- `defineCms` throws for a condition on an unknown field.
+- `defineCms` throws for a condition on an unknown field, and for one whose path crosses an `array` or `blocks` field.
 
 `unique` rejects a value that another document of the collection has, with `Already used` on the field (400). It runs after `beforeChange` hooks, so values set by hooks count. `null` and missing values never collide; comparison is exact and case-sensitive. `defineCms` throws for `unique` in a group, in a global or on other types. Each write scans the collection once per unique field; indexes can come later without API changes.
 
@@ -299,10 +303,10 @@ parent: { type: 'relation', collection: 'pages', onDelete: 'cascade' } // self-r
 posts: { type: 'join', collection: 'posts', on: 'author' }             // 1-m, on `authors`
 ```
 
-| Field      | Options                                                                                       | Where                                                                         |
-| ---------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `relation` | `collection` (target), `many`, `onDelete`, `label`, `required`                                | top level and in groups, in collections and globals; targets collections only |
-| `join`     | `collection` (source), `on` (path to a relation there, e.g. `author` or `seo.image`), `label` | top level of collections only; not stored                                     |
+| Field      | Options                                                                                       | Where                                                                                   |
+| ---------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `relation` | `collection` (target), `many`, `onDelete`, `label`, `required`                                | top level, in groups and in items, in collections and globals; targets collections only |
+| `join`     | `collection` (source), `on` (path to a relation there, e.g. `author` or `seo.image`), `label` | top level of collections only; not stored                                               |
 
 - Ids live in the document JSON: a string, or a string array with `many`. Writes check that every id exists in the target collection and that a document does not reference itself (400). `many` arrays keep their order and reject duplicates. A required `many` relation needs at least one id.
 - `defineCms` also checks `collection` and `join.on` at the type level: a typo shows as an error in `integral.config.ts`, naming the field path and the allowed values.
@@ -342,6 +346,85 @@ Known limits:
 
 - Restrict is checked per document as the cascade reaches it. A `restrict` reference from a document that a later cascade step would delete still blocks the whole delete.
 - Joins and delete checks scan the source collection with `json_extract` / `json_each`. That is fine up to roughly 10k–50k documents per collection. Indexes can come later without API changes.
+
+### Lists and blocks
+
+An `array` is a list of items that share one set of fields. A `blocks` field is a list where each item picks its fields by a block name:
+
+```ts
+links: {
+  type: 'array',
+  maxRows: 5,
+  labels: { singular: 'Link', plural: 'Links' },
+  fields: {
+    label: { type: 'text', required: true },
+    page: { type: 'relation', collection: 'pages' },
+  },
+},
+content: {
+  type: 'blocks',
+  blocks: {
+    hero: {
+      label: 'Hero',
+      description: 'Big title with an image',
+      icon: 'image',
+      fields: { title: { type: 'text', required: true }, image: { type: 'image' } },
+    },
+    text: { fields: { body: { type: 'textarea' } } },
+  },
+},
+```
+
+`fields`, `blocks`, `minRows`, `maxRows` and `labels` are in [Field options](#field-options). `labels.singular` names the add button in the admin ("Add Link"), and an array row ("Link 2"); a block row shows its block label. Each block takes:
+
+| Block option  | What it does                                                         |
+| ------------- | -------------------------------------------------------------------- |
+| `fields`      | The fields of an item of this block                                  |
+| `label`       | Name in the block picker and the row header. Default: the block name |
+| `description` | Help text in the block picker                                        |
+| `icon`        | A Lucide icon name for the block picker and the row header           |
+
+Items are stored in the document JSON. Every item has a stable `id`; a block item also has its block name in `blockType`:
+
+```json
+"links":   [{ "id": "…", "label": "Docs", "page": "p1" }],
+"content": [{ "id": "…", "blockType": "hero", "title": "Hi", "image": "m1" },
+            { "id": "…", "blockType": "text", "body": "…" }]
+```
+
+- The server fills a missing `id` on every write, drafts included. The admin creates one for each new row, so ids stay the same across saves. An item field MUST NOT be named `id`, and a block field MUST NOT be named `blockType`.
+- `required` means at least one item. `required`, `minRows` and `maxRows` apply only when the field's condition matches, and not to draft saves.
+- Error paths use the position: `content.2.title`, `links.0.page`. `Unknown block` (also for a draft), `Duplicate id`, `At least 2 items` and `At most 5 items` are field errors too.
+- `default`, `validate`, field hooks and slugs work inside items. Hooks get the positional `path` and the item as `siblingData`.
+- Inside an item, a condition key without `/` reads a field of the same item. Conditions outside the list cannot read into it.
+- `edit("pages", page.id, "content.2.title")` binds a field of an item. The admin opens that row and focuses the field.
+- `update` replaces a whole list, like a group. Items you send without an `id` get a new one.
+
+Reads treat a list like a group: `populate` and `select` go through it, and its key counts no hop. Blocks are keyed by block name:
+
+```ts
+cms.find("pages", { populate: { links: { page: true } } });
+cms.find("pages", { populate: { content: { hero: { image: true } } } });
+cms.find("pages", {
+  select: { links: { label: true }, content: { hero: { title: true }, text: true } },
+});
+// HTTP: ?populate=content.hero.image&select=links.label,content.hero.title
+```
+
+- The default `populate: true` resolves relations, images and files inside items, like anywhere else. `true` on a list key resolves every relation in its items one hop, in every block.
+- One query per relation field per hop (per block for blocks) covers the items of every document.
+- Items always keep `id`, and block items `blockType`. A block that `select` does not name leaves `{ id, blockType }` for its items.
+- Result types are a union of the blocks, so `if (block.blockType === 'hero')` narrows to the hero's fields. In written data, an item's `id` is optional; in read results, it is always there.
+- `private` works inside items. A public read gets only `{ id, blockType }` for an item of a block that is not in the schema anymore.
+- `onDelete` rules apply inside items: `set-null` clears the value in every item that holds the id and keeps the items.
+
+Limits:
+
+- Lists and fields inside them are not filterable.
+- No `join` inside items, and no join `on` path into items. No `unique` inside items.
+- In a localized collection or global, a top-level list is one localized key: each locale has its own list, or all share it with `localized: false`. Fields inside items MUST NOT set `localized`.
+- A custom field's server `load` inside a block item finds its field through the saved document, so it needs one.
+- `defineCms` throws at startup for a join, `unique` or `localized` inside items, a join `on` into items, an empty `blocks` record, a negative `minRows` or `maxRows`, and `minRows` above `maxRows`.
 
 ### Hooks
 
@@ -663,7 +746,7 @@ The runtime picks its mode from `window.name`:
 
 `preview({ admin: "/cms" })` sets the admin path for the links (default `/admin`); `admin: false` turns the admin bar off on the site. The Astro and Nuxt adapters pass their own `admin` option.
 
-Vue and React pages can re-render from the unsaved state too, so lists and conditions follow. `useDraft()` merges it into the document and starts the runtime:
+Vue and React pages can re-render from the unsaved state too, so lists and conditions follow. `useDraft()` merges it into the document and starts the runtime. The merge is recursive: items of an `array` or `blocks` field match by `id`, and a relation whose ids did not change keeps its populated value:
 
 ```ts
 import { useDraft } from "integral-cms/preview/vue"; // or integral-cms/preview/react
@@ -809,7 +892,7 @@ defineCms({
 ```
 
 - `localized: true` on a collection or global turns it on. It needs `localization`, or startup throws. The `media` collection MUST NOT be localized.
-- `localized: false` on a field shares it. A group is localized as a whole: its children MUST NOT set `localized`. Joins are never stored, so they are never localized.
+- `localized: false` on a field shares it. A group, an `array` and a `blocks` field are localized as a whole: fields inside them MUST NOT set `localized`. Joins are never stored, so they are never localized.
 - Relation, image and file fields MAY be localized.
 - With `localization` set, the default `general` and `seo` globals are localized.
 - `defaultLocale` MUST be one of `locales`; `locales` MUST NOT be empty or hold duplicates.
@@ -1069,11 +1152,22 @@ export default defineNuxtConfig({
 
 The module auto-imports `useIntegral()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results.
 During SSR it calls the CMS in-process; on client-side navigation it fetches the public read API.
+Read options and document IDs accept refs or getters. Use a getter for route-dependent filters so reused pages update on navigation; the route's locale updates automatically. Keep `seoMeta()` in a computed and pass getters to `useHead()` or `useSeoMeta()` so the head follows the document.
 
 ```vue
 <script setup lang="ts">
 const { data: posts } = await useIntegral().find("posts");
 const { data: post } = await useIntegral().findOne("posts", { where: { slug: "hello" } });
+const route = useRoute();
+const { data: current } = await useIntegral().findOne(
+  "posts",
+  () =>
+    ({
+      where: { slug: String(route.params.slug) },
+      alternates: true,
+    }) as const,
+);
+useAlternates(() => current.value?.alternates);
 </script>
 ```
 
@@ -1146,28 +1240,17 @@ mountAdmin("#admin");
 
 Coming from Payload, the auth hooks map to better-auth's request hooks:
 
-| Payload                                                                                                                                                                                                                                                                                           | better-auth                                                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `beforeLogin`                                                                                                                                                                                                                                                                                     | `hooks.before` with `ctx.path === '/sign-in/email'`         |
-| `afterLogin`                                                                                                                                                                                                                                                                                      | `hooks.after` with `ctx.path === '/sign-in/email'`          |
-| `afterLogout`                                                                                                                                                                                                                                                                                     | `hooks.after` with `ctx.path === '/sign-out'`               |
-| `afterForgotPassword`                                                                                                                                                                                                                                                                             | `hooks.after` with `ctx.path === '/request-password-reset'` |
-| Read options and document IDs accept refs or getters. Use a getter for route-dependent filters so reused pages update on navigation; the route's locale updates automatically. Keep `seoMeta()` in a computed and pass getters to `useHead()` or `useSeoMeta()` so the head follows the document. |
+| Payload               | better-auth                                                 |
+| --------------------- | ----------------------------------------------------------- |
+| `beforeLogin`         | `hooks.before` with `ctx.path === '/sign-in/email'`         |
+| `afterLogin`          | `hooks.after` with `ctx.path === '/sign-in/email'`          |
+| `afterLogout`         | `hooks.after` with `ctx.path === '/sign-out'`               |
+| `afterForgotPassword` | `hooks.after` with `ctx.path === '/request-password-reset'` |
 
 ```ts
 import { createAuthMiddleware } from 'better-auth/api'
 
 auth: {
-const route = useRoute();
-const { data: current } = await useIntegral().findOne(
-  "posts",
-  () =>
-    ({
-      where: { slug: String(route.params.slug) },
-      alternates: true,
-    }) as const,
-);
-useAlternates(() => current.value?.alternates);
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.path === '/sign-in/email') console.log('signed in')

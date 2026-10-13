@@ -116,9 +116,183 @@ describe("defineCms checks", () => {
     );
   });
 
+  describe("array", () => {
+    const array = (fields: Fields, extra: object = {}) =>
+      ({ type: "array", fields, ...extra }) as const;
+
+    it("accepts groups, nested arrays and sibling conditions inside items", () => {
+      const fields = {
+        x: { type: "text" },
+        links: array({
+          label: { type: "text" },
+          url: { type: "text", condition: { label: "a", "/x": "b" } },
+          g,
+          sub: array({ t: { type: "text" }, u: { type: "text", condition: { t: 1 } } }),
+        }),
+      } as Fields;
+      expect(define({ c: { fields } })).not.toThrow();
+    });
+
+    it("throws for an item field named id", () => {
+      expect(define({ c: { fields: { links: array({ id: { type: "text" } }) } } })).toThrow(
+        /array "c.links" cannot have an item field named "id"/,
+      );
+      const nested = { g: { type: "group", fields: { a: array({ id: { type: "text" } }) } } };
+      expect(define({ c: { fields: nested as Fields } })).toThrow(/array "c.g.a" cannot have/);
+    });
+
+    it("throws for a join inside an item", () => {
+      const fields = {
+        r: { type: "relation", collection: "c" },
+        links: array({ j: { type: "join", collection: "c", on: "r" } }),
+      } as Fields;
+      expect(define({ c: { fields } })).toThrow(/join inside array "c.links"/);
+    });
+
+    it("throws for a join on a relation inside an item", () => {
+      const fields = {
+        links: array({ r: { type: "relation", collection: "c" } }),
+        j: { type: "join", collection: "c", on: "links.r" },
+      } as Fields;
+      expect(define({ c: { fields } })).toThrow(/join "c.j" needs "links.r" to be a relation/);
+    });
+
+    it("throws for unique inside an item", () => {
+      expect(
+        define({ c: { fields: { links: array({ t: { type: "text", unique: true } }) } } }),
+      ).toThrow(/"c.links.t" cannot be unique/);
+    });
+
+    it("throws for bad minRows and maxRows", () => {
+      const t = { t: { type: "text" } } as const;
+      expect(define({ c: { fields: { a: array(t, { minRows: 3, maxRows: 2 }) } } })).toThrow(
+        /array "c.a" has minRows above maxRows/,
+      );
+      expect(define({ c: { fields: { a: array(t, { minRows: -1 }) } } })).toThrow(
+        /array "c.a" has a negative minRows/,
+      );
+      expect(define({ c: { fields: { a: array(t, { maxRows: -1 }) } } })).toThrow(
+        /array "c.a" has a negative maxRows/,
+      );
+      expect(define({ c: { fields: { a: array(t, { minRows: 2, maxRows: 2 }) } } })).not.toThrow();
+    });
+
+    it("throws for a condition path that crosses an array", () => {
+      const links = array({ label: { type: "text" } });
+      for (const path of ["/links.label", "/links.0.label", "links.0.label"])
+        expect(
+          define({ c: { fields: { links, a: { type: "text", condition: { [path]: 1 } } } } }),
+          path,
+        ).toThrow(`condition on "c.a" names "${path}" inside an array`);
+      expect(
+        define({ c: { fields: { links, a: { type: "text", condition: { "/links": 1 } } } } }),
+      ).not.toThrow();
+    });
+  });
+
+  describe("blocks", () => {
+    const blocks = (b: Record<string, Fields>, extra: object = {}) =>
+      ({
+        type: "blocks",
+        blocks: Object.fromEntries(Object.entries(b).map(([k, fields]) => [k, { fields }])),
+        ...extra,
+      }) as const;
+
+    it("accepts sibling conditions, nested lists and root conditions inside blocks", () => {
+      const fields = {
+        x: { type: "text" },
+        content: blocks({
+          hero: {
+            t: { type: "text" },
+            u: { type: "text", condition: { t: 1, "/x": 2 } },
+            sub: blocks({ a: { b: { type: "text" } } }),
+          },
+          text: { body: { type: "text" } },
+        }),
+      } as Fields;
+      expect(define({ c: { fields } })).not.toThrow();
+    });
+
+    it("throws for an empty blocks record", () => {
+      expect(define({ c: { fields: { content: blocks({}) } } })).toThrow(
+        /blocks "c.content" has no blocks/,
+      );
+    });
+
+    it("throws for a block field named id or blockType", () => {
+      for (const name of ["id", "blockType"])
+        expect(
+          define({ c: { fields: { content: blocks({ hero: { [name]: { type: "text" } } }) } } }),
+        ).toThrow(`blocks "c.content.hero" cannot have an item field named "${name}"`);
+    });
+
+    it("throws for a join, unique and a bad condition inside a block", () => {
+      const join = {
+        r: { type: "relation", collection: "c" },
+        content: blocks({ hero: { j: { type: "join", collection: "c", on: "r" } } }),
+      } as Fields;
+      expect(define({ c: { fields: join } })).toThrow(/join inside blocks "c.content"/);
+      expect(
+        define({
+          c: { fields: { content: blocks({ hero: { t: { type: "text", unique: true } } }) } },
+        }),
+      ).toThrow(/"c.content.hero.t" cannot be unique/);
+      const cond = { content: blocks({ hero: { t: { type: "text", condition: { nope: 1 } } } }) };
+      expect(define({ c: { fields: cond as Fields } })).toThrow(
+        /"c.content.hero.t" names unknown field "nope"/,
+      );
+    });
+
+    it("throws for a join on a relation inside a block", () => {
+      const fields = {
+        content: blocks({ hero: { r: { type: "relation", collection: "c" } } }),
+        j: { type: "join", collection: "c", on: "content.r" },
+      } as Fields;
+      expect(define({ c: { fields } })).toThrow(/join "c.j" needs "content.r" to be a relation/);
+    });
+
+    it("throws for bad minRows and maxRows", () => {
+      const b = { hero: { t: { type: "text" } } } as const;
+      expect(define({ c: { fields: { a: blocks(b, { minRows: 3, maxRows: 2 }) } } })).toThrow(
+        /blocks "c.a" has minRows above maxRows/,
+      );
+      expect(define({ c: { fields: { a: blocks(b, { maxRows: -1 }) } } })).toThrow(
+        /blocks "c.a" has a negative maxRows/,
+      );
+    });
+
+    it("throws for a condition path that crosses blocks", () => {
+      const content = blocks({ hero: { t: { type: "text" } } });
+      for (const path of ["/content.0.t", "content.0.t"])
+        expect(
+          define({ c: { fields: { content, a: { type: "text", condition: { [path]: 1 } } } } }),
+          path,
+        ).toThrow(`condition on "c.a" names "${path}" inside blocks`);
+    });
+
+    it("throws for localized on a field inside a block", () => {
+      const l = { locales: ["en", "de"], defaultLocale: "en" };
+      const f = { content: blocks({ hero: { t: { type: "text", localized: false } } }) };
+      expect(define({ c: { fields: f as Fields, localized: true } }, {}, l)).toThrow(
+        /field "c.content.hero.t" cannot set localized inside a block item/,
+      );
+    });
+  });
+
   describe("localization", () => {
     const l = { locales: ["en", "de"], defaultLocale: "en" };
     const fields = { t: { type: "text" } } as const;
+
+    it("throws for localized on a field inside an item", () => {
+      const f = {
+        links: { type: "array", fields: { t: { type: "text", localized: false } } },
+      } as const;
+      expect(define({ c: { fields: f, localized: true } }, {}, l)).toThrow(
+        /field "c.links.t" cannot set localized inside an array item/,
+      );
+      const ok = { links: { type: "array", localized: false, fields: { t: { type: "text" } } } };
+      expect(define({ c: { fields: ok as never, localized: true } }, {}, l)).not.toThrow();
+    });
 
     it("throws for localized without the localization option", () => {
       expect(define({ c: { fields, localized: true } })).toThrow(

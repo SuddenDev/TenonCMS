@@ -4,6 +4,7 @@ import { useDebounceFn } from "@vueuse/core";
 import { computed, provide, ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { client, schema, type Fields } from "@/shared/api";
+import { itemFields } from "../../../../../core/src/schema/traversal/item-fields";
 import { focusKey } from "@/modules/documents/fields";
 import { useRefs } from "@/modules/documents/composables/useRefs";
 import DocPane from "@/modules/documents/components/DocPane.vue";
@@ -149,6 +150,13 @@ async function withMedia(fields: Fields, data: Record<string, any>) {
     const v = data[k];
     if (!v) continue;
     if (f.type === "group") out[k] = await withMedia(f.fields, v);
+    else if (f.type === "array" || f.type === "blocks")
+      out[k] = await Promise.all(
+        v.map((item: Record<string, any>) => {
+          const inner = itemFields(f, item);
+          return inner ? withMedia(inner, item) : item;
+        }),
+      );
     else if (f.type === "image" || f.type === "file")
       out[k] = await (Array.isArray(v) ? Promise.all(v.map(mediaDoc)) : mediaDoc(v));
   }

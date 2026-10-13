@@ -1,5 +1,6 @@
 import { type Database, type Row } from "../types.ts";
-import { type Kysely, type SelectQueryBuilder, sql } from "kysely";
+import type { Each, Step } from "../../schema/traversal/relation-paths.ts";
+import { type Kysely, type RawBuilder, type SelectQueryBuilder, sql } from "kysely";
 
 export type Db = Kysely<Database>;
 export type DocData = Record<string, any>;
@@ -146,11 +147,33 @@ export const jsonAt = (
   return sql`COALESCE(${requested}, json_extract(${sql.raw(dataOf(drafts, "ld."))}, ${at}))`;
 };
 
-/** Whether the relation at `path` holds `id`. A `many` relation is an array. */
-export const holds = (path: string, many: boolean | undefined, id: string) =>
-  many
-    ? sql<boolean>`EXISTS (SELECT 1 FROM json_each(data, ${`$.${path}`}) WHERE value = ${id})`
-    : sql<boolean>`${jsonAt(path)} = ${id}`;
+/**
+ * Whether the relation at `path` in the JSON column `source` holds `id`. Each {@link Each} step scans the items with
+ * one nested `json_each`; a `many` relation is an array. JSON paths, block types and the id are parameters.
+ */
+export function holdsAt(
+  source: string,
+  path: Step[],
+  many: boolean | undefined,
+  id: string,
+  depth = 0,
+): RawBuilder<boolean> {
+  const each = path.findIndex((s) => typeof s !== "string");
+  const at = `$.${(each < 0 ? path : path.slice(0, each)).join(".")}`;
+  const json = sql.ref(source);
+  if (each < 0)
+    return many
+      ? sql<boolean>`EXISTS (SELECT 1 FROM json_each(${json}, ${at}) j WHERE j.value = ${id})`
+      : sql<boolean>`json_extract(${json}, ${at}) = ${id}`;
+
+  const item = `i${depth}`;
+  const { blockType } = path[each] as Each;
+  const block = blockType
+    ? sql`json_extract(${sql.ref(`${item}.value`)}, ${"$.blockType"}) = ${blockType} AND `
+    : sql``;
+  const rest = holdsAt(`${item}.value`, path.slice(each + 1), many, id, depth + 1);
+  return sql<boolean>`EXISTS (SELECT 1 FROM json_each(${json}, ${at}) ${sql.raw(item)} WHERE ${block}${rest})`;
+}
 
 /**
  * Selects the `Row`s of a collection that a perspective sees. A localized `loc` joins the locale rows, so the

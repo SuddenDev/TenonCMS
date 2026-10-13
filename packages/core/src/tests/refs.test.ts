@@ -1,7 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms, defineCollection, defineGlobal } from "../index.ts";
 import { page, seo } from "../presets/index.ts";
-import { admin, fresh, origin, relational, seed, setup, status, type Env } from "./setup.ts";
+import {
+  admin,
+  fresh,
+  origin,
+  relational,
+  seed,
+  setup,
+  status,
+  tmpDir,
+  type Env,
+} from "./setup.ts";
+import { local } from "../media/storage/local/index.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -259,5 +270,107 @@ describe("relation filters", () => {
       // @ts-expect-error many relations are not filterable
       r.client.find("posts", { where: { tags: "x" } });
     };
+  });
+});
+
+describe("references inside array items", () => {
+  const make = () =>
+    defineCms({
+      collections: {
+        pages: { fields: { title: { type: "text" } } },
+        menus: {
+          fields: {
+            links: {
+              type: "array",
+              fields: {
+                page: { type: "relation", collection: "pages" },
+                also: { type: "relation", collection: "pages", many: true },
+                image: { type: "image" },
+              },
+            },
+          },
+        },
+      },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+      media: { storage: local({ dir: tmpDir() }) },
+    });
+
+  it("fails at the positional path of the item with an unknown id", async () => {
+    const { cms, client } = setup(make());
+    await client.signUp(admin);
+    const p = await cms.create("pages", {});
+    const error = (links: object[]) =>
+      client.create("menus", { links } as never).catch((e: unknown) => e);
+
+    expect(await error([{ page: p.id }, { page: "nope" }])).toMatchObject({
+      status: 400,
+      body: { errors: { "links.1.page": expect.any(String) } },
+    });
+    expect(await error([{ also: [p.id] }, {}, { also: [p.id, "nope"] }])).toMatchObject({
+      body: { errors: { "links.2.also": expect.any(String) } },
+    });
+    expect(await error([{ image: "nope" }])).toMatchObject({
+      body: { errors: { "links.0.image": expect.any(String) } },
+    });
+    expect(
+      await status(client.create("menus", { links: [{ page: p.id }, {}] } as never)),
+    ).toBeUndefined();
+  });
+});
+
+describe("references inside block items", () => {
+  const make = () =>
+    defineCms({
+      collections: {
+        pages: { fields: { title: { type: "text" } } },
+        landing: {
+          fields: {
+            content: {
+              type: "blocks",
+              blocks: {
+                text: { fields: { body: { type: "text" } } },
+                hero: {
+                  fields: {
+                    image: { type: "image" },
+                    page: { type: "relation", collection: "pages" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+      media: { storage: local({ dir: tmpDir() }) },
+    });
+
+  it("fails at the positional path of the block with an unknown id", async () => {
+    const { cms, client } = setup(make());
+    await client.signUp(admin);
+    const p = await cms.create("pages", {});
+    const error = (content: object[]) =>
+      client.create("landing", { content } as never).catch((e: unknown) => e);
+
+    expect(
+      await error([{ blockType: "text" }, { blockType: "hero", image: "nope" }]),
+    ).toMatchObject({
+      status: 400,
+      body: { errors: { "content.1.image": expect.any(String) } },
+    });
+    expect(
+      await error([
+        { blockType: "hero", page: p.id },
+        { blockType: "hero", page: "nope" },
+      ]),
+    ).toMatchObject({
+      body: { errors: { "content.1.page": expect.any(String) } },
+    });
+    expect(
+      await status(
+        client.create("landing", { content: [{ blockType: "hero", page: p.id }] } as never),
+      ),
+    ).toBeUndefined();
   });
 });

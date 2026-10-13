@@ -10,4 +10,21 @@ describe("step", () => {
     expect(step({ other: true }, "docs", file)).toEqual({ on: false, child: false });
     expect(step(false, "docs", file)).toEqual({ on: false, child: false });
   });
+
+  it("passes the plan through groups, arrays and blocks without a hop", () => {
+    for (const field of [
+      { type: "group", fields: {} },
+      { type: "array", fields: {} },
+      { type: "blocks", blocks: {} },
+    ] as const) {
+      expect(step(2, "links", field)).toEqual({ on: true, child: 2 });
+      expect(step({ links: true }, "links", field)).toEqual({ on: true, child: 1 });
+      expect(step({ links: { page: true } }, "links", field)).toEqual({
+        on: true,
+        child: { page: true },
+      });
+      expect(step({ other: true }, "links", field)).toEqual({ on: true, child: false });
+      expect(step(false, "links", field)).toEqual({ on: true, child: false });
+    }
+  });
 });

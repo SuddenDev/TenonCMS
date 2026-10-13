@@ -18,6 +18,25 @@ const collections: Record<string, Collection> = {
       author: { type: "relation", collection: "authors" },
       tags: { type: "relation", collection: "tags", many: true },
       seo: { type: "group", fields: { image: { type: "relation", collection: "media" } } },
+      links: {
+        type: "array",
+        fields: {
+          label: { type: "text" },
+          author: { type: "relation", collection: "authors" },
+        },
+      },
+      content: {
+        type: "blocks",
+        blocks: {
+          hero: {
+            fields: {
+              title: { type: "text" },
+              author: { type: "relation", collection: "authors" },
+            },
+          },
+          text: { fields: { body: { type: "text" } } },
+        },
+      },
     },
   },
 };
@@ -39,6 +58,26 @@ describe("parsePopulate", () => {
     expect(parse({ populate: "seo.image" })).toEqual({ seo: { image: true } });
     expect(parse({ populate: "seo" })).toEqual({ seo: true });
     expect(parse({ populate: "posts.tags" }, "authors")).toEqual({ posts: { tags: true } });
+  });
+
+  it("passes through arrays without a hop", () => {
+    expect(parse({ populate: "links.author" })).toEqual({ links: { author: true } });
+    expect(parse({ populate: "links.author.avatar" })).toEqual({
+      links: { author: { avatar: true } },
+    });
+    expect(parse({ populate: "links.label" })).toBe("Invalid populate: links.label");
+  });
+
+  it("passes through blocks by block name without a hop", () => {
+    expect(parse({ populate: "content.hero.author.avatar" })).toEqual({
+      content: { hero: { author: { avatar: true } } },
+    });
+    expect(parse({ populate: "content" })).toEqual({ content: true });
+    expect(parse({ populate: "content.author" })).toBe("Invalid populate: content.author");
+    expect(parse({ populate: "content.hero.title" })).toBe("Invalid populate: content.hero.title");
+    expect(parse({ populate: "content.text.author" })).toBe(
+      "Invalid populate: content.text.author",
+    );
   });
 
   it.each([

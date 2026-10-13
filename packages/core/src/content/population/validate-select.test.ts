@@ -18,6 +18,25 @@ const collections: Record<string, Collection> = {
       author: { type: "relation", collection: "authors" },
       tags: { type: "relation", collection: "tags", many: true },
       seo: { type: "group", fields: { image: { type: "relation", collection: "assets" } } },
+      links: {
+        type: "array",
+        fields: {
+          label: { type: "text" },
+          author: { type: "relation", collection: "authors" },
+        },
+      },
+      content: {
+        type: "blocks",
+        blocks: {
+          hero: {
+            fields: {
+              title: { type: "text" },
+              author: { type: "relation", collection: "authors" },
+            },
+          },
+          text: { fields: { body: { type: "text" } } },
+        },
+      },
     },
   },
 };
@@ -61,6 +80,48 @@ describe("badSelectPath", () => {
     [{ constructor: true }, 2],
   ])("rejects %o with populate %o", (select, plan) => {
     expect(check(select, plan as never)).toEqual(expect.any(String));
+  });
+
+  it("selects into array items like a group, without a hop", () => {
+    expect(check({ links: true })).toBeUndefined();
+    expect(check({ links: { label: true } }, false)).toBeUndefined();
+    expect(check({ links: { author: { name: true } } }, 1)).toBeUndefined();
+    expect(
+      check({ links: { author: { name: true } } }, { links: { author: true } }),
+    ).toBeUndefined();
+    expect(check({ links: { author: { avatar: { url: true } } } }, 1)).toBe("links.author.avatar");
+    expect(check({ links: { author: { name: true } } }, false)).toBe("links.author");
+    expect(check({ links: { nope: true } })).toBe("links.nope");
+    expect(check({ links: { createdAt: true } })).toBe("links.createdAt");
+  });
+
+  it("selects into blocks by block name, like groups", () => {
+    expect(check({ content: true })).toBeUndefined();
+    expect(check({ content: { hero: true, text: { body: true } } }, false)).toBeUndefined();
+    expect(check({ content: { hero: { author: { name: true } } } }, 1)).toBeUndefined();
+    expect(
+      check(
+        { content: { hero: { author: { name: true } } } },
+        { content: { hero: { author: true } } },
+      ),
+    ).toBeUndefined();
+    expect(
+      check({ content: { hero: { author: { name: true } } } }, { content: true }),
+    ).toBeUndefined();
+    expect(check({ content: { hero: { author: { name: true } } } }, false)).toBe(
+      "content.hero.author",
+    );
+    expect(
+      check({ content: { hero: { author: { name: true } } } }, { content: { text: true } }),
+    ).toBe("content.hero.author");
+    expect(check({ content: { nope: true } })).toBe("content.nope");
+    expect(check({ content: { title: true } })).toBe("content.title");
+    expect(check({ content: { hero: { body: true } } })).toBe("content.hero.body");
+    expect(check({ content: { id: true } })).toBe("content.id");
+  });
+
+  it("selects into a group with populate: false", () => {
+    expect(check({ seo: { image: true } }, false)).toBeUndefined();
   });
 
   it("names the offending path", () => {

@@ -399,6 +399,30 @@ describe("hooks", () => {
     expect(JSON.stringify(schema).replace('"hooks":{"type":"text"}', "")).not.toContain("hooks");
   });
 
+  it("are not sent in /schema from block fields, and blocks named like options stay", async () => {
+    const field = { type: "text" as const, hooks: { afterRead: [log("f")] } };
+    const cms = defineCms({
+      ...db,
+      collections: {
+        posts: {
+          fields: {
+            content: {
+              type: "blocks",
+              blocks: { hooks: { fields: { field } }, preview: { fields: { field } } },
+            },
+          },
+        },
+      },
+    });
+    const { client } = setup(cms);
+    await client.signUp(admin);
+    const schema = await client.getSchema();
+    expect((schema.collections!.posts.fields.content as any).blocks).toEqual({
+      hooks: { fields: { field: { type: "text" } } },
+      preview: { fields: { field: { type: "text" } } },
+    });
+  });
+
   it("are not sent in /schema, and neither are validate and function defaults", async () => {
     const cms = defineCms({
       ...db,

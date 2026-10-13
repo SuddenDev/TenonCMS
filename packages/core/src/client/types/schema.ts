@@ -10,15 +10,21 @@ import type {
 } from "../../schema/index.ts";
 import type { Register } from "../index.ts";
 
-// Fields as the HTTP API sends them: private fields optional.
+// Fields as the HTTP API sends them: private fields optional, inside groups, array items and block items too.
 // Untyped fields (the admin's) stay as they are. The recursion would not terminate.
 type HttpFields<F> = string extends keyof F ? F : { [K in keyof F]: HttpField<F[K]> };
 
 type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, "required"> : HttpGroup<F>;
 
-type HttpGroup<F> = F extends { type: "group"; fields: infer G }
+type HttpGroup<F> = F extends { type: "group" | "array"; fields: infer G }
   ? Omit<F, "fields"> & { fields: Extract<HttpFields<G>, Fields> }
-  : F;
+  : F extends { type: "blocks"; blocks: infer B }
+    ? Omit<F, "blocks"> & {
+        blocks: { [K in keyof B]: Omit<B[K], "fields"> & { fields: HttpBlockFields<B[K]> } };
+      }
+    : F;
+
+type HttpBlockFields<B> = B extends { fields: infer G } ? Extract<HttpFields<G>, Fields> : never;
 
 // `Extract` keeps the result assignable to `Fields`.
 type Http<R> = string extends keyof R

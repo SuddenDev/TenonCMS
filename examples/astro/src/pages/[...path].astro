@@ -12,13 +12,14 @@ const page = await cms.findOne("pages", {
   where: { path },
   locale,
   alternates: true,
-  populate: { hero: true, seo: { image: true } },
+  populate: { hero: true, seo: { image: true }, content: { hero: { image: true } } },
   select: {
     title: true,
     path: true,
     body: true,
     seo: true,
     hero: true,
+    content: true,
     locale: true,
     alternates: true,
   },
@@ -63,5 +64,28 @@ const meta = seoMeta(page, { general, seo });
     <p style="white-space: pre-wrap" data-cms={edit("pages", page.id, "body")}>
       {page.body}
     </p>
+    {page.content?.map((item, i) =>
+      item.blockType === "hero" ? (
+        <section>
+          <h2 data-cms={edit("pages", page.id, `content.${i}.title`)}>{item.title}</h2>
+          {item.image && (
+            <img
+              data-cms={edit("pages", page.id, `content.${i}.image`)}
+              src={item.image.src}
+              srcset={item.image.srcset}
+              sizes="(min-width: 720px) 720px, 100vw"
+              width={item.image.width}
+              height={item.image.height}
+              alt={item.image.alt ?? ""}
+              style="max-width: 100%; height: auto"
+            />
+          )}
+        </section>
+      ) : (
+        <p style="white-space: pre-wrap" data-cms={edit("pages", page.id, `content.${i}.body`)}>
+          {item.body}
+        </p>
+      ),
+    )}
   </body>
 </html>

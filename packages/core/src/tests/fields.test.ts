@@ -1,7 +1,8 @@
+import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, origin, published, setup, status, type Env } from "./setup.ts";
+import { admin, fresh, origin, published, setup, status, tmpDb, type Env } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -294,7 +295,7 @@ describe("unique", () => {
 });
 
 describe("private", () => {
-  const make = () =>
+  const make = (url = ":memory:") =>
     defineCms({
       collections: {
         people: {
@@ -302,6 +303,18 @@ describe("private", () => {
             name: { type: "text" },
             email: { type: "text", private: true },
             contact: { type: "group", private: true, fields: { phone: { type: "text" } } },
+            links: {
+              type: "array",
+              fields: { url: { type: "text" }, note: { type: "text", private: true } },
+            },
+            content: {
+              type: "blocks",
+              blocks: {
+                quote: {
+                  fields: { text: { type: "text" }, source: { type: "text", private: true } },
+                },
+              },
+            },
           },
         },
         posts: { fields: { author: { type: "relation", collection: "people" } } },
@@ -309,7 +322,7 @@ describe("private", () => {
       globals: {
         site: { fields: { name: { type: "text" }, key: { type: "text", private: true } } },
       },
-      database: { url: ":memory:" },
+      database: { url },
       secret: "x".repeat(32),
     });
   const person = { name: "A", email: "e", contact: { phone: "p" } };
@@ -336,6 +349,52 @@ describe("private", () => {
     await client.signUp(admin);
     for (const read of await reads()) expect(read).toMatchObject(person);
     expect(await client.getGlobal("site")).toEqual({ name: "S", key: "k", ...published });
+  });
+
+  it("is missing in array items on public reads and sent with a session", async () => {
+    const cms = make();
+    const { client } = setup(cms);
+    const p = await cms.create("people", { name: "A", links: [{ id: "l", url: "u", note: "n" }] });
+    expect((await client.findById("people", p.id)).links).toEqual([{ id: "l", url: "u" }]);
+    await client.signUp(admin);
+    expect((await client.findById("people", p.id)).links).toEqual([
+      { id: "l", url: "u", note: "n" },
+    ]);
+  });
+
+  it("is missing in block items on public reads and sent with a session", async () => {
+    const cms = make();
+    const { client } = setup(cms);
+    const item = { id: "q", blockType: "quote", text: "t", source: "s" } as const;
+    const p = await cms.create("people", { name: "A", content: [item] });
+    expect((await client.findById("people", p.id)).content).toEqual([
+      { id: "q", blockType: "quote", text: "t" },
+    ]);
+    await client.signUp(admin);
+    expect((await client.findById("people", p.id)).content).toEqual([item]);
+  });
+
+  it("reduces a block item of an unknown block to id and blockType on public reads", async () => {
+    const url = tmpDb();
+    const cms = make(url);
+    const { client } = setup(cms);
+    const p = await cms.create("people", {
+      name: "A",
+      content: [{ id: "q", blockType: "quote", text: "t", source: "s" }],
+    });
+    // A block removed from the schema leaves its items in the stored data.
+    const db = createLibsql({ url });
+    await db.execute({
+      sql: "UPDATE cms_documents SET data = json_set(data, '$.content[0].blockType', 'gone') WHERE id = ?",
+      args: [p.id],
+    });
+    db.close();
+    const item = { id: "q", blockType: "gone", text: "t", source: "s" };
+    expect((await client.findById("people", p.id)).content).toEqual([
+      { id: "q", blockType: "gone" },
+    ]);
+    await client.signUp(admin);
+    expect((await client.findById("people", p.id)).content).toEqual([item]);
   });
 
   it("cannot be filtered without a session", async () => {

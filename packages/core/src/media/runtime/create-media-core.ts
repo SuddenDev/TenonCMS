@@ -1,7 +1,7 @@
 import type { Core } from "../../cms/runtime/types.ts";
 import type { MediaHooks, Modifiers, Schema } from "../../schema/index.ts";
 import type { ImageOptions } from "../../schema/fields/image.ts";
-import { relationPaths } from "../../schema/traversal/relation-paths.ts";
+import { pathKey, relationPaths } from "../../schema/traversal/relation-paths.ts";
 import { allowlist } from "../images/allowlist.ts";
 import type { Images } from "../images/types.ts";
 import type { ImagesOptions, MediaOptions } from "../config/options.ts";
@@ -69,7 +69,7 @@ function imageFields(schema: Required<Schema>): { path: string; image?: ImageOpt
   const owners = [...Object.values(schema.collections), ...Object.values(schema.globals)];
   return owners.flatMap((owner) =>
     relationPaths(owner.fields).flatMap(({ path, field }) =>
-      field.type === "image" ? [{ path: path.join("."), image: field.image }] : [],
+      field.type === "image" ? [{ path: pathKey(path), image: field.image }] : [],
     ),
   );
 }

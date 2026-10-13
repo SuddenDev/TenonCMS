@@ -39,12 +39,20 @@ type CheckOn<F, C, Self extends string> = F extends {
       : Replace<F, "on", JoinError<FieldsOf<C, N>, N & string, Self>>
   : F;
 
+type CheckBlocks<B, C, Self extends string> = {
+  [K in keyof B]: B[K] extends { fields: infer G }
+    ? Replace<B[K], "fields", CheckFields<G, C, Self>>
+    : B[K];
+};
+
 type CheckFields<F, C, Self extends string> = {
-  [K in keyof F]: F[K] extends { type: "group"; fields: infer G }
+  [K in keyof F]: F[K] extends { type: "group" | "array"; fields: infer G }
     ? Replace<F[K], "fields", CheckFields<G, C, Self>>
-    : F[K] extends { type: "relation" | "join" }
-      ? CheckOn<CheckTarget<F[K], C>, C, Self>
-      : F[K];
+    : F[K] extends { type: "blocks"; blocks: infer B }
+      ? Replace<F[K], "blocks", CheckBlocks<B, C, Self>>
+      : F[K] extends { type: "relation" | "join" }
+        ? CheckOn<CheckTarget<F[K], C>, C, Self>
+        : F[K];
 };
 
 type CheckCollections<S, C> = {

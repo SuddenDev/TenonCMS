@@ -3,8 +3,9 @@ import { toDoc } from "../../db/map-document.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { type Loc } from "../../db/queries/document-sql.ts";
 import { joinedDocs } from "../../db/queries/references/joined-documents.query.ts";
+import { blockGroups } from "../../schema/traversal/inner-fields.ts";
 import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
-import { relationPaths } from "../../schema/traversal/relation-paths.ts";
+import { plainPath, relationPaths } from "../../schema/traversal/relation-paths.ts";
 import {
   type Collection,
   type Fields,
@@ -13,6 +14,7 @@ import {
   type JoinField,
   type RefField,
 } from "../../schema/index.ts";
+import { isObject } from "../../schema/condition.ts";
 import { type PopulatePlan, step } from "./populate-plan.ts";
 import type { Kysely } from "kysely";
 
@@ -61,6 +63,15 @@ export async function populate(
     if (field.type === "group") {
       const values = docs.map((d) => d[key]).filter(Boolean);
       await populate(db, collections, field.fields, values, child, read);
+    } else if (field.type === "array" || field.type === "blocks") {
+      // The items of every document populate together, so it stays one query per field per hop and block.
+      const items = docs.flatMap((d) => (Array.isArray(d[key]) ? d[key].filter(isObject) : []));
+      if (field.type === "array") await populate(db, collections, field.fields, items, child, read);
+      else
+        for (const [name, group] of Object.entries(blockGroups(field))) {
+          const own = items.filter((item) => item.blockType === name);
+          await populate(db, collections, group.fields, own, step(child, name, group).child, read);
+        }
     } else if (isRef(field)) {
       await resolveRef(ctx, docs, key, field);
     } else if (field.type === "join") {
@@ -94,7 +105,7 @@ async function resolveRef(ctx: Hop, docs: Docs, key: string, field: RefField) {
 // Resolves join fields by loading the target documents and applying read hooks.
 async function resolveJoin(ctx: Hop, docs: Docs, key: string, field: JoinField) {
   const target = ctx.collections[field.collection].fields;
-  const source = relationPaths(target).find((r) => r.path.join(".") === field.on)!.field;
+  const source = relationPaths(target).find((r) => plainPath(r.path) === field.on)!.field;
 
   const ids = docs.map((d) => d.id);
   const loc = ctx.read.loc?.(field.collection);

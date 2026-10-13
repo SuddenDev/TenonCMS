@@ -13,19 +13,31 @@ type Scalar = {
 /** The stored ids of a reference field: an array with `many`, else one id. */
 export type Ids<F> = F extends { many: true } ? string[] : string;
 
-/** The stored value of one field. */
+/**
+ * The stored items of a `blocks` field: one object type per block, told apart by `blockType`. `id` is optional, as in
+ * array items.
+ */
+type BlockItem<B extends Record<string, { fields: Fields }>> = {
+  [K in keyof B & string]: { id?: string; blockType: K } & Data<B[K]["fields"]>;
+}[keyof B & string];
+
+/** The stored value of one field. An array item's `id` is optional, because a write MAY leave it out; reads always have it. */
 export type FieldValue<F extends Field> = F extends {
   type: "group";
   fields: infer G extends Fields;
 }
   ? Data<G>
-  : F extends { type: "select"; options: readonly (infer O)[] }
-    ? O
-    : F extends { type: "relation" | "image" | "file" }
-      ? Ids<F>
-      : F extends { type: keyof Scalar }
-        ? Scalar[F["type"]]
-        : string;
+  : F extends { type: "array"; fields: infer G extends Fields }
+    ? ({ id?: string } & Data<G>)[]
+    : F extends { type: "blocks"; blocks: infer B extends Record<string, { fields: Fields }> }
+      ? BlockItem<B>[]
+      : F extends { type: "select"; options: readonly (infer O)[] }
+        ? O
+        : F extends { type: "relation" | "image" | "file" }
+          ? Ids<F>
+          : F extends { type: keyof Scalar }
+            ? Scalar[F["type"]]
+            : string;
 
 export type JoinKey<F> = Keys<F, { type: "join" }>;
 export type RequiredKey<F> = Keys<F, { required: true }>;
@@ -85,8 +97,8 @@ export type Image = File & {
 /** A populated `image` or `file`, or several with `many`. */
 export type MediaValue<F, T> = F extends { many: true } ? T[] : T;
 
-/** Field keys that `where` accepts. Groups, joins and `many` relations are not filterable. */
+/** Field keys that `where` accepts. Groups, arrays, blocks, joins and `many` relations are not filterable. */
 export type FilterKey<F extends Fields> = Exclude<
   keyof F,
-  Keys<F, { type: "group" | "join" } | { many: true }>
+  Keys<F, { type: "group" | "array" | "blocks" | "join" } | { many: true }>
 >;

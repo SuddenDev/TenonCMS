@@ -59,7 +59,7 @@ calls `update()` when the bound documents, the edit mode or an item's data chang
 | `runtime/preview.ts`              | `preview()`: picks the mode and loads `live.ts` only when needed.                                                                                                                                                                                                           |
 | `runtime/live.ts`                 | `startLive()`: message channel and origin checks, observer, edit clicks and morph re-renders.                                                                                                                                                                               |
 | `runtime/store.ts`                | The singleton draft snapshot, `draftKey()` and subscriptions.                                                                                                                                                                                                               |
-| `runtime/merge-draft.ts`          | `merge()`: applies a draft, keeping populated values whose ids match.                                                                                                                                                                                                       |
+| `runtime/merge-draft.ts`          | `merge()`: applies a draft recursively, items by `id`, keeping populated values whose ids match.                                                                                                                                                                            |
 | `runtime/bind-elements.ts`        | `edit()`, `parseBinding()`, DOM patches, highlights and `boundDocuments()`.                                                                                                                                                                                                 |
 | `runtime/admin-bar.ts`            | `startAdminBar()`: loads the items, mounts the bar in a shadow root, `fillItems()`.                                                                                                                                                                                         |
 | `runtime/admin-bar-items.ts`      | `builtIns()` and `composeItems()`: built-in stubs and server-side composition.                                                                                                                                                                                              |
@@ -157,7 +157,9 @@ one with `idiomorph`, copies the `<title>` and patches bound elements again. Onl
 during it queues one more. The rest of `<head>` is left alone. Prerendered pages fetch their static HTML, so they
 only get the patches. `idiomorph` is bundled into the entry.
 
-`merge()` replaces top-level keys with draft values, except a value of ids that match the ids of the current,
-populated value: the browser cannot populate, so it keeps what the page has.
+`merge()` applies draft values recursively. A value whose ids match the ids of the current, populated value keeps
+the page's value at any depth: the browser cannot populate, so it keeps what the page has. Lists of objects with a
+string `id` (array and block items) match by `id` in draft order, so a reordered item keeps its populated relations;
+objects merge per draft key.
 
 The bar supports the eight compass positions except center-center and defaults to bottom-center, with 16 px clearance and safe-area insets. Its toolbar keeps roving keyboard focus and places every menu/portal inside the same shadow root. The Edit button opens `<admin>/presentation?url=<current page>`. Normal site pages have no live preview channel or embedded editor. Preview tabs retain field selection and live updates. Dismiss hides the bar; session expiry removes it and its listeners. Published forms remain read-only; perspective changes still reload.

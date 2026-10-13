@@ -20,6 +20,7 @@ import {
 import { useExtensionData } from "@/shared/composables/useExtensionData";
 import MediaField from "@/modules/media/components/MediaField.vue";
 import Icon from "@/shared/components/Icon.vue";
+import ItemList from "@/modules/documents/components/ItemList.vue";
 import SharedMarker from "@/modules/documents/components/SharedMarker.vue";
 import Mount from "@/shared/components/Mount.vue";
 import { Button } from "@/shared/components/ui/button";
@@ -189,6 +190,30 @@ if (slug?.parent && relation?.type === "relation") {
       />
     </template>
     <FieldError v-if="message">{{ message }}</FieldError>
+  </FieldSet>
+  <FieldSet
+    v-else-if="field.type === 'array' || field.type === 'blocks'"
+    ref="box"
+    :disabled="field.readOnly"
+    class="gap-3"
+  >
+    <FieldLegend variant="label" class="mb-0">
+      {{ field.labels?.plural ?? field.label ?? name }}
+      <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+      <SharedMarker v-if="shared" />
+    </FieldLegend>
+    <FieldDescription v-if="field.description" class="-mt-2">{{
+      field.description
+    }}</FieldDescription>
+    <ItemList
+      v-model="model"
+      :name="name"
+      :field="field"
+      :root="root"
+      :is-new="isNew"
+      :path="path"
+      :errors="errors"
+    />
   </FieldSet>
   <!-- Not a <label>: a click on its list would activate its first button. -->
   <FieldBox

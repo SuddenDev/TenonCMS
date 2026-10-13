@@ -2,6 +2,7 @@ import type { AdminDescriptor } from "../../admin/index.d.ts";
 import { Hono } from "hono";
 import type { Env } from "../../http/middleware/types.ts";
 import type { Localization } from "../../cms/config/options.ts";
+import { isObject } from "../condition.ts";
 import type { Schema } from "../index.ts";
 
 /**
@@ -34,10 +35,11 @@ export function readEndpoint(
 }
 
 // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
-// A field MAY be named `hooks` or `preview`; it has a `type`. `JSON.stringify` drops other functions, like `validate`, itself.
+// A field, or a block, collection or global with `fields`, MAY be named `hooks` or `preview`, so it passes as is.
+// `JSON.stringify` drops other functions, like `validate`, itself.
 // The admin only needs to know that a preview exists (`preview` or `permalink`), so either form is sent as `true`.
 function publicValue(key: string, value: any) {
-  if (typeof value?.type === "string") return value;
+  if (typeof value?.type === "string" || isObject(value?.fields)) return value;
   if (key === "hooks") return undefined;
   if (key === "permalink") return undefined;
   if (key === "preview") return !!value || undefined;

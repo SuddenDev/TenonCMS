@@ -24,35 +24,38 @@ Draft saves check types and run the before hooks, then save the pending version.
 
 `reads/read-documents.ts` → `reads/read-results.ts` → `population/populate.ts` → `population/select-fields.ts`
 
-`readDocs()` runs `beforeRead`, population, field and collection `afterRead`, media URLs, `alternates` (`reads/alternates.ts`: one batched published read per locale, then `permalinkUrl()`), then `select`. Population replaces relation ids with documents. It loads all targets of one field in one query, and each loaded batch runs its own collection's read hooks in the scope of the outer read.
+`readDocs()` runs `beforeRead`, population, field and collection `afterRead`, media URLs, `alternates` (`reads/alternates.ts`: one batched published read per locale, then `permalinkUrl()`), then `select`. Population replaces relation ids with documents. It loads all targets of one field in one query, and each loaded batch runs its own collection's read hooks in the scope of the outer read. Groups, arrays and blocks pass the plan through and count no hop; the items of every document populate together, an array's with its `fields`, a blocks field's once per block name with that block's sub-plan.
 
 ## Files
 
-| Path                             | Responsibility                                                                          |
-| -------------------------------- | --------------------------------------------------------------------------------------- |
-| `targets.ts`                     | Collection and global names, schema lookup, name checks and draft eligibility.          |
-| `locale.ts`                      | `withLocale()`: applies `locale` and `fallback` to a scope and rejects unknown locales. |
-| `lifecycle/run-operation.ts`     | Operation hooks, write transactions and `afterError` after the rollback.                |
-| `lifecycle/collect-hooks.ts`     | Hook order: collection or global, then plugins, then root. None for media.              |
-| `lifecycle/hook-args.ts`         | The arguments every hook gets.                                                          |
-| `lifecycle/run-read-hooks.ts`    | `beforeRead` and `afterRead`, shared by reads, writes and population.                   |
-| `reads/`                         | Load documents and globals, check read options and run read processing.                 |
-| `reads/loc-of.ts`                | `locOf()`: the locale descriptor (`Loc`) of a read, or `undefined` when not localized.  |
-| `reads/merge-locale.ts`          | `mergeLocale()`: shared fields plus the locale row, then the default row, then `null`.  |
-| `reads/alternates.ts`            | `addAlternates()`: the `alternates` metadata, one batched published read per locale.    |
-| `writes/`                        | The write pipeline, publish, discard and delete. `helpers/` prepares and saves.         |
-| `writes/split-locale.ts`         | `splitLocale()`: written data to shared and localized keys.                             |
-| `writes/helpers/store-locale.ts` | `saveLocalized()`: saves a localized write to the document row and the locale row.      |
-| `writes/discard-locale.ts`       | `discardLocalized()`: drops one locale's draft, or every draft with `all`.              |
-| `writes/copy-locale.ts`          | `copyLocalized()`: fills a locale from another through the write pipeline.              |
-| `writes/remove-locale.ts`        | `removeLocalized()`: deletes one locale row and runs `afterChange`.                     |
-| `population/populate-plan.ts`    | What a populate option resolves at each key and hop.                                    |
-| `population/populate.ts`         | Batched relation and join reads, with the target's read hooks.                          |
-| `population/select-fields.ts`    | Projection of a read result to the `select` keys.                                       |
-| `population/validate-select.ts`  | Checks that `select` fits the fields and what `populate` resolves.                      |
-| `integrity/check-*.ts`           | Existing ids, file rules and unique values before a save.                               |
-| `integrity/find-references.ts`   | Every document and global that points to a document.                                    |
-| `integrity/apply-on-delete.ts`   | `restrict`, then `set-null`, then `cascade` after a delete.                             |
+| Path                                                  | Responsibility                                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `targets.ts`                                          | Collection and global names, schema lookup, name checks and draft eligibility.                                                       |
+| `locale.ts`                                           | `withLocale()`: applies `locale` and `fallback` to a scope and rejects unknown locales.                                              |
+| `lifecycle/run-operation.ts`                          | Operation hooks, write transactions and `afterError` after the rollback.                                                             |
+| `lifecycle/collect-hooks.ts`                          | Hook order: collection or global, then plugins, then root. None for media.                                                           |
+| `lifecycle/hook-args.ts`                              | The arguments every hook gets.                                                                                                       |
+| `lifecycle/run-read-hooks.ts`                         | `beforeRead` and `afterRead`, shared by reads, writes and population.                                                                |
+| `reads/`                                              | Load documents and globals, check read options and run read processing.                                                              |
+| `reads/loc-of.ts`                                     | `locOf()`: the locale descriptor (`Loc`) of a read, or `undefined` when not localized.                                               |
+| `reads/merge-locale.ts`                               | `mergeLocale()`: shared fields plus the locale row, then the default row, then `null`.                                               |
+| `reads/alternates.ts`                                 | `addAlternates()`: the `alternates` metadata, one batched published read per locale.                                                 |
+| `collections/operations/local/alternates-at.local.ts` | `alternatesAt(url)`: matches a URL against the `permalink` templates (top-level fields only), reads that document with `alternates`. |
+| `writes/`                                             | The write pipeline, publish, discard and delete. `helpers/` prepares and saves.                                                      |
+| `writes/split-locale.ts`                              | `splitLocale()`: written data to shared and localized keys.                                                                          |
+| `writes/helpers/store-locale.ts`                      | `saveLocalized()`: saves a localized write to the document row and the locale row.                                                   |
+| `writes/discard-locale.ts`                            | `discardLocalized()`: drops one locale's draft, or every draft with `all`.                                                           |
+| `writes/copy-locale.ts`                               | `copyLocalized()`: fills a locale from another through the write pipeline.                                                           |
+| `writes/remove-locale.ts`                             | `removeLocalized()`: deletes one locale row and runs `afterChange`.                                                                  |
+| `population/populate-plan.ts`                         | What a populate option resolves at each key and hop. Groups and lists are always on.                                                 |
+| `population/populate.ts`                              | Batched relation and join reads, with the target's read hooks.                                                                       |
+| `population/select-fields.ts`                         | Projection to the `select` keys. Items keep `id` and `blockType`; blocks by block name.                                              |
+| `population/validate-select.ts`                       | Checks that `select` fits the fields and what `populate` resolves.                                                                   |
+| `integrity/check-*.ts`                                | Existing ids, file rules and unique values before a save, at positional paths.                                                       |
+| `integrity/find-references.ts`                        | Every document and global that points to a document.                                                                                 |
+| `integrity/apply-on-delete.ts`                        | `restrict`, then `set-null`, then `cascade` after a delete.                                                                          |
+
+References inside array and block items follow `Step[]` paths (`schema/traversal/relation-paths.ts`). `checkRefs()` and `clear()` in `apply-on-delete.ts` reach every item that holds a value through `holdersAt()`: `checkRefs()` fails at the positional path (`links.1.page`), and `set-null` clears the value in each item and keeps the items.
 
 `writes/remove-document.ts` deletes the row first and applies `onDelete` effects in the same transaction. Effects use the original scope, so a cascade that comes back to a deleted row finds nothing and cycles end. Hooks MUST make nested calls through the `cms` they get, so the calls join the transaction.
 

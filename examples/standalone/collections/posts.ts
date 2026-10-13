@@ -9,5 +9,13 @@ export const posts = defineCollection({
     publishedAt: { type: "date", label: "Published at" },
     hero: { type: "image", folder: "posts" },
     body: { type: "textarea" },
+    links: {
+      type: "array",
+      labels: { singular: "Link", plural: "Links" },
+      fields: {
+        label: { type: "text", required: true },
+        url: { type: "text" },
+      },
+    },
   },
 });

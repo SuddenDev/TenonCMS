@@ -15,9 +15,33 @@ function sameIds(draft: unknown, current: unknown) {
   );
 }
 
+const isItems = (v: unknown): v is Record<string, unknown>[] =>
+  Array.isArray(v) && v.every((item) => isObject(item) && typeof item.id === "string");
+
+function mergeKeys(draft: Record<string, unknown>, current: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(draft)) out[key] = mergeValue(value, current[key]);
+  return out;
+}
+
+// The ids check MUST come first: a populated relation is an object with `id` too.
+function mergeValue(draft: unknown, current: unknown): unknown {
+  if (sameIds(draft, current)) return current;
+  if (isItems(draft) && isItems(current)) {
+    const byId = new Map(current.map((item) => [item.id, item]));
+    return draft.map((item) => {
+      const now = byId.get(item.id as string);
+      return now ? mergeKeys(item, now) : item;
+    });
+  }
+  if (isObject(draft) && isObject(current)) return mergeKeys(draft, current);
+  return draft;
+}
+
 /**
- * Applies the draft of `doc` to it: draft values replace top-level keys. For a global, pass its name as `collection`.
- * A relation whose ids did not change keeps its populated value.
+ * Applies the draft of `doc` to it. For a global, pass its name as `collection`.
+ * Draft values replace the page's, recursively: a value whose ids did not change keeps its populated value,
+ * list items (objects with a string `id`) match by `id` in draft order, and objects merge per key of the draft.
  * A draft with a `locale` applies only to a `doc` of that locale. A `doc` without a `locale` takes any draft.
  */
 export function merge<T>(collection: string, doc: T, drafts: Drafts): T {
@@ -25,8 +49,5 @@ export function merge<T>(collection: string, doc: T, drafts: Drafts): T {
   const draft = drafts[draftKey(collection, String(doc.id ?? ""))];
   if (!draft) return doc;
   if (typeof doc.locale === "string" && draft.locale !== doc.locale) return doc;
-  const out: Record<string, unknown> = { ...doc };
-  for (const [key, value] of Object.entries(draft))
-    out[key] = sameIds(value, doc[key]) ? doc[key] : value;
-  return out as T;
+  return { ...doc, ...mergeKeys(draft, doc) } as T;
 }

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { CmsError, type Data, type Field, type Fields } from "@/shared/api";
 import { onLocaleFlush } from "@/shared/composables/useLocale";
-import { active, isEmpty } from "@/modules/documents/fields";
+import { active, isEmpty, normalize } from "@/modules/documents/fields";
 import { ago } from "@/shared/utils";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/shared/components/ui/card";
 import { FieldError } from "@/shared/components/ui/field";
 import FieldInput from "./FieldInput.vue";
+import ItemList from "./ItemList.vue";
 import SharedMarker from "./SharedMarker.vue";
 import { useAutosave } from "@/modules/documents/composables/useAutosave";
 
@@ -44,36 +45,6 @@ const props = defineProps<{
 }>();
 // `change`: the form state as it would be saved, on every edit and once on load.
 const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
-
-// Groups always render as objects, so their inputs have a model to bind to.
-// On save, an optional group with only empty values becomes null, so its required children do not apply.
-// Empty strings become null, so cleared optional fields pass validation.
-// Joins are not stored, so they stay out of the form data.
-// `fill`: use defaults for missing values. Like on the server, children of an optional group get them only when the group has a value.
-// On save, a field whose condition is false becomes null. Conditions read the form data as it is, so '' and null count the same.
-function normalize(
-  fields: Fields,
-  value: Record<string, any> | null | undefined,
-  save = false,
-  fill = false,
-  root: unknown = value,
-): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(fields).flatMap(([k, f]) => {
-      if (f.type === "join") return [];
-      if (save && !active(f, root, value)) return [[k, null]];
-      const v = value?.[k] === undefined && fill ? structuredClone(f.default) : value?.[k];
-      if (f.type === "group") {
-        const g = normalize(f.fields, v, save, fill && (f.required || v != null), root);
-        return [[k, save && !f.required && isEmpty(g) ? null : g]];
-      }
-      if (f.type === "boolean") return [[k, v ?? false]];
-      if ((f.type === "relation" || f.type === "image" || f.type === "file") && f.many)
-        return [[k, v ?? []]];
-      return [[k, v === "" || v === undefined ? null : v]];
-    }),
-  );
-}
 
 const data = ref(normalize(props.fields, props.initial, false, props.isNew));
 // Fields can change after mount, so the payload follows the current fields.
@@ -114,13 +85,17 @@ watch(
   },
   { deep: true, immediate: true },
 );
-// Top-level fields without a group share one card. Each group is its own card.
+// Top-level fields without a group or list share one card. Each group and list is its own card.
 const plain = computed(() =>
-  Object.entries(props.fields).filter(([, f]) => f.type !== "group" && f.type !== "join"),
+  Object.entries(props.fields).filter(
+    ([, f]) => f.type !== "group" && f.type !== "array" && f.type !== "blocks" && f.type !== "join",
+  ),
 );
 const groups = computed(() =>
   Object.entries(props.fields).flatMap(([name, field]) =>
-    field.type === "group" ? [{ name, field }] : [],
+    field.type === "group" || field.type === "array" || field.type === "blocks"
+      ? [{ name, field }]
+      : [],
   ),
 );
 const error = ref("");
@@ -218,14 +193,32 @@ async function discard() {
           <fieldset :disabled="field.readOnly" class="contents">
             <CardHeader class="py-4">
               <CardTitle>
-                {{ field.label ?? name }}
+                {{ ("labels" in field && field.labels?.plural) || field.label || name }}
                 <span v-if="field.required" class="text-destructive" aria-hidden="true">*</span>
                 <SharedMarker v-if="shared(field)" />
               </CardTitle>
               <CardDescription v-if="field.description">{{ field.description }}</CardDescription>
-              <FieldError v-if="errors[name]">{{ errors[name] }}</FieldError>
+              <FieldError v-if="field.type === 'group' && errors[name]">{{
+                errors[name]
+              }}</FieldError>
             </CardHeader>
-            <CardContent class="divide-border border-border flex flex-col divide-y border-t *:py-4">
+            <CardContent
+              v-if="field.type === 'array' || field.type === 'blocks'"
+              class="border-border border-t py-4"
+            >
+              <ItemList
+                v-model="data[name] as any"
+                :name="name"
+                :field="field"
+                :root="data"
+                :is-new="isNew"
+                :errors="errors"
+              />
+            </CardContent>
+            <CardContent
+              v-else
+              class="divide-border border-border flex flex-col divide-y border-t *:py-4"
+            >
               <template v-for="(child, key) in field.fields" :key="key">
                 <FieldInput
                   v-if="active(child, data, data[name] as Record<string, unknown>)"

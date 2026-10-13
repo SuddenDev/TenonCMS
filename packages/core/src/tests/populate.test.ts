@@ -1,7 +1,11 @@
 import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
+import { modifierId } from "../media/images/modifiers.ts";
+import { local } from "../media/storage/local/index.ts";
 import { seo } from "../presets/index.ts";
+import type { Modifiers } from "../schema/index.ts";
+import { png300 } from "./fixtures.ts";
 import {
   fresh,
   origin,
@@ -11,6 +15,7 @@ import {
   setup,
   status,
   tmpDb,
+  tmpDir,
   type Env,
 } from "./setup.ts";
 
@@ -437,5 +442,213 @@ describe("select over HTTP", () => {
       status: 400,
       body: { message: "Invalid select: nope" },
     });
+  });
+});
+
+describe("arrays", () => {
+  const provider = {
+    getImage: (src: { key: string }, m: Modifiers) => ({ url: `/img/${modifierId(m)}/${src.key}` }),
+  };
+  const make = async () => {
+    const cms = defineCms({
+      collections: {
+        pages: { fields: { title: { type: "text", required: true } } },
+        menus: {
+          fields: {
+            links: {
+              type: "array",
+              fields: {
+                label: { type: "text" },
+                page: { type: "relation", collection: "pages" },
+                icon: { type: "image", image: { sizes: [150], quality: 50 } },
+              },
+            },
+          },
+        },
+      },
+      media: { storage: local({ dir: tmpDir() }), images: { provider, sizes: [100, 200] } },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+    });
+    const image = await cms.media.upload(png300, { filename: "hero.png", mimeType: "image/png" });
+    const page = await cms.create("pages", { title: "Docs" });
+    const menu = await cms.create("menus", {
+      links: [
+        { id: "l1", label: "A", page: page.id, icon: image.id },
+        { id: "l2", label: "B" },
+      ],
+    });
+    const get = async (path: string) => {
+      const res = await cms.fetch(new Request(`${origin}/api/cms${path}`));
+      return { status: res.status, body: await res.json() };
+    };
+    return { cms, image, page, menu, get };
+  };
+
+  it("resolves relations and images inside items at the default depth", async () => {
+    const { cms, image, page, menu } = await make();
+    expect((await cms.findById("menus", menu.id))?.links).toEqual([
+      {
+        id: "l1",
+        label: "A",
+        page: expect.objectContaining({ id: page.id, title: "Docs" }),
+        icon: expect.objectContaining({
+          id: image.id,
+          src: "/img/f_webp&q_50&w_150/hero.png",
+          srcset: "/img/f_webp&q_50&w_150/hero.png 150w",
+        }),
+      },
+      { id: "l2", label: "B" },
+    ]);
+    expect((await cms.findById("menus", menu.id, { populate: false }))?.links?.[0]).toEqual({
+      id: "l1",
+      label: "A",
+      page: page.id,
+      icon: image.id,
+    });
+  });
+
+  it("resolves only the paths a populate object names", async () => {
+    const { cms, image, page, menu } = await make();
+    const read = await cms.findById("menus", menu.id, { populate: { links: { page: true } } });
+    expect(read?.links?.[0]).toMatchObject({ page: { id: page.id }, icon: image.id });
+  });
+
+  it("keeps item ids under select", async () => {
+    const { cms, page, menu } = await make();
+    expect(
+      await cms.findById("menus", menu.id, {
+        select: { links: { label: true, page: { title: true } } },
+      }),
+    ).toEqual({
+      id: menu.id,
+      links: [
+        { id: "l1", label: "A", page: { id: page.id, title: "Docs" } },
+        { id: "l2", label: "B" },
+      ],
+    });
+  });
+
+  it("reads populate and select paths into items over HTTP", async () => {
+    const { get, image, page, menu } = await make();
+    const populated = (await get(`/collections/menus/${menu.id}?populate=links.page`)).body;
+    expect(populated.links[0]).toMatchObject({ page: { id: page.id }, icon: image.id });
+    expect((await get(`/collections/menus/${menu.id}?select=links.label`)).body).toEqual({
+      id: menu.id,
+      links: [
+        { id: "l1", label: "A" },
+        { id: "l2", label: "B" },
+      ],
+    });
+    expect((await get(`/collections/menus?populate=links.label`)).status).toBe(400);
+  });
+});
+
+describe("blocks", () => {
+  const make = async () => {
+    const cms = defineCms({
+      collections: {
+        pages: { fields: { title: { type: "text", required: true } } },
+        landing: {
+          fields: {
+            content: {
+              type: "blocks",
+              blocks: {
+                hero: {
+                  fields: {
+                    title: { type: "text" },
+                    image: { type: "image" },
+                    page: { type: "relation", collection: "pages" },
+                  },
+                },
+                link: {
+                  fields: {
+                    label: { type: "text" },
+                    page: { type: "relation", collection: "pages" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      media: { storage: local({ dir: tmpDir() }) },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+    });
+    const image = await cms.media.upload(png300, { filename: "hero.png", mimeType: "image/png" });
+    const page = await cms.create("pages", { title: "Docs" });
+    const doc = await cms.create("landing", {
+      content: [
+        { id: "h", blockType: "hero", title: "Hi", image: image.id, page: page.id },
+        { id: "l", blockType: "link", label: "Go", page: page.id },
+      ],
+    });
+    const get = async (path: string) => {
+      const res = await cms.fetch(new Request(`${origin}/api/cms${path}`));
+      return { status: res.status, body: await res.json() };
+    };
+    return { cms, image, page, doc, get };
+  };
+
+  it("resolves relations and images in every block at the default depth", async () => {
+    const { cms, image, page, doc } = await make();
+    expect((await cms.findById("landing", doc.id))?.content).toEqual([
+      {
+        id: "h",
+        blockType: "hero",
+        title: "Hi",
+        image: expect.objectContaining({ id: image.id }),
+        page: expect.objectContaining({ id: page.id, title: "Docs" }),
+      },
+      { id: "l", blockType: "link", label: "Go", page: expect.objectContaining({ id: page.id }) },
+    ]);
+  });
+
+  it("resolves only the blocks and paths a populate object names", async () => {
+    const { cms, image, page, doc } = await make();
+    const read = await cms.findById("landing", doc.id, {
+      populate: { content: { hero: { image: true } } },
+    });
+    expect(read?.content).toMatchObject([
+      { image: { id: image.id }, page: page.id },
+      { page: page.id },
+    ]);
+    const all = await cms.findById("landing", doc.id, { populate: { content: true } });
+    expect(all?.content).toMatchObject([{ page: { id: page.id } }, { page: { id: page.id } }]);
+  });
+
+  it("leaves blocks a select does not name as id and blockType", async () => {
+    const { cms, page, doc } = await make();
+    expect(
+      await cms.findById("landing", doc.id, {
+        select: { content: { link: { page: { title: true } } } },
+      }),
+    ).toEqual({
+      id: doc.id,
+      content: [
+        { id: "h", blockType: "hero" },
+        { id: "l", blockType: "link", page: { id: page.id, title: "Docs" } },
+      ],
+    });
+  });
+
+  it("reads populate and select paths by block name over HTTP", async () => {
+    const { get, image, page, doc } = await make();
+    const populated = (await get(`/collections/landing/${doc.id}?populate=content.hero.image`))
+      .body;
+    expect(populated.content).toMatchObject([
+      { image: { id: image.id }, page: page.id },
+      { page: page.id },
+    ]);
+    expect((await get(`/collections/landing/${doc.id}?select=content.hero.title`)).body).toEqual({
+      id: doc.id,
+      content: [
+        { id: "h", blockType: "hero", title: "Hi" },
+        { id: "l", blockType: "link" },
+      ],
+    });
+    expect((await get(`/collections/landing?populate=content.image`)).status).toBe(400);
+    expect((await get(`/collections/landing?select=content.title`)).status).toBe(400);
   });
 });

@@ -16,6 +16,7 @@ import {
   type Resolve,
   type Select,
 } from "./index.ts";
+import type { FilterKey } from "./inference/data.ts";
 import { checkSchema } from "./validation/check-schema.ts";
 import { dataSchema } from "./validation/build-data-schema.ts";
 import { relationPaths } from "./traversal/relation-paths.ts";
@@ -40,6 +41,143 @@ describe("group types", () => {
       d.seo.title;
       // @ts-expect-error `noindex` is a boolean
       const n: string | null | undefined = d.seo?.noindex;
+    };
+  });
+});
+
+describe("array types", () => {
+  const fields = {
+    title: { type: "text" },
+    links: {
+      type: "array",
+      fields: {
+        label: { type: "text", required: true },
+        tags: { type: "array", fields: { name: { type: "text" } } },
+      },
+    },
+  } as const satisfies Fields;
+
+  it("infers items with an id", () => {
+    // Type-level only. The function never runs.
+    (d: Data<typeof fields>) => {
+      const id: string | undefined = d.links?.[0]?.id;
+      const label: string | undefined = d.links?.[0]?.label;
+      const name: string | null | undefined = d.links?.[0]?.tags?.[0]?.name;
+      // @ts-expect-error `label` is a string
+      const n: number | undefined = d.links?.[0]?.label;
+    };
+  });
+
+  it("accepts items without an id on write", () => {
+    const data: Data<typeof fields> = { links: [{ label: "a" }, { id: "x", label: "b" }] };
+  });
+
+  it("is not filterable", () => {
+    expectTypeOf<FilterKey<typeof fields>>().toEqualTypeOf<"title">();
+  });
+
+  it("checks relation targets inside items", () => {
+    const db = { database: { url: ":memory:" }, secret: "" };
+    const pages = defineCollection({ fields: {} });
+    const valid = defineCollection({
+      fields: {
+        links: {
+          type: "array",
+          fields: {
+            sub: { type: "array", fields: { page: { type: "relation", collection: "pages" } } },
+          },
+        },
+      },
+    });
+    const invalid = defineCollection({
+      fields: {
+        links: {
+          type: "array",
+          fields: {
+            sub: { type: "array", fields: { page: { type: "relation", collection: "nope" } } },
+          },
+        },
+      },
+    });
+    () => {
+      defineCms({ ...db, collections: { pages, valid } });
+      // @ts-expect-error unknown collection inside an array item
+      defineCms({ ...db, collections: { pages, invalid } });
+    };
+  });
+});
+
+describe("blocks types", () => {
+  const fields = {
+    title: { type: "text" },
+    content: {
+      type: "blocks",
+      blocks: {
+        hero: { fields: { heading: { type: "text", required: true } } },
+        text: { fields: { body: { type: "textarea" } } },
+      },
+    },
+  } as const satisfies Fields;
+
+  it("narrows an item on blockType", () => {
+    // Type-level only. The function never runs.
+    (d: Data<typeof fields>) => {
+      const item = d.content![0]!;
+      const type: "hero" | "text" = item.blockType;
+      if (item.blockType === "hero") {
+        const heading: string = item.heading;
+        // @ts-expect-error `body` belongs to the text block
+        item.body;
+      } else item.body satisfies string | null | undefined;
+    };
+  });
+
+  it("accepts items without an id on write and rejects an unknown block", () => {
+    const data: Data<typeof fields> = {
+      content: [
+        { blockType: "hero", heading: "a" },
+        { id: "x", blockType: "text" },
+      ],
+    };
+    // @ts-expect-error unknown block
+    const bad: Data<typeof fields> = { content: [{ blockType: "nope" }] };
+  });
+
+  it("is not filterable", () => {
+    expectTypeOf<FilterKey<typeof fields>>().toEqualTypeOf<"title">();
+  });
+
+  it("checks relation targets inside blocks", () => {
+    const db = { database: { url: ":memory:" }, secret: "" };
+    const pages = defineCollection({ fields: {} });
+    const blocks = (collection: string) => ({
+      fields: {
+        content: {
+          type: "blocks" as const,
+          blocks: { hero: { fields: { page: { type: "relation" as const, collection } } } },
+        },
+      },
+    });
+    const valid = defineCollection({
+      fields: {
+        content: {
+          type: "blocks",
+          blocks: { hero: { fields: { page: { type: "relation", collection: "pages" } } } },
+        },
+      },
+    });
+    const invalid = defineCollection({
+      fields: {
+        content: {
+          type: "blocks",
+          blocks: { hero: { fields: { page: { type: "relation", collection: "nope" } } } },
+        },
+      },
+    });
+    () => {
+      defineCms({ ...db, collections: { pages, valid, wide: blocks("pages") } });
+      // @ts-expect-error unknown collection inside a block
+      defineCms({ ...db, collections: { pages, invalid } });
     };
   });
 });
@@ -619,6 +757,123 @@ async function readTypes() {
 }
 
 // Checked by `pnpm typecheck` only.
+async function arrayReadTypes() {
+  const cms = defineCms({
+    collections: {
+      pages: { fields: { title: { type: "text", required: true } } },
+      menus: {
+        fields: {
+          links: {
+            type: "array",
+            fields: {
+              label: { type: "text", required: true },
+              page: { type: "relation", collection: "pages" },
+            },
+          },
+        },
+      },
+    },
+    database,
+    secret: "",
+    media: false,
+  });
+  const item = (await cms.find("menus"))[0].links![0];
+  const id: string = item.id;
+  item.page?.title satisfies string | undefined;
+  const ids = (await cms.find("menus", { populate: false }))[0].links![0];
+  ids.page satisfies string | null | undefined;
+  // @ts-expect-error `populate: false` returns ids inside items too
+  ids.page?.title;
+  const named = (await cms.find("menus", { populate: { links: { page: true } } }))[0].links![0];
+  named.page?.title satisfies string | undefined;
+  const sel = (await cms.find("menus", { select: { links: { label: true } } }))[0].links![0];
+  sel satisfies { id: string; label: string };
+  // @ts-expect-error not selected inside the item
+  sel.page;
+  const off = await cms.find("menus", { populate: false, select: { links: { label: true } } });
+  off[0].links![0].label satisfies string;
+  // @ts-expect-error unknown item key in select
+  cms.find("menus", { select: { links: { nope: true } } });
+  // @ts-expect-error unknown item key in populate
+  cms.find("menus", { populate: { links: { nope: true } } });
+  // @ts-expect-error scalars inside items cannot be populated
+  cms.find("menus", { populate: { links: { label: true } } });
+  // @ts-expect-error an object on an unresolved relation inside an item
+  cms.find("menus", { populate: false, select: { links: { page: { title: true } } } });
+}
+
+// Checked by `pnpm typecheck` only.
+async function blocksReadTypes() {
+  const cms = defineCms({
+    collections: {
+      pages: { fields: { title: { type: "text", required: true } } },
+      landing: {
+        fields: {
+          content: {
+            type: "blocks",
+            blocks: {
+              hero: {
+                fields: {
+                  heading: { type: "text", required: true },
+                  page: { type: "relation", collection: "pages" },
+                },
+              },
+              text: { fields: { body: { type: "text" } } },
+            },
+          },
+        },
+      },
+    },
+    database,
+    secret: "",
+    media: false,
+  });
+  const item = (await cms.find("landing"))[0].content![0];
+  const id: string = item.id;
+  if (item.blockType === "hero") item.page?.title satisfies string | undefined;
+  else item.body satisfies string | null | undefined;
+
+  const ids = (await cms.find("landing", { populate: false }))[0].content![0];
+  if (ids.blockType === "hero") {
+    ids.page satisfies string | null | undefined;
+    // @ts-expect-error `populate: false` returns ids inside blocks too
+    ids.page?.title;
+  }
+
+  const named = (await cms.find("landing", { populate: { content: { hero: { page: true } } } }))[0]
+    .content![0];
+  if (named.blockType === "hero") named.page?.title satisfies string | undefined;
+  const all = (await cms.find("landing", { populate: { content: true } }))[0].content![0];
+  if (all.blockType === "hero") all.page?.title satisfies string | undefined;
+
+  const sel = (await cms.find("landing", { select: { content: { hero: { heading: true } } } }))[0]
+    .content![0];
+  sel.id satisfies string;
+  sel.blockType satisfies "hero" | "text";
+  if (sel.blockType === "hero") {
+    sel.heading satisfies string;
+    // @ts-expect-error not selected inside the block
+    sel.page;
+  }
+  await cms.find("landing", { select: { content: { hero: true, text: { body: true } } } });
+  await cms.find("landing", { populate: false, select: { content: { text: { body: true } } } });
+
+  // @ts-expect-error unknown block name in select
+  cms.find("landing", { select: { content: { nope: true } } });
+  // @ts-expect-error unknown block name in populate
+  cms.find("landing", { populate: { content: { nope: true } } });
+  // @ts-expect-error item fields MUST be named under their block
+  cms.find("landing", { populate: { content: { page: true } } });
+  // @ts-expect-error unknown field in a block
+  cms.find("landing", { select: { content: { hero: { body: true } } } });
+  cms.find("landing", {
+    populate: false,
+    // @ts-expect-error an object on an unresolved relation inside a block
+    select: { content: { hero: { page: { title: true } } } },
+  });
+}
+
+// Checked by `pnpm typecheck` only.
 async function httpTypes() {
   const cms = defineCms({
     collections: {
@@ -632,6 +887,24 @@ async function httpTypes() {
             fields: {
               bio: { type: "text" },
               note: { type: "text", required: true, private: true },
+            },
+          },
+          links: {
+            type: "array",
+            fields: {
+              url: { type: "text" },
+              note: { type: "text", required: true, private: true },
+            },
+          },
+          content: {
+            type: "blocks",
+            blocks: {
+              quote: {
+                fields: {
+                  text: { type: "text" },
+                  source: { type: "text", required: true, private: true },
+                },
+              },
             },
           },
         },
@@ -648,6 +921,12 @@ async function httpTypes() {
   const name: string = person.name;
   // @ts-expect-error also inside groups
   const note: string = person.profile!.note;
+  // @ts-expect-error also inside array items
+  const itemNote: string = person.links![0].note;
+  person.links![0].id satisfies string;
+  // @ts-expect-error also inside block items
+  const source: string = person.content![0].source;
+  person.content![0].blockType satisfies "quote";
   // @ts-expect-error a private slug is missing on public reads too
   const handle: string = person.handle;
   person.slug satisfies string;
