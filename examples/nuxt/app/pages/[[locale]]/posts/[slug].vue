@@ -1,31 +1,52 @@
 <script setup lang="ts">
 import { edit } from "integral-cms/preview";
+import { seoMeta } from "integral-cms/client";
 
 // `[[locale]]` is empty for the default locale (`/posts/x`) and the locale code otherwise (`/de/posts/x`).
 // `path` drops a valid prefix only, so `/xx/posts/x` keeps it and is a 404.
 const route = useRoute();
-const slug = String(route.params.slug);
+const slug = computed(() => String(route.params.slug));
 const { path } = useLocale();
-const { data: post } = await useIntegral().findOne("posts", {
-  where: { slug },
-  alternates: true,
-  populate: true,
-  depth: 1,
+const cms = useIntegral();
+const {
+  data: post,
+  status,
+  error,
+} = await cms.findOne(
+  "posts",
+  () =>
+    ({
+      where: { slug: slug.value },
+      alternates: true,
+      populate: true,
+      depth: 1,
+    }) as const,
+);
+useAlternates(() => (status.value === "success" ? post.value?.alternates : null));
+watchEffect(() => {
+  if (error.value) showError(error.value);
+  else if (status.value === "success" && (!post.value || path.value !== `/posts/${slug.value}`))
+    showError({ statusCode: 404, statusMessage: "Post not found", fatal: true });
 });
-useAlternates(() => post.value?.alternates);
-if (!post.value || path.value !== `/posts/${slug}`)
-  throw createError({
-    statusCode: 404,
-    statusMessage: "Post not found",
-    fatal: true,
-  });
 
-useHead({ title: post.value.title });
+const { data: general } = await cms.getGlobal("general");
+const meta = computed(() => seoMeta(post.value ?? {}, { general: general.value }));
+useHead(() => ({
+  title: post.value?.title,
+  link: [
+    ...(meta.value.canonical ? [{ rel: "canonical" as const, href: meta.value.canonical }] : []),
+    ...meta.value.alternates.map((a) => ({
+      rel: "alternate" as const,
+      hreflang: a.hreflang,
+      href: a.href,
+    })),
+  ],
+}));
 </script>
 
 <template>
+  <AppHeader />
   <main v-if="post">
-    <NuxtLink to="/">← Home</NuxtLink>
     <h1 :data-cms="edit('posts', post.id, 'title')">{{ post.title }}</h1>
     <time v-if="post.publishedAt" :datetime="post.publishedAt">{{ post.publishedAt }}</time>
     <img

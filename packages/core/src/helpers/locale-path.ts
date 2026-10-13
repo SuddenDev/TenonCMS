@@ -32,14 +32,14 @@ export function localizePath(path: string, locale: string, l: Localization): str
 }
 
 /**
- * Where a language switch leads: `alternates[locale]` when the document has one, else the current unprefixed
- * `path` in the target locale. `alternates` is the `alternates` metadata of a read.
+ * Where a language switch leads: `alternates[locale]` when the document has one, else the target locale's
+ * homepage. `alternates` is the `alternates` metadata of a read.
  */
 export function switchTarget(
   l: Localization,
-  path: string,
+  _path: string,
   locale: string,
   alternates?: Record<string, string> | null,
 ): string {
-  return alternates?.[locale] ?? localizePath(path, locale, l);
+  return alternates?.[locale] ?? localizePath("/", locale, l);
 }

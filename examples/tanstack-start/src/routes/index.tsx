@@ -19,7 +19,7 @@ function Home() {
     <main>
       <h1>{general.title ?? "My site"}</h1>
       {general.tagline && <p>{general.tagline}</p>}
-      <ul>
+      <ul id="posts">
         {posts.map((post) => (
           <li key={post.id}>
             <Link to="/posts/$slug" params={{ slug: post.slug }}>
@@ -29,9 +29,6 @@ function Home() {
           </li>
         ))}
       </ul>
-      <p>
-        <a href="/admin">Admin</a>
-      </p>
     </main>
   );
 }

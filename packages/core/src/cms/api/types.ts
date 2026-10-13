@@ -103,6 +103,16 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
   ): Promise<ReadCollection<T, K, O, D, L> | undefined>;
 
   /**
+   * Returns the `alternates` of the document whose `permalink` is `url`, or `null` when no document has it, or
+   * without `localization`. It reads the locale from the prefix of `url` (`routing`), or from `options.locale`.
+   * Only a `permalink` template of top-level fields, like `/posts/{slug}`, can be matched; a function, a relation
+   * hop or `{locale}` cannot. It costs one read per matching collection plus the `alternates` reads.
+   * @example
+   * await cms.alternatesAt("/de/posts/hallo") // { en: "/posts/hello", de: "/de/posts/hallo", "x-default": "/posts/hello" }
+   */
+  alternatesAt(url: string, options?: LocaleOption<L>): Promise<Record<string, string> | null>;
+
+  /**
    * Creates a document. Throws a `ValidationError` for invalid `data`.
    * With `{ draft: true }`, creates it unpublished: only the drafts perspective reads it until `publish()`.
    */

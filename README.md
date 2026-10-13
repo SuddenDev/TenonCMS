@@ -874,10 +874,10 @@ import { localeFromPath, localizePath, switchTarget } from "integral-cms/client"
 
 localeFromPath("/de/about", localization); // { locale: "de", path: "/about" }
 localizePath("/about", "de", localization); // "/de/about"
-switchTarget(localization, "/about", "de", page.alternates); // page.alternates.de, else "/de/about"
+switchTarget(localization, "/about", "de", page.alternates);
 ```
 
-`localization` is `cms.localization` on the server. In the browser, `await client.localization()` fetches the public `GET /api/cms/localization` once per client (`null` without `localization`), so the browser never imports `integral.config.ts`.
+`switchTarget()` uses the document's alternate in the target locale, or that locale's homepage when the translation is missing. `localization` is `cms.localization` on the server. In the browser, `await client.localization()` fetches the public `GET /api/cms/localization` once per client (`null` without `localization`), so the browser never imports `integral.config.ts`.
 
 `seoMeta()` turns `alternates` into `hreflang` tags: `alternates` is a list of `{ hreflang, href }`, absolute against the site `url`, and `canonical` is the URL of the page's own locale.
 
@@ -893,8 +893,8 @@ const { canonical, alternates } = seoMeta(page, { general, seo });
 </html>
 ```
 
-- **Astro**: the middleware sets `Astro.locals.locale` and `Astro.locals.path` (the path without the prefix) from the URL. Read with `{ where: { path: Astro.locals.path }, locale: Astro.locals.locale, alternates: true }`. The catch-all route serves prefixed URLs as they are. Other routes MUST exist for the prefixed URLs too, for example under `src/pages/[...locale]/`; the integration adds no route folder.
-- **Nuxt**: `useLocale()` returns `locales`, `defaultLocale`, `locale`, `path`, `localePath(path, locale?)` and `switchLocale(locale)`. `useAlternates(() => page.value?.alternates)` registers the page's translations, so `switchLocale()` leads to them. `useIntegral()` reads in the route's locale unless the options set one.
+- **Astro**: the middleware sets `Astro.locals.locale` and `Astro.locals.path` (the path without the prefix) from the URL. Read with `{ where: { path: Astro.locals.path }, locale: Astro.locals.locale, alternates: true }` and pass the document's `alternates` to the header and language switch. The catch-all route serves prefixed URLs as they are. Other routes MUST exist for the prefixed URLs too, for example under `src/pages/[...locale]/`; the integration adds no route folder.
+- **Nuxt**: `useLocale()` returns `locales`, `defaultLocale`, `locale`, `path`, `localePath(path, locale?)`, `switchLocalePath(locale)` and `switchLocale(locale)`. `useAlternates(() => page.value?.alternates)` registers the page's translations. `switchLocalePath()` returns a translation's URL, or the locale's homepage when it is missing; `switchLocale()` navigates there. Render the header inside the page after its document loads so server-rendered language links have the alternates. `useIntegral()` reads in the route's locale unless the options set one.
 - **TanStack Start and others**: `client.localization()` plus the helpers above.
 
 #### Admin
@@ -1146,17 +1146,28 @@ mountAdmin("#admin");
 
 Coming from Payload, the auth hooks map to better-auth's request hooks:
 
-| Payload               | better-auth                                                 |
-| --------------------- | ----------------------------------------------------------- |
-| `beforeLogin`         | `hooks.before` with `ctx.path === '/sign-in/email'`         |
-| `afterLogin`          | `hooks.after` with `ctx.path === '/sign-in/email'`          |
-| `afterLogout`         | `hooks.after` with `ctx.path === '/sign-out'`               |
-| `afterForgotPassword` | `hooks.after` with `ctx.path === '/request-password-reset'` |
+| Payload                                                                                                                                                                                                                                                                                           | better-auth                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `beforeLogin`                                                                                                                                                                                                                                                                                     | `hooks.before` with `ctx.path === '/sign-in/email'`         |
+| `afterLogin`                                                                                                                                                                                                                                                                                      | `hooks.after` with `ctx.path === '/sign-in/email'`          |
+| `afterLogout`                                                                                                                                                                                                                                                                                     | `hooks.after` with `ctx.path === '/sign-out'`               |
+| `afterForgotPassword`                                                                                                                                                                                                                                                                             | `hooks.after` with `ctx.path === '/request-password-reset'` |
+| Read options and document IDs accept refs or getters. Use a getter for route-dependent filters so reused pages update on navigation; the route's locale updates automatically. Keep `seoMeta()` in a computed and pass getters to `useHead()` or `useSeoMeta()` so the head follows the document. |
 
 ```ts
 import { createAuthMiddleware } from 'better-auth/api'
 
 auth: {
+const route = useRoute();
+const { data: current } = await useIntegral().findOne(
+  "posts",
+  () =>
+    ({
+      where: { slug: String(route.params.slug) },
+      alternates: true,
+    }) as const,
+);
+useAlternates(() => current.value?.alternates);
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.path === '/sign-in/email') console.log('signed in')

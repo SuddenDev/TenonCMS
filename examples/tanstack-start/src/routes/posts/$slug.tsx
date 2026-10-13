@@ -1,4 +1,4 @@
-import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { edit } from "integral-cms/preview";
@@ -25,7 +25,6 @@ function Post() {
   const post = useDraft("posts", Route.useLoaderData());
   return (
     <main>
-      <Link to="/">← Home</Link>
       <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
       {post.publishedAt && <time dateTime={post.publishedAt}>{post.publishedAt}</time>}
       <p data-cms={edit("posts", post.id, "body")} style={{ whiteSpace: "pre-wrap" }}>

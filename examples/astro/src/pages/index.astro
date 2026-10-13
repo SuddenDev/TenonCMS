@@ -1,4 +1,6 @@
 ---
+import Header from "../components/Header.astro";
+
 export const prerender = false;
 
 const { integral: cms } = Astro.locals;
@@ -12,9 +14,10 @@ const posts = await cms.find("posts");
     <title>{general.title ?? "My site"}</title>
   </head>
   <body>
+    <Header />
     <h1>{general.title ?? "My site"}</h1>
     {general.tagline && <p>{general.tagline}</p>}
-    <ul>
+    <ul id="posts">
       {posts.map((post) => (
         <li>
           <a href={`/posts/${post.slug}`}>{post.title}</a>
@@ -23,8 +26,5 @@ const posts = await cms.find("posts");
         </li>
       ))}
     </ul>
-    <p>
-      <a href="/admin">Admin</a>
-    </p>
   </body>
 </html>

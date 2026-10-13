@@ -555,6 +555,34 @@ describe("alternates", () => {
     });
   });
 
+  describe("alternatesAt", () => {
+    const at = (s: { cms: any }, url: string) => s.cms.alternatesAt(url);
+
+    it("finds the document behind a URL, in any locale", async () => {
+      const s = await seedPosts(withPermalink());
+      const expected = { en: "/posts/hello", de: "/de/posts/hallo", "x-default": "/posts/hello" };
+      expect(await at(s, "/posts/hello")).toEqual(expected);
+      expect(await at(s, "/de/posts/hallo")).toEqual(expected);
+    });
+
+    it("omits an unpublished locale", async () => {
+      const s = await seedPosts(withPermalink());
+      expect(await at(s, "/posts/two")).toEqual({ en: "/posts/two", "x-default": "/posts/two" });
+    });
+
+    it("answers null for a URL no document has", async () => {
+      const s = await seedPosts(withPermalink());
+      expect(await at(s, "/posts/nope")).toBeNull();
+      expect(await at(s, "/de/posts/hello")).toBeNull();
+      expect(await at(s, "/about")).toBeNull();
+    });
+
+    it("answers null without localization", async () => {
+      const s = seeded({ collections: { posts: { permalink: "/posts/{slug}" } } });
+      expect(await at(s, "/posts/hello")).toBeNull();
+    });
+  });
+
   it("omits an unpublished locale", async () => {
     const s = await seedPosts(withPermalink());
     expect((await one(s, "p2", opts)).alternates).toEqual({

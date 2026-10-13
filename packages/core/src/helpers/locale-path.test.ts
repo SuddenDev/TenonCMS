@@ -72,9 +72,11 @@ describe("switchTarget", () => {
     );
   });
 
-  it("localizes the current path without an alternate", () => {
-    expect(switchTarget(except, "/about", "de")).toBe("/de/about");
-    expect(switchTarget(except, "/about", "de", { en: "/about" })).toBe("/de/about");
-    expect(switchTarget(except, "/about", "en", null)).toBe("/about");
+  it("uses the locale's homepage without an alternate", () => {
+    expect(switchTarget(except, "/about", "de")).toBe("/de");
+    expect(switchTarget(except, "/about", "de", { en: "/about" })).toBe("/de");
+    expect(switchTarget(except, "/about", "en", null)).toBe("/");
+    expect(switchTarget(always, "/about", "en", {})).toBe("/en");
+    expect(switchTarget(off, "/about", "de", {})).toBe("/");
   });
 });

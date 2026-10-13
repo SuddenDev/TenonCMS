@@ -75,3 +75,5 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 | `vite/index.ts`                            | `integralAdmin()`: the admin entry and `#integral/admin-html` for frameworks without an adapter.                                                         |
 
 Files the host compiles (`route.ts`, `middleware.ts`, `admin.astro`, `nuxt/runtime/`) ship as `.ts` source in `dist/`. Server runtime files MUST import from `h3`, not `#imports`. The admin path MUST NOT be `/` or sit under `API_BASE`. Builds keep core external in SSR, because bundling it breaks libsql's native binding; Nitro 2 also needs the libsql binaries in `traceInclude`.
+
+Nuxt reads accept reactive options and document IDs. Their `useAsyncData` keys follow the options and route, so reused pages update on navigation. `useAlternates()` shares the page's published translation URLs with `useLocale().switchLocalePath()` and `switchLocale()`; a missing translation leads to the target locale's homepage. Render the header after the page's read resolves, and compute head metadata from the reactive document.

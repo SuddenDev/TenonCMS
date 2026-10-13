@@ -5,6 +5,5 @@ useHead({ htmlAttrs: { lang: () => locale.value } });
 </script>
 
 <template>
-  <LocaleSwitch />
   <NuxtPage />
 </template>

@@ -3,13 +3,11 @@ import { switchTarget } from "integral-cms";
 import cms from "../../integral.config";
 
 interface Props {
-  locale: string;
-  /** Current path without the locale prefix. */
-  path: string;
-  alternates?: Record<string, string> | null;
+  alternates?: Record<string, string>;
 }
 
-const { locale, path, alternates } = Astro.props;
+const { alternates } = Astro.props;
+const { locale, path } = Astro.locals;
 const l = cms.localization!;
 ---
 
@@ -24,3 +22,11 @@ const l = cms.localization!;
     ),
   )}
 </nav>
+
+<style>
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+</style>

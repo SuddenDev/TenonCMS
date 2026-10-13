@@ -1,7 +1,7 @@
 ---
 import { seoMeta } from "integral-cms";
 import { edit } from "integral-cms/preview";
-import LocaleSwitch from "../components/LocaleSwitch.astro";
+import Header from "../components/Header.astro";
 
 export const prerender = false;
 
@@ -47,8 +47,7 @@ const meta = seoMeta(page, { general, seo });
     ))}
   </head>
   <body>
-    <a href="/">← Home</a>
-    {locale && <LocaleSwitch locale={locale} path={path} alternates={page.alternates} />}
+    <Header alternates={page.alternates} />
     <h1 data-cms={edit("pages", page.id, "title")}>{page.title}</h1>
     {page.hero && (
       <img

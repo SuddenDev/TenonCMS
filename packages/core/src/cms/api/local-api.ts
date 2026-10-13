@@ -53,6 +53,12 @@ export type LocalApi = {
   ): Promise<Row | undefined>;
   /** Deletes the translation of one locale. The default locale and the last locale row stay. */
   removeLocale(collection: string, id: string, locale: string): Promise<Row | undefined>;
+  /**
+   * The `alternates` of the document whose `permalink` is `url`, or `null` when no document has it. `url` is a public
+   * path with the locale prefix of `routing`; its locale is read from the prefix, or from `options.locale`. Only a
+   * `permalink` template of top-level fields (`/posts/{slug}`) can be matched.
+   */
+  alternatesAt(url: string, options?: { locale?: string }): Promise<Record<string, string> | null>;
   getGlobal(name: string, options?: Options): Promise<Row>;
   setGlobal(name: string, data: Record<string, unknown>, options?: WriteOptions): Promise<Row>;
   publishGlobal(name: string, options?: PublishOptions): Promise<Row>;

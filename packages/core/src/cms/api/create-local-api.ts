@@ -3,6 +3,7 @@ import type { LocalApi } from "./local-api.ts";
 import { mediaApi } from "../../media/api.ts";
 import { findLocal } from "../../collections/operations/local/find.local.ts";
 import { findOneLocal } from "../../collections/operations/local/find-one.local.ts";
+import { alternatesAtLocal } from "../../collections/operations/local/alternates-at.local.ts";
 import { findByIdLocal } from "../../collections/operations/local/find-by-id.local.ts";
 import { createLocal } from "../../collections/operations/local/create.local.ts";
 import { updateLocal } from "../../collections/operations/local/update.local.ts";
@@ -30,6 +31,7 @@ export function createLocalApi(core: Core, scope: Scope): LocalApi {
     find: findLocal(core, scope),
     findOne: findOneLocal(core, scope),
     findById: findByIdLocal(core, scope),
+    alternatesAt: alternatesAtLocal(core, scope),
     create: createLocal(core, scope),
     update: updateLocal(core, scope),
     publish: publishLocal(core, scope),

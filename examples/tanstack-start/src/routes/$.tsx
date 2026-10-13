@@ -1,4 +1,4 @@
-import { Link, createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { seoMeta } from "integral-cms/client";
@@ -44,7 +44,6 @@ function Page() {
   const page = useDraft("pages", Route.useLoaderData().page);
   return (
     <main>
-      <Link to="/">← Home</Link>
       <h1 data-cms={edit("pages", page.id, "title")}>{page.title}</h1>
       <p data-cms={edit("pages", page.id, "body")} style={{ whiteSpace: "pre-wrap" }}>
         {page.body}

@@ -9,4 +9,6 @@ Small functions for rendering pages, exported from `integral-cms` and `integral-
 | `breadcrumbs.ts` | `breadcrumbs()`: walks the populated `parent` chain. No queries.                                                                                                                                                                                                                                                                                                                    |
 | `locale-path.ts` | `localeFromPath()`, `localizePath()` and `switchTarget()`: locale prefixes of URL paths and the target of a language switch. They take the `localization` config (`cms.localization`, or `client.localization()` in the browser) and read `locales`, `defaultLocale` and `routing`.                                                                                                 |
 
+`switchTarget()` uses a document's published alternate when available, otherwise the target locale's homepage. Homepage fallbacks belong only in navigation; `seoMeta()` emits the published alternates as `hreflang` links.
+
 Helpers MUST have no imports, so they run in the browser.

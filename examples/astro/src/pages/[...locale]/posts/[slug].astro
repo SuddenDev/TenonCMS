@@ -1,7 +1,7 @@
 ---
 import { seoMeta } from "integral-cms";
 import { edit } from "integral-cms/preview";
-import LocaleSwitch from "../../../components/LocaleSwitch.astro";
+import Header from "../../../components/Header.astro";
 
 export const prerender = false;
 
@@ -27,8 +27,7 @@ const meta = seoMeta(post, { general });
     ))}
   </head>
   <body>
-    <a href="/">← Home</a>
-    {locale && <LocaleSwitch locale={locale} path={path} alternates={post.alternates} />}
+    <Header alternates={post.alternates} />
     <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
     {post.author && (
       <p style="color:blue" data-cms={edit("authors", post.author.id, "name")}>

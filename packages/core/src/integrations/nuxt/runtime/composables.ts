@@ -22,7 +22,16 @@ import {
   switchTarget,
 } from "integral-cms/client";
 import { getDrafts, merge, subscribe } from "integral-cms/preview";
-import { computed, onScopeDispose, type Ref, shallowRef, watchEffect } from "vue";
+import {
+  computed,
+  type MaybeRefOrGetter,
+  onScopeDispose,
+  type Ref,
+  shallowRef,
+  toRaw,
+  toValue,
+  watchEffect,
+} from "vue";
 
 // The client's types, so the options check the same way. The collection methods cast `options` when they pass it on:
 // TypeScript cannot match the two generic `select` checks, and the composable's own parameter already checks it.
@@ -83,8 +92,11 @@ function live<R extends PromiseLike<{ data: Ref<unknown> }> & { data: Ref<unknow
 }
 
 // Reads once per key into Nuxt's payload, with the preview drafts merged in.
-function load<T>(name: string, key: string, read: () => Promise<T>) {
-  return live(name, useAsyncData(`integral:${key}`, read));
+function load<T>(name: string, key: () => string, read: () => Promise<T>) {
+  return live(
+    name,
+    useAsyncData(() => `integral:${key()}`, read),
+  );
 }
 
 /**
@@ -101,8 +113,9 @@ export function useIntegral() {
   // The route's locale unless the options set one. The payload has the config after hydration.
   async function withLocale<O extends object>(options: O): Promise<O> {
     if ("locale" in options) return options;
+    const path = route.path;
     const config = cached.value !== undefined ? cached.value : await localization(client);
-    return config ? { ...options, locale: localeFromPath(route.path, config).locale } : options;
+    return config ? { ...options, locale: localeFromPath(path, config).locale } : options;
   }
   // A read without a `locale` follows the route's prefix, so its key holds the route. Otherwise `/about` and
   // `/de/about` would share one cached result.
@@ -112,22 +125,26 @@ export function useIntegral() {
   return {
     find<K extends keyof Collections & string, const O extends FindOptions<typeof cms, K> = {}>(
       collection: K,
-      options: Checked<O, Collections, Fields<K>, Depth> = {} as never,
+      options: MaybeRefOrGetter<O> &
+        MaybeRefOrGetter<Checked<O, Collections, Fields<K>, Depth>> = {} as never,
     ) {
-      return load(collection, keyOf(collection, options), async () =>
-        client.find<K, O>(collection, (await withLocale(options)) as never),
+      return load(
+        collection,
+        () => keyOf(collection, toValue(options)),
+        async () => client.find<K, O>(collection, (await withLocale(toValue(options))) as never),
       );
     },
 
     findOne<K extends keyof Collections & string, const O extends FindOptions<typeof cms, K>>(
       collection: K,
-      options: Checked<O, Collections, Fields<K>, Depth>,
+      options: MaybeRefOrGetter<O> & MaybeRefOrGetter<Checked<O, Collections, Fields<K>, Depth>>,
     ) {
       return load(
         collection,
-        keyOf(`${collection}:one`, options),
+        () => keyOf(`${collection}:one`, toValue(options)),
         async () =>
-          (await client.findOne<K, O>(collection, (await withLocale(options)) as never)) ?? null,
+          (await client.findOne<K, O>(collection, (await withLocale(toValue(options))) as never)) ??
+          null,
       );
     },
 
@@ -136,11 +153,21 @@ export function useIntegral() {
       const O extends ReadOptions<Collections, Fields<K>, true, L> = {},
     >(
       collection: K,
-      id: string,
-      options: Checked<O, Collections, Fields<K>, Depth, true, L> = {} as never,
+      id: MaybeRefOrGetter<string>,
+      options: MaybeRefOrGetter<O> &
+        MaybeRefOrGetter<Checked<O, Collections, Fields<K>, Depth, true, L>> = {} as never,
     ) {
-      return load(collection, keyOf(`${collection}:${id}`, options), async () =>
-        client.findById<K, O>(collection, id, (await withLocale(options)) as never),
+      return load(
+        collection,
+        () => keyOf(`${collection}:${toValue(id)}`, toValue(options)),
+        async () => {
+          const value = toValue(id);
+          return client.findById<K, O>(
+            collection,
+            value,
+            (await withLocale(toValue(options))) as never,
+          );
+        },
       );
     },
 
@@ -149,10 +176,15 @@ export function useIntegral() {
       const O extends ReadOptions<Collections, Globals[K]["fields"], false, L> = {},
     >(
       name: K,
-      options: Checked<O, Collections, Globals[K]["fields"], Depth, false, L> = {} as never,
+      options: MaybeRefOrGetter<O> &
+        MaybeRefOrGetter<
+          Checked<O, Collections, Globals[K]["fields"], Depth, false, L>
+        > = {} as never,
     ) {
-      return load(name, keyOf(`global:${name}`, options), async () =>
-        client.getGlobal<K, O>(name, (await withLocale(options)) as never),
+      return load(
+        name,
+        () => keyOf(`global:${name}`, toValue(options)),
+        async () => client.getGlobal<K, O>(name, (await withLocale(toValue(options))) as never),
       );
     },
   };
@@ -175,6 +207,8 @@ export function useLocale() {
   const current = computed(() => config.value && localeFromPath(route.path, config.value));
   const locale = computed(() => current.value?.locale as L | undefined);
   const path = computed(() => current.value?.path ?? route.path);
+  const switchLocalePath = (locale: L) =>
+    config.value ? switchTarget(config.value, path.value, locale, alternates.value) : route.path;
 
   return {
     locales: computed(() => config.value?.locales ?? []),
@@ -188,10 +222,12 @@ export function useLocale() {
       const l = locale ?? current.value?.locale;
       return config.value && l ? localizePath(path, l, config.value) : path;
     },
-    /** Navigates to the page's alternate in `locale` (see `useAlternates()`), else to the same path in it. */
+    /** The page's alternate in `locale`, else that locale's homepage. */
+    switchLocalePath,
+    /** Navigates to the page's alternate in `locale`, else that locale's homepage. */
     switchLocale(locale: L) {
       if (!config.value) return;
-      return navigateTo(switchTarget(config.value, path.value, locale, alternates.value));
+      return navigateTo(switchLocalePath(locale));
     },
   };
 }
@@ -208,6 +244,6 @@ export function useAlternates(source: () => Alternates | undefined) {
   watchEffect(() => (alternates.value = mine = source() ?? null));
   // A page that mounts first sets its own before this one is disposed.
   onScopeDispose(() => {
-    if (alternates.value === mine) alternates.value = null;
+    if (toRaw(alternates.value) === toRaw(mine)) alternates.value = null;
   });
 }
