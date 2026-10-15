@@ -2,6 +2,7 @@ import type { Mount, PageContext } from "integral-cms/admin";
 import { createClient } from "integral-cms/client";
 import { stars } from "../utils/stars.ts";
 import { esc } from "../utils/esc.ts";
+import { texts } from "../utils/texts.ts";
 import { addStyles } from "./styles.ts";
 
 const client = createClient();
@@ -11,11 +12,12 @@ export const mountQuote: Mount<PageContext> = (el, ctx) => {
   addStyles();
   const render = async ({ params, integral }: PageContext) => {
     const quote = await client.findById("quotes", String(params.id));
+    const t = texts(integral.locale);
     el.innerHTML = `
       <div class="example-page">
         <p class="links between">
-          <a class="btn" href="${integral.base}/quote-stats">← Quote stats</a>
-          <a class="btn" href="${integral.base}/content/collections/quotes/${esc(quote.id)}">Edit</a>
+          <a class="btn" href="${integral.base}/quote-stats">${t("back")}</a>
+          <a class="btn" href="${integral.base}/content/collections/quotes/${esc(quote.id)}">${t("edit")}</a>
         </p>
         <hr />
         <blockquote>“${esc(quote.text)}”</blockquote>

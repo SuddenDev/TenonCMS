@@ -32,7 +32,7 @@ export function RedirectsPlugin({
     admin: {
       pages: {
         "redirects-tools": {
-          title: "Redirect tools",
+          title: { en: "Redirect Tools", de: "Weiterleitungs-Tools" },
           nav: { icon: "arrow-right-left", order: 11 },
           mount: clientRef("integral-cms/plugins/redirects/admin#mountTools"),
         },
@@ -40,27 +40,37 @@ export function RedirectsPlugin({
     },
     collections: {
       redirects: defineCollection({
-        label: "Redirects",
+        label: { en: "Redirects", de: "Weiterleitungen" },
         titleField: "from",
         fields: {
           from: {
             type: "text",
             required: true,
             pattern: "/\\S*",
-            description: "Old path, e.g. /old-page",
+            description: { en: "Old path, e.g. /old-page", de: "Alter Pfad, z. B. /old-page" },
           },
           to: {
             type: "text",
             required: true,
             pattern: "(/|https?://)\\S*",
-            description: "New path, e.g. /new-page, or an http(s) URL",
+            description: {
+              en: "New path, e.g. /new-page, or an http(s) URL",
+              de: "Neuer Pfad, z. B. /new-page, oder eine http(s)-URL",
+            },
           },
-          permanent: { type: "boolean", default: true, description: "301 instead of 302" },
+          permanent: {
+            type: "boolean",
+            default: true,
+            description: { en: "301 instead of 302", de: "301 statt 302" },
+          },
           locale: {
             ...(locales
               ? ({ type: "select", options: locales } as const)
               : ({ type: "text" } as const)),
-            description: "Locale the redirect applies to. Empty: every locale",
+            description: {
+              en: "Locale the redirect applies to. Empty: every locale",
+              de: "Sprache, für die die Weiterleitung gilt. Leer: alle Sprachen",
+            },
           },
         },
         hooks: {

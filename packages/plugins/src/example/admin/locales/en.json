@@ -1,0 +1,17 @@
+{
+  "back": "← Quote stats",
+  "count": "{n} quotes",
+  "csv": "Download CSV",
+  "edit": "Edit",
+  "none": "No quotes.",
+  "quotes": "Quotes",
+  "random": "Random Quote (from api)",
+  "randomFailed": "Failed to fetch random quote",
+  "randomResult": "Random Quote from public route (see network tab)",
+  "rated": "Quotes rated {n}★",
+  "ratings": "Ratings",
+  "refresh": "Refresh",
+  "star": "{n} of 5",
+  "summary": "{count} quotes, {changes} changes since the server started.",
+  "title": "Quote stats"
+}

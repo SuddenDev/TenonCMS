@@ -1,0 +1,11 @@
+{
+  "title": "Weiterleitungs-Tools",
+  "test": "Pfad testen",
+  "lookUp": "Nachschlagen",
+  "import": "Importieren",
+  "hint": "Eine Weiterleitung pro Zeile: {format}. Eine Zeile mit {temporary} am Anfang leitet vorübergehend weiter.",
+  "none": "Keine Weiterleitung",
+  "imported": "{count} importiert.",
+  "view": "Weiterleitungen ansehen",
+  "failed": "Anfrage fehlgeschlagen"
+}

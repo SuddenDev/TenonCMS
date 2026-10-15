@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { FieldContext } from "integral-cms/admin";
+import { computed } from "vue";
+import { texts } from "../utils/texts.ts";
 
 const props = defineProps<FieldContext>();
+const t = computed(() => texts(props.integral.locale));
 
 const set = (n: number) => props.onChange(props.value === String(n) ? null : String(n));
 </script>
@@ -12,7 +15,7 @@ const set = (n: number) => props.onChange(props.value === String(n) ? null : Str
       v-for="n in 5"
       :key="n"
       type="button"
-      :aria-label="`${n} of 5`"
+      :aria-label="t('star', { n })"
       :disabled="field.readOnly"
       style="font-size: 1.25rem"
       @click="set(n)"

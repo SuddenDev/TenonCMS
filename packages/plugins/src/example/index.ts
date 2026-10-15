@@ -52,9 +52,9 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
     name: "example",
     collections: {
       quotes: defineCollection({
-        label: "Quotes",
+        label: { en: "Quotes", de: "Zitate" },
         titleField: "text",
-        nav: { group: "Example", icon: "quote" },
+        nav: { group: { en: "Example", de: "Beispiel" }, icon: "quote" },
         fields: {
           text: {
             type: "textarea",
@@ -68,18 +68,24 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
     },
     globals: {
       quoteSettings: defineGlobal({
-        label: "Quotes",
-        description: "Settings for the quotes plugin",
+        label: { en: "Quotes", de: "Zitate" },
+        description: {
+          en: "Settings for the quotes plugin",
+          de: "Einstellungen des Zitate-Plugins",
+        },
         nav: {
           display: "settings",
-          group: "Example",
+          group: { en: "Example", de: "Beispiel" },
           icon: "quote",
         },
         fields: {
           prefix: {
             type: "text",
             default: "Quote of the day",
-            description: "When requesting a random comment, this will be prefixed",
+            description: {
+              en: "When requesting a random comment, this will be prefixed",
+              de: "Steht vor einem zufällig abgefragten Zitat",
+            },
           },
         },
       }),
@@ -134,7 +140,7 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
       },
       pages: {
         "quote-stats": {
-          title: "Quote stats",
+          title: { en: "Quote stats", de: "Zitat-Statistik" },
           nav: { icon: "chart-bar", display: "main" },
           load: async ({ cms }) => {
             const quotes = await cms.find("quotes", { populate: false });
@@ -159,13 +165,13 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
       adminBar: {
         items: {
           "quote-stats": {
-            label: "Quote stats",
+            label: { en: "Quote stats", de: "Zitat-Statistik" },
             icon: "chart-bar",
             order: 40,
             href: `${admin}/quote-stats`,
           },
           "latest-quotes": {
-            label: "Latest quotes",
+            label: { en: "Latest quotes", de: "Neueste Zitate" },
             icon: "quote",
             order: 41,
             load: async ({ cms }) => ({
@@ -178,7 +184,7 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
             }),
           },
           "quote-count": {
-            label: "Quote count",
+            label: { en: "Quote count", de: "Anzahl der Zitate" },
             order: 43,
             load: async ({ cms }) => (await cms.find("quotes", { populate: false })).length,
             mount: counts[renderer],

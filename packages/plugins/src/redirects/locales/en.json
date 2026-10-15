@@ -1,0 +1,11 @@
+{
+  "title": "Redirect tools",
+  "test": "Test a path",
+  "lookUp": "Look up",
+  "import": "Import",
+  "hint": "One redirect per line: {format}. Start a line with {temporary} for a temporary redirect.",
+  "none": "No redirect",
+  "imported": "Imported {count}.",
+  "view": "View redirects",
+  "failed": "Request failed"
+}

@@ -1,0 +1,17 @@
+{
+  "back": "← Zitat-Statistik",
+  "count": "{n} Zitate",
+  "csv": "CSV herunterladen",
+  "edit": "Bearbeiten",
+  "none": "Keine Zitate.",
+  "quotes": "Zitate",
+  "random": "Zufälliges Zitat (von der API)",
+  "randomFailed": "Zufälliges Zitat konnte nicht geladen werden",
+  "randomResult": "Zufälliges Zitat von der öffentlichen Route (siehe Netzwerk-Tab)",
+  "rated": "Zitate mit {n}★",
+  "ratings": "Bewertungen",
+  "refresh": "Aktualisieren",
+  "star": "{n} von 5",
+  "summary": "{count} Zitate, {changes} Änderungen seit dem Start des Servers.",
+  "title": "Zitat-Statistik"
+}

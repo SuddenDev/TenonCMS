@@ -1,4 +1,5 @@
 import type { FieldContext, Mount } from "integral-cms/admin";
+import { texts } from "../utils/texts.ts";
 
 /**
  * Mount a rating field as a row of 5 stars (★).
@@ -6,7 +7,7 @@ import type { FieldContext, Mount } from "integral-cms/admin";
  * The field is read-only if `field.readOnly` is true.
  */
 export const mountRatingField: Mount<FieldContext> = (el, ctx) => {
-  const render = ({ value, onChange, field }: FieldContext) =>
+  const render = ({ value, onChange, field, integral }: FieldContext) =>
     el.replaceChildren(
       ...[1, 2, 3, 4, 5].map((n) => {
         const star = Object.assign(document.createElement("button"), {
@@ -15,7 +16,7 @@ export const mountRatingField: Mount<FieldContext> = (el, ctx) => {
           disabled: field.readOnly,
           onclick: () => onChange(value === String(n) ? null : String(n)),
         });
-        star.setAttribute("aria-label", `${n} of 5`);
+        star.setAttribute("aria-label", texts(integral.locale)("star", { n }));
         star.style.fontSize = "1.25rem";
         return star;
       }),

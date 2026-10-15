@@ -3,20 +3,18 @@ import type { PageContext } from "integral-cms/admin";
 import { API_BASE } from "integral-cms/client";
 import type { Stats as StatsData } from "../../types.ts";
 import { stars } from "../utils/stars.ts";
+import { texts } from "../utils/texts.ts";
 import { Divider } from "./Divider.tsx";
 import "./tailwind.css";
 
-const getRandomQuote = async () => {
+const getRandomQuote = async (t: ReturnType<typeof texts>) => {
   const response = await fetch(`${API_BASE}/example/random`, { method: "GET" });
-  alert(
-    response.ok
-      ? `Random Quote from public route (see network tab)\n\n ${await response.text()}`
-      : "Failed to fetch random quote",
-  );
+  alert(response.ok ? `${t("randomResult")}\n\n ${await response.text()}` : t("randomFailed"));
 };
 
 /** The stats page from its `load` data, with a rating chart and some links. */
 export function Stats({ data, integral }: PageContext<StatsData>) {
+  const t = texts(integral.locale);
   const max = Math.max(1, ...data.ratings);
   // The rating whose bar was clicked; clicking it again clears the filter.
   const [rating, setRating] = useState<number>();
@@ -25,21 +23,19 @@ export function Stats({ data, integral }: PageContext<StatsData>) {
     <div className="ex:mx-auto ex:my-5 ex:max-w-200">
       <p className="ex:mb-4 ex:flex ex:justify-end ex:gap-2">
         <button className="btn" type="button" onClick={() => integral.reload()}>
-          Refresh
+          {t("refresh")}
         </button>
-        <button className="btn" type="button" onClick={getRandomQuote}>
-          Random Quote (from api)
+        <button className="btn" type="button" onClick={() => getRandomQuote(t)}>
+          {t("random")}
         </button>
         <a className="btn" href={`${API_BASE}/example/quotes.csv`} download>
-          Download CSV
+          {t("csv")}
         </a>
       </p>
       <Divider />
-      <p>
-        {data.count} quotes, {data.changes} changes since the server started.
-      </p>
+      <p>{t("summary", { count: data.count, changes: data.changes })}</p>
       <Divider />
-      <h2 className="ex:mt-4 ex:font-semibold">Ratings</h2>
+      <h2 className="ex:mt-4 ex:font-semibold">{t("ratings")}</h2>
       <ul className="ex:mt-2 ex:flex ex:flex-col-reverse ex:gap-1">
         {data.ratings.map((count, i) => (
           <li key={i}>
@@ -64,8 +60,10 @@ export function Stats({ data, integral }: PageContext<StatsData>) {
         ))}
       </ul>
       <Divider />
-      <h2 className="ex:mt-4 ex:font-semibold">Quotes{rating && ` rated ${rating}★`}</h2>
-      {!shown.length && <p>No quotes.</p>}
+      <h2 className="ex:mt-4 ex:font-semibold">
+        {rating ? t("rated", { n: rating }) : t("quotes")}
+      </h2>
+      {!shown.length && <p>{t("none")}</p>}
       <ul className="ex:mt-2">
         {shown.map((quote) => (
           <li

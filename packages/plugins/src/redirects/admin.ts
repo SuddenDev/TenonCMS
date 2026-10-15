@@ -1,65 +1,82 @@
-import type { Mount, PageContext } from "integral-cms/admin";
+import { type Mount, type PageContext, translator } from "integral-cms/admin";
 import { CmsError, createClient } from "integral-cms/client";
 import css from "./admin.css?raw";
 import type { Redirect } from "./index.ts";
+import de from "./locales/de.json";
+import en from "./locales/en.json";
 
 const client = createClient();
 
-export const mountTools: Mount<PageContext> = (el, { integral }) => {
+type T = ReturnType<typeof translator>;
+
+// A switch of the admin language renders the page again.
+export const mountTools: Mount<PageContext> = (el, ctx) => {
   addStyles();
-  el.innerHTML = page;
-  const lookup = form(el, "lookup");
-  const importer = form(el, "import");
-  lookup.onsubmit = (e) => {
-    e.preventDefault();
-    void showLookup(lookup);
+  let locale = ctx.integral.locale;
+  const render = () => {
+    const t = translator({ en, de }, locale);
+    el.innerHTML = page(t);
+    const lookup = form(el, "lookup");
+    const importer = form(el, "import");
+    lookup.onsubmit = (e) => {
+      e.preventDefault();
+      void showLookup(lookup, t);
+    };
+    importer.onsubmit = (e) => {
+      e.preventDefault();
+      void runImport(importer, ctx.integral.base, t);
+    };
   };
-  importer.onsubmit = (e) => {
-    e.preventDefault();
-    void runImport(importer, integral.base);
-  };
-  return () => {
-    el.innerHTML = "";
+  render();
+  return {
+    update(next) {
+      if (next.integral.locale === locale) return;
+      locale = next.integral.locale;
+      render();
+    },
+    unmount: () => {
+      el.innerHTML = "";
+    },
   };
 };
 
 // `.input` and `.btn` are the admin's shared classes. Everything else comes from admin.css.
-const page = `
+const page = (t: T) => `
   <section class="redirects-tools">
-    <h1>Redirect tools</h1>
+    <h1>${t("title")}</h1>
     <form name="lookup">
       <label>
-        Test a path
+        ${t("test")}
         <span class="row">
           <input class="input" name="path" placeholder="/old-page" required />
-          <button class="btn" type="submit">Look up</button>
+          <button class="btn" type="submit">${t("lookUp")}</button>
         </span>
       </label>
       <output></output>
     </form>
     <form name="import">
       <label>
-        Import
+        ${t("import")}
         <textarea class="input" name="rows" rows="6" required></textarea>
       </label>
-      <p>One redirect per line: <code>/from /to</code>. Start a line with <code>302</code> for a temporary redirect.</p>
-      <span class="row"><button class="btn" type="submit">Import</button></span>
+      <p>${t("hint", { format: "<code>/from /to</code>", temporary: "<code>302</code>" })}</p>
+      <span class="row"><button class="btn" type="submit">${t("import")}</button></span>
       <output></output>
     </form>
   </section>`;
 
-async function showLookup(form: HTMLFormElement) {
+async function showLookup(form: HTMLFormElement, t: T) {
   const path = field(form, "path").value;
   const out = output(form);
   try {
     const redirect = await client.request<Redirect>("/redirects/lookup", { query: { path } });
     out.innerHTML = `${esc(path)} → <a href="${esc(redirect.to)}">${esc(redirect.to)}</a> (${redirect.status})`;
   } catch (e) {
-    out.textContent = e instanceof CmsError && e.status === 404 ? "No redirect" : errorMessage(e);
+    out.textContent = e instanceof CmsError && e.status === 404 ? t("none") : errorMessage(e, t);
   }
 }
 
-async function runImport(form: HTMLFormElement, base: string) {
+async function runImport(form: HTMLFormElement, base: string, t: T) {
   const rows = parseRows(field(form, "rows").value);
   const out = output(form);
   try {
@@ -67,9 +84,9 @@ async function runImport(form: HTMLFormElement, base: string) {
       method: "POST",
       body: rows,
     });
-    out.innerHTML = `Imported ${count}. <a href="${base}/content/collections/redirects">View redirects</a>`;
+    out.innerHTML = `${t("imported", { count })} <a href="${base}/content/collections/redirects">${t("view")}</a>`;
   } catch (e) {
-    out.textContent = errorMessage(e);
+    out.textContent = errorMessage(e, t);
   }
 }
 
@@ -84,8 +101,8 @@ export function parseRows(text: string) {
 }
 
 // The field messages of a 400, else the response message.
-function errorMessage(e: unknown) {
-  if (!(e instanceof CmsError)) return "Request failed";
+function errorMessage(e: unknown, t: T) {
+  if (!(e instanceof CmsError)) return t("failed");
   const fields = Object.values<string>(e.body?.errors ?? {});
   return fields.length ? fields.join(", ") : e.message;
 }

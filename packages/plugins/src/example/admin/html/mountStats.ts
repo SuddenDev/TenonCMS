@@ -3,6 +3,7 @@ import { API_BASE } from "integral-cms/client";
 import { stars } from "../utils/stars.ts";
 import type { Stats } from "../../types.ts";
 import { esc } from "../utils/esc.ts";
+import { texts } from "../utils/texts.ts";
 import { addStyles } from "./styles.ts";
 
 /** Renders the stats page from its `load` data, with a rating chart and some links. */
@@ -12,6 +13,7 @@ export const mountStats: Mount<PageContext<Stats>> = (el, ctx) => {
   let rating: number | undefined;
   const render = (page: PageContext<Stats>) => {
     const { data, integral } = page;
+    const t = texts(integral.locale);
     const max = Math.max(1, ...data.ratings);
     const rows = data.ratings
       .map(
@@ -39,18 +41,18 @@ export const mountStats: Mount<PageContext<Stats>> = (el, ctx) => {
     el.innerHTML = `
       <div class="example-page">
         <p class="links">
-          <button class="btn" type="button" data-action="reload">Refresh</button>
-          <button class="btn" type="button" data-action="random">Random Quote (from api)</button>
-          <a class="btn" href="${API_BASE}/example/quotes.csv" download>Download CSV</a>
+          <button class="btn" type="button" data-action="reload">${t("refresh")}</button>
+          <button class="btn" type="button" data-action="random">${t("random")}</button>
+          <a class="btn" href="${API_BASE}/example/quotes.csv" download>${t("csv")}</a>
         </p>
         <hr />
-        <p>${data.count} quotes, ${data.changes} changes since the server started.</p>
+        <p>${t("summary", { count: data.count, changes: data.changes })}</p>
         <hr />
-        <h2>Ratings</h2>
+        <h2>${t("ratings")}</h2>
         <ul class="chart"${rating ? " data-filtered" : ""}>${rows}</ul>
         <hr />
-        <h2>Quotes${rating ? ` rated ${rating}★` : ""}</h2>
-        ${shown.length ? "" : "<p>No quotes.</p>"}
+        <h2>${rating ? t("rated", { n: rating }) : t("quotes")}</h2>
+        ${shown.length ? "" : `<p>${t("none")}</p>`}
         <ul class="quotes">${quotes}</ul>
       </div>`;
     for (const button of el.querySelectorAll<HTMLElement>("[data-rating]")) {
@@ -64,11 +66,7 @@ export const mountStats: Mount<PageContext<Stats>> = (el, ctx) => {
     el.querySelector<HTMLElement>("[data-action=reload]")!.onclick = () => integral.reload();
     el.querySelector<HTMLElement>("[data-action=random]")!.onclick = async () => {
       const response = await fetch(`${API_BASE}/example/random`, { method: "GET" });
-      alert(
-        response.ok
-          ? `Random Quote from public route (see network tab)\n\n ${await response.text()}`
-          : "Failed to fetch random quote",
-      );
+      alert(response.ok ? `${t("randomResult")}\n\n ${await response.text()}` : t("randomFailed"));
     };
   };
   render(ctx);

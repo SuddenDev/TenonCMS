@@ -2,6 +2,7 @@ import type { PageContext } from "integral-cms/admin";
 import { createClient } from "integral-cms/client";
 import { useEffect, useState } from "react";
 import { stars } from "../utils/stars.ts";
+import { texts } from "../utils/texts.ts";
 import type { Quote as QuoteDoc } from "../../types.ts";
 import { Divider } from "./Divider.tsx";
 import "./tailwind.css";
@@ -11,6 +12,7 @@ const client = createClient();
 /** The quote of the `:id` route param, with a back and an edit link. Refetches when the param changes. */
 export function Quote({ params, integral }: PageContext) {
   const [quote, setQuote] = useState<QuoteDoc>();
+  const t = texts(integral.locale);
   useEffect(() => {
     client.findById("quotes", String(params.id)).then(setQuote);
   }, [params.id]);
@@ -18,11 +20,11 @@ export function Quote({ params, integral }: PageContext) {
     <div className="ex:mx-auto ex:my-5 ex:max-w-200">
       <p className="ex:flex ex:justify-between ex:gap-2">
         <a className="btn" href={`${integral.base}/quote-stats`}>
-          ← Quote stats
+          {t("back")}
         </a>
         {quote && (
           <a className="btn" href={`${integral.base}/content/collections/quotes/${quote.id}`}>
-            Edit
+            {t("edit")}
           </a>
         )}
       </p>

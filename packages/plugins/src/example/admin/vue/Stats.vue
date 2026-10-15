@@ -3,9 +3,11 @@ import { computed, ref } from "vue";
 import type { PageContext } from "integral-cms/admin";
 import { API_BASE } from "integral-cms/client";
 import { stars } from "../utils/stars.ts";
+import { texts } from "../utils/texts.ts";
 import type { Stats } from "../../types.ts";
 
 const props = defineProps<PageContext<Stats>>();
+const t = computed(() => texts(props.integral.locale));
 
 const max = computed(() => Math.max(1, ...props.data.ratings));
 
@@ -22,8 +24,8 @@ const getRandomQuote = async () => {
   const response = await fetch(`${API_BASE}/example/random`, { method: "GET" });
   alert(
     response.ok
-      ? `Random Quote from public route (see network tab)\n\n ${await response.text()}`
-      : "Failed to fetch random quote",
+      ? `${t.value("randomResult")}\n\n ${await response.text()}`
+      : t.value("randomFailed"),
   );
 };
 </script>
@@ -31,14 +33,14 @@ const getRandomQuote = async () => {
 <template>
   <div class="stats-wrapper">
     <p class="links">
-      <button class="btn" type="button" @click="integral.reload()">Refresh</button>
-      <button class="btn" type="button" @click="getRandomQuote()">Random Quote (from api)</button>
-      <a class="btn" :href="`${API_BASE}/example/quotes.csv`" download>Download CSV</a>
+      <button class="btn" type="button" @click="integral.reload()">{{ t("refresh") }}</button>
+      <button class="btn" type="button" @click="getRandomQuote()">{{ t("random") }}</button>
+      <a class="btn" :href="`${API_BASE}/example/quotes.csv`" download>{{ t("csv") }}</a>
     </p>
     <hr />
-    <p>{{ data.count }} quotes, {{ data.changes }} changes since the server started.</p>
+    <p>{{ t("summary", { count: data.count, changes: data.changes }) }}</p>
     <hr />
-    <h2>Ratings</h2>
+    <h2>{{ t("ratings") }}</h2>
     <ul class="chart" :data-filtered="rating || undefined">
       <li v-for="(count, i) in data.ratings" :key="i">
         <button type="button" :aria-pressed="rating === i + 1" @click="toggle(i + 1)">
@@ -51,10 +53,8 @@ const getRandomQuote = async () => {
       </li>
     </ul>
     <hr />
-    <h2>
-      Quotes<template v-if="rating"> rated {{ rating }}★</template>
-    </h2>
-    <p v-if="!shown.length">No quotes.</p>
+    <h2>{{ rating ? t("rated", { n: rating }) : t("quotes") }}</h2>
+    <p v-if="!shown.length">{{ t("none") }}</p>
     <ul class="quotes">
       <li v-for="quote in shown" :key="quote.id">
         <a :href="`${integral.base}/example/quotes/${quote.id}`">{{ quote.text }}</a>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { PageContext } from "integral-cms/admin";
 import { createClient } from "integral-cms/client";
-import { ref, watchEffect } from "vue";
+import { computed, ref, watchEffect } from "vue";
 import { stars } from "../utils/stars.ts";
+import { texts } from "../utils/texts.ts";
 import type { Quote } from "../../types.ts";
 
 const props = defineProps<PageContext>();
+const t = computed(() => texts(props.integral.locale));
 
 const client = createClient();
 const quote = ref<Quote>();
@@ -17,9 +19,9 @@ watchEffect(async () => {
 <template>
   <div class="quote-wrapper">
     <p class="links">
-      <a class="btn" :href="`${integral.base}/quote-stats`">← Quote stats</a>
+      <a class="btn" :href="`${integral.base}/quote-stats`">{{ t("back") }}</a>
       <a v-if="quote" class="btn" :href="`${integral.base}/content/collections/quotes/${quote.id}`">
-        Edit
+        {{ t("edit") }}
       </a>
     </p>
     <template v-if="quote">

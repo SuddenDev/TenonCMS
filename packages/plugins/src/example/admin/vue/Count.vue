@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { AdminBarItemContext } from "integral-cms/admin";
+import { computed } from "vue";
+import { texts } from "../utils/texts.ts";
 
-defineProps<AdminBarItemContext<number>>();
+const props = defineProps<AdminBarItemContext<number>>();
+const t = computed(() => texts(props.integral.locale));
 </script>
 
 <!-- Styled inline, because the bar's shadow root gets no page CSS. -->
@@ -16,6 +19,6 @@ defineProps<AdminBarItemContext<number>>();
       background: rgb(127 127 127 / 0.15);
     "
   >
-    {{ data }} quotes
+    {{ t("count", { n: data }) }}
   </span>
 </template>
