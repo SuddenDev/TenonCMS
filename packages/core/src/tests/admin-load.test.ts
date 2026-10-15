@@ -174,6 +174,16 @@ describe("field loaders", () => {
     expect(typeof ctx.cms.find).toBe("function");
   });
 
+  it("passes the admin language, English by default", async () => {
+    const load = vi.fn(() => "ok");
+    const { post } = await boot(color(load));
+    await post(field({ path: "seo.accent", locale: "de" }));
+    await post(field({ path: "seo.accent" }));
+    expect((load.mock.calls[0] as any)[0].locale).toBe("de");
+    expect((load.mock.calls[1] as any)[0].locale).toBe("en");
+    expect((await post(field({ path: "seo.accent", locale: "fr" }))).status).toBe(400);
+  });
+
   it("accepts an existing document and a global", async () => {
     const load = vi.fn(() => "ok");
     const { post, cms } = await boot(color(load));

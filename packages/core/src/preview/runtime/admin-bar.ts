@@ -6,6 +6,7 @@ import type {
   MountHandle,
 } from "../../admin/index.d.ts";
 import { lazyMount, loadClientRef } from "../../admin/browser/lazy-mount.ts";
+import { currentAdminLocale } from "../../admin/browser/locale.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
 import type { Unsubscribe } from "../config/types.ts";
 import {
@@ -107,7 +108,7 @@ export function startAdminBar(
   const itemContext = (id: string, bar = context()): AdminBarItemContext<any> => ({
     ...bar,
     data: data.get(id),
-    integral: { reload: () => reload(id) },
+    integral: { reload: () => reload(id), locale: currentAdminLocale() },
   });
 
   async function toItem(served: ResolvedBarItem): Promise<AdminBarItem | null> {

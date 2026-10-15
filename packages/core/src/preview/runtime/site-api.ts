@@ -1,4 +1,5 @@
 import type { AdminBarPosition, AdminOptions } from "../../admin/index.d.ts";
+import { currentAdminLocale } from "../../admin/browser/locale.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
 
 // `API_BASE` of the client. Importing it would pull core code into the browser entry.
@@ -35,9 +36,12 @@ export const loadAdminBar = (
   page: string,
   mode: "site" | "preview-tab",
 ): Promise<AdminBarData | "unauthorized" | null> =>
-  fetch(`${API}/admin-bar?url=${encodeURIComponent(page)}&mode=${mode}`, {
-    credentials: "same-origin",
-  })
+  fetch(
+    `${API}/admin-bar?url=${encodeURIComponent(page)}&mode=${mode}&locale=${currentAdminLocale()}`,
+    {
+      credentials: "same-origin",
+    },
+  )
     .then((res) => (res.status === 401 ? "unauthorized" : res.ok ? res.json() : null))
     .catch(() => null);
 
@@ -55,7 +59,7 @@ export async function loadAdminBarItem(
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ kind: "bar-item", id, url: page }),
+    body: JSON.stringify({ kind: "bar-item", id, url: page, locale: currentAdminLocale() }),
   });
   if (res.status === 401) return "unauthorized";
   if (!res.ok)

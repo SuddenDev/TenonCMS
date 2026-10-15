@@ -1,13 +1,13 @@
-import type { Nav } from "../../admin/index.d.ts";
+import type { Nav, Text } from "../../admin/index.d.ts";
 import type { Preview } from "../../preview/config/types.ts";
 import type { Fields } from "../../schema/fields/index.ts";
 import type { CollectionHooks } from "../../schema/hooks/index.ts";
 
 export type Collection<F extends Fields = Fields> = {
   /** Name in the admin. Defaults to the collection key. */
-  label?: string;
+  label?: Text;
   /** Short text under the name, e.g. on the Settings page and above the form. */
-  description?: string;
+  description?: Text;
   /** Placement in the admin navigation. Defaults to the sidebar. */
   nav?: Nav;
   /** The fields that make up the collection. */

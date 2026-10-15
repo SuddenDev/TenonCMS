@@ -38,8 +38,20 @@ export type MountHandle<Ctx> = {
   unmount: () => void;
 };
 
+/** The languages of the admin UI. Each user picks one; it is independent of the content locales. */
+export type AdminLocale = "en" | "de";
+
+/**
+ * A text the admin shows: one string for every admin language, or one per language.
+ * A missing language shows English, then the first entry.
+ * @example { en: "Posts", de: "Beiträge" }
+ */
+export type Text = string | Partial<Record<AdminLocale, string>>;
+
 /** Helpers from the admin, in every context as `integral`. */
 export type IntegralContext = {
+  /** The admin language the user picked. A change of it calls `update(ctx)`. */
+  locale: AdminLocale;
   /**
    * Path the admin is served at, e.g. `/admin`. Prefix links with it: `${base}/content/collections/posts`.
    *
@@ -69,7 +81,7 @@ export type FieldContext<D = unknown> = {
     /** Field type, e.g. `custom:color`. */
     type: string;
     /** Label shown above the input. */
-    label?: string;
+    label?: Text;
     /** The document cannot be saved while the field is empty. */
     required?: boolean;
     /** The input SHOULD be shown disabled. The admin still saves the value. */
@@ -119,7 +131,7 @@ export type Nav = {
    * Section of the sidebar or the Settings page. Defaults to `Content` in the sidebar and `Site` on the
    * Settings page. Sections appear in the order of their first entry.
    */
-  group?: string;
+  group?: Text;
   /** Lucide icon name, e.g. `arrow-right-left`. See https://lucide.dev/icons. */
   icon?: IconName;
   /**
@@ -143,7 +155,7 @@ export type AdminBarItem = {
   /** Position, lowest first. Items without one follow the ordered ones, in insertion order. */
   order?: number;
   /** Text of the item. */
-  label: string;
+  label: Text;
   /** Lucide icon name, e.g. `chart-bar`. See https://lucide.dev/icons. */
   icon?: IconName;
   /** Link target. */
@@ -195,8 +207,8 @@ export type AdminBarContext = {
 export type AdminBarItemContext<D = unknown> = AdminBarContext & {
   /** What the server `load` of this item returned. `undefined` without a `load`. Never another item's data. */
   data: D;
-  /** Helpers from the admin. The bar has no admin `base`, so only `reload` is here. */
-  integral: Pick<IntegralContext, "reload">;
+  /** Helpers from the admin. The bar has no admin `base`, so only `reload` and `locale` are here. */
+  integral: Pick<IntegralContext, "reload" | "locale">;
 };
 
 /** One step of the breadcrumbs. */
@@ -252,6 +264,8 @@ export type LoadContext = {
   user: User;
   /** The local API with that user. Reads follow the user's preview perspective. */
   cms: LocalApi;
+  /** The admin language of the user, for text a loader returns. */
+  locale: AdminLocale;
 };
 
 /** What the `load` of a page gets. Both are untrusted input from the browser. */
@@ -302,9 +316,9 @@ export type PageRegistration<D = any> = {
   /**
    * The name in the navigation, the document title and the default header text. Defaults to the page key.
    */
-  title?: string;
+  title?: Text;
   /** Short text under the name on the Settings page. */
-  description?: string;
+  description?: Text;
   /**
    * Path under the admin path. Defaults to `/<key>`. Params work: `/reports/:id`.
    *
@@ -341,11 +355,11 @@ export type PageRegistration<D = any> = {
 
 /** What `load` of a link or dropdown item may change on its registration. Returning `null` hides the item for the request. */
 export type AdminBarItemOverrides = {
-  label?: string;
+  label?: Text;
   icon?: IconName;
   href?: string;
   /** Replaces the registered children, by id. */
-  children?: Record<string, { label: string; icon?: IconName; href?: string; order?: number }>;
+  children?: Record<string, { label: Text; icon?: IconName; href?: string; order?: number }>;
 };
 
 type BarItemBase = {
@@ -358,7 +372,7 @@ type BarItemBase = {
 // A link or dropdown, rendered by the bar. `load` may return presentation overrides.
 type NativeItem<Children> = BarItemBase & {
   /** Text of the item. */
-  label: string;
+  label: Text;
   /** Link target. */
   href?: string;
   /**
@@ -379,7 +393,7 @@ type NativeItem<Children> = BarItemBase & {
 
 // A button. `load` returns data for the handler.
 type ClickItem<D> = BarItemBase & {
-  label: string;
+  label: Text;
   /** Runs in the browser on click, with the latest item context. */
   onClick: ClientRef<(ctx: AdminBarItemContext<D>) => void>;
   href?: never;
@@ -391,7 +405,7 @@ type ClickItem<D> = BarItemBase & {
 
 // A custom control. `load` returns data for the mount.
 type MountItem<D> = BarItemBase & {
-  label: string;
+  label: Text;
   /** Renders the item into the bar. Runs in the browser. */
   mount: ClientRef<Mount<AdminBarItemContext<D>>>;
   href?: never;
@@ -466,7 +480,7 @@ export type AdminOptions = {
    * @example
    * media: { nav: { group: 'Assets', icon: 'images' } }
    */
-  media?: { label?: string; nav?: Nav };
+  media?: { label?: Text; nav?: Nav };
   /**
    * Inputs by custom field type. The key `color` handles fields with `type: 'custom:color'`.
    * A key a plugin or the host uses twice throws at startup.
@@ -510,7 +524,7 @@ export type PageDescriptor = Omit<PageRegistration, "mount" | "load" | "pageHead
 export type AdminBarItemDescriptor = {
   id: string;
   hidden?: true;
-  label?: string;
+  label?: Text;
   icon?: IconName;
   order?: number;
   href?: string;

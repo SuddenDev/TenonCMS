@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isText } from "../describe/registration-checks.ts";
 import type { AdminBarItemDescriptor, AdminBarItemOverrides, Json } from "../index.d.ts";
 
 /** An admin bar item for one request: the registered item with the result of its `load` applied. */
@@ -11,17 +12,18 @@ export type ResolvedBarItem = Omit<AdminBarItemDescriptor, "load" | "hidden" | "
 };
 
 const text = z.string().min(1);
+const label = z.custom<AdminBarItemOverrides["label"]>(isText, "Expected a label");
 // What the `load` of a link or dropdown item may return. Unknown keys fail, so `id`, `order` and refs stay fixed.
 const overrides = z
   .strictObject({
-    label: text.optional(),
+    label: label.optional(),
     icon: z.string().optional(),
     href: z.string().optional(),
     children: z
       .record(
         text,
         z.strictObject({
-          label: text,
+          label,
           icon: z.string().optional(),
           href: z.string().optional(),
           order: z.number().optional(),

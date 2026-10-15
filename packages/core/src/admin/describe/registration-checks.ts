@@ -1,3 +1,6 @@
+import { ADMIN_LOCALES } from "../browser/locale.ts";
+import type { AdminLocale, Text } from "../index.d.ts";
+
 /** A registered `load` function with the name of the module that registered it, for error logs. */
 export type Loader<C> = { source: string; load: (ctx: C) => unknown };
 
@@ -6,6 +9,19 @@ export type AnyLoad = (ctx: never) => unknown;
 /** Whether `value` is a `clientRef()` result. */
 export function isRef(value: unknown): value is { clientRef: string } {
   return !!value && typeof value === "object" && typeof (value as any).clientRef === "string";
+}
+
+/** Whether `value` is a {@link Text}: a non-empty string, or an object of non-empty strings by admin language. */
+export function isText(value: unknown): value is Text {
+  if (typeof value === "string") return !!value;
+  if (!isObject(value)) return false;
+  const entries = Object.entries(value);
+  return (
+    entries.length > 0 &&
+    entries.every(
+      ([key, v]) => ADMIN_LOCALES.includes(key as AdminLocale) && typeof v === "string" && !!v,
+    )
+  );
 }
 
 /** Whether `value` is a plain-looking object: not `null`, not an array. */

@@ -96,9 +96,10 @@ describe("loading", () => {
   it("asks for the page's path and query with the mode, and shows the filled built-ins", async () => {
     await start();
     await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
-    expect(fetch).toHaveBeenCalledWith("/api/cms/admin-bar?url=%2Fposts%2F1%3Fx%3D2&mode=site", {
-      credentials: "same-origin",
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/cms/admin-bar?url=%2Fposts%2F1%3Fx%3D2&mode=site&locale=en",
+      { credentials: "same-origin" },
+    );
     expect(shown.items).toEqual([
       { id: "dashboard", order: 10, label: "Dashboard", builtIn: true, href: "/cms" },
       {
@@ -224,7 +225,7 @@ describe("click items", () => {
       perspective: "published",
       edit: false,
       data: { n: 1 },
-      integral: { reload: expect.any(Function) },
+      integral: { reload: expect.any(Function), locale: "en" },
     });
   });
 
@@ -283,7 +284,7 @@ describe("mount items", () => {
     expect(mount.mock.calls[0]![1]).toMatchObject({
       mode: "site",
       data: { rows: [1] },
-      integral: { reload: expect.any(Function) },
+      integral: { reload: expect.any(Function), locale: "en" },
     });
 
     result.update({ ...shown, perspective: "drafts" });
@@ -388,7 +389,7 @@ describe("reloading one item", () => {
     });
     await open();
     await reload();
-    expect(loadCalls).toEqual([{ kind: "bar-item", id: "a", url: "/posts/1?x=2" }]);
+    expect(loadCalls).toEqual([{ kind: "bar-item", id: "a", url: "/posts/1?x=2", locale: "en" }]);
     expect(fetch).toHaveBeenLastCalledWith("/api/cms/admin/load", {
       method: "POST",
       credentials: "same-origin",

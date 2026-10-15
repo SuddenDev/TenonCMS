@@ -1,4 +1,5 @@
 import type { IconName } from "../../admin/icons.d.ts";
+import type { Text } from "../../admin/index.d.ts";
 import type { ItemLabels } from "./array.ts";
 import type { Base } from "./common.ts";
 import type { Fields } from "./index.ts";
@@ -6,9 +7,9 @@ import type { Fields } from "./index.ts";
 /** One item type of a `blocks` field. Reuse a block in several fields by importing the same object. */
 export type Block = {
   /** Name in the admin's block picker and row header. Defaults to the block's key. */
-  label?: string;
+  label?: Text;
   /** Help text in the admin's block picker. */
-  description?: string;
+  description?: Text;
   /** Lucide icon in the admin's block picker. */
   icon?: IconName;
   /** The fields of an item of this block. `blockType` and `id` MUST NOT be among them. */

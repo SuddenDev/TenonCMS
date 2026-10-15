@@ -5,7 +5,7 @@ import { adminBrand } from "../../admin/merge/merge-options.ts";
 import type { AdminBar } from "../../admin/merge/merge-bar.ts";
 import { FAILED, loadBarItem } from "../../admin/load/bar-item.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
-import { isPageUrl } from "../../admin/load/load-request.ts";
+import { adminLocale, isPageUrl } from "../../admin/load/load-request.ts";
 import { caller } from "../../auth/get-caller.ts";
 import { outerScope } from "../../cms/runtime/operation-context.ts";
 import type { Core } from "../../cms/runtime/types.ts";
@@ -15,10 +15,11 @@ import { builtIns, composeItems } from "../runtime/admin-bar-items.ts";
 const query = z.object({
   url: z.string().refine(isPageUrl),
   mode: z.enum(["site", "preview-tab"]),
+  locale: adminLocale,
 });
 
 /**
- * `GET /admin-bar?url=&mode=` answers `{ position, items, branding }` for the page at `url`. Mount it behind the
+ * `GET /admin-bar?url=&mode=&locale=` answers `{ position, items, branding }` for the page at `url`. Mount it behind the
  * session middleware.
  *
  * - `preview-tab`: the fixed preview controls. No loader runs.
@@ -32,14 +33,14 @@ export function adminBarEndpoint(core: Core, bar: AdminBar) {
   return new Hono<Env>().get("/admin-bar", async (c) => {
     const parsed = query.safeParse(c.req.query());
     if (!parsed.success) return c.json({ message: z.prettifyError(parsed.error) }, 400);
-    const { url, mode } = parsed.data;
+    const { url, mode, locale } = parsed.data;
     const { position } = bar;
     const branding = adminBrand(core.admin.descriptor);
     if (mode === "preview-tab") return c.json({ position, items: builtIns(mode), branding });
 
     const { user, perspective } = await caller(core.getSession, c.req.raw);
     if (!user) return c.json({ message: "Unauthorized" }, 401);
-    const ctx = { user, cms: core.localApi(outerScope(user, perspective)), url };
+    const ctx = { user, cms: core.localApi(outerScope(user, perspective)), locale, url };
     const effective = composeItems<AdminBarItemDescriptor>(builtIns(mode), bar.items).filter(
       (item) => !item.hidden,
     );

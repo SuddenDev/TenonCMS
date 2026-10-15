@@ -242,6 +242,9 @@ describe("admin registration validation", () => {
     expect(item(null)).toThrow("MUST be an object or false");
     expect(item(false)).not.toThrow();
     expect(item({ label: "A" })).not.toThrow();
+    expect(item({ label: { en: "A", de: "B" } })).not.toThrow();
+    for (const label of [{}, { en: "" }, { fr: "A" }, ["A"]])
+      expect(item({ label })).toThrow('admin bar item "a" in integral.config.ts MUST have a label');
     expect(item({ label: "A", children: { b: {} } })).toThrow(
       'admin bar item "b" in integral.config.ts MUST have a label',
     );

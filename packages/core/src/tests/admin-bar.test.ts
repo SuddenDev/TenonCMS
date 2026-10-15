@@ -8,9 +8,9 @@ import { admin, base, origin, setup } from "./setup.ts";
 async function signedIn(cms: ReturnType<typeof defineCms>) {
   const s = setup(cms);
   await s.client.signUp(admin);
-  const get = (url = "/page", mode = "site") =>
+  const get = (url = "/page", mode = "site", extra = "") =>
     s.fetch(
-      `${origin}/api/cms/admin-bar?url=${encodeURIComponent(url)}&mode=${encodeURIComponent(mode)}`,
+      `${origin}/api/cms/admin-bar?url=${encodeURIComponent(url)}&mode=${encodeURIComponent(mode)}${extra}`,
     );
   const items = async (url?: string) => (await (await get(url)).json()).items;
   const ids = async (url?: string) => (await items(url)).map((i: { id: string }) => i.id);
@@ -158,6 +158,15 @@ describe("admin bar items", () => {
         cms: expect.anything(),
       }),
     );
+  });
+
+  it("passes the admin language to loaders and keeps a label per language", async () => {
+    const load = vi.fn(() => ({ label: { en: "Report", de: "Bericht" } }));
+    const { get } = await signedIn(items({ r: { label: "R", href: "/r", load } }));
+    const res = await get("/page", "site", "&locale=de");
+    const r = (await res.json()).items.find((i: { id: string }) => i.id === "r");
+    expect(r.label).toEqual({ en: "Report", de: "Bericht" });
+    expect((load.mock.calls[0] as any)[0].locale).toBe("de");
   });
 
   it("leaves a native item out when its loader returns null", async () => {

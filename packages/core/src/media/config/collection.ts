@@ -1,6 +1,6 @@
 /** The reserved collection of the media library. Written only through the media API. */
 export const mediaCollection = {
-  label: "Media",
+  label: { en: "Media", de: "Medien" },
   titleField: "filename",
   drafts: false,
   fields: {

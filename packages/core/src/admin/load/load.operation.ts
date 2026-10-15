@@ -33,10 +33,10 @@ export async function load(core: Core, request: LoadRequest, user: User, cms: Lo
 async function loadField(core: Core, request: Request<"field">, user: User, cms: LocalApi) {
   const loader = registered(core.admin.fieldLoaders, request.type);
   const field = await fieldTarget(core, cms, request);
-  const { path, owner } = request;
+  const { path, owner, locale } = request;
   const data = await runLoader(
     loader,
-    { user, cms, field, path, owner },
+    { user, cms, locale, field, path, owner },
     `admin field "${request.type}"`,
   );
   return { data };
@@ -44,8 +44,12 @@ async function loadField(core: Core, request: Request<"field">, user: User, cms:
 
 async function loadPage(core: Core, request: Request<"page">, user: User, cms: LocalApi) {
   const loader = registered(core.admin.pageLoaders, request.key);
-  const { params, query } = request;
-  const data = await runLoader(loader, { user, cms, params, query }, `admin page "${request.key}"`);
+  const { params, query, locale } = request;
+  const data = await runLoader(
+    loader,
+    { user, cms, locale, params, query },
+    `admin page "${request.key}"`,
+  );
   return { data };
 }
 
@@ -55,7 +59,7 @@ async function loadItem(core: Core, request: Request<"bar-item">, user: User, cm
   const item = findItem(bar.items, request.id);
   if (!item?.load || !bar.loaders.has(item.id)) throw notFound();
 
-  const ctx = { user, cms, url: request.url };
+  const ctx = { user, cms, locale: request.locale, url: request.url };
   const resolved = await loadBarItem(item, bar.loaders, ctx, { rethrow: true });
   if (resolved === FAILED) throw new HTTPException(500, { message: "Internal Server Error" });
   return { item: resolved };

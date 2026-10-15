@@ -1,12 +1,13 @@
+import type { Text } from "../../admin/index.d.ts";
 import type { Condition } from "../condition.ts";
 import type { FieldHooks, Fn, HookArgs, Validate } from "../hooks/index.ts";
 
 /** Options of every field, joins included. */
 export type Common = {
   /** Label in the admin. Defaults to the field key. */
-  label?: string;
+  label?: Text;
   /** Help text below the input in the admin. */
-  description?: string;
+  description?: Text;
   /**
    * The field applies only when this matches the document. Otherwise the admin hides it and saves it as `null`,
    * and the server skips `required`, the built-in checks and `validate`. The type check still runs. See {@link Condition}.

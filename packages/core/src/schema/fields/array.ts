@@ -1,12 +1,13 @@
+import type { Text } from "../../admin/index.d.ts";
 import type { Base } from "./common.ts";
 import type { Fields } from "./index.ts";
 
 /** Labels of one item and of the list in the admin. */
 export type ItemLabels = {
   /** One item, e.g. `Slide`, in the row header and the add button. Default: `Item`, or `Block` for blocks. */
-  singular?: string;
+  singular?: Text;
   /** The list, e.g. `Slides`, as its heading in the admin. Default: the field's `label`. */
-  plural?: string;
+  plural?: Text;
 };
 
 /** A list of items that share one set of fields. Its validator is built by `dataSchema()` from the items. */

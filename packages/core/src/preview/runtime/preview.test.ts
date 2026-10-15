@@ -234,7 +234,7 @@ describe("preview", () => {
     stop = preview({ admin: "/cms" });
     const ctx = await mounted();
     expect(fetch).toHaveBeenCalledWith(
-      `/api/cms/admin-bar?url=${encodeURIComponent("/posts/current?lang=de&view=draft")}&mode=site`,
+      `/api/cms/admin-bar?url=${encodeURIComponent("/posts/current?lang=de&view=draft")}&mode=site&locale=en`,
       { credentials: "same-origin" },
     );
     expect(document.documentElement.lastElementChild!.hasAttribute("data-cms-bar")).toBe(true);

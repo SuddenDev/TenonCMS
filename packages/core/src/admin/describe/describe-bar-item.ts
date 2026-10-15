@@ -1,5 +1,6 @@
 import type { AdminBarItemDescriptor } from "../index.d.ts";
 import {
+  isText,
   copyConfig,
   isObject,
   optionalLoad,
@@ -26,10 +27,11 @@ export function describeBarItem(
   child = false,
 ): DescribedItem {
   const where = `admin bar item "${id}" in ${source}`;
+
   if (!isObject(value))
     throw new Error(`integral-cms: ${where} MUST be an object${child ? "" : " or false"}`);
-  if (typeof value.label !== "string" || !value.label)
-    throw new Error(`integral-cms: ${where} MUST have a label`);
+  if (!isText(value.label)) throw new Error(`integral-cms: ${where} MUST have a label`);
+
   const { label, icon, order, href, onClick, mount, children } = value;
   checkCombination(value, id, where, source);
 

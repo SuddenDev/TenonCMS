@@ -1,5 +1,6 @@
 import type { ClientRef } from "./index.d.ts";
 export type * from "./index.d.ts";
+export { type Messages, translate, translator } from "./browser/text.ts";
 
 // A module path with an optional `#export` name.
 const SPECIFIER = /^[^#]+(?:#[\w$]+)?$/;

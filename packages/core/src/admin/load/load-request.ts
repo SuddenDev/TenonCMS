@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ADMIN_LOCALES } from "../browser/locale.ts";
 
 const text = z.string().min(1);
 
@@ -17,6 +18,8 @@ const owner = z.union([
   z.strictObject({ global: text }),
 ]);
 const queryValue = z.union([z.string(), z.null()]);
+/** The admin language of a request. Loaders get it as `locale`. */
+export const adminLocale = z.enum(ADMIN_LOCALES).default("en");
 
 /**
  * The body of `POST /admin/load`.
@@ -25,14 +28,20 @@ const queryValue = z.union([z.string(), z.null()]);
  * - `bar-item`: the loader of one bar item, or one child of a dropdown, for the page at `url`.
  */
 export const loadRequest = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("field"), type: text, path: text, owner }),
+  z.object({ kind: z.literal("field"), type: text, path: text, owner, locale: adminLocale }),
   z.object({
     kind: z.literal("page"),
     key: text,
     params: z.record(z.string(), z.union([z.string(), z.array(z.string())])),
     query: z.record(z.string(), z.union([queryValue, z.array(queryValue)])),
+    locale: adminLocale,
   }),
-  z.object({ kind: z.literal("bar-item"), id: text, url: z.string().refine(isPageUrl) }),
+  z.object({
+    kind: z.literal("bar-item"),
+    id: text,
+    url: z.string().refine(isPageUrl),
+    locale: adminLocale,
+  }),
 ]);
 
 export type LoadRequest = z.infer<typeof loadRequest>;
