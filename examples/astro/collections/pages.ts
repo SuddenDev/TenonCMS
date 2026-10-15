@@ -2,14 +2,14 @@ import { defineCollection } from "integral-cms";
 import { page, seo } from "integral-cms/presets";
 
 export const pages = defineCollection({
-  label: "Pages",
+  label: { en: "Pages", de: "Seiten" },
   localized: true,
   titleField: "title",
   fields: {
     ...page.fields,
     ...seo.fields,
     body: { type: "textarea" },
-    hero: { type: "image" },
+    hero: { label: { en: "Hero Image" }, type: "image" },
     content: {
       type: "blocks",
       blocks: {

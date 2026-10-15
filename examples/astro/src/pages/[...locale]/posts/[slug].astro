@@ -15,6 +15,7 @@ const post =
     : undefined;
 if (!post) return new Response("Not found", { status: 404 });
 const general = await cms.getGlobal("general", { locale });
+const text = await cms.getGlobal("strings", { locale, fallback: false });
 const meta = seoMeta(post, { general });
 ---
 
@@ -51,5 +52,8 @@ const meta = seoMeta(post, { general });
     <p style="white-space: pre-wrap" data-cms={edit("posts", post.id, "body")}>
       {post.body}
     </p>
+    <a href="/" data-cms={edit("strings", null, "allPosts")}>
+      {text.allPosts}
+    </a>
   </body>
 </html>
