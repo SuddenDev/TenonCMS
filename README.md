@@ -813,7 +813,7 @@ defineCms({
 - a custom control: `mount: clientRef(...)`, the same `mount(el, ctx)` contract as fields and pages;
 - `false` instead of an item, which removes the item with that key, built-ins included, before any loader or browser code runs.
 
-`mount` cannot be combined with `href`, `onClick` or `children`, and `onClick` not with `href` or `children`; both throw at startup, as does a missing `label`. `load` is optional and runs on the server for every bar request, with `{ user, cms, url }`. `url` is the page the bar shows on; it comes from the browser and is never fetched. For a link or dropdown, the result is an overlay of `label`, `icon`, `href` and `children`, and `null` hides the item for that request. For a button or a custom control, the result is any JSON and arrives as `ctx.data`; `null` is valid data. Each item only sees its own data. A loader that throws or returns something invalid is logged and the item is skipped; the rest of the bar stays. `ctx.integral.reload()` runs one item's loader again.
+`mount` cannot be combined with `href`, `onClick` or `children`, and `onClick` not with `href` or `children`; both throw at startup, as does a missing `label`. `load` is optional and runs on the server for every bar request, with `{ user, cms, locale, url }`. `url` is the page the bar shows on; it comes from the browser and is never fetched. For a link or dropdown, the result is an overlay of `label`, `icon`, `href` and `children`, and `null` hides the item for that request. For a button or a custom control, the result is any JSON and arrives as `ctx.data`; `null` is valid data. Each item only sees its own data. A loader that throws or returns something invalid is logged and the item is skipped; the rest of the bar stays. `ctx.integral.reload()` runs one item's loader again.
 
 The bar is one flat row sorted by `order`, then by registration order; items without `order` follow. Built-ins: `dashboard` 10, `edit` 20, `perspective` 30. Plugins add items with `admin.adminBar.items`, see [Plugins](#plugins). They compose in this order: built-ins, plugins in plugin order, the host. Preview tabs show the fixed `edit` (10) and `live-edit` (20) controls; custom items and their loaders do not run there. `position` and `adminBar: false` belong to the host.
 
@@ -989,6 +989,33 @@ When `localization` is set, the top bar has a language menu next to the perspect
 - The "…" menu has "Copy from…", "Copy to…", "Remove translation" and "Discard all changes". Each asks first.
 - Lists show the active language with fallback and mark rows that have no translation.
 - Live preview opens the page of the active language, and the admin bar's Edit link on a site page carries the page's `<html lang>`.
+
+#### Site strings
+
+Short texts a site hardcodes, like a "Read more" button, go into a `strings` global. Each key becomes a text field that editors translate on the Settings page:
+
+```ts
+import { strings } from "integral-cms/presets";
+
+defineCms({
+  globals: {
+    strings: strings({
+      readMore: { label: "Read more link", default: { en: "Read more", de: "Weiterlesen" } },
+      subscribe: "Subscribe",
+    }),
+  },
+});
+
+const text = await cms.getGlobal("strings", { locale, fallback: false });
+text.readMore; // the stored text, else the code default of `locale`
+```
+
+- A default is one text for every locale, or one per locale. A locale without an entry gets the first one.
+- `{ label, default }` sets the field label in the admin. Without it, the label is the key. In this form, no locale MAY be named `default`.
+- Read with `fallback: false`. Otherwise a text stored in the default locale wins over another locale's code default.
+- A text equal to its code default is not stored, so a later change of a code default reaches every locale that did not change that text.
+- Read the global once per page, e.g. in the layout, and pass the texts down.
+- The global is localized, so it needs `localization`.
 
 The `redirects` plugin has a `locale` field. A redirect without one applies to every locale, `from` is unique per locale, and `resolveRedirect(cms, path, locale?)` and `GET …/redirects/lookup?path=&locale=` prefer the locale's redirect.
 
@@ -1305,7 +1332,7 @@ export default defineCms({ /* … */ admin });
 
 `satisfies AdminOptions` is optional: `defineCms` types an inline object too.
 
-**Server and browser.** Only `load` functions run on the server. They get the signed-in user and the user's `cms`, MUST only read, and MUST return JSON (`null`, booleans, strings, finite numbers, arrays, plain objects); anything else is an error. Everything the browser runs is a `clientRef()` to an export in a module of its own. `clientRef()` names a module and an optional `#export` (default: `default`). Relative paths resolve from the project root, not from the file that calls it. Package paths resolve through package exports. Astro, Nuxt and `integralAdmin()` find the literal `clientRef()` calls in the static imports of `integral.config.ts` without running it, and bundle those exports for the browser only. Computed references are rejected. Inline functions for `mount`, `onClick` or `pageHeader` are rejected too. Keep loader results small and deliberate: being signed in does not make every server value fit for the browser.
+**Server and browser.** Only `load` functions run on the server. They get the signed-in user, the user's `cms` and the admin language as `locale`, MUST only read, and MUST return JSON (`null`, booleans, strings, finite numbers, arrays, plain objects); anything else is an error. Everything the browser runs is a `clientRef()` to an export in a module of its own. `clientRef()` names a module and an optional `#export` (default: `default`). Relative paths resolve from the project root, not from the file that calls it. Package paths resolve through package exports. Astro, Nuxt and `integralAdmin()` find the literal `clientRef()` calls in the static imports of `integral.config.ts` without running it, and bundle those exports for the browser only. Computed references are rejected. Inline functions for `mount`, `onClick` or `pageHeader` are rejected too. Keep loader results small and deliberate: being signed in does not make every server value fit for the browser.
 
 **What is public.** Only the login branding (`/admin-brand`). Fields, pages and bar items arrive after sign-in from `/schema` and `/admin-bar`, without loader functions. `POST /api/cms/admin/load` runs one loader for the signed-in user and answers with its data; it only accepts registered keys. Responses are `Cache-Control: no-store`. Loaders read the user's perspective: drafts only with a session and the preview cookie.
 
@@ -1319,15 +1346,32 @@ Not available yet: switching between Drafts and Published without a reload, and 
 - `pages` adds routes under the admin path. The path is `/<key>` unless `route` is set; routes start with `/`, and nesting and params work, like `route: '/reports/:id'`. A page shown in the content sidebar or on the Settings page opens under `/content` (`/stats` becomes `/content/stats`) or `/content/settings`; `main` and `none` pages use the route as is and open full width, without the sidebar, under the top bar.
 - A page has an optional `title` (default: its key), `description` and `nav`. `nav` is the same for collections, globals, pages and media:
   - `display`: `content` (default) shows it in the sidebar, `settings` as a card on the Settings page, `main` in the top bar next to Content and Visual Editor, sorted by `order` (on phones, in the menu sheet), `none` nowhere. A `none` page like `/reports/:id` still works by URL.
-  - `group`: the section. The default is `Content` in the sidebar and `Site` on the Settings page.
+  - `group`: the section. The default is `Content` in the sidebar and `Site` on the Settings page, in the admin language.
   - `icon`: a [Lucide](https://lucide.dev/icons) name, type-checked. `order`: lowest first.
 - Collections and globals take `description` and `nav` in their own config, next to `label`. Items sort by `order` (collections 10, media 15, globals 20, pages 30; equal orders keep their definition order), and sections appear in the order of their first item. `media` takes `{ label, nav }` to move the media library.
-- Settings: the sidebar has a "Settings" entry under "Admin" when any item has `display: "settings"`. It opens `/content/settings`, a page with one section of cards per `group`, and each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", group: "Site", order: 3 }, fields })`.
+- Settings: the sidebar has a "Settings" entry under "Admin" when any item has `display: "settings"`. It opens `/content/settings`, a page with one section of cards per `group`, and each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", order: 3 }, fields })`.
 - `name` shows in the sidebar header, on the login and in the page title (default `integral-cms`). `logo` (sidebar header and login) and `icon` (collapsed sidebar) are URLs, or `{ light, dark }` pairs that follow the admin's theme. The admin links the files and does not bundle them: put them in the host's `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
 - The favicon is `favicon` if set, else `icon`, else the host's `favicon.svg`, `.ico` or `.png` in its public folder. `favicon` takes a URL or a `{ light, dark }` pair.
 - `title` is the navigation label, the document title and the default header text. The visible header area above a page is `pageHeader`: `true` (default) shows the title as text, `false` nothing, an array of `{ label, to }` breadcrumbs, and `clientRef()` of a function `(crumbs, { params, query, data, integral })` returns an HTML string or breadcrumbs (`crumbs` are the route's). The function MUST be synchronous. The string is not escaped, so escape untrusted values like `params`, and prefix links with `integral.base`.
 - A page on a built-in path replaces that view: `route: '/'` with `display: 'main'` replaces the redirect from `/` to `/content` (the admin has no dashboard of its own), and `route: '/collections/posts'` the posts list. Without one, the admin keeps its default.
 - Plugins contribute the same `admin` object through [`definePlugin({ admin })`](#plugins).
+- The admin speaks English and German. Each user picks the language under "Interface language" in the user menu; the browser keeps the choice (`integral-admin-locale` in `localStorage`), and without one the admin follows the browser language. It is independent of the content languages in `localization`. Server validation messages stay English.
+- Every label and description you write takes a string for every language or one per language: `label: { en: "Posts", de: "Beiträge" }`. That covers collections, globals, fields, blocks, `labels.singular` / `plural`, `nav.group`, page `title` / `description`, bar item labels (also from a loader) and `media.label`. A missing language shows English, then the first entry. The built-in General, SEO, Strings and Media entries ship both.
+- Your own browser code gets the language as `ctx.integral.locale` (`"en"` or `"de"`), in pages, fields, page headers and bar items; a switch calls `update(ctx)`. Server `load` functions get it as `locale`. `translator()` from `integral-cms/admin` reads your own message files:
+
+  ```ts
+  import { translator } from "integral-cms/admin";
+  import en from "./locales/en.json";
+  import de from "./locales/de.json";
+
+  export const mountStats: Mount<PageContext> = (el, ctx) => {
+    const t = translator({ en, de }, ctx.integral.locale);
+    el.textContent = t("stats.count", { n: 3 }); // "{n} quotes" in en.json
+    // …
+  };
+  ```
+
+  Keys are dotted paths, `{name}` fills a parameter, and a missing key falls back to English, then to the key. `translate(text, locale)` resolves one `{ en, de }` value. The bundled redirects and example plugins use both.
 
 Every browser slot (field, page, bar item) is one function, `mount(el, ctx)`, exported from a module and registered with `clientRef()`. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes. For Vue and React there are ready-made wrappers; export their result and reference the export:
 
@@ -1530,13 +1574,13 @@ Working:
 
 - Schema-in-code collections and globals with inferred types
 - Relations between collections: `relation` and `join` fields, typed `populate`, `onDelete` rules
-- Admin: list, create, edit, delete; globals; email/password login; custom fields, pages and admin bar items via `admin` in `integral.config.ts` (`mount(el, ctx)` from any framework, optional server `load`)
+- Admin in English and German: list, create, edit, delete; globals; email/password login; custom fields, pages and admin bar items via `admin` in `integral.config.ts` (`mount(el, ctx)` from any framework, optional server `load`)
 - Public read API with equality filters, `limit` and `select`; `Astro.locals.integral` in Astro, `useIntegral()` in Nuxt
 - Collection, global and field hooks, run by the local API in one transaction per write
 - Validation in the local API (zod) with field errors in the admin, CSRF protection, first-user-only sign-up
 - Field options: help text, placeholders, defaults, built-in checks, `validate`, conditions, `unique`, `private` and `readOnly`
 - `slug` fields, and the page and SEO preset (`integral-cms/presets`): nested paths, SEO fields, and `seoMeta()` / `breadcrumbs()` / `slugify()`
-- Content localization: per-collection `localized`, per-locale drafts and publishing, fallback, `permalink`, `hreflang`, a language menu in the admin (see [Localization](#localization))
+- Content localization: per-collection `localized`, per-locale drafts and publishing, fallback, `permalink`, `hreflang`, a language menu in the admin, translatable site strings (see [Localization](#localization))
 - Media library: chunked uploads to the local disk or S3/R2, folders, `image` and `file` fields, responsive images through IPX or Cloudflare, media hooks
 - Plugins with collections, globals, root hooks, routes and admin registrations (fields, pages, bar items); `integral-cms/plugins/redirects`, and `integral-cms/plugins/example` to copy from
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
