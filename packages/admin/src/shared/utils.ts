@@ -14,12 +14,15 @@ const units: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 6e4],
 ];
 
-/** "3 minutes ago", "yesterday": a date relative to now, for list rows and status bars. */
-export function ago(date: string | number | Date) {
+const formats = new Map<string, Intl.RelativeTimeFormat>();
+
+/** "3 minutes ago", "yesterday", "now": a date relative to now in `locale`, for list rows and status bars. */
+export function ago(date: string | number | Date, locale: string) {
   const diff = new Date(date).getTime() - Date.now();
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  let rtf = formats.get(locale);
+  if (!rtf) formats.set(locale, (rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" })));
   for (const [unit, ms] of units) {
     if (Math.abs(diff) >= ms) return rtf.format(Math.round(diff / ms), unit);
   }
-  return "just now";
+  return rtf.format(0, "second");
 }

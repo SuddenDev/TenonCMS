@@ -12,6 +12,7 @@ import NotFound from "@/shared/components/NotFound.vue";
 import SelectContentPlaceholder from "@/shared/components/SelectContentPlaceholder.vue";
 import Mount from "@/shared/components/Mount.vue";
 import { useExtensionData } from "@/shared/composables/useExtensionData";
+import { i18n, text } from "@/shared/i18n";
 import { CONTENT, pageDataKey, pagePath } from "@/shared/options";
 import CollectionList from "@/modules/documents/views/CollectionList.vue";
 import DocEdit from "@/modules/documents/views/DocEdit.vue";
@@ -21,6 +22,7 @@ import Media from "@/modules/media/views/Media.vue";
 import MediaFile from "@/modules/media/views/MediaFile.vue";
 import Preview from "@/modules/preview/views/Preview.vue";
 
+const { t } = i18n.global;
 const empty = { render: () => null };
 const placeholder = { render: () => h(SelectContentPlaceholder) };
 
@@ -28,7 +30,7 @@ function hostPage({ mount, title, load }: PageDescriptor, key: string) {
   const name = `admin-page:${key}`;
   return {
     setup() {
-      useHead({ title: title ?? key });
+      useHead({ title: () => text(title) ?? key });
       const route = useRoute();
       // A computed keeps the context object between renders of the router view, so `Mount` sees no change.
       if (!load) {
@@ -66,7 +68,7 @@ function pageRoute(key: string, page: PageDescriptor): RouteRecordRaw {
     path: pagePath(key, page),
     component: hostPage(page, key),
     meta: {
-      breadcrumb: page.title ?? key,
+      breadcrumb: () => text(page.title) ?? key,
       full: page.nav?.display === "main" || page.nav?.display === "none",
       pageHeader: page.pageHeader,
       page: key,
@@ -95,12 +97,12 @@ export function createAdminRouter(base: string) {
     {
       path: CONTENT,
       component: placeholder,
-      meta: { pageHeader: false, breadcrumb: "Content", root: true },
+      meta: { pageHeader: false, breadcrumb: () => t("nav.content"), root: true },
     },
     {
       path: `${CONTENT}/settings`,
       component: Settings,
-      meta: { breadcrumb: "Settings", panes: true },
+      meta: { breadcrumb: () => t("nav.settings"), panes: true },
       children: [{ path: "globals/:name", component: GlobalEdit, meta: { panes: true } }],
     },
     {
@@ -108,7 +110,7 @@ export function createAdminRouter(base: string) {
       component: Media,
       meta: {
         breadcrumb: (r) =>
-          String(r.params.folder || "Media")
+          String(r.params.folder || t("nav.media"))
             .split("/")
             .at(-1)!,
       },
@@ -116,7 +118,7 @@ export function createAdminRouter(base: string) {
     {
       path: `${CONTENT}/media-file/:id`,
       component: MediaFile,
-      meta: { breadcrumb: "File", parent: `${CONTENT}/media` },
+      meta: { breadcrumb: () => t("nav.file"), parent: `${CONTENT}/media` },
     },
     // The media library is written only through the media API, so its generic views redirect.
     { path: `${CONTENT}/collections/media`, redirect: `${CONTENT}/media` },

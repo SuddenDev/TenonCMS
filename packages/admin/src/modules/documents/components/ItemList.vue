@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { inject, reactive, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { text } from "@/shared/i18n";
 import type { Field } from "@/shared/api";
 import { itemFields } from "../../../../../core/src/schema/traversal/item-fields";
 import { active, focusKey } from "@/modules/documents/fields";
@@ -33,15 +35,19 @@ const props = defineProps<{
   errors?: Record<string, string>;
 }>();
 const model = defineModel<Item[]>({ required: true });
+const { t } = useI18n();
 const path = () => props.path ?? props.name;
 const blocks = () => (props.field.type === "blocks" ? props.field.blocks : undefined);
-const singular = () => props.field.labels?.singular ?? (blocks() ? "Block" : "Item");
+const singular = () =>
+  text(props.field.labels?.singular) ?? t(blocks() ? "items.block" : "items.item");
 // The block of a row. Undefined for an array and for an unknown block.
 const blockOf = (item: Item) =>
   blocks() && Object.hasOwn(blocks()!, item.blockType) ? blocks()![item.blockType] : undefined;
 // Row name for the header and the actions label.
 const rowName = (item: Item, i: number) =>
-  blocks() ? (blockOf(item)?.label ?? String(item.blockType)) : `${singular()} ${i + 1}`;
+  blocks()
+    ? (text(blockOf(item)?.label) ?? String(item.blockType))
+    : t("items.numbered", { label: singular(), n: i + 1 });
 const full = () => props.field.maxRows !== undefined && model.value.length >= props.field.maxRows;
 
 // Ids of the open rows. Rows added in this session open, saved ones start collapsed.
@@ -151,7 +157,7 @@ function drop(i: number) {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  :aria-label="`${rowName(item, i)} actions`"
+                  :aria-label="t('items.actions', { name: rowName(item, i) })"
                   :disabled="field.readOnly"
                 >
                   <Icon name="ellipsis" />
@@ -159,24 +165,24 @@ function drop(i: number) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem :disabled="i === 0" @select="move(i, i - 1)">
-                  <Icon name="arrow-up" />Move up
+                  <Icon name="arrow-up" />{{ t("common.moveUp") }}
                 </DropdownMenuItem>
                 <DropdownMenuItem :disabled="i === model.length - 1" @select="move(i, i + 1)">
-                  <Icon name="arrow-down" />Move down
+                  <Icon name="arrow-down" />{{ t("common.moveDown") }}
                 </DropdownMenuItem>
                 <DropdownMenuItem :disabled="full()" @select="duplicate(i)">
-                  <Icon name="copy" />Duplicate
+                  <Icon name="copy" />{{ t("items.duplicate") }}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" @select="remove(i)">
-                  <Icon name="trash" />Remove
+                  <Icon name="trash" />{{ t("common.remove") }}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
           <CollapsibleContent class="border-border border-t p-3">
             <p v-if="!itemFields(field, item)" class="text-muted-foreground text-sm">
-              Unknown block {{ item.blockType }}
+              {{ t("items.unknownBlock", { type: item.blockType }) }}
             </p>
             <div v-else class="flex flex-col gap-4">
               <template v-for="(child, key) in itemFields(field, item)" :key="key">
@@ -201,7 +207,7 @@ function drop(i: number) {
       <DropdownMenu v-if="blocks()">
         <DropdownMenuTrigger as-child>
           <Button type="button" variant="outline" size="sm" :disabled="field.readOnly || full()">
-            <Icon name="plus" />Add {{ singular() }}
+            <Icon name="plus" />{{ t("items.add", { label: singular() }) }}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
@@ -213,9 +219,9 @@ function drop(i: number) {
           >
             <Icon v-if="block.icon" :name="block.icon" class="mt-0.5" />
             <span class="flex flex-col">
-              <span>{{ block.label ?? key }}</span>
+              <span>{{ text(block.label) ?? key }}</span>
               <span v-if="block.description" class="text-muted-foreground text-xs">{{
-                block.description
+                text(block.description)
               }}</span>
             </span>
           </DropdownMenuItem>
@@ -229,7 +235,7 @@ function drop(i: number) {
         :disabled="field.readOnly || full()"
         @click="add()"
       >
-        <Icon name="plus" />Add {{ singular() }}
+        <Icon name="plus" />{{ t("items.add", { label: singular() }) }}
       </Button>
     </div>
     <FieldError v-if="errors?.[path()]">{{ errors[path()] }}</FieldError>

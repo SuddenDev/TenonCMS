@@ -2,6 +2,8 @@
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, provide, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { text } from "@/shared/i18n";
 import { useRoute } from "vue-router";
 import { client, schema } from "@/shared/api";
 import { keepPaneKey, reloadKey, titleField } from "@/modules/documents/fields";
@@ -20,6 +22,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { ago } from "@/shared/utils";
 
+const { t, locale: adminLocale } = useI18n();
 const route = useRoute();
 const name = route.params.name as string;
 const collection = computed(() => schema.value.collections?.[name]);
@@ -29,11 +32,11 @@ const active = computed(() => (collection.value?.localized ? locale.value : unde
 const docs = ref<Record<string, any>[]>([]);
 const loading = ref(true);
 const search = ref("");
-const sorts: PaneSort[] = [
-  { value: "title", label: "Sort by Name" },
-  { value: "updatedAt", label: "Sort by Last Edited" },
-  { value: "createdAt", label: "Sort by Created" },
-];
+const sorts = computed<PaneSort[]>(() => [
+  { value: "title", label: t("documents.sortName") },
+  { value: "updatedAt", label: t("documents.sortEdited") },
+  { value: "createdAt", label: t("documents.sortCreated") },
+]);
 const sort = ref("updatedAt");
 const layout = ref<PaneLayout>("normal");
 const rows = computed(() => {
@@ -44,7 +47,7 @@ const rows = computed(() => {
     .filter((d) => !q || title(d).toLowerCase().includes(q))
     .map((d) => ({
       id: d.id as string,
-      title: title(d) || "(untitled)",
+      title: title(d) || t("common.untitled"),
       updatedAt: d.updatedAt as string,
       createdAt: d.createdAt as string,
       // `locales` lists the languages with a version.
@@ -56,7 +59,7 @@ const rows = computed(() => {
     );
 });
 
-useHead({ title: () => collection.value?.label ?? name });
+useHead({ title: () => text(collection.value?.label) ?? name });
 
 // A later load wins, so a quick language switch shows the last one.
 let loads = 0;
@@ -91,9 +94,9 @@ provide(keepPaneKey, (id) => (kept = id));
 
 <template>
   <template v-if="collection">
-    <Pane :title="collection.label ?? name">
+    <Pane :title="text(collection.label) ?? name">
       <template #actions>
-        <Button as-child variant="ghost" size="icon-sm" aria-label="New">
+        <Button as-child variant="ghost" size="icon-sm" :aria-label="t('documents.new')">
           <RouterLink :to="`${CONTENT}/collections/${name}/new`"><Icon name="plus" /></RouterLink>
         </Button>
         <PaneMenuOptions
@@ -113,25 +116,25 @@ provide(keepPaneKey, (id) => (kept = id));
             :to="`${CONTENT}/collections/${name}/${doc.id}`"
             :icon="collection.nav?.icon ?? 'file-text'"
             :label="doc.title"
-            :subtitle="ago(doc.updatedAt)"
+            :subtitle="ago(doc.updatedAt, adminLocale)"
             :active="route.params.id === doc.id"
           >
             <template v-if="doc.draft || !doc.translated" #end>
               <span class="flex items-center gap-2">
                 <span v-if="!doc.translated" class="text-muted-foreground text-xs">
-                  Not translated
+                  {{ t("common.notTranslated") }}
                 </span>
                 <span
                   v-else
                   class="size-2 rounded-full bg-amber-500"
                   role="img"
-                  aria-label="Draft"
+                  :aria-label="t('common.draft')"
                 />
               </span>
             </template>
           </PaneMenuItem>
           <p v-if="!loading && !rows.length" class="text-muted-foreground px-2 py-2 text-sm">
-            {{ search ? "No matches." : "Nothing here yet." }}
+            {{ t(search ? "common.noMatches" : "common.nothingYet") }}
           </p>
         </template>
       </PaneMenu>
@@ -142,7 +145,7 @@ provide(keepPaneKey, (id) => (kept = id));
         v-else
         class="text-muted-foreground hidden flex-1 items-center justify-center text-sm sm:flex"
       >
-        Select a document
+        {{ t("documents.selectDocument") }}
       </div>
     </RouterView>
   </template>

@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createApp, effectScope, nextTick, ref, type EffectScope } from "vue";
 import { client, CmsError } from "@/shared/api";
+import { i18n } from "@/shared/i18n";
 import { sessionKey } from "@/shared/options";
 import { useExtensionData } from "./useExtensionData";
 
@@ -37,7 +38,7 @@ it("posts to the load endpoint and exposes the result with its request", async (
   const { data } = setup(() => ({ kind: "page", key: "stats", params: {}, query: {} }));
   expect(spy).toHaveBeenCalledWith("/admin/load", {
     method: "POST",
-    body: { kind: "page", key: "stats", params: {}, query: {} },
+    body: { kind: "page", key: "stats", params: {}, query: {}, locale: "en" },
   });
   expect(data.loading.value).toBe(true);
   calls[0].resolve({ n: 1 });
@@ -46,6 +47,15 @@ it("posts to the load endpoint and exposes the result with its request", async (
     request: { kind: "page", key: "stats", params: {}, query: {} },
     data: { n: 1 },
   });
+});
+
+it("reloads in the new admin language after a switch", async () => {
+  mockRequest();
+  setup(() => ({ kind: "page", key: "stats", params: {}, query: {} }));
+  i18n.global.locale.value = "de";
+  await nextTick();
+  i18n.global.locale.value = "en";
+  expect(calls.map((c) => c.body.locale)).toEqual(["en", "de"]);
 });
 
 it("sends no request without a request body", () => {

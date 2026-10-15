@@ -8,6 +8,12 @@ const target = process.env.CMS_URL ?? "http://localhost:4321";
 
 export default defineConfig(() => ({
   plugins: [vue(), tailwindcss()],
+  // vue-i18n feature flags: Composition API only, no devtools in production.
+  define: {
+    __VUE_I18N_FULL_INSTALL__: false,
+    __VUE_I18N_LEGACY_API__: false,
+    __INTLIFY_PROD_DEVTOOLS__: false,
+  },
   build: {
     // Vue is bundled in. Hosts plug in through `mount(el)`, so no shared runtime is needed.
     lib: {

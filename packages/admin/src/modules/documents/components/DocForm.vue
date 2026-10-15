@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { text } from "@/shared/i18n";
 import { CmsError, type Data, type Field, type Fields } from "@/shared/api";
 import { onLocaleFlush } from "@/shared/composables/useLocale";
 import { active, isEmpty, normalize } from "@/modules/documents/fields";
@@ -45,6 +47,7 @@ const props = defineProps<{
 }>();
 // `change`: the form state as it would be saved, on every edit and once on load.
 const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
+const { t, locale } = useI18n();
 
 const data = ref(normalize(props.fields, props.initial, false, props.isNew));
 // Fields can change after mount, so the payload follows the current fields.
@@ -127,7 +130,7 @@ async function attempt(action: () => Promise<void>) {
     errors.value = (e instanceof CmsError && e.body?.errors) || {};
     const fieldErrors = Object.keys(errors.value).some((key) => key !== "");
     error.value =
-      errors.value[""] ?? (fieldErrors ? "Please fix the marked fields" : (e as Error).message);
+      errors.value[""] ?? (fieldErrors ? t("documents.fixFields") : (e as Error).message);
   } finally {
     busy.value = false;
   }
@@ -148,12 +151,13 @@ const publish = () =>
   });
 
 async function discard() {
-  const message =
+  const message = t(
     current.value.publishedAt || props.global
-      ? "Discard the unpublished changes?"
+      ? "documents.discardPublished"
       : props.localized
-        ? "Discard this draft? This language was never published, so it is removed."
-        : "Discard this draft? It was never published, so the entry is deleted.";
+        ? "documents.discardLocale"
+        : "documents.discardNew",
+  );
   if (!confirm(message)) return;
   await attempt(async () => {
     await autosave.flush();
@@ -193,11 +197,17 @@ async function discard() {
           <fieldset :disabled="field.readOnly" class="contents">
             <CardHeader class="py-4">
               <CardTitle>
-                {{ ("labels" in field && field.labels?.plural) || field.label || name }}
+                {{
+                  text("labels" in field ? field.labels?.plural : undefined) ??
+                  text(field.label) ??
+                  name
+                }}
                 <span v-if="field.required" class="text-destructive" aria-hidden="true">*</span>
                 <SharedMarker v-if="shared(field)" />
               </CardTitle>
-              <CardDescription v-if="field.description">{{ field.description }}</CardDescription>
+              <CardDescription v-if="field.description">{{
+                text(field.description)
+              }}</CardDescription>
               <FieldError v-if="field.type === 'group' && errors[name]">{{
                 errors[name]
               }}</FieldError>
@@ -247,17 +257,21 @@ async function discard() {
         <span v-if="autosave.error.value" class="text-destructive text-sm" role="alert">
           {{ (autosave.error.value as Error).message }}
         </span>
-        <span v-else-if="saving" class="text-muted-foreground text-sm" role="status">Saving…</span>
+        <span v-else-if="saving" class="text-muted-foreground text-sm" role="status">{{
+          t("documents.saving")
+        }}</span>
         <span v-else-if="current.hasDraft" class="text-muted-foreground text-sm" role="status">
-          Draft saved {{ ago(current.updatedAt as string) }}
+          {{ t("documents.draftSaved", { ago: ago(current.updatedAt as string, locale) }) }}
         </span>
         <span v-else-if="current.publishedAt" class="text-muted-foreground text-sm">
-          Published {{ ago(current.publishedAt as string) }}
+          {{ t("documents.publishedAgo", { ago: ago(current.publishedAt as string, locale) }) }}
         </span>
       </template>
-      <span v-else-if="saved" class="text-muted-foreground text-sm" role="status">Saved</span>
+      <span v-else-if="saved" class="text-muted-foreground text-sm" role="status">{{
+        t("common.saved")
+      }}</span>
       <span v-else-if="initial.updatedAt" class="text-muted-foreground text-sm">
-        Edited {{ ago(initial.updatedAt as string) }}
+        {{ t("documents.edited", { ago: ago(initial.updatedAt as string, locale) }) }}
       </span>
       <div class="ml-auto flex items-center gap-2">
         <slot />
@@ -270,13 +284,13 @@ async function discard() {
             :disabled="busy"
             @click="discard"
           >
-            Discard changes
+            {{ t("documents.discardChanges") }}
           </Button>
           <Button type="button" size="sm" :disabled="busy || !canPublish" @click="publish">
-            Publish
+            {{ t("documents.publish") }}
           </Button>
         </template>
-        <Button v-else type="submit" size="sm" :disabled="busy">Save</Button>
+        <Button v-else type="submit" size="sm" :disabled="busy">{{ t("common.save") }}</Button>
       </div>
     </footer>
   </form>

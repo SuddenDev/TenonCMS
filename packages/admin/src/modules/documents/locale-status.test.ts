@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { createI18n } from "vue-i18n";
+import de from "@/shared/i18n/de";
+import en from "@/shared/i18n/en";
 import { localeDialog, localeStatus, rowState } from "./locale-status";
+
+const i18n = (locale: "en" | "de") =>
+  createI18n({ legacy: false, locale, messages: { en, de } }).global;
+const english = i18n("en");
 
 const published = { publishedAt: "2026-01-01", hasDraft: false };
 const edited = { publishedAt: "2026-01-01", hasDraft: true };
@@ -93,7 +100,7 @@ describe("localeStatus", () => {
 
 describe("localeDialog", () => {
   it("overwrites an existing locale", () => {
-    expect(localeDialog({ kind: "copy", from: "en", to: "de", exists: true })).toEqual({
+    expect(localeDialog({ kind: "copy", from: "en", to: "de", exists: true }, english)).toEqual({
       title: "Overwrite German?",
       description: "Its draft will be replaced with the English content.",
       action: "Overwrite",
@@ -102,7 +109,7 @@ describe("localeDialog", () => {
   });
 
   it("creates a new locale", () => {
-    expect(localeDialog({ kind: "copy", from: "en", to: "de", exists: false })).toEqual({
+    expect(localeDialog({ kind: "copy", from: "en", to: "de", exists: false }, english)).toEqual({
       title: "Create German from English?",
       description: "The English content is saved as a draft.",
       action: "Create",
@@ -111,7 +118,7 @@ describe("localeDialog", () => {
   });
 
   it("removes a translation", () => {
-    expect(localeDialog({ kind: "remove", locale: "de" })).toMatchObject({
+    expect(localeDialog({ kind: "remove", locale: "de" }, english)).toMatchObject({
       title: "Remove the German translation?",
       action: "Remove",
       destructive: true,
@@ -119,19 +126,31 @@ describe("localeDialog", () => {
   });
 
   it("lists the pending parts of a discard", () => {
-    expect(localeDialog({ kind: "discard", shared: true, locales: ["de", "fr"] }).description).toBe(
-      "Shared fields and the German and French drafts go back to the published version.",
-    );
-    expect(localeDialog({ kind: "discard", shared: false, locales: ["de"] }).description).toBe(
-      "The German draft goes back to the published version.",
-    );
-    expect(localeDialog({ kind: "discard", shared: true, locales: [] }).description).toBe(
+    expect(
+      localeDialog({ kind: "discard", shared: true, locales: ["de", "fr"] }, english).description,
+    ).toBe("Shared fields and the German and French drafts go back to the published version.");
+    expect(
+      localeDialog({ kind: "discard", shared: false, locales: ["de"] }, english).description,
+    ).toBe("The German draft goes back to the published version.");
+    expect(localeDialog({ kind: "discard", shared: true, locales: [] }, english).description).toBe(
       "Shared fields go back to the published version.",
     );
-    expect(localeDialog({ kind: "discard", shared: true, locales: [] })).toMatchObject({
+    expect(localeDialog({ kind: "discard", shared: true, locales: [] }, english)).toMatchObject({
       title: "Discard all changes?",
       action: "Discard",
       destructive: true,
     });
+  });
+
+  it("names the languages in the admin language", () => {
+    const german = i18n("de");
+    expect(localeDialog({ kind: "copy", from: "en", to: "fr", exists: false }, german).title).toBe(
+      "Französisch aus Englisch erstellen?",
+    );
+    expect(
+      localeDialog({ kind: "discard", shared: false, locales: ["de", "fr"] }, german).description,
+    ).toBe(
+      "Die Entwürfe in Deutsch und Französisch werden auf die veröffentlichte Version zurückgesetzt.",
+    );
   });
 });

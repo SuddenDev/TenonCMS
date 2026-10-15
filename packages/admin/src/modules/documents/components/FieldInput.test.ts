@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from "vitest";
 import { createApp, h, nextTick, ref, type App } from "vue";
+import { i18n } from "@/shared/i18n";
 import { client, schema } from "@/shared/api";
 import { integralKey, registryKey, sessionKey } from "@/shared/options";
 import { ownerKey, type Owner } from "@/modules/documents/fields";
@@ -50,6 +51,7 @@ function setup(load = true) {
           })
         : null,
   })
+    .use(i18n)
     .provide(registryKey, { color: async () => mount })
     .provide(integralKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} })
     .provide(sessionKey, { expire: vi.fn() } as never)
@@ -66,6 +68,7 @@ it("asks for the data with the field's type, full path and owner, and mounts wit
     type: "color",
     path: "seo.color",
     owner: { collection: "posts" },
+    locale: "en",
   });
   calls[0].resolve({ palette: ["red"] });
   await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce());

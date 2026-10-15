@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CONTENT } from "@/shared/options";
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { client, type Field, type MediaRead } from "@/shared/api";
 import { fits } from "@/modules/media/media";
 import MediaLibrary from "./MediaLibrary.vue";
@@ -17,6 +18,7 @@ type MediaField = Extract<Field, { type: "image" | "file" }>;
 
 const props = defineProps<{ field: MediaField; invalid?: boolean }>();
 const model = defineModel<string | string[] | null>();
+const { t } = useI18n();
 const ids = computed(() => (model.value == null ? [] : ([] as string[]).concat(model.value)));
 const docs = ref<Record<string, MediaRead | null>>({});
 const open = ref(false);
@@ -60,7 +62,7 @@ async function upload(files: FileList | null) {
   error.value = "";
   for (const file of files ?? []) {
     if (!fits(props.field, { mimeType: file.type, size: file.size })) {
-      error.value = `${file.name} is not allowed here`;
+      error.value = t("media.notAllowedHere", { name: file.name });
       continue;
     }
     try {
@@ -84,14 +86,14 @@ async function upload(files: FileList | null) {
       >
         <MediaThumb :doc="docs[id]" sizes="3rem" class="size-12" />
         <RouterLink :to="`${CONTENT}/media-file/${id}`" class="flex-1 truncate text-sm underline">
-          {{ docs[id]?.filename ?? (docs[id] === null ? "Missing file" : "…") }}
+          {{ docs[id]?.filename ?? (docs[id] === null ? t("media.missingFile") : "…") }}
         </RouterLink>
         <template v-if="field.many">
           <button
             type="button"
             class="btn-ghost"
             :disabled="i === 0"
-            aria-label="Move up"
+            :aria-label="t('common.moveUp')"
             @click="move(i, -1)"
           >
             ↑
@@ -100,7 +102,7 @@ async function upload(files: FileList | null) {
             type="button"
             class="btn-ghost"
             :disabled="i === ids.length - 1"
-            aria-label="Move down"
+            :aria-label="t('common.moveDown')"
             @click="move(i, 1)"
           >
             ↓
@@ -112,7 +114,7 @@ async function upload(files: FileList | null) {
           :disabled="field.readOnly"
           @click="set(ids.filter((x) => x !== id))"
         >
-          Remove
+          {{ t("common.remove") }}
         </button>
       </li>
     </ul>
@@ -123,13 +125,13 @@ async function upload(files: FileList | null) {
         :disabled="field.readOnly"
         @click="choose"
       >
-        Choose
+        {{ t("media.choose") }}
       </button>
       <label
         class="btn-ghost border-input cursor-pointer border"
         :class="field.readOnly && 'pointer-events-none opacity-50'"
       >
-        Upload new
+        {{ t("media.uploadNew") }}
         <input
           type="file"
           class="hidden"
@@ -149,11 +151,13 @@ async function upload(files: FileList | null) {
     <Dialog v-model:open="open">
       <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>Choose {{ field.many ? "files" : "a file" }}</DialogTitle>
+          <DialogTitle>{{ t(field.many ? "media.chooseFiles" : "media.chooseFile") }}</DialogTitle>
         </DialogHeader>
         <MediaLibrary v-model:folder="folder" v-model:selected="picked" :pick="field" />
         <DialogFooter>
-          <button type="button" class="btn" @click="confirm">Select</button>
+          <button type="button" class="btn" @click="confirm">
+            {{ t("media.select") }}
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

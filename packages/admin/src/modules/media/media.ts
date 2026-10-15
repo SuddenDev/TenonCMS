@@ -1,11 +1,12 @@
 import { accepts } from "../../../../core/src/media/library/names";
 
-/** Bytes as `1.2 MB`. */
-export function formatSize(bytes: number) {
+/** Bytes as `1.2 MB`, the number in `locale`. */
+export function formatSize(bytes: number, locale: string) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let i = 0;
   for (; bytes >= 1024 && i < units.length - 1; i++) bytes /= 1024;
-  return `${i && bytes < 10 ? bytes.toFixed(1) : Math.round(bytes)} ${units[i]}`;
+  const digits = i && bytes < 10 ? 1 : 0;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(bytes)} ${units[i]}`;
 }
 
 /** The rules of an `image` or `file` field that the admin checks before a pick or an upload. */

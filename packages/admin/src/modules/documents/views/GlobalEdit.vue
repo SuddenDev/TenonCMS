@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
 import { computed, provide, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { text } from "@/shared/i18n";
 import { useRoute } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import { ownerKey } from "@/modules/documents/fields";
@@ -25,6 +27,7 @@ withDefaults(
 );
 // `saved`: after every save, draft save, publish and discard.
 const emit = defineEmits<{ saved: []; change: [data: Record<string, unknown>] }>();
+const { t } = useI18n();
 const name = useRoute().params.name as string;
 const global = computed(() => schema.value.globals?.[name]);
 provide(
@@ -38,7 +41,7 @@ const readOnly = computed(() => drafts.value && usePerspective().perspective ===
 const doc = ref<Record<string, unknown> | null>(null);
 const data = ref<Record<string, unknown>>({});
 
-useHead({ title: () => global.value?.label ?? name });
+useHead({ title: () => text(global.value?.label) ?? name });
 
 const error = ref("");
 const { locale, defaultLocale, flush } = useLocale();
@@ -128,7 +131,7 @@ const discardAll = () =>
 <template>
   <Pane
     v-if="global"
-    :title="global.label ?? name"
+    :title="text(global.label) ?? name"
     :min="min"
     :max="max"
     :grow="grow"
@@ -142,7 +145,7 @@ const discardAll = () =>
         as-child
         variant="ghost"
         size="icon-sm"
-        aria-label="Preview"
+        :aria-label="t('common.preview')"
       >
         <RouterLink :to="`/presentation/globals/${name}`"><Icon name="eye" /></RouterLink>
       </Button>
@@ -159,15 +162,15 @@ const discardAll = () =>
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
-        <p class="text-muted-foreground text-xs">Global</p>
-        <h1 class="mt-1 text-2xl font-semibold">{{ global.label ?? name }}</h1>
+        <p class="text-muted-foreground text-xs">{{ t("documents.global") }}</p>
+        <h1 class="mt-1 text-2xl font-semibold">{{ text(global.label) ?? name }}</h1>
         <StatusBadges v-if="drafts" :doc="doc" :languages="languages" />
         <p v-if="error" class="text-destructive mt-2 text-sm" role="alert">{{ error }}</p>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
-          Published version. Switch to Drafts to edit.
+          {{ t("documents.readOnly") }}
         </p>
         <p v-if="global.description" class="text-muted-foreground mt-2 text-sm">
-          {{ global.description }}
+          {{ text(global.description) }}
         </p>
       </header>
       <DocForm

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { Button } from "@/shared/components/ui/button";
 import { Separator } from "@/shared/components/ui/separator";
@@ -35,6 +36,7 @@ import {
   type Perspective,
 } from "@/shared";
 
+const { t } = useI18n();
 const route = useRoute();
 const { name, logo, icon } = useBrand();
 const tools = useAppBar();
@@ -42,8 +44,8 @@ const { perspective, set } = usePerspective();
 useLocaleFromRoute();
 const { locales, defaultLocale, locale, select } = useLocale();
 const perspectives = [
-  { value: "drafts", label: "Drafts" },
-  { value: "published", label: "Published" },
+  { value: "drafts", label: "common.drafts" },
+  { value: "published", label: "common.published" },
 ] as const;
 const row = ref<HTMLElement>();
 providePanes(row);
@@ -57,7 +59,7 @@ providePanes(row);
       <div class="flex items-center gap-2">
         <Sheet>
           <SheetTrigger as-child>
-            <Button variant="ghost" size="icon-sm" class="sm:hidden" aria-label="Menu">
+            <Button variant="ghost" size="icon-sm" class="sm:hidden" :aria-label="t('nav.menu')">
               <Icon name="menu" />
             </Button>
           </SheetTrigger>
@@ -74,7 +76,7 @@ providePanes(row);
             </SheetClose>
             <Separator class="my-2" />
             <Button as-child variant="ghost" class="justify-start gap-2">
-              <a href="/" rel="noopener noreferrer"><Icon name="globe" />Go to site</a>
+              <a href="/" rel="noopener noreferrer"><Icon name="globe" />{{ t("nav.goToSite") }}</a>
             </Button>
           </SheetContent>
         </Sheet>
@@ -106,12 +108,17 @@ providePanes(row);
       <div class="flex items-center gap-1.5">
         <Button as-child variant="ghost" size="sm" class="gap-1.5 text-xs max-sm:hidden">
           <a href="/" rel="noopener noreferrer"
-            ><Icon name="globe" class="" /><span>Go to site</span></a
+            ><Icon name="globe" class="" /><span>{{ t("nav.goToSite") }}</span></a
           >
         </Button>
         <DropdownMenu v-if="locales.length">
           <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="sm" class="gap-1.5 text-xs" aria-label="Language">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="gap-1.5 text-xs"
+              :aria-label="t('nav.language')"
+            >
               {{ locale?.toUpperCase() }}
               <Icon name="chevron-down" />
             </Button>
@@ -135,7 +142,7 @@ providePanes(row);
                 class="size-2 rounded-full data-[perspective=drafts]:bg-amber-500 data-[perspective=published]:bg-emerald-500"
                 aria-hidden="true"
               />
-              {{ perspective === "drafts" ? "Drafts" : "Published" }}
+              {{ t(perspective === "drafts" ? "common.drafts" : "common.published") }}
               <Icon name="chevron-down" />
             </Button>
           </DropdownMenuTrigger>
@@ -145,14 +152,14 @@ providePanes(row);
               @update:model-value="(p) => set(p as Perspective)"
             >
               <DropdownMenuRadioItem v-for="p in perspectives" :key="p.value" :value="p.value">
-                {{ p.label }}
+                {{ t(p.label) }}
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
         <Separator orientation="vertical" class="h-6 self-center!" />
-        <Button variant="ghost" size="icon-sm" class="">
-          <Icon name="search" class="" />
+        <Button variant="ghost" size="icon-sm" :aria-label="t('nav.search')">
+          <Icon name="search" />
         </Button>
         <NavUser />
       </div>
@@ -170,7 +177,7 @@ providePanes(row);
       <template v-else>
         <MenuPane v-if="route.meta.menu !== false" />
         <slot v-if="route.meta.panes" />
-        <Pane v-else title="Page" :min="448" grow :collapsible="false">
+        <Pane v-else :title="t('nav.page')" :min="448" grow :collapsible="false">
           <template #header><PageTitle :value="route.meta.pageHeader ?? true" /></template>
           <main class="h-full"><slot /></main>
         </Pane>

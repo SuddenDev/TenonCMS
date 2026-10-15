@@ -13,6 +13,7 @@ export type PaneMenuOptionsEmits = DropdownMenuRootEmits;
 <script setup lang="ts">
 import { reactivePick } from "@vueuse/core";
 import { useForwardPropsEmits } from "reka-ui";
+import { useI18n } from "vue-i18n";
 import Icon from "@/shared/components/Icon.vue";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenuItem } from "reka-ui";
@@ -32,6 +33,7 @@ const props = withDefaults(defineProps<PaneMenuOptionsProps>(), {
   defaultLayout: "normal",
 });
 const emits = defineEmits<PaneMenuOptionsEmits>();
+const { t } = useI18n();
 const sort = defineModel<string>("sort");
 const layout = defineModel<PaneLayout>("layout");
 
@@ -39,23 +41,23 @@ const forwarded = useForwardPropsEmits(
   reactivePick(props, "open", "defaultOpen", "modal", "dir"),
   emits,
 );
-const layouts: { value: PaneLayout; label: string; icon: string }[] = [
-  { value: "compact", label: "Compact view", icon: "rows-4" },
-  { value: "normal", label: "Normal view", icon: "rows-3" },
-  { value: "detailed", label: "Detailed view", icon: "rows-2" },
-];
+const layouts = [
+  { value: "compact", label: "pane.compact", icon: "rows-4" },
+  { value: "normal", label: "pane.normal", icon: "rows-3" },
+  { value: "detailed", label: "pane.detailed", icon: "rows-2" },
+] as const;
 </script>
 
 <template>
   <DropdownMenu v-bind="forwarded">
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="icon-sm" aria-label="List options">
+      <Button variant="ghost" size="icon-sm" :aria-label="t('pane.listOptions')">
         <Icon name="ellipsis" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="w-52">
       <template v-if="sorts.length">
-        <DropdownMenuLabel>Sort</DropdownMenuLabel>
+        <DropdownMenuLabel>{{ t("pane.sort") }}</DropdownMenuLabel>
         <DropdownMenuRadioGroup v-model="sort">
           <DropdownMenuRadioItem v-for="s in sorts" :key="s.value" :value="s.value">
             {{ s.label }}
@@ -66,15 +68,15 @@ const layouts: { value: PaneLayout; label: string; icon: string }[] = [
           @select="sort = defaultSort"
           class="text-muted-foreground hover:text-accent-foreground w-full cursor-pointer px-2 py-1.5 text-left text-xs underline transition-colors"
         >
-          Reset sort
+          {{ t("pane.resetSort") }}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
       </template>
-      <DropdownMenuLabel>Layout</DropdownMenuLabel>
+      <DropdownMenuLabel>{{ t("pane.layout") }}</DropdownMenuLabel>
       <DropdownMenuRadioGroup v-model="layout">
         <DropdownMenuRadioItem v-for="l in layouts" :key="l.value" :value="l.value">
           <Icon :name="l.icon" />
-          {{ l.label }}
+          {{ t(l.label) }}
         </DropdownMenuRadioItem>
       </DropdownMenuRadioGroup>
       <DropdownMenuItem
@@ -82,7 +84,7 @@ const layouts: { value: PaneLayout; label: string; icon: string }[] = [
         @select="layout = defaultLayout"
         class="text-muted-foreground hover:text-accent-foreground w-full cursor-pointer px-2 py-1.5 text-left text-xs underline transition-colors"
       >
-        Reset view
+        {{ t("pane.resetView") }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

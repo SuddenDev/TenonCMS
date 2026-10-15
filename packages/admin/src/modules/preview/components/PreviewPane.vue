@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { registerPreviewTab } from "../composables/usePreviewChannel";
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { Icon, Pane } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -15,6 +16,7 @@ const props = withDefaults(
   { href: "", frame: 0 },
 );
 const emit = defineEmits<{ reload: []; close: []; navigate: [url: string] }>();
+const { t } = useI18n();
 const edit = defineModel<boolean>("edit", { default: true });
 const mobile = ref(false);
 // What the URL input shows. The page's URL replaces it, unless it is being edited.
@@ -43,21 +45,26 @@ function openTab() {
 </script>
 
 <template>
-  <Pane title="Preview" :min="300" grow :collapsible="false">
+  <Pane :title="t('common.preview')" :min="300" grow :collapsible="false">
     <template #header>
       <header class="border-border flex h-12 shrink-0 items-center gap-1 border-b pr-2 pl-3">
         <label class="flex shrink-0 items-center gap-1.5 pr-1 text-xs">
           <Switch v-model="edit" />
-          Edit
+          {{ t("preview.edit") }}
         </label>
-        <Button variant="ghost" size="icon-sm" aria-label="Reload" @click="emit('reload')">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          :aria-label="t('preview.reload')"
+          @click="emit('reload')"
+        >
           <Icon name="rotate-cw" />
         </Button>
         <form class="flex min-w-0 flex-1" @submit.prevent="submit">
           <Input
             v-model="typed"
             inputmode="url"
-            aria-label="URL"
+            :aria-label="t('preview.url')"
             class="h-8 text-xs"
             @input="editing = true"
             @keydown.esc="reset"
@@ -67,7 +74,7 @@ function openTab() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Open in new tab"
+          :aria-label="t('preview.openTab')"
           :disabled="!url"
           @click="openTab"
         >
@@ -76,12 +83,17 @@ function openTab() {
         <Button
           variant="ghost"
           size="icon-sm"
-          :aria-label="mobile ? 'Desktop' : 'Mobile'"
+          :aria-label="t(mobile ? 'preview.desktop' : 'preview.mobile')"
           @click="mobile = !mobile"
         >
           <Icon :name="mobile ? 'monitor' : 'smartphone'" />
         </Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Close" @click="emit('close')">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          :aria-label="t('common.close')"
+          @click="emit('close')"
+        >
           <Icon name="x" />
         </Button>
       </header>
@@ -90,7 +102,7 @@ function openTab() {
       v-if="url === null"
       class="text-muted-foreground flex h-full items-center justify-center text-sm"
     >
-      No preview for this document
+      {{ t("preview.none") }}
     </p>
     <div
       v-else-if="url"
@@ -101,7 +113,7 @@ function openTab() {
         :key="frame"
         :src="url"
         name="integral-preview"
-        title="Preview"
+        :title="t('common.preview')"
         class="group-data-[mobile=true]:border-border block h-full w-full bg-white group-data-[mobile=true]:w-[390px] group-data-[mobile=true]:rounded-lg group-data-[mobile=true]:border"
       />
     </div>

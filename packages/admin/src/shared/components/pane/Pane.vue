@@ -18,6 +18,7 @@ export interface PaneProps {
 <script setup lang="ts">
 import { useForwardExpose } from "reka-ui";
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import Icon from "@/shared/components/Icon.vue";
 import { COLLAPSED, usePane } from "@/shared/composables/usePanes";
 import { Button } from "../ui/button";
@@ -31,6 +32,7 @@ const props = withDefaults(defineProps<PaneProps>(), {
   width: undefined,
   handle: "right",
 });
+const { t } = useI18n();
 const { forwardRef, currentElement } = useForwardExpose();
 const { collapsed, hidden, stacked, toggle, back, width, resize } = usePane(
   currentElement,
@@ -74,7 +76,7 @@ function startResize(e: PointerEvent) {
       v-if="collapsed"
       type="button"
       class="hover:bg-muted flex h-full flex-col items-center gap-3 py-3"
-      :title="`Expand ${title}`"
+      :title="t('pane.expand', { title })"
       @click="toggle"
     >
       <span class="text-sm font-medium [writing-mode:vertical-rl]">{{ title }}</span>
@@ -86,7 +88,7 @@ function startResize(e: PointerEvent) {
             v-if="back"
             type="button"
             class="hover:bg-muted -ml-1 flex size-8 shrink-0 items-center justify-center rounded-md"
-            aria-label="Back"
+            :aria-label="t('common.back')"
             @click="back"
           >
             <Icon name="chevron-left" />
@@ -97,7 +99,7 @@ function startResize(e: PointerEvent) {
           <div v-else class="w-full min-w-0">
             <Button
               variant="ghost"
-              :title="stacked ? undefined : `Collapse ${title}`"
+              :title="stacked ? undefined : t('pane.collapse', { title })"
               class="-ml-2 min-w-0 flex-1 truncate text-left"
               size="sm"
               @click="toggle"
@@ -119,7 +121,7 @@ function startResize(e: PointerEvent) {
         class="hover:bg-ring/10 absolute inset-y-0 z-20 w-2 cursor-col-resize touch-none transition-colors data-[handle=left]:-left-1 data-[handle=right]:-right-1"
         role="separator"
         aria-orientation="vertical"
-        :aria-label="`Resize ${title}`"
+        :aria-label="t('pane.resize', { title })"
         @pointerdown.prevent="startResize"
       />
     </template>

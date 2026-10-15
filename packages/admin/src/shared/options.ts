@@ -18,7 +18,8 @@ export const optionsKey = Symbol() as InjectionKey<Branding>;
 
 /** The load of the custom page on screen, set by its route view. The page header reads the same data. */
 export const pageDataKey = Symbol() as InjectionKey<ShallowRef<ExtensionData<any> | undefined>>;
-export const integralKey = Symbol() as InjectionKey<IntegralContext>;
+// `locale` is added where a context is built, so it follows the admin language.
+export const integralKey = Symbol() as InjectionKey<Omit<IntegralContext, "locale">>;
 export const sessionKey = Symbol() as InjectionKey<{
   user: Ref<Session["user"] | null>;
   signOut: () => Promise<void>;

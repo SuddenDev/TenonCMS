@@ -10,15 +10,14 @@ export interface PaneSearchProps extends PrimitiveProps {
 <script setup lang="ts">
 import { reactivePick } from "@vueuse/core";
 import { Primitive, useForwardExpose, useForwardProps } from "reka-ui";
+import { useI18n } from "vue-i18n";
 import Icon from "@/shared/components/Icon.vue";
 import { cn } from "@/shared/utils";
 import { Button } from "../ui/button";
 
 // A search input that stays at the top of the pane while the list scrolls.
-const props = withDefaults(defineProps<PaneSearchProps>(), {
-  as: "div",
-  placeholder: "Search list",
-});
+const props = withDefaults(defineProps<PaneSearchProps>(), { as: "div" });
+const { t } = useI18n();
 const query = defineModel<string>({ default: "" });
 // Picks instead of omitting: the runtime props also hold `modelValue`, which MUST NOT reach the root.
 const forwarded = useForwardProps(reactivePick(props, "as", "asChild"));
@@ -41,8 +40,8 @@ const { forwardRef } = useForwardExpose();
     <input
       v-model="query"
       type="text"
-      :placeholder="placeholder"
-      :aria-label="placeholder"
+      :placeholder="placeholder ?? t('pane.search')"
+      :aria-label="placeholder ?? t('pane.search')"
       class="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
       @keydown.esc="query = ''"
     />
@@ -52,7 +51,7 @@ const { forwardRef } = useForwardExpose();
       variant="ghost"
       size="icon-xs"
       class="text-muted-foreground hover:text-foreground shrink-0"
-      aria-label="Clear search"
+      :aria-label="t('pane.clearSearch')"
       @click="query = ''"
     >
       <Icon name="x" class="text-xs" />

@@ -3,6 +3,7 @@ import type { DialogContentEmits, DialogContentProps } from "reka-ui";
 
 import type { HTMLAttributes } from "vue";
 import Icon from "@/shared/components/Icon.vue";
+import { useI18n } from "vue-i18n";
 import { reactiveOmit } from "@vueuse/core";
 import {
   DialogClose,
@@ -23,6 +24,7 @@ const emits = defineEmits<DialogContentEmits>();
 const delegatedProps = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
+const { t } = useI18n();
 </script>
 
 <template>
@@ -57,7 +59,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
           class="hover:bg-secondary absolute top-4 right-4 rounded-md p-0.5 transition-colors"
         >
           <Icon name="x" />
-          <span class="sr-only">Close</span>
+          <span class="sr-only">{{ t("common.close") }}</span>
         </DialogClose>
       </DialogContent>
     </DialogOverlay>

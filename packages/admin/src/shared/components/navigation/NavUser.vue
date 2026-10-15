@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, inject } from "vue";
+import { useI18n } from "vue-i18n";
 import Icon from "@/shared/components/Icon.vue";
 import { useTheme } from "@/shared/composables/useTheme";
+import { useAdminLocale } from "@/shared/i18n";
+import { localeLabel } from "@/shared/locale";
 import { sessionKey } from "@/shared/options";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import {
@@ -12,14 +15,19 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 
+const { t } = useI18n();
 const { user, signOut } = inject(sessionKey)!;
 const theme = useTheme();
+const { locale, locales } = useAdminLocale();
 const themes = [
-  { value: "light", label: "Light", icon: "sun" },
-  { value: "dark", label: "Dark", icon: "moon" },
+  { value: "light", label: "nav.light", icon: "sun" },
+  { value: "dark", label: "nav.dark", icon: "moon" },
 ] as const;
 
 const initials = computed(() =>
@@ -54,15 +62,28 @@ const initials = computed(() =>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuRadioGroup v-model="theme">
-        <DropdownMenuRadioItem v-for="t in themes" :key="t.value" :value="t.value">
-          <Icon :name="t.icon" />
-          {{ t.label }}
+        <DropdownMenuRadioItem v-for="mode in themes" :key="mode.value" :value="mode.value">
+          <Icon :name="mode.icon" />
+          {{ t(mode.label) }}
         </DropdownMenuRadioItem>
       </DropdownMenuRadioGroup>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <Icon name="languages" />
+          {{ t("nav.interfaceLanguage") }}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <DropdownMenuRadioGroup v-model="locale">
+            <DropdownMenuRadioItem v-for="code in locales" :key="code" :value="code">
+              {{ localeLabel(code) }}
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
       <DropdownMenuSeparator />
       <DropdownMenuItem @select="signOut">
         <Icon name="log-out" />
-        Log out
+        {{ t("nav.logOut") }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

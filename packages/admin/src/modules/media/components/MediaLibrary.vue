@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { client, type MediaRead } from "@/shared/api";
 import { fits, formatSize, type MediaRules } from "@/modules/media/media";
 import Icon from "@/shared/components/Icon.vue";
@@ -19,6 +20,7 @@ const props = defineProps<{ pick?: MediaRules & { many?: boolean } }>();
 const folder = defineModel<string>("folder", { default: "" });
 const selected = defineModel<string[]>("selected", { default: () => [] });
 const emit = defineEmits<{ open: [id: string] }>();
+const { t, locale } = useI18n();
 
 const docs = ref<MediaRead[]>([]);
 const folders = ref<string[]>([]);
@@ -45,7 +47,7 @@ const crumbs = computed(() =>
 const allowed = (d: MediaRead) => !props.pick || fits(props.pick, d);
 
 function newFolder() {
-  const name = prompt("Folder name")
+  const name = prompt(t("media.folderName"))
     ?.trim()
     .replace(/^\/+|\/+$/g, "");
   if (!name) return;
@@ -82,7 +84,7 @@ async function upload(files: Iterable<File> | null | undefined) {
     });
     const u = uploads.value.at(-1)!;
     if (props.pick && !fits(props.pick, { mimeType: file.type, size: file.size })) {
-      u.error = "Not allowed for this field";
+      u.error = t("media.notAllowed");
       continue;
     }
     const done = client.media
@@ -96,7 +98,9 @@ async function upload(files: Iterable<File> | null | undefined) {
         docs.value = [doc, ...docs.value];
         if (props.pick) choose(doc);
       })
-      .catch((e: Error) => (u.error = u.controller.signal.aborted ? "Canceled" : e.message));
+      .catch(
+        (e: Error) => (u.error = u.controller.signal.aborted ? t("media.canceled") : e.message),
+      );
     started.push(done);
   }
   // Hooks MAY change the folder, so the folder list reloads once per batch.
@@ -118,7 +122,7 @@ function cancel(u: Upload) {
         :class="!folder && 'bg-muted font-medium'"
         @click="folder = ''"
       >
-        <Icon name="folder" /> All files
+        <Icon name="folder" /> {{ t("media.allFiles") }}
       </button>
       <button
         v-for="f in tree"
@@ -138,10 +142,10 @@ function cancel(u: Upload) {
         <Breadcrumb class="mr-auto">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbPage v-if="!folder">All files</BreadcrumbPage>
-              <BreadcrumbLink v-else as="button" type="button" @click="folder = ''"
-                >All files</BreadcrumbLink
-              >
+              <BreadcrumbPage v-if="!folder">{{ t("media.allFiles") }}</BreadcrumbPage>
+              <BreadcrumbLink v-else as="button" type="button" @click="folder = ''">{{
+                t("media.allFiles")
+              }}</BreadcrumbLink>
             </BreadcrumbItem>
             <template v-for="(c, i) in crumbs" :key="c.path">
               <BreadcrumbSeparator />
@@ -155,9 +159,11 @@ function cancel(u: Upload) {
           </BreadcrumbList>
         </Breadcrumb>
         <slot name="actions" />
-        <button type="button" class="btn-ghost" @click="newFolder">New folder</button>
+        <button type="button" class="btn-ghost" @click="newFolder">
+          {{ t("media.newFolder") }}
+        </button>
         <label class="btn cursor-pointer">
-          Upload
+          {{ t("media.upload") }}
           <input
             type="file"
             multiple
@@ -176,7 +182,7 @@ function cancel(u: Upload) {
           <span v-if="u.error" class="flex-1 text-red-600" role="alert">{{ u.error }}</span>
           <Progress v-else class="flex-1" :model-value="u.total ? (u.loaded / u.total) * 100 : 0" />
           <button type="button" class="btn-ghost" @click="cancel(u)">
-            {{ u.error ? "Dismiss" : "Cancel" }}
+            {{ t(u.error ? "common.dismiss" : "common.cancel") }}
           </button>
         </li>
       </ul>
@@ -193,11 +199,11 @@ function cancel(u: Upload) {
           >
             <MediaThumb :doc="d" sizes="9rem" class="aspect-square w-full" />
             <span class="truncate text-xs">{{ d.filename }}</span>
-            <span class="text-muted-foreground text-xs">{{ formatSize(d.size) }}</span>
+            <span class="text-muted-foreground text-xs">{{ formatSize(d.size, locale) }}</span>
           </button>
         </li>
         <li v-if="!here.length" class="text-muted-foreground col-span-full text-sm">
-          Nothing here yet. Drop files to upload.
+          {{ t("media.empty") }}
         </li>
       </ul>
     </div>

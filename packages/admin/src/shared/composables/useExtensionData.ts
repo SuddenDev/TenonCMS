@@ -1,6 +1,7 @@
 import { inject, onScopeDispose, ref, shallowRef, watch } from "vue";
 import { client, CmsError } from "@/shared/api";
 import { sessionKey } from "@/shared/options";
+import { i18n } from "@/shared/i18n";
 
 /** What `POST /admin/load` selects: a custom field of a document or global, or a custom page. */
 export type LoadRequest =
@@ -50,7 +51,7 @@ export function useExtensionData<R extends object = LoadRequest>(request: () => 
     try {
       const { data } = await client.request<{ data: unknown }>("/admin/load", {
         method: "POST",
-        body,
+        body: { ...body, locale: i18n.global.locale.value },
       });
       if (mine !== generation) return;
       result.value = { request: body, data };
@@ -65,7 +66,7 @@ export function useExtensionData<R extends object = LoadRequest>(request: () => 
   }
 
   watch(
-    () => JSON.stringify(request() ?? null),
+    () => JSON.stringify([request() ?? null, i18n.global.locale.value]),
     () => {
       current = request();
       void run();

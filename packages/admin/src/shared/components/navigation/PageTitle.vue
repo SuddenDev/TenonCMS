@@ -11,6 +11,7 @@ import { loadClientRef } from "../../../../../core/src/admin/browser/lazy-mount.
 import AppBreadcrumbs from "@/shared/components/navigation/AppBreadcrumbs.vue";
 import Mount from "@/shared/components/Mount.vue";
 import { useBreadcrumbs } from "@/shared/composables/useBreadcrumbs";
+import { i18n } from "@/shared/i18n";
 import { integralKey, pageDataKey, registryKey } from "@/shared/options";
 
 // `true`: the title as text, `false`: nothing, an array: these breadcrumbs, a `clientRef`: a callback that returns
@@ -43,9 +44,16 @@ watch(
 
 // The callback gets the context of the page: with a server loader, the params, query and data of the last
 // finished load. Until that exists, and without the callback, the title shows.
+// The page header callback gets the same `integral` as the page, with the admin language.
 const context = computed(() => {
+  const locale = i18n.global.locale.value;
   if (!route.meta.load)
-    return { params: route.params, query: route.query, data: undefined, integral };
+    return {
+      params: route.params,
+      query: route.query,
+      data: undefined,
+      integral: { ...integral, locale },
+    };
   const loader = pageData?.value;
   const loaded = loader?.result.value;
   if (!loader || !loaded || loaded.request.key !== route.meta.page) return undefined;
@@ -53,7 +61,7 @@ const context = computed(() => {
     params: loaded.request.params,
     query: loaded.request.query,
     data: loaded.data,
-    integral: { ...integral, reload: async () => void (await loader.reload()) },
+    integral: { ...integral, locale, reload: async () => void (await loader.reload()) },
   };
 });
 

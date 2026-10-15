@@ -2,6 +2,7 @@
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { client, schema } from "@/shared/api";
 import MediaLibrary from "@/modules/media/components/MediaLibrary.vue";
@@ -23,7 +24,8 @@ const library = ref<InstanceType<typeof MediaLibrary>>();
 const failed = ref<{ id: string; message: string }[]>([]);
 const error = ref("");
 
-useHead({ title: "Media" });
+const { t } = useI18n();
+useHead({ title: () => t("nav.media") });
 
 // One request per image, so no request runs long. Variants of deleted files are cleaned by `cms.media.regenerate()` only.
 const job = ref<{ done: number; total: number; rendered: number; removed: number } | null>(null);
@@ -46,7 +48,7 @@ async function regenerate(force: boolean) {
 }
 
 async function rename() {
-  const to = prompt("Move this folder to", folder.value)?.trim();
+  const to = prompt(t("media.moveFolder"), folder.value)?.trim();
   if (!to || to === folder.value) return;
   error.value = "";
   try {
@@ -61,11 +63,11 @@ async function rename() {
 </script>
 
 <template>
-  <h1 class="mb-6 text-2xl font-semibold">Media</h1>
+  <h1 class="mb-6 text-2xl font-semibold">{{ t("nav.media") }}</h1>
   <div v-if="error || failed.length" class="mb-4 text-sm text-red-600" role="alert">
     <p v-if="error">{{ error }}</p>
     <template v-else>
-      <p>Some files did not move. Rename again to retry.</p>
+      <p>{{ t("media.notMoved") }}</p>
       <ul class="list-disc pl-5">
         <li v-for="f in failed" :key="f.id">
           <RouterLink :to="`${CONTENT}/media-file/${f.id}`" class="underline">{{ f.id }}</RouterLink
@@ -78,11 +80,13 @@ async function rename() {
   <div v-if="job" class="mb-4 text-sm" role="status">
     <Progress :model-value="job.total ? (job.done / job.total) * 100 : 100" class="mb-1 h-1.5" />
     <p v-if="job.done < job.total">
-      Regenerating variants: {{ job.done }} of {{ job.total }} images
+      {{ t("media.regenerating", { done: job.done, total: job.total }) }}
     </p>
     <p v-else>
-      Done: {{ job.rendered }} variants rendered, {{ job.removed }} removed.
-      <button type="button" class="underline" @click="job = null">Dismiss</button>
+      {{ t("media.regenerated", { rendered: job.rendered, removed: job.removed }) }}
+      <button type="button" class="underline" @click="job = null">
+        {{ t("common.dismiss") }}
+      </button>
     </p>
   </div>
   <MediaLibrary
@@ -94,20 +98,22 @@ async function rename() {
       <DropdownMenu v-if="schema.media?.regenerate">
         <DropdownMenuTrigger as-child>
           <button type="button" class="btn-ghost" :disabled="!!job && job.done < job.total">
-            Library
+            {{ t("media.library") }}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem @select="regenerate(false)">Regenerate variants</DropdownMenuItem>
-          <DropdownMenuItem @select="regenerate(true)">Re-render all variants</DropdownMenuItem>
+          <DropdownMenuItem @select="regenerate(false)">{{
+            t("media.regenerate")
+          }}</DropdownMenuItem>
+          <DropdownMenuItem @select="regenerate(true)">{{ t("media.rerender") }}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <DropdownMenu v-if="folder">
         <DropdownMenuTrigger as-child>
-          <button type="button" class="btn-ghost">Folder</button>
+          <button type="button" class="btn-ghost">{{ t("media.folder") }}</button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem @select="rename">Rename or move…</DropdownMenuItem>
+          <DropdownMenuItem @select="rename">{{ t("media.rename") }}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </template>

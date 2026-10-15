@@ -46,52 +46,55 @@ export function localeStatus({
   };
 }
 
+/** What `localeDialog()` needs of a vue-i18n composer. */
+type I18n = {
+  t(key: string, named?: Record<string, unknown>, plural?: number): string;
+  locale: { value: string };
+};
+
 type Dialog =
   | { kind: "copy"; from: string; to: string; exists: boolean }
   | { kind: "remove"; locale: string }
   | { kind: "discard"; shared: boolean; locales: string[] };
 
-const english = (code: string) => localeLabel(code, "en");
-
-/** The wording of the confirm dialog of a locale action. Language names are in English. */
-export function localeDialog(dialog: Dialog) {
+/** The wording of the confirm dialog of a locale action, in the admin language of `i18n`. */
+export function localeDialog(dialog: Dialog, { t, locale }: I18n) {
+  const name = (code: string) => localeLabel(code, locale.value);
   if (dialog.kind === "copy") {
-    const from = english(dialog.from);
-    const to = english(dialog.to);
+    const from = name(dialog.from);
+    const to = name(dialog.to);
     return dialog.exists
       ? {
-          title: `Overwrite ${to}?`,
-          description: `Its draft will be replaced with the ${from} content.`,
-          action: "Overwrite",
+          title: t("locales.overwriteTitle", { to }),
+          description: t("locales.overwriteText", { from }),
+          action: t("locales.overwrite"),
           destructive: true,
         }
       : {
-          title: `Create ${to} from ${from}?`,
-          description: `The ${from} content is saved as a draft.`,
-          action: "Create",
+          title: t("locales.createTitle", { to, from }),
+          description: t("locales.createText", { from }),
+          action: t("locales.create"),
           destructive: false,
         };
   }
   if (dialog.kind === "remove")
     return {
-      title: `Remove the ${english(dialog.locale)} translation?`,
-      description: "Its content is deleted, published or not. The other languages stay.",
-      action: "Remove",
+      title: t("locales.removeTitle", { locale: name(dialog.locale) }),
+      description: t("locales.removeText"),
+      action: t("locales.remove"),
       destructive: true,
     };
 
-  const names = new Intl.ListFormat("en", { type: "conjunction" }).format(
-    dialog.locales.map(english),
+  const count = dialog.locales.length;
+  const names = new Intl.ListFormat(locale.value, { type: "conjunction" }).format(
+    dialog.locales.map(name),
   );
-  const drafts = `the ${names} draft${dialog.locales.length > 1 ? "s" : ""}`;
-  const subject = dialog.shared
-    ? `Shared fields${dialog.locales.length ? ` and ${drafts}` : ""}`
-    : drafts.replace(/^t/, "T");
-  const plural = dialog.shared || dialog.locales.length > 1;
   return {
-    title: "Discard all changes?",
-    description: `${subject} ${plural ? "go" : "goes"} back to the published version.`,
-    action: "Discard",
+    title: t("locales.discardTitle"),
+    description: !count
+      ? t("locales.discardShared")
+      : t(dialog.shared ? "locales.discardSharedAnd" : "locales.discardDrafts", { names }, count),
+    action: t("locales.discard"),
     destructive: true,
   };
 }

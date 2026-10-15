@@ -2,6 +2,8 @@
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, inject, provide, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { text } from "@/shared/i18n";
 import { useRouter } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
 import {
@@ -44,6 +46,7 @@ const emit = defineEmits<{
   change: [data: Record<string, unknown>];
 }>();
 // `doc` is the latest saved document. `initial` is what the form shows; a draft save leaves it, so typing goes on.
+const { t } = useI18n();
 const doc = ref<Record<string, unknown> | null>(null);
 const initial = ref<Record<string, unknown>>({});
 
@@ -91,12 +94,12 @@ const label = (collection: string, d: Record<string, any>) => {
 
 const title = () =>
   isNew.value
-    ? `New ${collection.value?.label ?? props.name}`
+    ? t("documents.newTitle", { type: text(collection.value?.label) ?? props.name })
     : String(
         (collection.value &&
           (doc.value?.[titleField(collection.value)] ||
             tr.defaults.value?.[titleField(collection.value)])) ||
-          "Untitled",
+          t("documents.untitled"),
       );
 
 if (!props.closable) useHead({ title });
@@ -217,7 +220,7 @@ const discardAll = () =>
   });
 
 async function remove() {
-  if (!confirm("Delete this entry?")) return;
+  if (!confirm(t("documents.deleteConfirm"))) return;
   error.value = "";
   try {
     await client.delete(props.name, docId.value);
@@ -247,7 +250,7 @@ async function remove() {
         as-child
         variant="ghost"
         size="icon-sm"
-        aria-label="Preview"
+        :aria-label="t('common.preview')"
       >
         <RouterLink :to="`/presentation/collections/${name}/${docId}`"
           ><Icon name="eye"
@@ -267,7 +270,7 @@ async function remove() {
         v-if="closable"
         variant="ghost"
         size="icon-sm"
-        aria-label="Close"
+        :aria-label="t('common.close')"
         @click="emit('close')"
       >
         <Icon name="x" />
@@ -275,18 +278,18 @@ async function remove() {
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
       <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
-        <p class="text-muted-foreground text-xs">{{ collection.label ?? name }}</p>
+        <p class="text-muted-foreground text-xs">{{ text(collection.label) ?? name }}</p>
         <h1 class="mt-1 text-2xl font-semibold">{{ title() }}</h1>
         <StatusBadges v-if="drafts" :doc="doc" :languages="languages" />
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
-          Published version. Switch to Drafts to edit.
+          {{ t("documents.readOnly") }}
         </p>
         <p v-if="collection.description" class="text-muted-foreground mt-2 text-sm">
-          {{ collection.description }}
+          {{ text(collection.description) }}
         </p>
         <template v-if="!isNew">
           <section v-for="j in joins" :key="j.key" class="mt-4">
-            <h2 class="text-muted-foreground mb-1 text-xs">{{ j.field.label ?? j.key }}</h2>
+            <h2 class="text-muted-foreground mb-1 text-xs">{{ text(j.field.label) ?? j.key }}</h2>
             <ul class="divide-border border-border bg-card divide-y rounded-lg border">
               <li v-for="d in joined[j.key] ?? []" :key="d.id">
                 <button
@@ -299,7 +302,7 @@ async function remove() {
                 </button>
               </li>
               <li v-if="!joined[j.key]?.length" class="text-muted-foreground px-3 py-2 text-sm">
-                Nothing linked.
+                {{ t("documents.nothingLinked") }}
               </li>
             </ul>
           </section>
@@ -320,7 +323,7 @@ async function remove() {
         @change="emit('change', $event)"
       >
         <Button v-if="!isNew" type="button" variant="ghost" size="sm" @click="remove">
-          Delete
+          {{ t("common.delete") }}
         </Button>
         <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
       </DocForm>

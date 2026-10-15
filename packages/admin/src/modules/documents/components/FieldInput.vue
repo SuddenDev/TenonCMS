@@ -17,6 +17,8 @@ import {
   ownerKey,
   titleField,
 } from "@/modules/documents/fields";
+import { useI18n } from "vue-i18n";
+import { text } from "@/shared/i18n";
 import { useExtensionData } from "@/shared/composables/useExtensionData";
 import MediaField from "@/modules/media/components/MediaField.vue";
 import Icon from "@/shared/components/Icon.vue";
@@ -54,6 +56,7 @@ const props = defineProps<{
   shared?: boolean;
   placeholders?: Record<string, unknown>;
 }>();
+const { t } = useI18n();
 const model = defineModel<any>();
 const id = useId();
 const path = computed(() => props.path ?? props.name);
@@ -167,12 +170,12 @@ if (slug?.parent && relation?.type === "relation") {
     class="border-border gap-4 rounded-md border p-4"
   >
     <FieldLegend variant="label" class="mb-0 px-1">
-      {{ field.label ?? name }}
+      {{ text(field.label) ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
     </FieldLegend>
     <FieldDescription v-if="field.description" class="-mt-2">{{
-      field.description
+      text(field.description)
     }}</FieldDescription>
     <template v-for="(child, key) in field.fields" :key="key">
       <FieldInput
@@ -198,12 +201,12 @@ if (slug?.parent && relation?.type === "relation") {
     class="gap-3"
   >
     <FieldLegend variant="label" class="mb-0">
-      {{ field.labels?.plural ?? field.label ?? name }}
+      {{ text(field.labels?.plural) ?? text(field.label) ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
     </FieldLegend>
     <FieldDescription v-if="field.description" class="-mt-2">{{
-      field.description
+      text(field.description)
     }}</FieldDescription>
     <ItemList
       v-model="model"
@@ -222,12 +225,12 @@ if (slug?.parent && relation?.type === "relation") {
     :data-invalid="invalid"
   >
     <FieldTitle>
-      {{ field.label ?? name }}
+      {{ text(field.label) ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
     </FieldTitle>
     <MediaField v-model="model" :field="field" :invalid="invalid" />
-    <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
+    <FieldDescription v-if="field.description">{{ text(field.description) }}</FieldDescription>
     <FieldError v-if="message">{{ message }}</FieldError>
   </FieldBox>
   <FieldBox
@@ -245,14 +248,16 @@ if (slug?.parent && relation?.type === "relation") {
       :aria-invalid="invalid"
     />
     <FieldContent>
-      <FieldLabel :for="id">{{ field.label ?? name }}<SharedMarker v-if="shared" /></FieldLabel>
-      <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
+      <FieldLabel :for="id"
+        >{{ text(field.label) ?? name }}<SharedMarker v-if="shared"
+      /></FieldLabel>
+      <FieldDescription v-if="field.description">{{ text(field.description) }}</FieldDescription>
       <FieldError v-if="message">{{ message }}</FieldError>
     </FieldContent>
   </FieldBox>
   <FieldBox v-else ref="box" :data-invalid="invalid">
     <component :is="custom ? FieldTitle : FieldLabel" :for="custom ? undefined : id">
-      {{ field.label ?? name }}
+      {{ text(field.label) ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
     </component>
@@ -312,7 +317,7 @@ if (slug?.parent && relation?.type === "relation") {
         type="button"
         variant="outline"
         size="icon"
-        aria-label="Open"
+        :aria-label="t('common.open')"
         @click="openRef(field.collection, model)"
       >
         <Icon name="arrow-up-right" />
@@ -360,7 +365,7 @@ if (slug?.parent && relation?.type === "relation") {
       v-bind="attrs"
       :aria-invalid="invalid"
     />
-    <FieldDescription v-if="field.description">{{ field.description }}</FieldDescription>
+    <FieldDescription v-if="field.description">{{ text(field.description) }}</FieldDescription>
     <FieldError v-if="message">{{ message }}</FieldError>
   </FieldBox>
 </template>

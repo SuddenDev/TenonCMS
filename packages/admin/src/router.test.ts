@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createHead } from "@unhead/vue/client";
 import { createApp, h, nextTick, shallowRef, type App } from "vue";
+import { i18n } from "@/shared/i18n";
 import { RouterView } from "vue-router";
 import { client, CmsError } from "@/shared/api";
 import PageTitle from "@/shared/components/navigation/PageTitle.vue";
@@ -45,6 +46,7 @@ it("shows the page title as text by default, without breadcrumbs", async () => {
   const root = document.createElement("div");
   app = createApp({ render: () => h(PageTitle, { value: true }) })
     .use(router)
+    .use(i18n)
     .provide(integralKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} });
   app.mount(root);
   await nextTick();
@@ -90,6 +92,7 @@ async function loaded(options: { load?: true } = { load: true }) {
   })
     .use(router)
     .use(createHead())
+    .use(i18n)
     .provide(registryKey, { stats: async () => mount, header: async () => header })
     .provide(integralKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} })
     .provide(pageDataKey, shallowRef())
@@ -101,7 +104,13 @@ async function loaded(options: { load?: true } = { load: true }) {
 it("loads once for the page and its header, then mounts with the data", async () => {
   const { calls, mount, header, root } = await loaded();
   expect(calls).toHaveLength(1);
-  expect(calls[0].body).toEqual({ kind: "page", key: "stats", params: {}, query: { tab: "a" } });
+  expect(calls[0].body).toEqual({
+    kind: "page",
+    key: "stats",
+    params: {},
+    query: { tab: "a" },
+    locale: "en",
+  });
   expect(root.querySelector("[role=status]")).not.toBeNull();
   expect(mount).not.toHaveBeenCalled();
   calls[0].resolve({ n: 1 });

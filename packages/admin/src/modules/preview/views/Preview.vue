@@ -2,6 +2,7 @@
 import { CONTENT } from "@/shared/options";
 import { useDebounceFn } from "@vueuse/core";
 import { computed, provide, ref, shallowRef, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { client, schema, type Fields } from "@/shared/api";
 import { itemFields } from "../../../../../core/src/schema/traversal/item-fields";
@@ -19,6 +20,7 @@ import {
   usePreviewChannel,
 } from "@/modules/preview/composables/usePreviewChannel";
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 // No name: the site itself, without a document.
@@ -229,7 +231,7 @@ function close() {
       @deleted="router.push('/presentation')"
     >
       <template #actions>
-        <Button as-child variant="ghost" size="icon-sm" aria-label="Documents on this page">
+        <Button as-child variant="ghost" size="icon-sm" :aria-label="t('preview.documents')">
           <RouterLink to="/presentation"><Icon name="list" /></RouterLink>
         </Button>
       </template>
@@ -260,7 +262,7 @@ function close() {
     @saved="saved(name, '', true)"
   >
     <template #actions>
-      <Button as-child variant="ghost" size="icon-sm" aria-label="Documents on this page">
+      <Button as-child variant="ghost" size="icon-sm" :aria-label="t('preview.documents')">
         <RouterLink to="/presentation"><Icon name="list" /></RouterLink>
       </Button>
     </template>

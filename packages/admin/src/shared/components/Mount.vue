@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { ClientRef, Mount, MountHandle } from "../../../../core/src/admin/index.d.ts";
 import { lazyMount, loadClientRef } from "../../../../core/src/admin/browser/lazy-mount.ts";
 import { Button } from "@/shared/components/ui/button";
@@ -14,6 +15,7 @@ const props = defineProps<{
   loader?: ExtensionData<any>;
   elClass?: string;
 }>();
+const { t, locale } = useI18n();
 const el = useTemplateRef("el");
 const registry = inject(registryKey, {});
 const integral = inject(integralKey)!;
@@ -26,6 +28,7 @@ const context = () => ({
   data: props.loader?.result.value?.data,
   integral: {
     ...integral,
+    locale: locale.value,
     reload: async () => {
       await props.loader?.reload();
     },
@@ -101,7 +104,7 @@ function onClick(e: MouseEvent) {
       role="status"
       class="text-muted-foreground p-4 text-sm"
     >
-      Loading…
+      {{ t("common.loading") }}
     </p>
     <div
       v-if="loader?.error.value"
@@ -109,7 +112,9 @@ function onClick(e: MouseEvent) {
       class="text-destructive flex items-center gap-3 p-4 text-sm"
     >
       <span>{{ loader.error.value.message }}</span>
-      <Button type="button" variant="outline" size="sm" @click="loader.reload()">Retry</Button>
+      <Button type="button" variant="outline" size="sm" @click="loader.reload()">{{
+        t("common.retry")
+      }}</Button>
     </div>
     <div ref="el" :class="['min-h-0 w-full flex-1', elClass]" />
   </div>

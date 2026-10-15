@@ -1,10 +1,18 @@
+const displayNames = new Map<string, Intl.DisplayNames>();
+
 /**
  * The name of a language in `inLanguage` (default: the language itself), with a capital first letter.
  * An invalid code gives the code back.
  */
 export function localeLabel(code: string, inLanguage = code) {
   try {
-    const name = new Intl.DisplayNames([inLanguage], { type: "language" }).of(code);
+    let names = displayNames.get(inLanguage);
+    if (!names)
+      displayNames.set(
+        inLanguage,
+        (names = new Intl.DisplayNames([inLanguage], { type: "language" })),
+      );
+    const name = names.of(code);
     return name ? name.charAt(0).toLocaleUpperCase(inLanguage) + name.slice(1) : code;
   } catch {
     return code;

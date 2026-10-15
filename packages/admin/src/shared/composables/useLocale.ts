@@ -2,6 +2,7 @@ import { useStorage } from "@vueuse/core";
 import { computed, onScopeDispose, watch } from "vue";
 import { useRoute } from "vue-router";
 import { schema } from "@/shared/api";
+import { i18n } from "@/shared/i18n";
 import { queryLocale } from "@/shared/locale";
 
 // A throwing or missing storage only means the choice is not remembered.
@@ -35,7 +36,7 @@ export function useLocale() {
 
   /** Saves pending edits, then switches. A failed save asks first. */
   async function select(code: string) {
-    if (!(await flush()) && !confirm("The last edit could not be saved. Switch anyway?")) return;
+    if (!(await flush()) && !confirm(i18n.global.t("locales.unsaved"))) return;
     locale.value = code;
   }
 

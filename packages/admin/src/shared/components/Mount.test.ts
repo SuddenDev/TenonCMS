@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from "vitest";
 import { createApp, h, nextTick, ref, shallowRef, type App } from "vue";
+import { i18n } from "@/shared/i18n";
 import { integralKey, registryKey } from "@/shared/options";
 import Mount from "./Mount.vue";
 
@@ -30,6 +31,7 @@ function render(
   root = document.createElement("div");
   document.body.append(root);
   app = createApp({ render: () => h(Mount, props() as never) })
+    .use(i18n)
     .provide(registryKey, registry)
     .provide(integralKey, integral);
   app.mount(root);
@@ -46,6 +48,20 @@ it("mounts at once without a loader, with data undefined and a no-op reload", as
   expect(ctx.data).toBeUndefined();
   await expect(ctx.integral.reload()).resolves.toBeUndefined();
   expect(root.querySelector("[role=status]")).toBeNull();
+});
+
+it("passes the admin language and updates the mount when it changes", async () => {
+  const h = handle();
+  const mount = vi.fn(() => h);
+  render(() => ({ mount, ctx: {} }));
+  expect((mount.mock.calls[0] as any)[1].integral.locale).toBe("en");
+  i18n.global.locale.value = "de";
+  await vi.waitFor(() =>
+    expect(h.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ integral: expect.objectContaining({ locale: "de" }) }),
+    ),
+  );
+  i18n.global.locale.value = "en";
 });
 
 it("waits for code and data, shows a status meanwhile, then mounts once", async () => {

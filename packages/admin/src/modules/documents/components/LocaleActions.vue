@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from "vue";
+import { useI18n } from "vue-i18n";
 import { localeLabel } from "@/shared/locale";
 import Icon from "@/shared/components/Icon.vue";
 import {
@@ -39,6 +40,9 @@ const emit = defineEmits<{
   discardAll: [];
 }>();
 
+const i18n = useI18n();
+const { t } = i18n;
+
 type Pending =
   | { kind: "copy"; from: string; to: string }
   | { kind: "remove"; locale: string }
@@ -54,10 +58,10 @@ const pending = shallowRef<Pending>();
 const text = computed(() => {
   const p = pending.value;
   if (!p) return undefined;
-  if (p.kind === "copy") return localeDialog({ ...p, exists: exists(p.to) });
-  if (p.kind === "remove") return localeDialog(p);
+  if (p.kind === "copy") return localeDialog({ ...p, exists: exists(p.to) }, i18n);
+  if (p.kind === "remove") return localeDialog(p, i18n);
   const { shared, locales } = props.languages.discardAll;
-  return localeDialog({ kind: "discard", shared, locales });
+  return localeDialog({ kind: "discard", shared, locales }, i18n);
 });
 
 function ask(next: Pending) {
@@ -76,13 +80,13 @@ function confirm() {
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="icon-sm" aria-label="Language actions" :disabled="busy">
+      <Button variant="ghost" size="icon-sm" :aria-label="t('locales.actions')" :disabled="busy">
         <Icon name="ellipsis" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger>Copy from…</DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger>{{ t("locales.copyFrom") }}</DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
           <DropdownMenuItem
             v-for="s in others"
@@ -95,7 +99,7 @@ function confirm() {
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger>Copy to…</DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger>{{ t("locales.copyTo") }}</DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
           <DropdownMenuItem
             v-for="s in others"
@@ -109,13 +113,13 @@ function confirm() {
       <template v-if="locale !== defaultLocale && exists(locale)">
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" @select="ask({ kind: 'remove', locale })">
-          Remove translation
+          {{ t("locales.removeTranslation") }}
         </DropdownMenuItem>
       </template>
       <template v-if="languages.discardAll.show">
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" @select="ask({ kind: 'discard' })">
-          Discard all changes
+          {{ t("locales.discardAll") }}
         </DropdownMenuItem>
       </template>
     </DropdownMenuContent>
@@ -127,7 +131,7 @@ function confirm() {
         <AlertDialogDescription>{{ text.description }}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogCancel>{{ t("common.cancel") }}</AlertDialogCancel>
         <AlertDialogAction :variant="text.destructive ? 'destructive' : 'default'" @click="confirm">
           {{ text.action }}
         </AlertDialogAction>

@@ -3,6 +3,7 @@ import { useRoute } from "vue-router";
 import { groupMenu } from "../../../../core/src/admin/browser/menu";
 import type { Nav } from "../../../../core/src/admin/index.d.ts";
 import { schema } from "@/shared/api";
+import { i18n, text } from "@/shared/i18n";
 import { CONTENT, pagePath } from "@/shared/options";
 
 export type MenuItem = {
@@ -17,6 +18,8 @@ export type MenuItem = {
   children?: MenuItem[];
 };
 
+const { t } = i18n.global;
+
 type Entry = MenuItem & { display: NonNullable<Nav["display"]> };
 
 function entry(
@@ -24,7 +27,13 @@ function entry(
   nav: Nav = {},
 ): Entry {
   const { display = "content", icon, order, group } = nav;
-  return { ...base, icon: icon ?? base.icon, order: order ?? base.order, group, display };
+  return {
+    ...base,
+    icon: icon ?? base.icon,
+    order: order ?? base.order,
+    group: text(group),
+    display,
+  };
 }
 
 // Every collection, global and page with its `nav` defaults, wherever it is shown.
@@ -35,7 +44,7 @@ function useEntries() {
       name === "media"
         ? entry(
             {
-              label: schema.value.admin?.media?.label ?? "Media",
+              label: text(schema.value.admin?.media?.label) ?? t("nav.media"),
               icon: "image",
               order: 15,
               to: `${CONTENT}/media`,
@@ -44,8 +53,8 @@ function useEntries() {
           )
         : entry(
             {
-              label: c.label ?? name,
-              description: c.description,
+              label: text(c.label) ?? name,
+              description: text(c.description),
               icon: "folder",
               order: 10,
               to: `${CONTENT}/collections/${name}`,
@@ -56,8 +65,8 @@ function useEntries() {
     ...Object.entries(schema.value.globals ?? {}).map(([name, g]) =>
       entry(
         {
-          label: g.label ?? name,
-          description: g.description,
+          label: text(g.label) ?? name,
+          description: text(g.description),
           icon: "settings",
           order: 20,
           // Settings globals open next to the Settings list.
@@ -72,8 +81,8 @@ function useEntries() {
     ...Object.entries(schema.value.admin?.pages ?? {}).map(([key, p]) =>
       entry(
         {
-          label: p.title ?? key,
-          description: p.description,
+          label: text(p.title) ?? key,
+          description: text(p.description),
           icon: "file",
           order: 30,
           to: pagePath(key, p),
@@ -90,7 +99,7 @@ export function useSettings() {
   return computed(() =>
     groupMenu<MenuItem>(
       entries.value.filter((e) => e.display === "settings"),
-      "Site",
+      t("nav.site"),
     ),
   );
 }
@@ -108,14 +117,14 @@ export function useMenu() {
     const targets = settings.value.flatMap((g) => g.items.map((i) => i.to));
     if (targets.length)
       items.push({
-        label: "Settings",
+        label: t("nav.settings"),
         icon: "settings",
-        group: "Manage",
+        group: t("nav.manage"),
         order: 100,
         to: `${CONTENT}/settings`,
         also: targets,
       });
-    return groupMenu(items);
+    return groupMenu(items, t("nav.content"));
   });
 }
 
@@ -131,8 +140,8 @@ export function useAppBar() {
   return computed<Tool[]>(() => {
     const at = (to: string) => route.path === to || route.path.startsWith(`${to}/`);
     const tools: MenuItem[] = [
-      { label: "Content", icon: "layout-list", to: CONTENT, order: 5 },
-      { label: "Visual Editor", icon: "eye", to: "/presentation", order: 10 },
+      { label: t("nav.content"), icon: "layout-list", to: CONTENT, order: 5 },
+      { label: t("nav.visualEditor"), icon: "eye", to: "/presentation", order: 10 },
       ...entries.value.filter((e) => e.display === "main"),
     ];
     return tools

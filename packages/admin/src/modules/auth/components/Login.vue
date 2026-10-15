@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { client } from "@/shared/api";
 import Themed from "@/shared/components/Themed.vue";
 import { Button } from "@/shared/components/ui/button";
@@ -13,7 +14,8 @@ const form = ref({ name: "", email: "", password: "" });
 const error = ref("");
 const busy = ref(false);
 
-useHead({ title: () => (signUp.value ? "Create account" : "Sign in") });
+const { t } = useI18n();
+useHead({ title: () => t(signUp.value ? "auth.createAccount" : "auth.signIn") });
 
 async function submit() {
   busy.value = true;
@@ -42,18 +44,18 @@ async function submit() {
         class="h-10 self-start object-contain"
       />
       <h1 class="text-lg font-semibold">
-        {{ signUp ? "Create the first admin" : "Sign in" }}
+        {{ t(signUp ? "auth.createFirstAdmin" : "auth.signIn") }}
       </h1>
       <label v-if="signUp" class="flex flex-col gap-1 text-sm">
-        Name
+        {{ t("auth.name") }}
         <input v-model="form.name" class="input" required autocomplete="name" />
       </label>
       <label class="flex flex-col gap-1 text-sm">
-        Email
+        {{ t("auth.email") }}
         <input v-model="form.email" type="email" class="input" required autocomplete="email" />
       </label>
       <label class="flex flex-col gap-1 text-sm">
-        Password
+        {{ t("auth.password") }}
         <input
           v-model="form.password"
           type="password"
@@ -65,10 +67,10 @@ async function submit() {
       </label>
       <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
       <Button size="lg" :disabled="busy">
-        {{ signUp ? "Create account" : "Sign in" }}
+        {{ t(signUp ? "auth.createAccount" : "auth.signIn") }}
       </Button>
       <Button variant="link" size="xs" type="button" class="opacity-80" @click="signUp = !signUp">
-        {{ signUp ? "I already have an account" : "First time? Create the admin account" }}
+        {{ t(signUp ? "auth.haveAccount" : "auth.firstTime") }}
       </Button>
     </form>
   </div>

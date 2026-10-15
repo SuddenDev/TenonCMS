@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { Pane, PaneMenu, PaneMenuItem, PaneMenuLabel, Icon } from "@/shared/";
 import { useSettings } from "@/shared/composables/useMenu";
 
-useHead({ title: "Settings" });
+const { t } = useI18n();
+useHead({ title: () => t("nav.settings") });
 const settings = useSettings();
 const route = useRoute();
 </script>
 
 <template>
-  <Pane title="Settings">
-    <p v-if="!settings.length" class="text-muted-foreground p-3 text-sm">No settings yet.</p>
+  <Pane :title="t('nav.settings')">
+    <p v-if="!settings.length" class="text-muted-foreground p-3 text-sm">
+      {{ t("settings.empty") }}
+    </p>
     <PaneMenu layout="detailed">
       <template v-for="group in settings" :key="group.label">
         <PaneMenuLabel>{{ group.label }}</PaneMenuLabel>
@@ -35,7 +39,7 @@ const route = useRoute();
       v-else
       class="text-muted-foreground hidden flex-1 items-center justify-center text-sm sm:flex"
     >
-      Select a setting
+      {{ t("settings.select") }}
     </div>
   </RouterView>
 </template>
