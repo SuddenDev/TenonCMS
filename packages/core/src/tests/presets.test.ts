@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { CmsError } from "../client/index.ts";
 import { defineCms } from "../index.ts";
-import { nestedPaths, page, seo } from "../presets/index.ts";
-import { admin, fresh, origin, setup, status, type Env } from "./setup.ts";
+import { nestedPaths, page, seo, strings } from "../presets/index.ts";
+import { admin, fresh, origin, setup, status, tmpDb, type Env } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -255,6 +255,83 @@ describe("nestedPaths", () => {
     expect(await cms.findById("pages", team.id)).toMatchObject({
       title: "Team *",
       path: "/company/team",
+    });
+  });
+});
+
+describe("strings preset", () => {
+  const ui = strings({
+    readMore: { label: "Read more link", default: { en: "Read more", de: "Weiterlesen" } },
+    subscribe: "Subscribe",
+  });
+  const make = () =>
+    defineCms({
+      globals: { strings: ui },
+      localization: { locales: ["en", "de"], defaultLocale: "en" },
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+      media: false,
+      settings: false,
+    });
+
+  it("is a localized settings global with a text field per key", () => {
+    expect(ui.localized).toBe(true);
+    expect(ui.nav).toMatchObject({ display: "settings" });
+    expect(ui.fields.readMore).toMatchObject({
+      type: "text",
+      label: "Read more link",
+      placeholder: "Read more",
+    });
+    expect(ui.fields.subscribe).toMatchObject({
+      type: "text",
+      label: "subscribe",
+      placeholder: "Subscribe",
+    });
+  });
+
+  it("reads the code defaults of the locale before anything is saved", async () => {
+    const cms = make();
+    expect(await cms.getGlobal("strings", { locale: "de", fallback: false })).toMatchObject({
+      readMore: "Weiterlesen",
+      subscribe: "Subscribe",
+    });
+    expect(await cms.getGlobal("strings", { locale: "en" })).toMatchObject({
+      readMore: "Read more",
+      subscribe: "Subscribe",
+    });
+  });
+
+  it("prefers a stored value", async () => {
+    const cms = make();
+    await cms.setGlobal("strings", { readMore: "Mehr lesen" }, { locale: "de" });
+    const de = await cms.getGlobal("strings", { locale: "de", fallback: false });
+    expect(de).toMatchObject({ readMore: "Mehr lesen", subscribe: "Subscribe" });
+    expect(await cms.getGlobal("strings", { locale: "en" })).toMatchObject({
+      readMore: "Read more",
+    });
+  });
+
+  it("stores no code default, so a changed default reaches a saved locale", async () => {
+    const url = tmpDb();
+    const at = (subscribe: string) =>
+      defineCms({
+        globals: { strings: strings({ readMore: "Read more", subscribe }) },
+        localization: { locales: ["en", "de"], defaultLocale: "en" },
+        database: { url },
+        secret: "x".repeat(32),
+        media: false,
+        settings: false,
+      });
+    await at("Subscribe").setGlobal(
+      "strings",
+      { readMore: "Mehr lesen", subscribe: "Subscribe" },
+      { locale: "de" },
+    );
+    expect(
+      await at("Sign up").getGlobal("strings", { locale: "de", fallback: false }),
+    ).toMatchObject({
+      readMore: "Mehr lesen",
+      subscribe: "Sign up",
     });
   });
 });

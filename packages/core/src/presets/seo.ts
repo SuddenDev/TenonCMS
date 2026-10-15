@@ -5,12 +5,15 @@ export const seo = {
   fields: {
     seo: {
       type: "group",
-      label: "SEO",
+      label: { en: "SEO", de: "SEO" },
       fields: {
         title: { type: "text" },
         description: { type: "textarea" },
         image: { type: "image" },
-        noindex: { type: "boolean", label: "Hide from search engines" },
+        noindex: {
+          type: "boolean",
+          label: { en: "Hide from search engines", de: "Vor Suchmaschinen verbergen" },
+        },
       },
     },
   },

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineCms, definePlugin } from "../index.ts";
-import { settings } from "../presets/index.ts";
+import { mediaCollection } from "../media/config/collection.ts";
+import { seo, settings, strings } from "../presets/index.ts";
 import { published, setup, unpublished } from "./setup.ts";
 
 describe("presets", () => {
@@ -22,8 +23,10 @@ describe("presets", () => {
 
   it("place both on the settings hub with a label and a description", () => {
     const { general, seo } = settings;
-    expect(general.nav).toMatchObject({ display: "settings", group: "Site", order: 1 });
-    expect(seo.nav).toMatchObject({ display: "settings", group: "Site", order: 2 });
+    expect(general.nav).toMatchObject({ display: "settings", order: 1 });
+    expect(general.nav).not.toHaveProperty("group");
+    expect(seo.nav).toMatchObject({ display: "settings", order: 2 });
+    expect(seo.nav).not.toHaveProperty("group");
     for (const g of [general, seo]) {
       expect(g.label).toBeTruthy();
       expect(g.description).toBeTruthy();
@@ -35,6 +38,21 @@ describe("presets", () => {
       };
       walk(g.fields);
     }
+  });
+
+  it("ship every label and description in English and German", () => {
+    const texts: unknown[] = [];
+    const walk = (node: object) => {
+      for (const [key, value] of Object.entries(node)) {
+        const isField = !!value && typeof value === "object" && "type" in value;
+        if ((key === "label" || key === "description") && !isField) texts.push(value);
+        else if (value && typeof value === "object") walk(value);
+      }
+    };
+    walk({ settings, seo, strings: strings({}), media: mediaCollection });
+    expect(texts.length).toBeGreaterThan(10);
+    for (const text of texts)
+      expect(text).toEqual({ en: expect.any(String), de: expect.any(String) });
   });
 
   it("checks the url pattern", async () => {
