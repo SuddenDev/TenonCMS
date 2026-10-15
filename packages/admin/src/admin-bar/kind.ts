@@ -10,7 +10,7 @@ export type BarItem = AdminBarItem & { builtIn?: true };
 export const isBuiltIn = (item: BarItem, id: string) => item.builtIn === true && item.id === id;
 
 /**
- * How the bar renders an item. The built-in `perspective` and `live-edit` are controls: a menu and a switch.
+ * How the bar renders an item. The built-in `perspective` and `live-edit` are controls.
  * A `mount` item renders itself.
  */
 export function kind(item: BarItem) {

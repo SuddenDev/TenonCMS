@@ -208,3 +208,58 @@ describe("dropdown children", () => {
     ).toBe(false);
   });
 });
+
+describe("language", () => {
+  afterEach(() => localStorage.clear());
+
+  it("labels the built-ins in the admin language and keeps host labels", async () => {
+    localStorage.setItem("integral-admin-locale", "de");
+    render(
+      context([
+        { id: "edit", label: "Edit", href: "/admin/presentation", builtIn: true },
+        { id: "perspective", label: "Drafts", builtIn: true },
+        { id: "custom", label: "Custom" },
+      ]),
+    );
+    await nextTick();
+    expect(labels()).toEqual(["Bearbeiten", "Entwürfe", "Custom", "Admin-Leiste ausblenden"]);
+    expect(root.querySelector("[role=toolbar]")?.getAttribute("aria-label")).toBe("Admin-Leiste");
+  });
+
+  it("shows a host label in the admin language, children included", async () => {
+    localStorage.setItem("integral-admin-locale", "de");
+    render(
+      context([
+        { id: "docs", label: { en: "Docs", de: "Doku" }, href: "/docs" },
+        {
+          id: "menu",
+          label: { en: "Menu", de: "Menü" },
+          children: [{ id: "c", label: { en: "Child", de: "Kind" }, href: "/c" }],
+        },
+      ]),
+    );
+    await nextTick();
+    expect(labels()).toEqual(["Doku", "Menü", "Admin-Leiste ausblenden"]);
+    root
+      .querySelector<HTMLElement>("[aria-haspopup]")!
+      .dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[role=menu]")?.textContent).toContain("Kind"),
+    );
+  });
+
+  it("names the preview tab's built-ins", async () => {
+    localStorage.setItem("integral-admin-locale", "de");
+    render({
+      ...context([
+        { id: "edit", label: "Back to visual editor", href: "/admin/presentation", builtIn: true },
+        { id: "live-edit", label: "Edit preview", builtIn: true },
+      ]),
+      mode: "preview-tab",
+    });
+    await nextTick();
+    expect(root.textContent).toContain("Zurück zum visuellen Editor");
+    expect(root.textContent).toContain("Vorschau bearbeiten");
+    expect(labels()).toContain("Vorschau beenden");
+  });
+});

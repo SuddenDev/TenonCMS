@@ -12,7 +12,9 @@ export function headroom(
   options: { height: number; threshold?: number; pinned?: boolean },
 ): HeadroomState {
   if (y <= options.height || options.pinned) return { y, hidden: false };
+
   const delta = y - state.y;
   if (Math.abs(delta) <= (options.threshold ?? 8)) return state;
+
   return { y, hidden: delta > 0 };
 }

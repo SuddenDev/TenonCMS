@@ -4,6 +4,7 @@ import type { AdminBarContext } from "../../../core/src/admin/index.d.ts";
 // Deep per-icon import, an exception to the lazy `Icon.vue` rule: the bar MUST NOT load Icon.vue's chunk with every icon for its own glyphs.
 import ChevronDown from "@lucide/vue/dist/esm/icons/chevron-down.mjs";
 import { Button } from "@/shared/components/ui/button";
+import { barText } from "./messages";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,9 +15,10 @@ import {
 
 const props = defineProps<{ ctx: AdminBarContext }>();
 
+const text = barText();
 const perspectives = [
-  { value: "drafts", label: "Drafts" },
-  { value: "published", label: "Published" },
+  { value: "drafts", label: text.drafts },
+  { value: "published", label: text.published },
 ] as const;
 
 const select = (value: unknown) => {
@@ -35,7 +37,7 @@ const select = (value: unknown) => {
             class="size-1.5 rounded-full data-[perspective=drafts]:bg-amber-500 data-[perspective=published]:bg-emerald-500"
             aria-hidden="true"
           />
-          {{ ctx.perspective === "drafts" ? "Drafts" : "Published" }}
+          {{ ctx.perspective === "drafts" ? text.drafts : text.published }}
           <ChevronDown class="text-muted-foreground" />
         </Button>
       </ToolbarButton>

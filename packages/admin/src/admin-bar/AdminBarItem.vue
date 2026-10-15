@@ -14,11 +14,15 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { Switch } from "@/shared/components/ui/switch";
+import { computed } from "vue";
 import { childKind, isBuiltIn, kind, type BarItem } from "./kind";
+import { barText, itemLabel } from "./messages";
 import MountItem from "./MountItem.vue";
 import PerspectiveMenu from "./PerspectiveMenu.vue";
 
-defineProps<{ item: BarItem; ctx: AdminBarContext }>();
+const props = defineProps<{ item: BarItem; ctx: AdminBarContext }>();
+const text = barText();
+const label = computed(() => itemLabel(props.item, props.ctx.mode, text));
 </script>
 
 <template>
@@ -28,10 +32,10 @@ defineProps<{ item: BarItem; ctx: AdminBarContext }>();
     v-else-if="kind(item) === 'edit'"
     class="flex shrink-0 items-center gap-1.5 px-2 text-xs font-medium"
   >
-    {{ item.label }}
+    {{ label }}
     <ToolbarButton as-child>
       <Switch
-        :aria-label="item.label"
+        :aria-label="label"
         class="scale-75"
         :model-value="ctx.edit"
         @update:model-value="ctx.setEdit($event)"
@@ -46,7 +50,7 @@ defineProps<{ item: BarItem; ctx: AdminBarContext }>();
       <ToolbarButton as-child>
         <Button variant="ghost" size="xs">
           <Icon v-if="item.icon" :name="item.icon" />
-          {{ item.label }}
+          {{ label }}
           <ChevronDown class="text-muted-foreground" />
         </Button>
       </ToolbarButton>
@@ -62,12 +66,12 @@ defineProps<{ item: BarItem; ctx: AdminBarContext }>();
         <DropdownMenuItem v-else-if="childKind(child) === 'link'" as-child class="py-1 text-xs">
           <a :href="child.href">
             <Icon v-if="child.icon" :name="child.icon" />
-            {{ child.label }}
+            {{ text.label(child.label) }}
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem v-else class="py-1 text-xs" @select="child.onClick?.()">
           <Icon v-if="child.icon" :name="child.icon" />
-          {{ child.label }}
+          {{ text.label(child.label) }}
         </DropdownMenuItem>
       </template>
     </DropdownMenuContent>
@@ -77,7 +81,7 @@ defineProps<{ item: BarItem; ctx: AdminBarContext }>();
     <Button
       as="a"
       :href="item.href"
-      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'integral-cms') : item.label"
+      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'integral-cms') : label"
       variant="ghost"
       size="xs"
     >
@@ -94,7 +98,7 @@ defineProps<{ item: BarItem; ctx: AdminBarContext }>();
             ? 'max-w-24 whitespace-normal sm:max-w-none'
             : ['max-w-28 truncate', isBuiltIn(item, 'dashboard') && 'max-sm:hidden']
         "
-        >{{ isBuiltIn(item, "dashboard") ? (ctx.name ?? "integral-cms") : item.label }}</span
+        >{{ isBuiltIn(item, "dashboard") ? (ctx.name ?? "integral-cms") : label }}</span
       >
     </Button>
   </ToolbarLink>
@@ -103,7 +107,7 @@ defineProps<{ item: BarItem; ctx: AdminBarContext }>();
     <Button
       variant="ghost"
       size="xs"
-      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'integral-cms') : item.label"
+      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'integral-cms') : label"
       @click="item.onClick?.()"
     >
       <Themed
@@ -114,7 +118,7 @@ defineProps<{ item: BarItem; ctx: AdminBarContext }>();
       <Box v-else-if="isBuiltIn(item, 'dashboard')" />
       <Icon v-else-if="item.icon" :name="item.icon" />
       <span class="max-w-28 truncate" :class="isBuiltIn(item, 'dashboard') && 'max-sm:hidden'">{{
-        isBuiltIn(item, "dashboard") ? (ctx.name ?? "integral-cms") : item.label
+        isBuiltIn(item, "dashboard") ? (ctx.name ?? "integral-cms") : label
       }}</span>
     </Button>
   </ToolbarButton>

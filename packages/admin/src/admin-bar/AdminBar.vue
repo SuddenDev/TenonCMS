@@ -7,10 +7,12 @@ import X from "@lucide/vue/dist/esm/icons/x.mjs";
 import { Button } from "@/shared/components/ui/button";
 import { headroom, type HeadroomState } from "./headroom";
 import AdminBarItem from "./AdminBarItem.vue";
+import { barText } from "./messages";
 
 const props = defineProps<{ ctx: AdminBarContext; root: HTMLElement; portal: HTMLElement }>();
 
 const HEIGHT = 30;
+const text = barText();
 
 // Open menus hold focus, so focus inside the root also covers them.
 const pinned = ref(false);
@@ -51,7 +53,7 @@ onBeforeUnmount(() => cancelAnimationFrame(frame));
 <template>
   <ConfigProvider :teleport-to="portal">
     <ToolbarRoot
-      aria-label="Admin bar"
+      :aria-label="text.adminBar"
       loop
       :data-mode="ctx.mode"
       :data-position="ctx.position"
@@ -74,7 +76,7 @@ onBeforeUnmount(() => cancelAnimationFrame(frame));
         <Button
           variant="ghost"
           size="icon-xs"
-          :aria-label="ctx.mode === 'preview-tab' ? 'Exit preview' : 'Dismiss admin bar'"
+          :aria-label="ctx.mode === 'preview-tab' ? text.exitPreview : text.dismiss"
           @click="ctx.dismiss"
           ><X
         /></Button>
