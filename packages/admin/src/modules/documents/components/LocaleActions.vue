@@ -84,7 +84,7 @@ function confirm() {
         <Icon name="ellipsis" />
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end">
+    <DropdownMenuContent align="end" class="min-w-48">
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>{{ t("locales.copyFrom") }}</DropdownMenuSubTrigger>
         <DropdownMenuSubContent>

@@ -244,6 +244,12 @@ async function remove() {
     :handle="handle"
     :collapsible="false"
   >
+    <template #title>
+      <div class="min-w-0 flex-1">
+        <h2 :class="drafts ? 'sr-only' : 'truncate text-sm font-medium'">{{ title() }}</h2>
+        <StatusBadges v-if="doc && drafts" :doc="doc" :languages="languages" />
+      </div>
+    </template>
     <template #actions>
       <Button
         v-if="collection.preview && !previewing && !isNew"
@@ -277,10 +283,9 @@ async function remove() {
       </Button>
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
-      <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
+      <header class="mx-auto w-full max-w-3xl px-6 pt-10 pb-8 sm:px-8">
         <p class="text-muted-foreground text-xs">{{ text(collection.label) ?? name }}</p>
-        <h1 class="mt-1 text-2xl font-semibold">{{ title() }}</h1>
-        <StatusBadges v-if="drafts" :doc="doc" :languages="languages" />
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ title() }}</h1>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           {{ t("documents.readOnly") }}
         </p>
@@ -290,16 +295,17 @@ async function remove() {
         <template v-if="!isNew">
           <section v-for="j in joins" :key="j.key" class="mt-4">
             <h2 class="text-muted-foreground mb-1 text-xs">{{ text(j.field.label) ?? j.key }}</h2>
-            <ul class="divide-border border-border bg-card divide-y rounded-lg border">
+            <ul class="divide-border border-border divide-y rounded-md border">
               <li v-for="d in joined[j.key] ?? []" :key="d.id">
-                <button
+                <Button
                   type="button"
-                  class="hover:bg-muted flex w-full items-center justify-between px-3 py-2 text-left text-sm"
+                  variant="ghost"
+                  class="h-auto w-full justify-between rounded-none px-3 py-2 font-normal"
                   @click="open?.(j.field.collection, d.id)"
                 >
                   {{ label(j.field.collection, d) }}
                   <Icon name="arrow-up-right" class="text-muted-foreground" />
-                </button>
+                </Button>
               </li>
               <li v-if="!joined[j.key]?.length" class="text-muted-foreground px-3 py-2 text-sm">
                 {{ t("documents.nothingLinked") }}
@@ -312,6 +318,7 @@ async function remove() {
         :id="formId"
         class="flex-1 inert:opacity-60"
         :fields="collection.fields"
+        :layout="collection"
         :initial="initial"
         :doc="doc"
         :inert="readOnly"

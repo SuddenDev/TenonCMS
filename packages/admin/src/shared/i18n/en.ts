@@ -4,6 +4,7 @@ export default {
   common: {
     back: "Back",
     cancel: "Cancel",
+    clear: "Clear",
     close: "Close",
     copy: "Copy",
     copied: "Copied",
@@ -82,6 +83,14 @@ export default {
     select: "Select a setting",
   },
   documents: {
+    notPublished: "Not published yet",
+    unpublishedChanges: "Unpublished changes",
+    noDraft: "No unpublished changes",
+    perspectiveUnsaved: "Could not save pending edits. Retry before switching perspective.",
+
+    selectDate: "Select date",
+    selectDateTime: "Select date and time",
+    enterTime: "Enter time",
     deleteConfirm: "Delete this entry?",
     discardChanges: "Discard changes",
     discardLocale: "Discard this draft? This language was never published, so it is removed.",
@@ -89,6 +98,7 @@ export default {
     discardPublished: "Discard the unpublished changes?",
     draftSaved: "Draft saved {ago}",
     edited: "Edited {ago}",
+    hasErrors: "Has errors",
     fixFields: "Please fix the marked fields",
     global: "Global",
     languages: "Languages",

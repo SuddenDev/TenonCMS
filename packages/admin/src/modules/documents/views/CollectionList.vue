@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PublicationStatus from "@/modules/documents/components/PublicationStatus.vue";
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, provide, ref, watch } from "vue";
@@ -52,7 +53,9 @@ const rows = computed(() => {
       createdAt: d.createdAt as string,
       // `locales` lists the languages with a version.
       translated: !active.value || !Array.isArray(d.locales) || d.locales.includes(active.value),
-      draft: d.hasDraft || d.publishedAt === null,
+      publishedAt: d.publishedAt,
+      hasDraft: d.hasDraft,
+      sharedDraft: d.sharedDraft,
     }))
     .sort((a, b) =>
       key === "title" ? a.title.localeCompare(b.title) : b[key].localeCompare(a[key]),
@@ -111,6 +114,7 @@ provide(keepPaneKey, (id) => (kept = id));
         <PaneMenuSkeleton v-if="loading" />
         <template v-else>
           <PaneMenuItem
+            class="[&_[data-slot=pane-menu-item-end]]:opacity-100"
             v-for="doc in rows"
             :key="doc.id"
             :to="`${CONTENT}/collections/${name}/${doc.id}`"
@@ -119,17 +123,12 @@ provide(keepPaneKey, (id) => (kept = id));
             :subtitle="ago(doc.updatedAt, adminLocale)"
             :active="route.params.id === doc.id"
           >
-            <template v-if="doc.draft || !doc.translated" #end>
+            <template #end>
               <span class="flex items-center gap-2">
                 <span v-if="!doc.translated" class="text-muted-foreground text-xs">
                   {{ t("common.notTranslated") }}
                 </span>
-                <span
-                  v-else
-                  class="size-2 rounded-full bg-amber-500"
-                  role="img"
-                  :aria-label="t('common.draft')"
-                />
+                <PublicationStatus v-else-if="collection.drafts !== false" :doc="doc" compact />
               </span>
             </template>
           </PaneMenuItem>

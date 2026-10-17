@@ -83,6 +83,11 @@ describe("blocks items", () => {
     ]);
     expect(titleField({ fields: { content, name: { type: "text" } } } as never)).toBe("name");
   });
+
+  it("normalize defaults a many select to an empty list", () => {
+    const fields = { tags: { type: "select", many: true, options: ["a"] } };
+    expect(normalize(fields as never, {})).toEqual({ tags: [] });
+  });
 });
 
 describe("moveItem", () => {

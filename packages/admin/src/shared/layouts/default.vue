@@ -35,12 +35,13 @@ import {
   localeLabel,
   type Perspective,
 } from "@/shared";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 
 const { t } = useI18n();
 const route = useRoute();
 const { name, logo, icon } = useBrand();
 const tools = useAppBar();
-const { perspective, set } = usePerspective();
+const { perspective, set, switching, error: perspectiveError } = usePerspective();
 useLocaleFromRoute();
 const { locales, defaultLocale, locale, select } = useLocale();
 const perspectives = [
@@ -136,7 +137,7 @@ providePanes(row);
         </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="sm" class="gap-1.5 text-xs">
+            <Button variant="ghost" size="sm" class="gap-1.5 text-xs" :disabled="switching">
               <span
                 :data-perspective="perspective"
                 class="size-2 rounded-full data-[perspective=drafts]:bg-amber-500 data-[perspective=published]:bg-emerald-500"
@@ -164,24 +165,33 @@ providePanes(row);
         <NavUser />
       </div>
     </header>
-    <div ref="row" class="flex min-h-0 flex-1 overflow-x-auto">
-      <div v-if="route.meta.full" class="flex min-w-0 flex-1 flex-col">
-        <header
-          v-if="route.meta.pageHeader !== false"
-          class="border-border flex h-12 shrink-0 items-center border-b px-4"
-        >
-          <PageTitle :value="route.meta.pageHeader ?? true" />
-        </header>
-        <main class="min-h-0 flex-1 overflow-auto"><slot /></main>
+    <p
+      v-if="perspectiveError"
+      class="text-destructive border-border border-b px-3 py-2 text-sm"
+      role="alert"
+    >
+      {{ perspectiveError }}
+    </p>
+    <TooltipProvider :delay-duration="300">
+      <div ref="row" class="flex min-h-0 flex-1 overflow-x-auto">
+        <div v-if="route.meta.full" class="flex min-w-0 flex-1 flex-col">
+          <header
+            v-if="route.meta.pageHeader !== false"
+            class="border-border flex h-12 shrink-0 items-center border-b px-4"
+          >
+            <PageTitle :value="route.meta.pageHeader ?? true" />
+          </header>
+          <main class="min-h-0 flex-1 overflow-auto"><slot /></main>
+        </div>
+        <template v-else>
+          <MenuPane v-if="route.meta.menu !== false" />
+          <slot v-if="route.meta.panes" />
+          <Pane v-else :title="t('nav.page')" :min="448" grow :collapsible="false">
+            <template #header><PageTitle :value="route.meta.pageHeader ?? true" /></template>
+            <main class="h-full"><slot /></main>
+          </Pane>
+        </template>
       </div>
-      <template v-else>
-        <MenuPane v-if="route.meta.menu !== false" />
-        <slot v-if="route.meta.panes" />
-        <Pane v-else :title="t('nav.page')" :min="448" grow :collapsible="false">
-          <template #header><PageTitle :value="route.meta.pageHeader ?? true" /></template>
-          <main class="h-full"><slot /></main>
-        </Pane>
-      </template>
-    </div>
+    </TooltipProvider>
   </div>
 </template>

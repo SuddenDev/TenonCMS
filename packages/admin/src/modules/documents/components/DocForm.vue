@@ -1,24 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { text } from "@/shared/i18n";
-import { CmsError, type Data, type Field, type Fields } from "@/shared/api";
+import { CmsError, type Data, type Field, type Fields, type Layout } from "@/shared/api";
 import { onLocaleFlush } from "@/shared/composables/useLocale";
-import { active, isEmpty, normalize } from "@/modules/documents/fields";
+import { active, normalize } from "@/modules/documents/fields";
 import { ago } from "@/shared/utils";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
-import { FieldError } from "@/shared/components/ui/field";
 import FieldInput from "./FieldInput.vue";
-import ItemList from "./ItemList.vue";
-import SharedMarker from "./SharedMarker.vue";
+import FieldLayout from "./fields/FieldLayout.vue";
 import { useAutosave } from "@/modules/documents/composables/useAutosave";
+import Icon from "@/shared/components/Icon.vue";
 
 // `isNew`: plain `default` values pre-fill the form, and slugs follow their `from` field. Function defaults are not in the schema; the server fills them.
 // `id`: the form's id, so a button outside of it can submit it with `form`.
@@ -30,9 +21,11 @@ import { useAutosave } from "@/modules/documents/composables/useAutosave";
 // `localized`: the entry has languages. Its fields marked `localized: false` are labeled as shared.
 // `defaults`: the default language's data. Empty localized fields show its values as placeholders.
 // `missing`: the active language has no version yet, so there is nothing to publish before the first edit.
+// `layout`: the tabs and fieldsets of the collection or global.
 const props = defineProps<{
   id?: string;
   fields: Fields;
+  layout?: Layout;
   initial: Record<string, unknown>;
   save?: (data: Data<Fields>) => Promise<void>;
   saveDraft?: (data: Data<Fields>) => Promise<void>;
@@ -87,19 +80,6 @@ watch(
     if (drafts && JSON.stringify(body) !== sent) autosave.schedule();
   },
   { deep: true, immediate: true },
-);
-// Top-level fields without a group or list share one card. Each group and list is its own card.
-const plain = computed(() =>
-  Object.entries(props.fields).filter(
-    ([, f]) => f.type !== "group" && f.type !== "array" && f.type !== "blocks" && f.type !== "join",
-  ),
-);
-const groups = computed(() =>
-  Object.entries(props.fields).flatMap(([name, field]) =>
-    field.type === "group" || field.type === "array" || field.type === "blocks"
-      ? [{ name, field }]
-      : [],
-  ),
 );
 const error = ref("");
 // Messages by field path from a 400 response.
@@ -173,84 +153,31 @@ async function discard() {
     @submit.prevent="drafts ? autosave.flush() : submit()"
     @focusout="drafts && autosave.flush()"
   >
-    <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-6">
-      <Card v-if="plain.some(([, f]) => active(f, data, data))" class="gap-0 py-0">
-        <CardContent class="divide-border flex flex-col divide-y *:py-4">
-          <template v-for="[name, field] in plain" :key="name">
-            <FieldInput
-              v-if="active(field, data, data)"
-              v-model="data[name]"
-              :name="name"
-              :field="field"
-              :root="data"
-              :siblings="{ fields, data }"
-              :is-new="isNew"
-              :errors="errors"
-              :shared="shared(field)"
-              :placeholders="inherited(field)"
-            />
-          </template>
-        </CardContent>
-      </Card>
-      <template v-for="{ name, field } in groups" :key="name">
-        <Card v-if="active(field, data, data)" class="gap-0 py-0">
-          <fieldset :disabled="field.readOnly" class="contents">
-            <CardHeader class="py-4">
-              <CardTitle>
-                {{
-                  text("labels" in field ? field.labels?.plural : undefined) ??
-                  text(field.label) ??
-                  name
-                }}
-                <span v-if="field.required" class="text-destructive" aria-hidden="true">*</span>
-                <SharedMarker v-if="shared(field)" />
-              </CardTitle>
-              <CardDescription v-if="field.description">{{
-                text(field.description)
-              }}</CardDescription>
-              <FieldError v-if="field.type === 'group' && errors[name]">{{
-                errors[name]
-              }}</FieldError>
-            </CardHeader>
-            <CardContent
-              v-if="field.type === 'array' || field.type === 'blocks'"
-              class="border-border border-t py-4"
-            >
-              <ItemList
-                v-model="data[name] as any"
-                :name="name"
-                :field="field"
-                :root="data"
-                :is-new="isNew"
-                :errors="errors"
-              />
-            </CardContent>
-            <CardContent
-              v-else
-              class="divide-border border-border flex flex-col divide-y border-t *:py-4"
-            >
-              <template v-for="(child, key) in field.fields" :key="key">
-                <FieldInput
-                  v-if="active(child, data, data[name] as Record<string, unknown>)"
-                  v-model="(data[name] as Record<string, unknown>)[key]"
-                  :name="String(key)"
-                  :field="child"
-                  :root="data"
-                  :siblings="{ fields: field.fields, data: data[name] as Record<string, unknown> }"
-                  :is-new="isNew"
-                  :loose="!field.required && isEmpty(data[name] as Record<string, unknown>)"
-                  :path="`${name}.${key}`"
-                  :errors="errors"
-                  :placeholders="inherited(field)?.[name] as Record<string, unknown> | undefined"
-                />
-              </template>
-            </CardContent>
-          </fieldset>
-        </Card>
-      </template>
+    <div class="mx-auto flex w-full max-w-3xl flex-col px-6 pb-12 sm:px-8">
+      <FieldLayout
+        split
+        :fields="fields"
+        :layout="layout"
+        :show="(_, f) => active(f, data, data)"
+        :errors="errors"
+      >
+        <template #field="{ name, field }">
+          <FieldInput
+            v-model="data[name]"
+            :name="name"
+            :field="field"
+            :root="data"
+            :siblings="{ fields, data }"
+            :is-new="isNew"
+            :errors="errors"
+            :shared="shared(field)"
+            :placeholders="inherited(field)"
+          />
+        </template>
+      </FieldLayout>
     </div>
     <footer
-      class="bg-background border-border sticky bottom-0 mt-auto flex items-center gap-3 border-t px-4 py-2"
+      class="bg-background border-border sticky bottom-0 z-10 mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-3"
     >
       <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
       <template v-else-if="drafts">
@@ -273,7 +200,7 @@ async function discard() {
       <span v-else-if="initial.updatedAt" class="text-muted-foreground text-sm">
         {{ t("documents.edited", { ago: ago(initial.updatedAt as string, locale) }) }}
       </span>
-      <div class="ml-auto flex items-center gap-2">
+      <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
         <slot />
         <template v-if="drafts">
           <Button
@@ -287,6 +214,7 @@ async function discard() {
             {{ t("documents.discardChanges") }}
           </Button>
           <Button type="button" size="sm" :disabled="busy || !canPublish" @click="publish">
+            <Icon name="upload" />
             {{ t("documents.publish") }}
           </Button>
         </template>

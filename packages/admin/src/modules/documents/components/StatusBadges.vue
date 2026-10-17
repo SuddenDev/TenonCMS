@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
+import PublicationStatus from "./PublicationStatus.vue";
 import { useLocale } from "@/shared/composables/useLocale";
 import type { localeStatus } from "@/modules/documents/locale-status";
+import { localeLabel } from "@/shared/locale";
+import Icon from "@/shared/components/Icon.vue";
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 
-// "Published" once the document has a published version, "Draft" while it has unpublished changes or was never published.
-// `languages`: the state of a localized entry. It replaces the dots with the active language's state and a row of language codes, which switch the language.
 const props = defineProps<{
   doc: Record<string, unknown>;
   languages?: ReturnType<typeof localeStatus>;
@@ -22,38 +31,43 @@ const labels = {
 </script>
 
 <template>
-  <div v-if="languages" class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-    <span class="text-muted-foreground flex items-center gap-1.5">
-      <span :class="dot" :data-state="languages.active" aria-hidden="true" />
-      {{ t(labels[languages.active]) }}
+  <div class="flex min-w-0 items-center gap-2 text-xs">
+    <PublicationStatus :doc="doc" :missing="languages?.active === 'missing'" />
+    <span v-if="languages?.active === 'missing'" class="text-muted-foreground">
+      {{ t("common.notTranslated") }}
     </span>
-    <span class="flex flex-wrap gap-1" role="group" :aria-label="t('documents.languages')">
-      <button
-        v-for="s in languages.states"
-        :key="s.locale"
-        type="button"
-        :data-active="s.locale === locale"
-        :aria-label="`${s.locale.toUpperCase()}: ${t(labels[s.state])}`"
-        :aria-pressed="s.locale === locale"
-        class="text-muted-foreground hover:bg-muted data-[active=true]:bg-muted data-[active=true]:text-foreground flex items-center gap-1.5 rounded px-1.5 py-0.5"
-        @click="select(s.locale)"
-      >
-        <span :class="dot" :data-state="s.state" aria-hidden="true" />
-        {{ s.locale.toUpperCase() }}
-      </button>
-    </span>
-  </div>
-  <div v-else class="mt-2 flex gap-3 text-xs">
-    <span v-if="props.doc.publishedAt" class="text-muted-foreground flex items-center gap-1.5">
-      <span class="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
-      {{ t("common.published") }}
-    </span>
-    <span
-      v-if="props.doc.hasDraft || props.doc.publishedAt === null"
-      class="text-muted-foreground flex items-center gap-1.5"
-    >
-      <span class="size-2 rounded-full bg-amber-500" aria-hidden="true" />
-      {{ t("common.draft") }}
-    </span>
+    <DropdownMenu v-if="languages">
+      <DropdownMenuTrigger as-child>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="ml-auto min-w-0 gap-1.5"
+          :aria-label="`${t('documents.languages')}: ${localeLabel(locale ?? '')}`"
+        >
+          <Icon name="languages" class="text-muted-foreground" />
+          <span class="truncate">{{ localeLabel(locale ?? "") }}</span>
+          <Icon name="chevron-down" class="text-muted-foreground size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" class="min-w-48">
+        <DropdownMenuRadioGroup
+          :model-value="locale"
+          @update:model-value="(value) => typeof value === 'string' && select(value)"
+        >
+          <DropdownMenuRadioItem
+            v-for="s in languages.states"
+            :key="s.locale"
+            :value="s.locale"
+            class="gap-3"
+          >
+            <div class="flex items-center gap-2">
+              <span :class="dot" :title="t(labels[s.state])" :data-state="s.state" />
+              <span class="flex-1">{{ localeLabel(s.locale) }}</span>
+            </div>
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>
 </template>

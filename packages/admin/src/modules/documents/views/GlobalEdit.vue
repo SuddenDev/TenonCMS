@@ -139,6 +139,14 @@ const discardAll = () =>
     :handle="handle"
     :collapsible="false"
   >
+    <template #title>
+      <div class="min-w-0 flex-1">
+        <h2 :class="drafts ? 'sr-only' : 'truncate text-sm font-medium'">
+          {{ text(global.label) ?? name }}
+        </h2>
+        <StatusBadges v-if="doc && drafts" :doc="doc" :languages="languages" />
+      </div>
+    </template>
     <template #actions>
       <Button
         v-if="global.preview && !previewing"
@@ -161,10 +169,9 @@ const discardAll = () =>
       <slot name="actions" />
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
-      <header class="mx-auto w-full max-w-2xl px-4 pt-8 pb-6">
+      <header class="mx-auto w-full max-w-2xl px-6 pt-10 pb-8 sm:px-8">
         <p class="text-muted-foreground text-xs">{{ t("documents.global") }}</p>
-        <h1 class="mt-1 text-2xl font-semibold">{{ text(global.label) ?? name }}</h1>
-        <StatusBadges v-if="drafts" :doc="doc" :languages="languages" />
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ text(global.label) ?? name }}</h1>
         <p v-if="error" class="text-destructive mt-2 text-sm" role="alert">{{ error }}</p>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           {{ t("documents.readOnly") }}
@@ -177,6 +184,7 @@ const discardAll = () =>
         id="global-form"
         class="flex-1 inert:opacity-60"
         :fields="global.fields"
+        :layout="global"
         :initial="data"
         :doc="doc"
         :inert="readOnly"

@@ -86,8 +86,7 @@ export function normalize(
         return [[k, items]];
       }
       if (f.type === "boolean") return [[k, v ?? false]];
-      if ((f.type === "relation" || f.type === "image" || f.type === "file") && f.many)
-        return [[k, v ?? []]];
+      if ("many" in f && f.many) return [[k, v ?? []]];
       return [[k, v === "" || v === undefined ? null : v]];
     }),
   );

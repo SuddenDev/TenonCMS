@@ -4,6 +4,7 @@ export default {
   common: {
     back: "Zurück",
     cancel: "Abbrechen",
+    clear: "Zurücksetzen",
     close: "Schließen",
     copy: "Kopieren",
     copied: "Kopiert",
@@ -63,7 +64,7 @@ export default {
     signIn: "Anmelden",
   },
   pane: {
-    clearSearch: "Suche leeren",
+    clearSearch: "Suche zurücksetzen",
     collapse: "{title} einklappen",
     compact: "Kompakte Ansicht",
     detailed: "Detaillierte Ansicht",
@@ -82,6 +83,15 @@ export default {
     select: "Einstellung auswählen",
   },
   documents: {
+    notPublished: "Noch nicht veröffentlicht",
+    unpublishedChanges: "Unveröffentlichte Änderungen",
+    noDraft: "Keine unveröffentlichten Änderungen",
+    perspectiveUnsaved:
+      "Ausstehende Änderungen konnten nicht gespeichert werden. Vor dem Perspektivwechsel erneut versuchen.",
+
+    selectDate: "Datum auswählen",
+    selectDateTime: "Datum und Uhrzeit auswählen",
+    enterTime: "Uhrzeit",
     deleteConfirm: "Diesen Eintrag löschen?",
     discardChanges: "Änderungen verwerfen",
     discardLocale:
@@ -91,6 +101,7 @@ export default {
     discardPublished: "Die unveröffentlichten Änderungen verwerfen?",
     draftSaved: "Entwurf gespeichert {ago}",
     edited: "Bearbeitet {ago}",
+    hasErrors: "Enthält Fehler",
     fixFields: "Bitte die markierten Felder korrigieren",
     global: "Global",
     languages: "Sprachen",
