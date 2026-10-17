@@ -1,6 +1,7 @@
 import type { Text } from "../../admin/index.d.ts";
 import type { Base } from "./common.ts";
 import type { Fields } from "./index.ts";
+import type { Layout } from "./layout.ts";
 
 /** Labels of one item and of the list in the admin. */
 export type ItemLabels = {
@@ -11,18 +12,19 @@ export type ItemLabels = {
 };
 
 /** A list of items that share one set of fields. Its validator is built by `dataSchema()` from the items. */
-export type ArrayField = Base<Record<string, any>[]> & {
-  /**
-   * Stores a list of objects. Every item has a stable `id`, filled on write when missing, so `id` MUST NOT be a field
-   * of an item. Not filterable. Paths into items use the position: `links.2.label`.
-   */
-  type: "array";
-  /** The fields of each item. Items MAY contain groups, arrays and blocks, but no joins. */
-  fields: Fields;
-  /** Fewest items. Checked only when the field applies. `required` means at least one. */
-  minRows?: number;
-  /** Most items. Checked only when the field applies. */
-  maxRows?: number;
-  /** Admin labels. */
-  labels?: ItemLabels;
-};
+export type ArrayField = Base<Record<string, any>[]> &
+  Layout & {
+    /**
+     * Stores a list of objects. Every item has a stable `id`, filled on write when missing, so `id` MUST NOT be a field
+     * of an item. Not filterable. Paths into items use the position: `links.2.label`.
+     */
+    type: "array";
+    /** The fields of each item. Items MAY contain groups, arrays and blocks, but no joins. */
+    fields: Fields;
+    /** Fewest items. Checked only when the field applies. `required` means at least one. */
+    minRows?: number;
+    /** Most items. Checked only when the field applies. */
+    maxRows?: number;
+    /** Admin labels. */
+    labels?: ItemLabels;
+  };

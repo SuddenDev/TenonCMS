@@ -22,6 +22,31 @@ import { dataSchema } from "./validation/build-data-schema.ts";
 import { relationPaths } from "./traversal/relation-paths.ts";
 import { targetOf } from "./traversal/reference-fields.ts";
 
+it("infers datetime fields as strings", () => {
+  const fields = {
+    start: { type: "datetime", required: true },
+    end: { type: "datetime" },
+  } as const satisfies Fields;
+  expectTypeOf<Data<typeof fields>["start"]>().toEqualTypeOf<string>();
+  expectTypeOf<Data<typeof fields>["end"]>().toEqualTypeOf<string | null | undefined>();
+});
+
+describe("select types", () => {
+  const fields = {
+    size: { type: "select", options: [{ value: "s", label: "Small" }, "m"] },
+    tags: { type: "select", many: true, required: true, options: ["a", "b"] },
+  } as const satisfies Fields;
+
+  it("infers option values and an array with many", () => {
+    expectTypeOf<Data<typeof fields>["size"]>().toEqualTypeOf<"s" | "m" | null | undefined>();
+    expectTypeOf<Data<typeof fields>["tags"]>().toEqualTypeOf<("a" | "b")[]>();
+  });
+
+  it("does not filter a many select", () => {
+    expectTypeOf<FilterKey<typeof fields>>().toEqualTypeOf<"size">();
+  });
+});
+
 describe("group types", () => {
   const fields = {
     seo: { type: "group", fields: { title: { type: "text" }, noindex: { type: "boolean" } } },

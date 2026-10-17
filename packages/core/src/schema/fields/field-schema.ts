@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { type StoredField, type GroupField, type ArrayField, type BlocksField } from "./index.ts";
 import { textSchema } from "./text.ts";
 import { dateSchema } from "./date.ts";
+import { datetimeSchema } from "./datetime.ts";
 import { numberSchema } from "./number.ts";
 import { booleanSchema } from "./boolean.ts";
 import { selectSchema } from "./select.ts";
@@ -24,12 +25,14 @@ export function fieldSchema(
       return textSchema(field, on);
     case "date":
       return dateSchema();
+    case "datetime":
+      return datetimeSchema();
     case "number":
       return numberSchema(field, on);
     case "boolean":
       return booleanSchema();
     case "select":
-      return selectSchema(field);
+      return selectSchema(field, on);
     case "slug":
       return slugSchema(field, on);
     case "relation":

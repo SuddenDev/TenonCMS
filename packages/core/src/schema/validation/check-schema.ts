@@ -1,6 +1,6 @@
 import { type Condition } from "../condition.ts";
 import { fieldAt } from "../traversal/field-at.ts";
-import { isRef, targetOf } from "../traversal/reference-fields.ts";
+import { targetOf } from "../traversal/reference-fields.ts";
 import { pathKey, plainPath, relationPaths } from "../traversal/relation-paths.ts";
 import { placeholders } from "../../preview/templates/placeholders.ts";
 import type { Localization } from "../../cms/config/options.ts";
@@ -10,15 +10,20 @@ import {
   type Collection,
   type Field,
   type Fields,
+  type Layout,
+  type NumberField,
   type Preview,
+  type SelectField,
   type Schema,
 } from "../index.ts";
 import { dataSchema } from "./build-data-schema.ts";
+import { checkLayout } from "./check-layout.ts";
+import { optionValue } from "../fields/select.ts";
 
 type Collections = Record<string, Collection>;
 
 /** A collection or global with the parts the checks need. */
-type Owner = {
+type Owner = Layout & {
   name: string;
   fields: Fields;
   localized?: boolean;
@@ -32,6 +37,7 @@ const uniqueTypes = [
   "textarea",
   "number",
   "date",
+  "datetime",
   "select",
   "slug",
   "relation",
@@ -43,8 +49,8 @@ const uniqueTypes = [
  * Checks that the schema can work. Runs once while the instance is built.
  * @throws {Error} For a populate depth above the limit, a relation or join that does not fit, a condition on an unknown
  * field, `unique` where it cannot apply, an invalid `pattern`, a `preview` placeholder on an unknown field,
- * a `localized` option or `localization` config that does not fit, or array or block items or row limits that do not
- * fit.
+ * a `localized` option or `localization` config that does not fit, array or block items or row limits that do not
+ * fit, select options or number options that do not fit, or an admin layout that names unknown tabs or fieldsets.
  */
 export function checkSchema(
   schema: Schema,
@@ -60,6 +66,7 @@ export function checkSchema(
     checkRelations(collections, owner);
     checkJoins(collections, owner);
     checkFields(owner.fields, owner.fields, owner.name, !owner.global);
+    checkLayout(owner.fields, owner, owner.name);
     checkPreview(collections, owner, localization?.routing === false);
     checkLocalized(owner, !!localization);
 
@@ -81,6 +88,8 @@ function owners(schema: Schema): Owner[] {
       localized: c.localized,
       preview: c.preview,
       permalink: c.permalink,
+      tabs: c.tabs,
+      fieldsets: c.fieldsets,
       global: false,
     })),
     ...Object.entries(schema.globals ?? {}).map(([name, g]) => ({
@@ -89,6 +98,8 @@ function owners(schema: Schema): Owner[] {
       localized: g.localized,
       preview: g.preview,
       permalink: g.permalink,
+      tabs: g.tabs,
+      fieldsets: g.fieldsets,
       global: true,
     })),
   ];
@@ -180,15 +191,32 @@ function hasJoin(fields: Fields): boolean {
 }
 
 // `top`: fields at the top level of a collection, the only place `unique` works.
+function checkOptions(f: SelectField, at: string) {
+  if (!f.options.length) fail(`select "${at}" has no options`);
+  const seen = new Set<string>();
+  for (const value of f.options.map(optionValue)) {
+    if (seen.has(value)) fail(`select "${at}" repeats option "${value}"`);
+    seen.add(value);
+  }
+}
+
+function checkNumber(f: NumberField, at: string) {
+  if (f.step !== undefined && !(f.step > 0)) fail(`number "${at}" needs a positive step`);
+  if (f.appearance === "slider" && (f.min === undefined || f.max === undefined))
+    fail(`slider "${at}" needs min and max`);
+}
+
 function checkFields(fields: Fields, root: Fields, where: string, top: boolean) {
   for (const [key, f] of Object.entries(fields)) {
     const at = `${where}.${key}`;
     if (
       "unique" in f &&
       f.unique &&
-      (!top || !uniqueTypes.includes(f.type) || (isRef(f) && f.many))
+      (!top || !uniqueTypes.includes(f.type) || ("many" in f && f.many))
     )
       fail(`"${at}" cannot be unique`);
+    if (f.type === "select") checkOptions(f, at);
+    if (f.type === "number") checkNumber(f, at);
     for (const path of conditionPaths(f.condition ?? {})) {
       const rooted = path.startsWith("/");
       const crossed = crossedList(rooted ? root : fields, rooted ? path.slice(1) : path);

@@ -1,9 +1,10 @@
 import type { Text } from "../../admin/index.d.ts";
 import type { Condition } from "../condition.ts";
 import type { FieldHooks, Fn, HookArgs, Validate } from "../hooks/index.ts";
+import type { Placement } from "./layout.ts";
 
 /** Options of every field, joins included. */
-export type Common = {
+export type Common = Placement & {
   /** Label in the admin. Defaults to the field key. */
   label?: Text;
   /** Help text below the input in the admin. */
@@ -43,7 +44,7 @@ export type Base<V = string, S = V> = Common & {
   /**
    * No other document of the collection MAY have the same value. Checked after `beforeChange` hooks; a collision is a
    * `ValidationError` with `Already used`. `null` and missing values never collide. Case-sensitive.
-   * Only on top-level `text`, `textarea`, `number`, `date`, `select`, `slug` and single `relation` fields of a collection.
+   * Only on top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug` and single `relation` fields of a collection.
    */
   unique?: boolean;
   /**

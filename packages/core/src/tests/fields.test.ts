@@ -11,6 +11,31 @@ beforeEach(() => {
   ({ cms, client, fetchWithSession } = fresh());
 });
 
+describe("datetime", () => {
+  it("round-trips timestamps through the client and enforces validation and uniqueness", async () => {
+    const { cms, client } = setup(
+      defineCms({
+        collections: {
+          events: { fields: { start: { type: "datetime", required: true, unique: true } } },
+        },
+        media: false,
+        database: { url: ":memory:" },
+        secret: "x".repeat(32),
+      }),
+    );
+    await client.signUp(admin);
+    const start = "2026-10-17T12:34:56.000Z";
+    const event = await client.create("events", { start });
+    expect(await client.findById("events", event.id)).toMatchObject({ start });
+    expect(await client.find("events", { where: { start } })).toHaveLength(1);
+    await expect(client.create("events", { start })).rejects.toMatchObject({ status: 400 });
+    await expect(client.update("events", event.id, { start: "2026-10-17" })).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(await cms.findById("events", event.id)).toMatchObject({ start });
+  });
+});
+
 describe("condition", () => {
   const make = (hooks = {}) =>
     defineCms({

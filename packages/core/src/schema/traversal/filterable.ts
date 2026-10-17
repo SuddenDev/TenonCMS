@@ -1,8 +1,7 @@
 import { type Fields } from "../index.ts";
-import { isRef } from "./reference-fields.ts";
 
 /**
- * Checks whether `where` accepts `key`. Groups, arrays, blocks, joins and `many` relations, images and files are not filterable.
+ * Checks whether `where` accepts `key`. Groups, arrays, blocks, joins and `many` relations, images, files and selects are not filterable.
  * @returns `false` for an unknown key too.
  */
 export function filterable(fields: Fields, key: string) {
@@ -13,6 +12,6 @@ export function filterable(fields: Fields, key: string) {
     field.type !== "array" &&
     field.type !== "blocks" &&
     field.type !== "join" &&
-    !(isRef(field) && field.many)
+    !("many" in field && field.many)
   );
 }

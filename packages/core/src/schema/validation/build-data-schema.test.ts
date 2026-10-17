@@ -3,6 +3,30 @@ import { type Fields } from "../index.ts";
 import { dataSchema } from "./build-data-schema.ts";
 
 describe("dataSchema", () => {
+  it("validates UTC datetime strings and keeps date-only fields strict", () => {
+    const s = dataSchema({ start: { type: "datetime", required: true }, day: { type: "date" } });
+    expect(s.parse({ start: "2026-10-17T12:34:56.000Z", day: "2026-10-17" })).toEqual({
+      start: "2026-10-17T12:34:56.000Z",
+      day: "2026-10-17",
+    });
+    for (const start of [
+      undefined,
+      null,
+      "",
+      "2026-10-17",
+      "2026-10-17T12:34:56",
+      "2026-02-30T12:00:00Z",
+      42,
+    ])
+      expect(s.safeParse({ start }).success, String(start)).toBe(false);
+    expect(
+      s.safeParse({ start: "2026-10-17T12:34:56Z", day: "2026-10-17T12:34:56Z" }).success,
+    ).toBe(false);
+    expect(dataSchema({ start: { type: "datetime" } }).safeParse({ start: null }).success).toBe(
+      true,
+    );
+  });
+
   const schema = dataSchema({
     title: { type: "text", required: true },
     body: { type: "textarea" },
@@ -405,5 +429,51 @@ describe("blocks", () => {
     const r = parse(fields, { content: [{ blockType: "hero" }] }, false);
     expect(r.success).toBe(true);
     expect(parse(fields, { content: [{ blockType: "nope" }] }, false).success).toBe(false);
+  });
+});
+
+describe("select", () => {
+  it("takes the values of labeled options", () => {
+    const s = dataSchema({
+      size: { type: "select", options: [{ value: "s", label: { en: "Small" } }, "m"] },
+    });
+    expect(s.safeParse({ size: "s" }).success).toBe(true);
+    expect(s.safeParse({ size: "m" }).success).toBe(true);
+    expect(s.safeParse({ size: "Small" }).success).toBe(false);
+  });
+
+  it("stores an array of distinct options with many", () => {
+    const s = dataSchema({
+      tags: { type: "select", many: true, options: ["a", "b"] },
+      cats: { type: "select", many: true, required: true, options: ["a", "b"] },
+    });
+    expect(s.safeParse({ tags: [], cats: ["a"] }).success).toBe(true);
+    expect(s.safeParse({ tags: ["a", "b"], cats: ["b"] }).success).toBe(true);
+    for (const bad of [{ tags: "a" }, { tags: ["c"] }, { tags: ["a", "a"] }, { cats: [] }])
+      expect(s.safeParse({ cats: ["a"], ...bad }).success, JSON.stringify(bad)).toBe(false);
+  });
+
+  it("skips required of an inactive many select", () => {
+    const fields = {
+      on: { type: "boolean" },
+      tags: { type: "select", many: true, required: true, options: ["a"], condition: { on: true } },
+    } as const satisfies Fields;
+    expect(dataSchema(fields, { on: false }).safeParse({ on: false, tags: [] }).success).toBe(true);
+    expect(dataSchema(fields, { on: false }).safeParse({ on: false, tags: ["x"] }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("number step", () => {
+  it("accepts multiples of step counted from min", () => {
+    const s = dataSchema({
+      half: { type: "number", step: 0.5 },
+      odd: { type: "number", min: 1, step: 2 },
+      cents: { type: "number", step: 0.01 },
+    });
+    expect(s.safeParse({ half: 1.5, odd: 5, cents: 0.3 }).success).toBe(true);
+    for (const bad of [{ half: 1.2 }, { odd: 4 }, { cents: 0.305 }])
+      expect(s.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
   });
 });

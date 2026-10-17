@@ -3,13 +3,15 @@ import type { BooleanField } from "./boolean.ts";
 import type { Block, BlocksField } from "./blocks.ts";
 import type { CustomField } from "./custom.ts";
 import type { DateField } from "./date.ts";
+import type { DateTimeField } from "./datetime.ts";
 import type { FileField, MediaFieldOptions } from "./file.ts";
 import type { GroupField } from "./group.ts";
 import type { ImageField, ImageOptions, Modifiers } from "./image.ts";
 import type { JoinField } from "./join.ts";
+import type { Fieldset, Layout, Placement, Tab } from "./layout.ts";
 import type { NumberField } from "./number.ts";
 import type { RelationField } from "./relation.ts";
-import type { SelectField } from "./select.ts";
+import type { SelectField, SelectOption } from "./select.ts";
 import type { SlugField } from "./slug.ts";
 import type { TextField } from "./text.ts";
 
@@ -22,6 +24,7 @@ export type {
   BooleanField,
   CustomField,
   DateField,
+  DateTimeField,
   FileField,
   GroupField,
   ImageField,
@@ -29,9 +32,14 @@ export type {
   MediaFieldOptions,
   Modifiers,
   JoinField,
+  Fieldset,
+  Layout,
+  Placement,
+  Tab,
   NumberField,
   RelationField,
   SelectField,
+  SelectOption,
   SlugField,
   TextField,
 };
@@ -40,6 +48,7 @@ export type {
 export type Field =
   | TextField
   | DateField
+  | DateTimeField
   | NumberField
   | BooleanField
   | SelectField

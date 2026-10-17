@@ -35,11 +35,11 @@ export function readEndpoint(
 }
 
 // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
-// A field, or a block, collection or global with `fields`, MAY be named `hooks` or `preview`, so it passes as is.
-// `JSON.stringify` drops other functions, like `validate`, itself.
+// Only the options of a field, block, collection or global are touched: a field, block, tab or fieldset MAY be named
+// `hooks`, `preview` or `permalink`. `JSON.stringify` drops other functions, like `validate`, itself.
 // The admin only needs to know that a preview exists (`preview` or `permalink`), so either form is sent as `true`.
-function publicValue(key: string, value: any) {
-  if (typeof value?.type === "string" || isObject(value?.fields)) return value;
+function publicValue(this: any, key: string, value: any) {
+  if (typeof this?.type !== "string" && !isObject(this?.fields)) return value;
   if (key === "hooks") return undefined;
   if (key === "permalink") return undefined;
   if (key === "preview") return !!value || undefined;

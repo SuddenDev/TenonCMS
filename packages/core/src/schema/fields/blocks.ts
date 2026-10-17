@@ -3,9 +3,10 @@ import type { Text } from "../../admin/index.d.ts";
 import type { ItemLabels } from "./array.ts";
 import type { Base } from "./common.ts";
 import type { Fields } from "./index.ts";
+import type { Layout } from "./layout.ts";
 
 /** One item type of a `blocks` field. Reuse a block in several fields by importing the same object. */
-export type Block = {
+export type Block = Layout & {
   /** Name in the admin's block picker and row header. Defaults to the block's key. */
   label?: Text;
   /** Help text in the admin's block picker. */

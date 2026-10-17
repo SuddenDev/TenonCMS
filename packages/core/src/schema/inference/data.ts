@@ -5,10 +5,14 @@ type Scalar = {
   text: string;
   textarea: string;
   date: string;
+  datetime: string;
   slug: string;
   number: number;
   boolean: boolean;
 };
+
+/** The stored value of a `select` option. */
+type OptionValue<O> = O extends { value: infer V } ? V : O;
 
 /** The stored ids of a reference field: an array with `many`, else one id. */
 export type Ids<F> = F extends { many: true } ? string[] : string;
@@ -32,7 +36,9 @@ export type FieldValue<F extends Field> = F extends {
     : F extends { type: "blocks"; blocks: infer B extends Record<string, { fields: Fields }> }
       ? BlockItem<B>[]
       : F extends { type: "select"; options: readonly (infer O)[] }
-        ? O
+        ? F extends { many: true }
+          ? OptionValue<O>[]
+          : OptionValue<O>
         : F extends { type: "relation" | "image" | "file" }
           ? Ids<F>
           : F extends { type: keyof Scalar }
@@ -97,7 +103,7 @@ export type Image = File & {
 /** A populated `image` or `file`, or several with `many`. */
 export type MediaValue<F, T> = F extends { many: true } ? T[] : T;
 
-/** Field keys that `where` accepts. Groups, arrays, blocks, joins and `many` relations are not filterable. */
+/** Field keys that `where` accepts. Groups, arrays, blocks, joins and `many` relations and selects are not filterable. */
 export type FilterKey<F extends Fields> = Exclude<
   keyof F,
   Keys<F, { type: "group" | "array" | "blocks" | "join" } | { many: true }>

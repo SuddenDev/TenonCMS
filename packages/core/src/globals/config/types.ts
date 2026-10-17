@@ -1,9 +1,9 @@
 import type { Nav, Text } from "../../admin/index.d.ts";
 import type { Preview } from "../../preview/config/types.ts";
-import type { Fields } from "../../schema/fields/index.ts";
+import type { Fields, Layout } from "../../schema/fields/index.ts";
 import type { GlobalHooks } from "../../schema/hooks/index.ts";
 
-export type Global<F extends Fields = Fields> = {
+export type Global<F extends Fields = Fields> = Layout & {
   /** Name in the admin. Defaults to the global key. */
   label?: Text;
   /** Short text under the name, e.g. on the Settings page and above the form. */

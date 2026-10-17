@@ -73,6 +73,7 @@ describe("defineCms checks", () => {
         r: { type: "relation", collection: "c" },
       },
       { r: { type: "relation", collection: "c", many: true, unique: true } },
+      { s: { type: "select", options: ["a"], many: true, unique: true } },
     ] as Fields[];
     for (const fields of bad)
       expect(define({ c: { fields } }), JSON.stringify(fields)).toThrow(/cannot be unique/);
@@ -92,6 +93,99 @@ describe("defineCms checks", () => {
       g: { type: "slug", from: "a", unique: true },
     };
     expect(define({ c: { fields } })).not.toThrow();
+  });
+
+  it("throws for empty or repeated select options", () => {
+    expect(define({ c: { fields: { s: { type: "select", options: [] } } } })).toThrow(
+      /select "c.s" has no options/,
+    );
+    expect(
+      define({
+        c: { fields: { s: { type: "select", options: ["a", { value: "a", label: "A" }] } } },
+      }),
+    ).toThrow(/select "c.s" repeats option "a"/);
+  });
+
+  it("throws for a slider without min and max and for a step that is not positive", () => {
+    expect(
+      define({ c: { fields: { n: { type: "number", appearance: "slider", min: 0 } } } }),
+    ).toThrow(/slider "c.n" needs min and max/);
+    expect(define({ c: { fields: { n: { type: "number", step: 0 } } } })).toThrow(
+      /number "c.n" needs a positive step/,
+    );
+    expect(
+      define({ c: { fields: { n: { type: "number", appearance: "slider", min: 0, max: 9 } } } }),
+    ).not.toThrow();
+  });
+
+  describe("layout", () => {
+    const tabs = { main: {}, seo: {} };
+    const fieldsets = { meta: {} };
+
+    it("accepts tabs and fieldsets named by the nearest owner", () => {
+      const fields = {
+        a: { type: "text", tab: "main", fieldset: "meta", width: "1/2" },
+        b: { type: "text", tab: "main", fieldset: "meta" },
+        c: { type: "text", tab: ["main", "seo"] },
+        g: {
+          type: "group",
+          tab: "seo",
+          tabs: { x: {} },
+          fieldsets,
+          fields: { t: { type: "text", tab: "x", fieldset: "meta" } },
+        },
+        l: { type: "array", tabs: { x: {} }, fields: { t: { type: "text", tab: "x" } } },
+        k: {
+          type: "blocks",
+          blocks: { hero: { fieldsets, fields: { t: { type: "text", fieldset: "meta" } } } },
+        },
+      } as const satisfies Fields;
+      expect(define({ c: { tabs, fieldsets, fields } })).not.toThrow();
+      expect(
+        define({}, { s: { tabs, fields: { a: { type: "text", tab: "main" } } } as never }),
+      ).not.toThrow();
+    });
+
+    it("throws for a tab or fieldset the nearest owner does not have", () => {
+      const bad: [Record<string, unknown>, RegExp][] = [
+        [{ fields: { a: { type: "text", tab: "nope" } } }, /field "c.a" names unknown tab "nope"/],
+        [{ tabs, fields: { a: { type: "text", tab: ["main", "nope"] } } }, /unknown tab "nope"/],
+        [
+          { fields: { a: { type: "text", fieldset: "nope" } } },
+          /field "c.a" names unknown fieldset "nope"/,
+        ],
+        [
+          { tabs, fields: { g: { type: "group", fields: { t: { type: "text", tab: "main" } } } } },
+          /field "c.g.t" names unknown tab "main"/,
+        ],
+        [
+          { fields: { l: { type: "array", fields: { t: { type: "text", fieldset: "x" } } } } },
+          /field "c.l.t" names unknown fieldset "x"/,
+        ],
+        [
+          {
+            fields: {
+              k: {
+                type: "blocks",
+                blocks: { hero: { fields: { t: { type: "text", tab: "x" } } } },
+              },
+            },
+          },
+          /field "c.k.hero.t" names unknown tab "x"/,
+        ],
+      ];
+      for (const [c, message] of bad) expect(define({ c } as never)).toThrow(message);
+    });
+
+    it("throws for a fieldset whose fields sit in different tabs", () => {
+      const fields = {
+        a: { type: "text", tab: "main", fieldset: "meta" },
+        b: { type: "text", tab: "seo", fieldset: "meta" },
+      } as const satisfies Fields;
+      expect(define({ c: { tabs, fieldsets, fields } })).toThrow(
+        /fieldset "c.meta" holds fields of different tabs/,
+      );
+    });
   });
 
   it("throws for an invalid pattern, also under a condition", () => {

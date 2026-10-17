@@ -423,6 +423,30 @@ describe("hooks", () => {
     });
   });
 
+  it("keep tabs and fieldsets named like options in /schema", async () => {
+    const layout = {
+      tabs: { hooks: { label: "Hooks" }, preview: {} },
+      fieldsets: { permalink: { label: "Links" } },
+    };
+    const cms = defineCms({
+      ...db,
+      collections: {
+        posts: {
+          ...layout,
+          permalink: "/{title}",
+          hooks: { afterRead: [log("a")] },
+          fields: { title: { type: "text", tab: "hooks", fieldset: "permalink" } },
+        },
+      },
+    });
+    const { client } = setup(cms);
+    await client.signUp(admin);
+    const posts = (await client.getSchema()).collections!.posts as any;
+    expect({ tabs: posts.tabs, fieldsets: posts.fieldsets }).toEqual(layout);
+    expect(posts.hooks).toBeUndefined();
+    expect(posts.preview).toBe(true);
+  });
+
   it("are not sent in /schema, and neither are validate and function defaults", async () => {
     const cms = defineCms({
       ...db,
