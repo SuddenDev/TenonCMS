@@ -48,8 +48,9 @@ const attrs = computed(() => {
 <template>
   <Field v-bind="forwarded()" :data-invalid="invalid">
     <component :is="unlabeled ? FieldTitle : FieldLabel" :for="unlabeled ? undefined : id">
-      {{ text(field.label) ?? name
-      }}<span v-if="required" class="text-destructive" aria-hidden="true">*</span>
+      <span v-if="text(field.label)">{{ text(field.label) }}</span>
+      <span v-else class="capitalize">{{ name }}</span>
+      <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
     </component>
     <FieldDescription v-if="field.description" class="-mt-1">{{

@@ -283,7 +283,7 @@ async function remove() {
       </Button>
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
-      <header class="mx-auto w-full max-w-3xl px-6 pt-10 pb-8 sm:px-8">
+      <header class="mx-auto w-full max-w-2xl px-6 pt-10 pb-8 sm:px-8">
         <p class="text-muted-foreground text-xs">{{ text(collection.label) ?? name }}</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ title() }}</h1>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">

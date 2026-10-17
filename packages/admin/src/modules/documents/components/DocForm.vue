@@ -153,7 +153,7 @@ async function discard() {
     @submit.prevent="drafts ? autosave.flush() : submit()"
     @focusout="drafts && autosave.flush()"
   >
-    <div class="mx-auto flex w-full max-w-3xl flex-col px-6 pb-12 sm:px-8">
+    <div class="mx-auto flex w-full max-w-2xl flex-col px-6 pb-12 sm:px-8">
       <FieldLayout
         split
         :fields="fields"
