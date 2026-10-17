@@ -97,7 +97,9 @@ export default defineCms({
 });
 ```
 
-Field types: `text`, `textarea`, `number`, `boolean`, `date`, `select`, `slug`, `group`, `array`, `blocks` (see [Lists and blocks](#lists-and-blocks)), `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
+Field types: `text`, `textarea`, `number`, `boolean`, `date`, `datetime`, `select`, `slug`, `group`, `array`, `blocks` (see [Lists and blocks](#lists-and-blocks)), `relation`, `join` (see [Relations](#relations)). `defineGlobal()` does the same for globals.
+
+A `date` stores a calendar date (`2026-10-17`). A `datetime` stores a UTC ISO timestamp (`2026-10-17T12:00:00.000Z`). The admin shows both in the interface language and edits date-time values in the browser’s local timezone. Date-time pickers include a time input with seconds.
 
 A `slug` is a URL part such as `about-us`:
 
@@ -131,25 +133,25 @@ seo: {
 
 #### Field options
 
-| Option                              | Types                                                                               | What it does                                                |
-| ----------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `label`                             | all                                                                                 | Label in the admin                                          |
-| `description`                       | all                                                                                 | Help text below the field in the admin                      |
-| `placeholder`                       | `text`, `textarea`, `number`, `date`                                                | Shown in the empty input                                    |
-| `required`                          | all but `join`                                                                      | The value MUST be present                                   |
-| `default`                           | all but `join`                                                                      | Value on `create` when the field is `undefined`             |
-| `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                  | String length, and a regular expression for the whole value |
-| `min`, `max`                        | `number`                                                                            | Number range                                                |
-| `fields`                            | `group`, `array`                                                                    | The fields of the group, or of each item                    |
-| `blocks`                            | `blocks`                                                                            | The item types, keyed by block name                         |
-| `minRows`, `maxRows`                | `array`, `blocks`                                                                   | Fewest and most items                                       |
-| `labels`                            | `array`, `blocks`                                                                   | `{ singular, plural }`, item labels in the admin            |
-| `validate`                          | all but `join`                                                                      | Your check, on the server                                   |
-| `condition`                         | all                                                                                 | The field applies only when this matches                    |
-| `unique`                            | top-level `text`, `textarea`, `number`, `date`, `select`, `slug`, single `relation` | No two documents MAY have the same value                    |
-| `private`                           | all                                                                                 | Keep values out of public HTTP reads                        |
-| `readOnly`                          | all but `join`                                                                      | The admin shows the input disabled                          |
-| `hooks`                             | all but `join`                                                                      | See [Hooks](#hooks)                                         |
+| Option                              | Types                                                                                           | What it does                                                |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `label`                             | all                                                                                             | Label in the admin                                          |
+| `description`                       | all                                                                                             | Help text below the field in the admin                      |
+| `placeholder`                       | `text`, `textarea`, `number`, `date`, `datetime`                                                | Shown in the empty input                                    |
+| `required`                          | all but `join`                                                                                  | The value MUST be present                                   |
+| `default`                           | all but `join`                                                                                  | Value on `create` when the field is `undefined`             |
+| `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                              | String length, and a regular expression for the whole value |
+| `min`, `max`                        | `number`                                                                                        | Number range                                                |
+| `fields`                            | `group`, `array`                                                                                | The fields of the group, or of each item                    |
+| `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name                         |
+| `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                       |
+| `labels`                            | `array`, `blocks`                                                                               | `{ singular, plural }`, item labels in the admin            |
+| `validate`                          | all but `join`                                                                                  | Your check, on the server                                   |
+| `condition`                         | all                                                                                             | The field applies only when this matches                    |
+| `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value                    |
+| `private`                           | all                                                                                             | Keep values out of public HTTP reads                        |
+| `readOnly`                          | all but `join`                                                                                  | The admin shows the input disabled                          |
+| `hooks`                             | all but `join`                                                                                  | See [Hooks](#hooks)                                         |
 
 The admin gets the schema as JSON, so functions never reach the browser:
 

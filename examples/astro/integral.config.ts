@@ -6,11 +6,13 @@ import { strings } from "integral-cms/presets";
 import { authors } from "./collections/authors";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
+import { kitchenSink } from "./globals/kitchen-sink";
 
 export default defineCms({
   localization: { locales: ["en", "de"], defaultLocale: "en", fallback: false },
   collections: { posts, authors, pages },
   globals: {
+    kitchenSink,
     footer: defineGlobal({
       label: "Footer",
       description: "Links and copyright line",

@@ -1,0 +1,188 @@
+---
+import { edit } from "integral-cms/preview";
+import Header from "../../components/Header.astro";
+
+export const prerender = false;
+
+// `/kitchensink` and `/de/kitchensink`. `locals.path` keeps an unknown prefix, so `/xx/kitchensink` is a 404.
+const { integral: cms, locale, path } = Astro.locals;
+if (path !== "/kitchensink") return new Response("Not found", { status: 404 });
+const sink = await cms.getGlobal("kitchenSink", { locale });
+const at = (field: string) => edit("kitchenSink", null, field);
+const list = (values?: readonly string[] | null) => (values?.length ? values.join(", ") : "–");
+const rows: [string, unknown][] = [
+  ["slug", sink.slug],
+  ["status", sink.status],
+  ["code", sink.code],
+  ["shortName", sink.shortName],
+  ["shared", sink.shared],
+  ["length", sink.length],
+  ["note", sink.note],
+  ["featured", sink.featured],
+  ["notify", sink.notify],
+  ["reason", sink.reason],
+  ["color", sink.color],
+  ["size", sink.size],
+  ["tags", list(sink.tags)],
+  ["channels", list(sink.channels)],
+  ["days", list(sink.days)],
+  ["quantity", sink.quantity],
+  ["price", sink.price],
+  ["rating", sink.rating],
+  ["volume", sink.volume],
+  ["starts", sink.starts],
+  ["ends", sink.ends],
+];
+---
+
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <title>{sink.headline ?? "Kitchen sink"}</title>
+    <style>
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        font-family: system-ui, sans-serif;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.25rem 1rem;
+      }
+      dt {
+        color: #666;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+      section {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-block: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main>
+      <h1 data-cms={at("headline")}>{sink.headline ?? "Kitchen sink"}</h1>
+      {sink.intro && (
+        <p style="white-space: pre-wrap" data-cms={at("intro")}>
+          {sink.intro}
+        </p>
+      )}
+
+      <h2>Scalars</h2>
+      <dl>
+        {rows.map(([name, value]) => (
+          <>
+            <dt>{name}</dt>
+            <dd data-cms={at(name)}>
+              {value === null || value === undefined ? "–" : String(value)}
+            </dd>
+          </>
+        ))}
+      </dl>
+
+      <h2>Media and relations</h2>
+      {sink.cover && (
+        <img
+          src={sink.cover.src}
+          srcset={sink.cover.srcset}
+          sizes="(min-width: 760px) 760px, 100vw"
+          width={sink.cover.width}
+          height={sink.cover.height}
+          alt={sink.cover.alt ?? ""}
+          data-cms={at("cover")}
+          data-cms-attr="src,srcset,alt"
+        />
+      )}
+      {sink.gallery && sink.gallery.length > 0 && (
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem">
+          {sink.gallery.map((image) => (
+            <img src={image.src} srcset={image.srcset} sizes="250px" alt={image.alt ?? ""} />
+          ))}
+        </div>
+      )}
+      {sink.attachment && (
+        <p>
+          <a href={sink.attachment.url}>{sink.attachment.filename}</a>
+        </p>
+      )}
+      <p>Author: {sink.author?.name ?? "–"}</p>
+      <p>Posts: {list(sink.posts?.map((post) => post.title))}</p>
+
+      <h2>Groups</h2>
+      <section>
+        <h3>Meta</h3>
+        <p data-cms={at("meta.title")}>{sink.meta?.title ?? "–"}</p>
+        <p data-cms={at("meta.description")}>{sink.meta?.description}</p>
+        <p>
+          Open Graph: {sink.meta?.ogTitle ?? "–"} ({sink.meta?.ogType ?? "–"})
+        </p>
+        {sink.meta?.ogImage && <img src={sink.meta.ogImage.src} alt="" width="240" />}
+      </section>
+      <section>
+        <h3>Address</h3>
+        <p>
+          {sink.address?.street} {sink.address?.zip}
+        </p>
+        <p>
+          {sink.address?.geo?.lat ?? "–"}, {sink.address?.geo?.lng ?? "–"}
+        </p>
+      </section>
+
+      <h2>Links</h2>
+      <ul>
+        {(sink.links ?? []).map((link, i) => (
+          <li>
+            <a
+              href={link.url}
+              target={link.newTab ? "_blank" : undefined}
+              rel={link.rel ?? undefined}
+              data-cms={at(`links.${i}.label`)}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <h2>Sections</h2>
+      {(sink.sections ?? []).map((section, i) =>
+        section.blockType === "hero" ? (
+          <section
+            style={`text-align: ${section.align ?? "left"}; ${section.dark ? "background: #222; color: #fff" : ""}`}
+          >
+            <h3 data-cms={at(`sections.${i}.title`)}>{section.title}</h3>
+            {section.image && (
+              <img src={section.image.src} srcset={section.image.srcset} sizes="760px" alt="" />
+            )}
+          </section>
+        ) : section.blockType === "quote" ? (
+          <section>
+            <blockquote data-cms={at(`sections.${i}.text`)}>{section.text}</blockquote>
+            <p>
+              {section.by}
+              {section.role && `, ${section.role}`}
+            </p>
+          </section>
+        ) : (
+          <section>
+            <a href={section.href} data-cms={at(`sections.${i}.label`)}>
+              {section.label}
+            </a>
+          </section>
+        ),
+      )}
+
+      <details>
+        <summary>Raw data</summary>
+        <pre>{JSON.stringify(sink, null, 2)}</pre>
+      </details>
+    </main>
+  </body>
+</html>
