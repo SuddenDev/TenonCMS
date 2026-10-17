@@ -69,7 +69,7 @@ it("renders built-ins, callbacks and custom mounts inline in the supplied order"
     "Edit",
     "Between",
     "Drafts",
-    "Dismiss admin bar",
+    "Dismiss bar",
   ]);
   [...root.querySelectorAll("button")].find((el) => el.textContent === "Before edit")!.click();
   expect(onClick).toHaveBeenCalledOnce();
@@ -97,7 +97,7 @@ it("keeps preview controls separate and restores item order when preview exits",
     { id: "dashboard", label: "Dashboard", href: "/admin", builtIn: true },
   ]);
   await nextTick();
-  expect(labels()).toEqual(["Edit", "Custom", "Example site", "Dismiss admin bar"]);
+  expect(labels()).toEqual(["Edit", "Custom", "Example site", "Dismiss bar"]);
 });
 
 const labelsInOrder = () =>
@@ -117,7 +117,7 @@ it("renders one flat row in the supplied order, in both modes", async () => {
     { id: "a", label: "A", href: "/a" },
   ]);
   await nextTick();
-  expect(labels()).toEqual(["B", "A", "Dismiss admin bar"]);
+  expect(labels()).toEqual(["B", "A", "Dismiss bar"]);
   expect(root.querySelectorAll("[aria-hidden='true'][class*='w-px']")).toHaveLength(1);
 });
 
@@ -134,7 +134,7 @@ it("renders the untouched built-ins as controls and a replacement by id as the h
     "Drafts",
     "Edit preview",
     "Edit preview",
-    "Dismiss admin bar",
+    "Dismiss bar",
   ]);
   expect(root.querySelector("[role=switch]")).not.toBeNull();
   app!.unmount();
@@ -222,7 +222,7 @@ describe("language", () => {
       ]),
     );
     await nextTick();
-    expect(labels()).toEqual(["Bearbeiten", "Entwürfe", "Custom", "Admin-Leiste ausblenden"]);
+    expect(labels()).toEqual(["Bearbeiten", "Entwürfe", "Custom", "Leiste ausblenden"]);
     expect(root.querySelector("[role=toolbar]")?.getAttribute("aria-label")).toBe("Admin-Leiste");
   });
 
@@ -239,7 +239,7 @@ describe("language", () => {
       ]),
     );
     await nextTick();
-    expect(labels()).toEqual(["Doku", "Menü", "Admin-Leiste ausblenden"]);
+    expect(labels()).toEqual(["Doku", "Menü", "Leiste ausblenden"]);
     root
       .querySelector<HTMLElement>("[aria-haspopup]")!
       .dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
@@ -258,7 +258,7 @@ describe("language", () => {
       mode: "preview-tab",
     });
     await nextTick();
-    expect(root.textContent).toContain("Zurück zum visuellen Editor");
+    expect(root.textContent).toContain("Zurück zum Editor");
     expect(root.textContent).toContain("Vorschau bearbeiten");
     expect(labels()).toContain("Vorschau beenden");
   });
