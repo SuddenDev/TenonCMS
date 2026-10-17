@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from "vue";
-import { DialogClose } from "reka-ui";
-import { cn } from "@/shared/utils";
-import { Button } from "@/shared/components/ui/button";
 import { useI18n } from "vue-i18n";
+import type { HTMLAttributes } from "vue";
+import { cn } from "@/shared/utils";
+import { DialogClose } from "reka-ui";
+import { Button } from "@/shared/components/ui/button";
 
 const props = withDefaults(
   defineProps<{
@@ -20,7 +20,12 @@ const { t } = useI18n();
 <template>
   <div
     data-slot="dialog-footer"
-    :class="cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', props.class)"
+    :class="
+      cn(
+        'bg-muted/50 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t p-4 sm:flex-row sm:justify-end',
+        props.class,
+      )
+    "
   >
     <slot />
     <DialogClose v-if="showCloseButton" as-child>

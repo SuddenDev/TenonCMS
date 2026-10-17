@@ -72,41 +72,46 @@ function startResize(e: PointerEvent) {
     class="border-border bg-background relative flex h-full shrink-0 flex-col border-r"
     :style="style"
   >
-    <button
+    <Button
       v-if="collapsed"
       type="button"
-      class="hover:bg-muted flex h-full flex-col items-center gap-3 py-3"
+      variant="ghost"
+      class="h-full flex-col justify-start rounded-none py-3"
       :title="t('pane.expand', { title })"
       @click="toggle"
     >
       <span class="text-sm font-medium [writing-mode:vertical-rl]">{{ title }}</span>
-    </button>
+    </Button>
     <template v-else>
       <slot name="header" :toggle="toggle">
         <header class="border-border flex h-12 shrink-0 items-center gap-1 border-b pr-2 pl-3">
-          <button
+          <Button
             v-if="back"
             type="button"
-            class="hover:bg-muted -ml-1 flex size-8 shrink-0 items-center justify-center rounded-md"
+            variant="ghost"
+            size="icon-sm"
+            class="-ml-1"
             :aria-label="t('common.back')"
             @click="back"
           >
             <Icon name="chevron-left" />
-          </button>
-          <h2 v-if="!collapsible" class="w-full min-w-0 truncate text-sm font-medium">
-            {{ title }}
-          </h2>
-          <div v-else class="w-full min-w-0">
-            <Button
-              variant="ghost"
-              :title="stacked ? undefined : t('pane.collapse', { title })"
-              class="-ml-2 min-w-0 flex-1 truncate text-left"
-              size="sm"
-              @click="toggle"
-            >
+          </Button>
+          <slot name="title">
+            <h2 v-if="!collapsible" class="w-full min-w-0 truncate text-sm font-medium">
               {{ title }}
-            </Button>
-          </div>
+            </h2>
+            <div v-else class="w-full min-w-0">
+              <Button
+                variant="ghost"
+                :title="stacked ? undefined : t('pane.collapse', { title })"
+                class="-ml-2 min-w-0 flex-1 truncate text-left"
+                size="sm"
+                @click="toggle"
+              >
+                {{ title }}
+              </Button>
+            </div>
+          </slot>
           <slot name="actions" />
         </header>
       </slot>

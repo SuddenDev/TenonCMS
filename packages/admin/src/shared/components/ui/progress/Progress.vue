@@ -2,8 +2,8 @@
 import type { ProgressRootProps } from "reka-ui";
 import type { HTMLAttributes } from "vue";
 import { reactiveOmit } from "@vueuse/core";
-import { ProgressIndicator, ProgressRoot } from "reka-ui";
 import { cn } from "@/shared/utils";
+import { ProgressIndicator, ProgressRoot } from "reka-ui";
 
 const props = withDefaults(defineProps<ProgressRootProps & { class?: HTMLAttributes["class"] }>(), {
   modelValue: 0,
@@ -18,7 +18,7 @@ const delegatedProps = reactiveOmit(props, "class");
     v-bind="delegatedProps"
     :class="
       cn(
-        'bg-muted relative flex h-1.5 w-full items-center overflow-x-hidden rounded-full',
+        'bg-muted relative flex h-1 w-full items-center overflow-x-hidden rounded-full',
         props.class,
       )
     "

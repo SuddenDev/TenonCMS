@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { PrimitiveProps } from "reka-ui";
 import type { HTMLAttributes } from "vue";
+import { Input } from "../ui/input";
 
 export interface PaneSearchProps extends PrimitiveProps {
   placeholder?: string;
@@ -37,12 +38,12 @@ const { forwardRef } = useForwardExpose();
     "
   >
     <Icon name="search" class="text-muted-foreground text-sm" />
-    <input
+    <Input
       v-model="query"
       type="text"
       :placeholder="placeholder ?? t('pane.search')"
       :aria-label="placeholder ?? t('pane.search')"
-      class="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
+      class="h-8 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 md:text-sm dark:bg-transparent"
       @keydown.esc="query = ''"
     />
     <Button

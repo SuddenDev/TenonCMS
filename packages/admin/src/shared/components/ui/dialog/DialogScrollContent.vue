@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import type { DialogContentEmits, DialogContentProps } from "reka-ui";
 
 import type { HTMLAttributes } from "vue";
 import Icon from "@/shared/components/Icon.vue";
-import { useI18n } from "vue-i18n";
 import { reactiveOmit } from "@vueuse/core";
+import { cn } from "@/shared/utils";
 import {
   DialogClose,
   DialogContent,
@@ -12,7 +13,6 @@ import {
   DialogPortal,
   useForwardPropsEmits,
 } from "reka-ui";
-import { cn } from "@/shared/utils";
 
 defineOptions({
   inheritAttrs: false,
@@ -58,7 +58,7 @@ const { t } = useI18n();
         <DialogClose
           class="hover:bg-secondary absolute top-4 right-4 rounded-md p-0.5 transition-colors"
         >
-          <Icon name="x" />
+          <Icon name="x" class="h-4 w-4" />
           <span class="sr-only">{{ t("common.close") }}</span>
         </DialogClose>
       </DialogContent>

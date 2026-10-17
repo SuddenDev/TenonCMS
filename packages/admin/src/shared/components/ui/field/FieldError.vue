@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue";
-import { computed } from "vue";
 import { cn } from "@/shared/utils";
+import { computed } from "vue";
 
 const props = defineProps<{
   class?: HTMLAttributes["class"];

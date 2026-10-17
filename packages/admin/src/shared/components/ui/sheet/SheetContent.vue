@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import type { DialogContentEmits, DialogContentProps } from "reka-ui";
 
 import type { HTMLAttributes } from "vue";
 import Icon from "@/shared/components/Icon.vue";
-import { useI18n } from "vue-i18n";
 import { reactiveOmit } from "@vueuse/core";
-import { DialogClose, DialogContent, DialogPortal, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/shared/utils";
+import { DialogClose, DialogContent, DialogPortal, useForwardPropsEmits } from "reka-ui";
 import { Button } from "@/shared/components/ui/button";
 import SheetOverlay from "./SheetOverlay.vue";
 
@@ -49,7 +49,7 @@ const { t } = useI18n();
       <slot />
 
       <DialogClose v-if="showCloseButton" data-slot="sheet-close" as-child>
-        <Button variant="ghost" class="absolute top-4 right-4" size="icon-sm">
+        <Button variant="ghost" class="absolute top-3 right-3" size="icon-sm">
           <Icon name="x" />
           <span class="sr-only">{{ t("common.close") }}</span>
         </Button>

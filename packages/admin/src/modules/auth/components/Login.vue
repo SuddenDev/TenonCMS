@@ -6,6 +6,7 @@ import { client } from "@/shared/api";
 import Themed from "@/shared/components/Themed.vue";
 import { Button } from "@/shared/components/ui/button";
 import { useBrand } from "@/shared/composables/useBrand";
+import { Input } from "@/shared/components/ui/input";
 
 const { name, logo, icon } = useBrand();
 const emit = defineEmits<{ done: [] }>();
@@ -48,18 +49,17 @@ async function submit() {
       </h1>
       <label v-if="signUp" class="flex flex-col gap-1 text-sm">
         {{ t("auth.name") }}
-        <input v-model="form.name" class="input" required autocomplete="name" />
+        <Input v-model="form.name" required autocomplete="name" />
       </label>
       <label class="flex flex-col gap-1 text-sm">
         {{ t("auth.email") }}
-        <input v-model="form.email" type="email" class="input" required autocomplete="email" />
+        <Input v-model="form.email" type="email" required autocomplete="email" />
       </label>
       <label class="flex flex-col gap-1 text-sm">
         {{ t("auth.password") }}
-        <input
+        <Input
           v-model="form.password"
           type="password"
-          class="input"
           required
           minlength="8"
           :autocomplete="signUp ? 'new-password' : 'current-password'"

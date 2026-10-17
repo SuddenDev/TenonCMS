@@ -1,8 +1,8 @@
 <script lang="ts" setup>
+import { useI18n } from "vue-i18n";
 import type { HTMLAttributes } from "vue";
 
 import Icon from "@/shared/components/Icon.vue";
-import { useI18n } from "vue-i18n";
 import { cn } from "@/shared/utils";
 
 const props = defineProps<{

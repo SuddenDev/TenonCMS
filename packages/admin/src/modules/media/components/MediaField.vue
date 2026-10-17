@@ -13,6 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
+import { Button } from "@/shared/components/ui/button";
+import Icon from "@/shared/components/Icon.vue";
 
 type MediaField = Extract<Field, { type: "image" | "file" }>;
 
@@ -77,58 +79,60 @@ async function upload(files: FileList | null) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2" :aria-invalid="invalid">
-    <ul v-if="ids.length" class="flex flex-col gap-2">
-      <li
-        v-for="(id, i) in ids"
-        :key="id"
-        class="border-border bg-card flex items-center gap-3 rounded-md border p-2"
-      >
+  <div class="flex flex-col gap-3" :aria-invalid="invalid">
+    <ul
+      v-if="ids.length"
+      class="border-border divide-border divide-y overflow-hidden rounded-md border"
+    >
+      <li v-for="(id, i) in ids" :key="id" class="flex items-center gap-3 p-3">
         <MediaThumb :doc="docs[id]" sizes="3rem" class="size-12" />
-        <RouterLink :to="`${CONTENT}/media-file/${id}`" class="flex-1 truncate text-sm underline">
+        <RouterLink
+          :to="`${CONTENT}/media-file/${id}`"
+          class="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
+        >
           {{ docs[id]?.filename ?? (docs[id] === null ? t("media.missingFile") : "…") }}
         </RouterLink>
         <template v-if="field.many">
-          <button
+          <Button
             type="button"
-            class="btn-ghost"
+            variant="ghost"
+            size="icon-sm"
             :disabled="i === 0"
             :aria-label="t('common.moveUp')"
             @click="move(i, -1)"
           >
-            ↑
-          </button>
-          <button
+            <Icon name="arrow-up" />
+          </Button>
+          <Button
             type="button"
-            class="btn-ghost"
+            variant="ghost"
+            size="icon-sm"
             :disabled="i === ids.length - 1"
             :aria-label="t('common.moveDown')"
             @click="move(i, 1)"
           >
-            ↓
-          </button>
+            <Icon name="arrow-down" />
+          </Button>
         </template>
-        <button
+        <Button
           type="button"
-          class="btn-ghost"
+          variant="ghost"
+          size="sm"
           :disabled="field.readOnly"
           @click="set(ids.filter((x) => x !== id))"
         >
           {{ t("common.remove") }}
-        </button>
+        </Button>
       </li>
     </ul>
-    <div class="flex gap-2">
-      <button
-        type="button"
-        class="btn-ghost border-input border"
-        :disabled="field.readOnly"
-        @click="choose"
-      >
+    <div class="flex flex-wrap gap-2">
+      <Button type="button" variant="outline" :disabled="field.readOnly" @click="choose">
         {{ t("media.choose") }}
-      </button>
-      <label
-        class="btn-ghost border-input cursor-pointer border"
+      </Button>
+      <Button
+        as="label"
+        variant="outline"
+        class="cursor-pointer"
         :class="field.readOnly && 'pointer-events-none opacity-50'"
       >
         {{ t("media.uploadNew") }}
@@ -144,7 +148,7 @@ async function upload(files: FileList | null) {
             ($event.target as HTMLInputElement).value = '';
           "
         />
-      </label>
+      </Button>
     </div>
     <span v-if="error" class="text-xs text-red-600" role="alert">{{ error }}</span>
 
@@ -155,9 +159,9 @@ async function upload(files: FileList | null) {
         </DialogHeader>
         <MediaLibrary v-model:folder="folder" v-model:selected="picked" :pick="field" />
         <DialogFooter>
-          <button type="button" class="btn" @click="confirm">
+          <Button type="button" @click="confirm">
             {{ t("media.select") }}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

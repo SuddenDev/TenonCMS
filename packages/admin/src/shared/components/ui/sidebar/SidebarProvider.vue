@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { HTMLAttributes, Ref } from "vue";
 import { defaultDocument, useEventListener, useMediaQuery, useVModel } from "@vueuse/core";
+import { cn } from "@/shared/utils";
 import { TooltipProvider } from "reka-ui";
 import { computed, ref } from "vue";
-import { cn } from "@/shared/utils";
 import {
   provideSidebarContext,
   SIDEBAR_COOKIE_MAX_AGE,
@@ -54,7 +54,7 @@ function toggleSidebar() {
 }
 
 useEventListener("keydown", (event: KeyboardEvent) => {
-  if (event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
+  if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
     event.preventDefault();
     toggleSidebar();
   }

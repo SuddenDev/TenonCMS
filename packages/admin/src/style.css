@@ -54,3 +54,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+@theme inline {
+  --font-heading: var(--font-sans);
+}

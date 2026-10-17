@@ -20,6 +20,7 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { useBreadcrumb } from "@/shared/composables/useBreadcrumbs";
+import { Button } from "@/shared/components/ui/button";
 
 type Reference = { collection: string; id: string } | { global: string };
 
@@ -112,7 +113,7 @@ const referenceLink = (r: Reference) =>
         />
         <video v-else-if="kind === 'video'" :src="doc.url" controls class="w-full rounded-lg" />
         <audio v-else-if="kind === 'audio'" :src="doc.url" controls class="w-full" />
-        <a v-else :href="doc.url" download class="btn inline-block">{{ t("media.download") }}</a>
+        <Button v-else as="a" :href="doc.url" download>{{ t("media.download") }}</Button>
       </div>
 
       <form class="flex w-full max-w-sm flex-col gap-4" @submit.prevent="save">
@@ -163,19 +164,19 @@ const referenceLink = (r: Reference) =>
           <dt class="text-muted-foreground">{{ t("media.url") }}</dt>
           <dd class="flex min-w-0 items-center gap-2">
             <a :href="doc.url" class="truncate underline" target="_blank">{{ doc.url }}</a>
-            <button type="button" class="btn-ghost shrink-0" @click="copy">
+            <Button type="button" variant="ghost" size="sm" class="shrink-0" @click="copy">
               {{ t(copied ? "common.copied" : "common.copy") }}
-            </button>
+            </Button>
           </dd>
         </dl>
 
         <div class="flex items-center gap-3">
-          <button class="btn" :disabled="busy">{{ t("common.save") }}</button>
+          <Button :disabled="busy">{{ t("common.save") }}</Button>
           <AlertDialog>
             <AlertDialogTrigger as-child>
-              <button type="button" class="btn-ghost text-red-600">
+              <Button type="button" variant="ghost" class="text-destructive">
                 {{ t("common.delete") }}
-              </button>
+              </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>

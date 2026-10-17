@@ -14,6 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/shared/components/ui/breadcrumb";
 import { Progress } from "@/shared/components/ui/progress";
+import { Button } from "@/shared/components/ui/button";
 
 // `pick`: picker mode for an image or file field. Files that do not fit it are disabled, and a click selects instead of opening.
 const props = defineProps<{ pick?: MediaRules & { many?: boolean } }>();
@@ -116,25 +117,29 @@ function cancel(u: Upload) {
 <template>
   <div class="flex gap-6" @dragover.prevent @drop.prevent="upload($event.dataTransfer?.files)">
     <nav class="flex w-44 shrink-0 flex-col gap-0.5 text-sm">
-      <button
+      <Button
         type="button"
-        class="hover:bg-muted flex items-center gap-2 rounded px-2 py-1 text-left"
-        :class="!folder && 'bg-muted font-medium'"
+        variant="ghost"
+        size="sm"
+        :data-active="!folder"
+        class="data-[active=true]:bg-muted justify-start font-normal data-[active=true]:font-medium"
         @click="folder = ''"
       >
         <Icon name="folder" /> {{ t("media.allFiles") }}
-      </button>
-      <button
+      </Button>
+      <Button
         v-for="f in tree"
         :key="f"
         type="button"
-        class="hover:bg-muted flex items-center gap-2 truncate rounded py-1 pr-2 text-left"
-        :class="f === folder && 'bg-muted font-medium'"
+        variant="ghost"
+        size="sm"
+        :data-active="f === folder"
+        class="data-[active=true]:bg-muted justify-start truncate font-normal data-[active=true]:font-medium"
         :style="{ paddingLeft: `${0.5 + f.split('/').length * 0.75}rem` }"
         @click="folder = f"
       >
         <Icon name="folder" /> {{ f.split("/").at(-1) }}
-      </button>
+      </Button>
     </nav>
 
     <div class="flex min-w-0 flex-1 flex-col gap-4">
@@ -159,10 +164,10 @@ function cancel(u: Upload) {
           </BreadcrumbList>
         </Breadcrumb>
         <slot name="actions" />
-        <button type="button" class="btn-ghost" @click="newFolder">
+        <Button type="button" variant="ghost" @click="newFolder">
           {{ t("media.newFolder") }}
-        </button>
-        <label class="btn cursor-pointer">
+        </Button>
+        <Button as="label" class="cursor-pointer">
           {{ t("media.upload") }}
           <input
             type="file"
@@ -173,7 +178,7 @@ function cancel(u: Upload) {
               ($event.target as HTMLInputElement).value = '';
             "
           />
-        </label>
+        </Button>
       </div>
 
       <ul v-if="uploads.length" class="flex flex-col gap-2">
@@ -181,18 +186,19 @@ function cancel(u: Upload) {
           <span class="w-48 truncate">{{ u.name }}</span>
           <span v-if="u.error" class="flex-1 text-red-600" role="alert">{{ u.error }}</span>
           <Progress v-else class="flex-1" :model-value="u.total ? (u.loaded / u.total) * 100 : 0" />
-          <button type="button" class="btn-ghost" @click="cancel(u)">
+          <Button type="button" variant="ghost" size="sm" @click="cancel(u)">
             {{ t(u.error ? "common.dismiss" : "common.cancel") }}
-          </button>
+          </Button>
         </li>
       </ul>
 
       <ul class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3">
         <li v-for="d in here" :key="d.id">
-          <button
+          <Button
             type="button"
-            class="border-border bg-card hover:border-input flex w-full flex-col gap-1 rounded-lg border p-2 text-left disabled:opacity-40"
-            :class="selected.includes(d.id) && 'ring-primary ring-2'"
+            variant="outline"
+            :data-selected="selected.includes(d.id)"
+            class="bg-card data-[selected=true]:ring-primary h-auto w-full flex-col items-stretch gap-1 rounded-lg p-2 text-left font-normal whitespace-normal disabled:opacity-40 data-[selected=true]:ring-2"
             :disabled="!allowed(d)"
             :aria-pressed="pick ? selected.includes(d.id) : undefined"
             @click="pick ? choose(d) : emit('open', d.id)"
@@ -200,7 +206,7 @@ function cancel(u: Upload) {
             <MediaThumb :doc="d" sizes="9rem" class="aspect-square w-full" />
             <span class="truncate text-xs">{{ d.filename }}</span>
             <span class="text-muted-foreground text-xs">{{ formatSize(d.size, locale) }}</span>
-          </button>
+          </Button>
         </li>
         <li v-if="!here.length" class="text-muted-foreground col-span-full text-sm">
           {{ t("media.empty") }}

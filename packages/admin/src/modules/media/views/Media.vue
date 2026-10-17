@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
+import { Button } from "@/shared/components/ui/button";
 
 const route = useRoute();
 const router = useRouter();
@@ -84,9 +85,9 @@ async function rename() {
     </p>
     <p v-else>
       {{ t("media.regenerated", { rendered: job.rendered, removed: job.removed }) }}
-      <button type="button" class="underline" @click="job = null">
+      <Button type="button" variant="link" size="xs" @click="job = null">
         {{ t("common.dismiss") }}
-      </button>
+      </Button>
     </p>
   </div>
   <MediaLibrary
@@ -97,9 +98,9 @@ async function rename() {
     <template #actions>
       <DropdownMenu v-if="schema.media?.regenerate">
         <DropdownMenuTrigger as-child>
-          <button type="button" class="btn-ghost" :disabled="!!job && job.done < job.total">
+          <Button type="button" variant="ghost" :disabled="!!job && job.done < job.total">
             {{ t("media.library") }}
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem @select="regenerate(false)">{{
@@ -110,7 +111,7 @@ async function rename() {
       </DropdownMenu>
       <DropdownMenu v-if="folder">
         <DropdownMenuTrigger as-child>
-          <button type="button" class="btn-ghost">{{ t("media.folder") }}</button>
+          <Button type="button" variant="ghost">{{ t("media.folder") }}</Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem @select="rename">{{ t("media.rename") }}</DropdownMenuItem>
