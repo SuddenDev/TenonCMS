@@ -43,6 +43,30 @@ it("propagates SMTP failures without retrying", async () => {
   expect(sendMail).toHaveBeenCalledOnce();
 });
 
+it("forwards native pooled SMTP options, TLS settings and explicit overrides", async () => {
+  const adapter = smtp({
+    host: "smtp.example.com",
+    port: 587,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 50,
+    connectionTimeout: 10_000,
+    tls: { servername: "smtp.example.com", minVersion: "TLSv1.2" },
+    requireTLS: false,
+  });
+  await adapter.send(message);
+  expect(createTransport).toHaveBeenCalledExactlyOnceWith({
+    host: "smtp.example.com",
+    port: 587,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 50,
+    connectionTimeout: 10_000,
+    tls: { servername: "smtp.example.com", minVersion: "TLSv1.2" },
+    requireTLS: false,
+  });
+});
+
 it("rejects a partially rejected recipient list", async () => {
   sendMail.mockResolvedValueOnce({ accepted: [message.to], rejected: ["other@example.com"] });
   await expect(

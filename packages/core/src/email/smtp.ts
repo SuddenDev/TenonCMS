@@ -1,8 +1,8 @@
-import { createTransport, type SMTPTransportOptions } from "nodemailer";
+import { createTransport, type SMTPPoolOptions } from "nodemailer";
 import type { EmailAdapter } from "./types.ts";
 
-/** SMTP delivery through Nodemailer's ESM build. Connections open only when sending. */
-export function smtp(options: SMTPTransportOptions): EmailAdapter {
+/** SMTP delivery with native Nodemailer options, including pooling. Connects only when sending. */
+export function smtp(options: SMTPPoolOptions): EmailAdapter {
   let transport: ReturnType<typeof createTransport> | undefined;
   return {
     async send(message) {

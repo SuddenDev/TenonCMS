@@ -17,6 +17,8 @@ Authentication assembly in `auth/config/build-options.ts` wires default callback
 
 The root imports no SMTP runtime. Nodemailer 10's ESM entry documents support for Workers with Node.js compatibility. Use implicit TLS on port 465 for Workers; port 25 is blocked. The CMS's overall Workers support remains a separate concern. SMTP pooling is intended for Node servers; Workers requests MUST NOT share open sockets.
 
+`smtp()` accepts Nodemailer's native `SMTPPoolOptions`, which extends its ordinary `SMTPTransportOptions`. TLS, authentication, timeouts and pool settings pass to `createTransport()` unchanged. Explicit options override the adapter's `requireTLS: true` default.
+
 Mail sends immediately. It is not queued, retried or rolled back with a content transaction. A hook can send before its surrounding write commits. Hosts that require reliable delivery after commit need an outbox or a separate delivery workflow.
 
 There is no browser email method or generic send endpoint. Framework routes can import the CMS and call `cms.email.send()`. Plugin routes use `c.var.cms.email.send()` and existing `client.request()`. Endpoint owners MUST validate input, choose recipients/templates on the server and enforce authorization and abuse protection.

@@ -129,6 +129,14 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
 
     signIn: (data: object) => user("/auth/sign-in/email", data),
 
+    requestPasswordReset: async (data: { email: string; redirectTo?: string }) => {
+      await request("POST", "/auth/request-password-reset", data);
+    },
+
+    resetPassword: async (data: { token: string; newPassword: string }) => {
+      await request("POST", "/auth/reset-password", data);
+    },
+
     signOut: async () => {
       await request("POST", "/auth/sign-out", {});
     },

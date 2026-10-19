@@ -1280,6 +1280,22 @@ export default defineCms({
 
 `smtp()` uses Nodemailer 10's ESM build and connects only when sending. For STARTTLS, use port 587 and `secure: false`; the adapter requires TLS by default. Nodemailer documents Workers support with Node.js compatibility. For Workers use port 465 with `secure: true` and leave pooling off; port 25 is blocked. This does not enable the CMS's other planned Workers features.
 
+Pass Nodemailer's native SMTP options directly to `smtp()`. This includes authentication, TLS, timeouts and connection pooling; the adapter forwards them to `nodemailer.createTransport()`. Your explicit options override the adapter's `requireTLS: true` default:
+
+```ts
+adapter: smtp({
+  host: process.env.SMTP_HOST,
+  port: 465,
+  secure: true,
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+  pool: true,
+  maxConnections: 3,
+  maxMessages: 50,
+  connectionTimeout: 10_000,
+  tls: { minVersion: "TLSv1.2" },
+}),
+```
+
 Any server code can send, including an Astro route or Nuxt server endpoint, without a plugin:
 
 ```ts

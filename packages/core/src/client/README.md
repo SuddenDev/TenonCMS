@@ -32,6 +32,8 @@
 
 Each client keeps its own closures, so two clients with different origins or `fetch` functions do not share state.
 
+`requestPasswordReset({ email, redirectTo })` asks Better Auth to send a reset link. Its response does not reveal whether an account exists. `resetPassword({ token, newPassword })` consumes that link's single-use token and does not sign in. Both methods use the existing auth endpoints; the host must configure email delivery or its own `sendResetPassword` callback.
+
 The draft methods (`createDraft()`, `updateDraft()`, `publish()`, `discard()`, `setGlobalDraft()`, `publishGlobal()`, `discardGlobal()`) call the draft routes. `discard()` returns `null` when it deleted a document that was never published. `preview.enter(perspective?)` and `preview.exit()` set and clear the preview cookie; with `drafts` (the default), reads of the signed-in user see drafts.
 
 A part upload retries a network error, a 5xx, a 408 and a 429 3 times with backoff. Any other 4xx is final.

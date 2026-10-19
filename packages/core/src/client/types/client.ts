@@ -318,6 +318,12 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   signIn(data: { email: string; password: string }): Promise<Session["user"]>;
 
+  /** Sends a password-reset link when the account exists. Needs configured email delivery. `redirectTo` is the trusted URL of the new-password form. */
+  requestPasswordReset(data: { email: string; redirectTo?: string }): Promise<void>;
+
+  /** Sets a new password using the single-use token from the email link. Does not sign in. */
+  resetPassword(data: { token: string; newPassword: string }): Promise<void>;
+
   /**
    * Signs out and clears the session cookie.
    * `POST /api/cms/auth/sign-out`

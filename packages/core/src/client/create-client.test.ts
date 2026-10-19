@@ -16,6 +16,21 @@ function recorder(body: unknown = {}) {
   return { fetch, calls, client: createClient({ fetch, baseUrl: "http://x" }) };
 }
 
+it("requests and completes a password reset through the auth endpoints", async () => {
+  const { client, calls } = recorder({ status: true });
+  const request = {
+    email: "admin@example.com",
+    redirectTo: "https://example.com/cms/reset-password",
+  };
+  const reset = { token: "reset-token", newPassword: "a-new-password" };
+  await expect(client.requestPasswordReset(request)).resolves.toBeUndefined();
+  await expect(client.resetPassword(reset)).resolves.toBeUndefined();
+  expect(calls()).toEqual([
+    ["POST", "http://x/api/cms/auth/request-password-reset", request],
+    ["POST", "http://x/api/cms/auth/reset-password", reset],
+  ]);
+});
+
 describe("locale on reads", () => {
   it("sends locale, fallback and alternates as query parameters", async () => {
     const { client, calls } = recorder([]);

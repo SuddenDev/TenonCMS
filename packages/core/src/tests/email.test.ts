@@ -127,6 +127,44 @@ describe("email", () => {
 });
 
 describe("auth email", () => {
+  it("returns to the configured admin path and consumes a reset token once", async () => {
+    const send = vi.fn(async (_message: { text?: string }) => {});
+    const { client, fetch } = setup(defineCms({ ...base, email: { from, adapter: { send } } }));
+    await client.signUp(admin);
+    await client.signOut();
+    await client.requestPasswordReset({
+      email: "missing@example.com",
+      redirectTo: `${origin}/cms/reset-password`,
+    });
+    expect(send).not.toHaveBeenCalled();
+    await client.requestPasswordReset({
+      email: admin.email,
+      redirectTo: `${origin}/cms/reset-password`,
+    });
+    const link = send.mock.calls[0][0].text!.match(/https?:\/\/\S+/)![0];
+    const response = await fetch(link);
+    expect(response.status).toBe(302);
+    const redirect = new URL(response.headers.get("location")!);
+    expect(redirect.origin + redirect.pathname).toBe(`${origin}/cms/reset-password`);
+    const token = redirect.searchParams.get("token")!;
+    expect(token).toBeTruthy();
+    await expect(client.resetPassword({ token, newPassword: "short" })).rejects.toMatchObject({
+      status: 400,
+    });
+    await client.resetPassword({ token, newPassword: "new-password123" });
+    await expect(
+      client.resetPassword({ token, newPassword: "another-password123" }),
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(client.signIn(admin)).rejects.toMatchObject({ status: 401 });
+    await client.signIn({ email: admin.email, password: "new-password123" });
+    expect(await client.getSession()).not.toBeNull();
+    const reused = await fetch(link);
+    const failed = new URL(reused.headers.get("location")!);
+    expect(failed.pathname).toBe("/cms/reset-password");
+    expect(failed.searchParams.get("error")).toBe("INVALID_TOKEN");
+    expect(failed.searchParams.has("token")).toBe(false);
+  });
+
   it("delivers a password reset through the adapter and accepts its token", async () => {
     const send = vi.fn(async (_message: { text?: string }) => {});
     const { cms, client } = setup(defineCms({ ...base, email: { from, adapter: { send } } }));
