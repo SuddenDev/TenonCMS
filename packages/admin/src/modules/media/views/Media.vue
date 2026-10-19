@@ -4,16 +4,26 @@ import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
-import { client, schema } from "@/shared/api";
+import { client, CmsError, schema } from "@/shared/api";
 import MediaLibrary from "@/modules/media/components/MediaLibrary.vue";
+import MediaRenameDialog from "../components/dialogs/MediaRenameDialog.vue";
+import MediaFile from "./MediaFile.vue";
+import { Sheet, SheetContent } from "@/shared/components/ui/sheet";
 import { Progress } from "@/shared/components/ui/progress";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { Button } from "@/shared/components/ui/button";
+import Icon from "@/shared/components/Icon.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,8 +32,21 @@ const folder = computed({
   set: (f: string) => void router.push(f ? `${CONTENT}/media/${f}` : `${CONTENT}/media`),
 });
 const library = ref<InstanceType<typeof MediaLibrary>>();
-const failed = ref<{ id: string; message: string }[]>([]);
+const file = computed(() => (typeof route.query.file === "string" ? route.query.file : ""));
+const detailOpen = computed({
+  get: () => !!file.value,
+  set: (open: boolean) => {
+    if (!open) {
+      const query = { ...route.query };
+      delete query.file;
+      void router.push({ path: route.path, query });
+    }
+  },
+});
 const error = ref("");
+const renameOpen = ref(false);
+const renameBusy = ref(false);
+const renameError = ref("");
 
 const { t } = useI18n();
 useHead({ title: () => t("nav.media") });
@@ -48,75 +71,109 @@ async function regenerate(force: boolean) {
   }
 }
 
-async function rename() {
-  const to = prompt(t("media.moveFolder"), folder.value)?.trim();
-  if (!to || to === folder.value) return;
-  error.value = "";
+function startRename() {
+  renameError.value = "";
+  renameOpen.value = true;
+}
+
+async function rename(to: string) {
+  if (renameBusy.value) return;
+  renameError.value = "";
+  renameBusy.value = true;
   try {
-    const result = await client.media.renameFolder(folder.value, to);
-    failed.value = result.failed;
-    if (!result.failed.length) folder.value = to.replace(/^\/+|\/+$/g, "");
-    else await library.value?.load();
+    const result = await library.value!.renameFolder(to);
+    if (result.failed.length)
+      renameError.value = `${t("media.notMoved")} ${result.failed.map((file) => `${file.id}: ${file.message}`).join("; ")}`;
+    else renameOpen.value = false;
   } catch (e) {
-    error.value = (e as Error).message;
+    renameError.value =
+      (e instanceof CmsError && e.body?.errors && Object.values(e.body.errors).join("; ")) ||
+      (e as Error).message;
+  } finally {
+    renameBusy.value = false;
   }
 }
 </script>
 
 <template>
-  <h1 class="mb-6 text-2xl font-semibold">{{ t("nav.media") }}</h1>
-  <div v-if="error || failed.length" class="mb-4 text-sm text-red-600" role="alert">
-    <p v-if="error">{{ error }}</p>
-    <template v-else>
-      <p>{{ t("media.notMoved") }}</p>
-      <ul class="list-disc pl-5">
-        <li v-for="f in failed" :key="f.id">
-          <RouterLink :to="`${CONTENT}/media-file/${f.id}`" class="underline">{{ f.id }}</RouterLink
-          >:
-          {{ f.message }}
-        </li>
-      </ul>
-    </template>
-  </div>
-  <div v-if="job" class="mb-4 text-sm" role="status">
-    <Progress :model-value="job.total ? (job.done / job.total) * 100 : 100" class="mb-1 h-1.5" />
-    <p v-if="job.done < job.total">
-      {{ t("media.regenerating", { done: job.done, total: job.total }) }}
-    </p>
-    <p v-else>
-      {{ t("media.regenerated", { rendered: job.rendered, removed: job.removed }) }}
-      <Button type="button" variant="link" size="xs" @click="job = null">
-        {{ t("common.dismiss") }}
-      </Button>
-    </p>
-  </div>
   <MediaLibrary
     ref="library"
+    class="h-full"
     v-model:folder="folder"
-    @open="(id) => router.push(`${CONTENT}/media-file/${id}`)"
+    @open="(id) => router.push({ path: route.path, query: { ...route.query, file: id } })"
   >
     <template #actions>
       <DropdownMenu v-if="schema.media?.regenerate">
         <DropdownMenuTrigger as-child>
-          <Button type="button" variant="ghost" :disabled="!!job && job.done < job.total">
-            {{ t("media.library") }}
+          <Button type="button" size="icon" variant="ghost" :aria-label="t('common.advanced')">
+            <Icon name="ellipsis" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem @select="regenerate(false)">{{
-            t("media.regenerate")
-          }}</DropdownMenuItem>
-          <DropdownMenuItem @select="regenerate(true)">{{ t("media.rerender") }}</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <DropdownMenu v-if="folder">
-        <DropdownMenuTrigger as-child>
-          <Button type="button" variant="ghost">{{ t("media.folder") }}</Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem @select="rename">{{ t("media.rename") }}</DropdownMenuItem>
+        <DropdownMenuContent align="end" class="min-w-48">
+          <template v-if="folder">
+            <DropdownMenuItem @select="startRename">{{ t("media.renameFolder") }}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </template>
+          <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>{{ t("common.advanced") }}</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent class="min-w-48">
+                  <DropdownMenuItem @select="regenerate(false)">{{
+                    t("media.regenerate")
+                  }}</DropdownMenuItem>
+                  <DropdownMenuItem @select="regenerate(true)">{{
+                    t("media.rerender")
+                  }}</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     </template>
+    <template #status>
+      <p v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</p>
+      <div v-if="job" class="text-sm" role="status">
+        <Progress
+          :model-value="job.total ? (job.done / job.total) * 100 : 100"
+          class="mb-1 h-1.5"
+        />
+        <p v-if="job.done < job.total">
+          {{ t("media.regenerating", { done: job.done, total: job.total }) }}
+        </p>
+        <p v-else>
+          {{ t("media.regenerated", { rendered: job.rendered, removed: job.removed }) }}
+          <Button type="button" variant="link" size="xs" @click="job = null">{{
+            t("common.dismiss")
+          }}</Button>
+        </p>
+      </div>
+    </template>
   </MediaLibrary>
+  <MediaRenameDialog
+    v-model:open="renameOpen"
+    :name="folder"
+    :label="t('media.folder')"
+    :error="renameError"
+    :busy="renameBusy"
+    @submit="rename"
+  />
+  <Sheet v-model:open="detailOpen">
+    <SheetContent
+      class="gap-0 overflow-hidden data-[side=right]:w-full data-[side=right]:sm:max-w-lg"
+      :aria-describedby="undefined"
+    >
+      <MediaFile
+        v-if="file"
+        :key="file"
+        :id="file"
+        @saved="library?.load()"
+        @deleted="
+          detailOpen = false;
+          library?.load();
+        "
+      />
+    </SheetContent>
+  </Sheet>
 </template>

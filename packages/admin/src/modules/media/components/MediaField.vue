@@ -3,14 +3,14 @@ import { CONTENT } from "@/shared/options";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { client, type Field, type MediaRead } from "@/shared/api";
-import { fits } from "@/modules/media/media";
+import { uploadFiles } from "../uploads";
 import MediaLibrary from "./MediaLibrary.vue";
 import MediaThumb from "./MediaThumb.vue";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
@@ -26,7 +26,7 @@ const docs = ref<Record<string, MediaRead | null>>({});
 const open = ref(false);
 const folder = ref(props.field.folder ?? "");
 const picked = ref<string[]>([]);
-const error = ref("");
+const fileInput = ref<HTMLInputElement>();
 
 watch(
   ids,
@@ -61,20 +61,10 @@ function confirm() {
 }
 
 async function upload(files: FileList | null) {
-  error.value = "";
-  for (const file of files ?? []) {
-    if (!fits(props.field, { mimeType: file.type, size: file.size })) {
-      error.value = t("media.notAllowedHere", { name: file.name });
-      continue;
-    }
-    try {
-      const doc = await client.media.upload(file, { folder: props.field.folder });
-      docs.value[doc.id] = doc;
-      set([...(props.field.many ? ids.value : []), doc.id]);
-    } catch (e) {
-      error.value = (e as Error).message;
-    }
-  }
+  const uploaded = await uploadFiles(files, { folder: props.field.folder, rules: props.field });
+  if (!uploaded.length) return;
+  for (const doc of uploaded) docs.value[doc.id] = doc;
+  set([...(props.field.many ? ids.value : []), ...uploaded.map((doc) => doc.id)]);
 }
 </script>
 
@@ -87,7 +77,10 @@ async function upload(files: FileList | null) {
       <li v-for="(id, i) in ids" :key="id" class="flex items-center gap-3 p-3">
         <MediaThumb :doc="docs[id]" sizes="3rem" class="size-12" />
         <RouterLink
-          :to="`${CONTENT}/media-file/${id}`"
+          :to="{
+            path: docs[id]?.folder ? `${CONTENT}/media/${docs[id].folder}` : `${CONTENT}/media`,
+            query: { file: id },
+          }"
           class="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
         >
           {{ docs[id]?.filename ?? (docs[id] === null ? t("media.missingFile") : "…") }}
@@ -130,35 +123,59 @@ async function upload(files: FileList | null) {
         {{ t("media.choose") }}
       </Button>
       <Button
-        as="label"
+        type="button"
         variant="outline"
-        class="cursor-pointer"
-        :class="field.readOnly && 'pointer-events-none opacity-50'"
+        :disabled="field.readOnly"
+        @click="fileInput?.click()"
       >
         {{ t("media.uploadNew") }}
-        <input
-          type="file"
-          class="hidden"
-          :multiple="field.many"
-          :accept="
-            (field.accept ?? (field.type === 'image' ? ['image/*'] : [])).join(',') || undefined
-          "
-          @change="
-            upload(($event.target as HTMLInputElement).files);
-            ($event.target as HTMLInputElement).value = '';
-          "
-        />
       </Button>
+      <input
+        ref="fileInput"
+        type="file"
+        class="hidden"
+        :multiple="field.many"
+        :accept="
+          (field.accept ?? (field.type === 'image' ? ['image/*'] : [])).join(',') || undefined
+        "
+        @change="
+          upload(($event.target as HTMLInputElement).files);
+          ($event.target as HTMLInputElement).value = '';
+        "
+      />
     </div>
-    <span v-if="error" class="text-xs text-red-600" role="alert">{{ error }}</span>
-
     <Dialog v-model:open="open">
-      <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle>{{ t(field.many ? "media.chooseFiles" : "media.chooseFile") }}</DialogTitle>
-        </DialogHeader>
-        <MediaLibrary v-model:folder="folder" v-model:selected="picked" :pick="field" />
-        <DialogFooter>
+      <DialogContent
+        class="flex h-[min(85svh,52rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
+        :aria-describedby="undefined"
+        :show-close-button="false"
+      >
+        <DialogTitle class="sr-only">{{
+          t(field.many ? "media.chooseFiles" : "media.chooseFile")
+        }}</DialogTitle>
+        <MediaLibrary
+          v-model:folder="folder"
+          v-model:selected="picked"
+          :pick="field"
+          class="min-h-0 flex-1"
+        >
+          <template #actions-end>
+            <DialogClose as-child>
+              <Button type="button" variant="ghost" size="icon" :aria-label="t('common.close')">
+                <Icon name="x" />
+              </Button>
+            </DialogClose>
+          </template>
+        </MediaLibrary>
+        <DialogFooter
+          class="border-border m-0 shrink-0 items-center rounded-b-xl border-t px-6 py-4 sm:flex-row"
+        >
+          <span class="text-muted-foreground mr-auto text-sm" role="status">{{
+            t("media.selectedCount", { count: picked.length })
+          }}</span>
+          <Button type="button" variant="outline" @click="open = false">{{
+            t("common.cancel")
+          }}</Button>
           <Button type="button" @click="confirm">
             {{ t("media.select") }}
           </Button>

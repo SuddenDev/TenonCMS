@@ -19,7 +19,6 @@ import DocEdit from "@/modules/documents/views/DocEdit.vue";
 import GlobalEdit from "@/modules/documents/views/GlobalEdit.vue";
 import Settings from "@/modules/settings/views/Settings.vue";
 import Media from "@/modules/media/views/Media.vue";
-import MediaFile from "@/modules/media/views/MediaFile.vue";
 import Preview from "@/modules/preview/views/Preview.vue";
 
 const { t } = i18n.global;
@@ -106,25 +105,32 @@ export function createAdminRouter(base: string) {
       children: [{ path: "globals/:name", component: GlobalEdit, meta: { panes: true } }],
     },
     {
-      path: `${CONTENT}/media/:folder(.*)?`,
+      path: `${CONTENT}/media`,
       component: Media,
       meta: {
+        pageHeader: false,
         breadcrumb: (r) =>
           String(r.params.folder || t("nav.media"))
             .split("/")
             .at(-1)!,
       },
+      children: [{ path: ":folder(.*)", component: empty }],
     },
     {
       path: `${CONTENT}/media-file/:id`,
-      component: MediaFile,
-      meta: { breadcrumb: () => t("nav.file"), parent: `${CONTENT}/media` },
+      redirect: (to) => ({
+        path: `${CONTENT}/media`,
+        query: { ...to.query, file: String(to.params.id) },
+      }),
     },
     // The media library is written only through the media API, so its generic views redirect.
     { path: `${CONTENT}/collections/media`, redirect: `${CONTENT}/media` },
     {
       path: `${CONTENT}/collections/media/:id`,
-      redirect: (to) => `${CONTENT}/media-file/${String(to.params.id)}`,
+      redirect: (to) => ({
+        path: `${CONTENT}/media`,
+        query: { ...to.query, file: String(to.params.id) },
+      }),
     },
     {
       path: `${CONTENT}/collections/:name`,

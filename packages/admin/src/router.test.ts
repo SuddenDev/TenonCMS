@@ -17,6 +17,16 @@ afterEach(() => {
   history.replaceState(null, "", "/");
 });
 
+it("keeps existing media detail links and query parameters working", async () => {
+  const router = createAdminRouter("/admin");
+  await router.push("/content/media-file/photo?locale=de");
+  expect(router.currentRoute.value.path).toBe("/content/media");
+  expect(router.currentRoute.value.query).toEqual({ file: "photo", locale: "de" });
+  await router.push("/content/collections/media/photo");
+  expect(router.currentRoute.value.path).toBe("/content/media");
+  expect(router.currentRoute.value.query.file).toBe("photo");
+});
+
 it("resolves an authenticated custom page when its URL is already open", async () => {
   const router = createAdminRouter("/admin");
   await router.push("/stats?range=week");
