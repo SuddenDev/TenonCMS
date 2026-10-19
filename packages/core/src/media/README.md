@@ -14,6 +14,12 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 
 `cms.media.update(id, { folder })` enters `operations/update/update.operation.ts`. `placeOf()` (`place.ts`) works out the new folder, filename and key. In one transaction `moveFile()` (`move-file.ts`) checks that the name is free, runs `beforeMove` and moves the file and its variants; then `update()` writes the document and runs `afterMove`. A failed transaction moves the file back with `moveBack()`. `renameFolder()` calls `update()` once per document and reports partial failures.
 
+## Follow a download
+
+`endpoints/download.endpoint.ts` → `operations/download-archive.operation.ts` → `storage.get()`
+
+`GET /api/cms/media/download?id=<id>&folder=<path>` requires a session. Repeated `id` and `folder` parameters select originals; a single file uses `serveFile()` with range support. Folder or mixed selections enter `downloadArchive()`, which resolves matching documents and streams a ZIP through `client-zip`, retaining folder names and nested paths. Variants and unfinished uploads are excluded. Sources open one at a time and close when the download is cancelled. Selected empty folders produce directory entries, since folders have no database records. An empty folder parameter is invalid.
+
 ## Files
 
 | Path                                              | Responsibility                                                                                                     |
@@ -37,17 +43,19 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 | `operations/update/move-file.ts`                  | Moves a file with its variants, and moves it back after a failure.                                                 |
 | `operations/rename-folder.operation.ts`           | Moves every file of a folder.                                                                                      |
 | `operations/folders.operation.ts`                 | Lists every folder.                                                                                                |
+| `operations/download-archive.operation.ts`        | Streams selected originals into a ZIP and cancels the active storage read.                                         |
 | `operations/delete.operation.ts`                  | Deletes the document, then the file and its variants.                                                              |
 | `operations/regenerate.operation.ts`              | Brings stored variants in line with the image options.                                                             |
 | `library/names.ts`                                | Filename and folder rules, storage keys, free names and MIME matching. Browser-safe.                               |
 | `library/names-in.ts`                             | Names used by documents and unfinished uploads.                                                                    |
+| `library/selection.ts`                            | Folder containment, recursive file selection and move destinations. Browser-safe.                                  |
 | `images/`                                         | Provider types, modifiers, variant selection, allowlist, `/img` path parsing and URL decoration.                   |
 | `images/ipx.ts`, `images/cloudflare.ts`           | Providers; `integral-cms/media/ipx` and `integral-cms/media/cloudflare`.                                           |
 | `variants/keys.ts`                                | Variant key layout and listing.                                                                                    |
 | `variants/render-variants.ts`                     | Renders and stores one or many variants.                                                                           |
 | `variants/move-variants.ts`, `delete-variants.ts` | Moves or deletes a file with its variants.                                                                         |
 | `variants/remove-orphans.ts`                      | Deletes variants of files that no longer exist.                                                                    |
-| `endpoints/routes.ts`                             | Mounts public reads and protected writes in order.                                                                 |
+| `endpoints/routes.ts`                             | Mounts public reads and protected downloads and writes in order.                                                   |
 | `endpoints/*.endpoint.ts`                         | One Hono sub-app per capability.                                                                                   |
 | `endpoints/serve-file.ts`                         | Document lookup by key, range responses and the sandbox headers of every served file.                              |
 | `endpoints/request-context.ts`                    | Body parsing and the user scope.                                                                                   |

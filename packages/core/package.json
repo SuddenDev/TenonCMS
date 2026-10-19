@@ -169,6 +169,7 @@
     "@tiptap/starter-kit": "^3.32.0",
     "@tiptap/static-renderer": "^3.32.0",
     "better-auth": "^1.7.5",
+    "client-zip": "^2.5.1",
     "consola": "^3.4.2",
     "hono": "^4.13.8",
     "image-size": "^2.0.4",

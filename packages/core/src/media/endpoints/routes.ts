@@ -9,8 +9,9 @@ import { uploadsEndpoints } from "./uploads.endpoint.ts";
 import { updateEndpoints } from "./update.endpoint.ts";
 import { regenerateEndpoints } from "./regenerate.endpoint.ts";
 import { deleteEndpoints } from "./delete.endpoint.ts";
+import { downloadEndpoint } from "./download.endpoint.ts";
 
-/** Public media reads and session-protected media writes, in registration order. `regenerate` tells `/schema` whether variants can be regenerated. */
+/** Public media reads and session-protected downloads and writes. `regenerate` tells `/schema` whether variants can be regenerated. */
 export function mediaRoutes(core: Core) {
   const reads = new Hono<Env>();
   reads.route("/", foldersReadEndpoints(core));
@@ -18,6 +19,7 @@ export function mediaRoutes(core: Core) {
   reads.route("/", imagesEndpoints(core));
 
   const writes = new Hono<Env>();
+  writes.route("/", downloadEndpoint(core));
   writes.route("/", uploadsEndpoints(core));
   writes.route("/", foldersWriteEndpoints(core));
   writes.route("/", updateEndpoints(core));
