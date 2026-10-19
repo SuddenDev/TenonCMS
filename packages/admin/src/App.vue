@@ -8,6 +8,7 @@ import { layouts } from "@/shared/layouts";
 import { useTheme } from "@/shared/composables/useTheme";
 import { useBrand } from "@/shared/composables/useBrand";
 import { optionsKey, sessionKey } from "@/shared/options";
+import { Toaster } from "@/shared/components/ui/sonner";
 
 const { user, loading, load, signOut, expire, error } = useSession();
 const route = useRoute();
@@ -52,4 +53,5 @@ useHead(() => ({
   <component :is="layout" v-else>
     <RouterView :key="viewKey" />
   </component>
+  <Toaster />
 </template>

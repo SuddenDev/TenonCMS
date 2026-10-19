@@ -28,6 +28,11 @@ const delegatedProps = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 const { t } = useI18n();
+
+function keepOpenForToast(event: Event) {
+  if (event.target instanceof Element && event.target.closest("[data-sonner-toaster]"))
+    event.preventDefault();
+}
 </script>
 
 <template>
@@ -36,6 +41,7 @@ const { t } = useI18n();
     <DialogContent
       data-slot="dialog-content"
       v-bind="{ ...$attrs, ...forwarded }"
+      @interact-outside="keepOpenForToast"
       :class="
         cn(
           'bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm',
