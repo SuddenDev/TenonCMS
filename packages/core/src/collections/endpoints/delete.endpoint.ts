@@ -9,7 +9,10 @@ export function deleteEndpoint(core: Core) {
 
   return new Hono<Env>().delete("/collections/:name/:id", async (c) => {
     const { name } = collectionOf(collections, c.req.param("name"));
-    await c.var.cms.delete(name, c.req.param("id"));
+    await c.var.cms.delete(name, c.req.param("id"), {
+      allowBrokenLinks: c.req.query("allowBrokenLinks") === "true",
+    });
+
     return c.body(null, 204);
   });
 }

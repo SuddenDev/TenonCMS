@@ -1,3 +1,4 @@
+import type { DeleteOptions } from "../../errors.ts";
 import type {
   AlternatesOf,
   Checked,
@@ -63,10 +64,11 @@ type LocaleOption<L extends string> = {
 };
 /** Options of `discard()`: one locale's draft, or with `all` every draft of the document, shared fields included. */
 type DiscardOptions<L extends string> =
-  | LocaleOption<L>
+  | (LocaleOption<L> & DeleteOptions)
   | {
       /** Drops the shared draft and the draft of every locale. A document or locale that was never published is deleted. Ignores `locale`. */
       all: true;
+      allowBrokenLinks?: boolean;
     };
 
 /**
@@ -178,7 +180,11 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
-  delete(collection: keyof Collections<T> & string, id: string): Promise<void>;
+  delete(
+    collection: keyof Collections<T> & string,
+    id: string,
+    options?: DeleteOptions,
+  ): Promise<void>;
 
   /** Returns a global. Fields that were never saved are missing. */
   getGlobal<

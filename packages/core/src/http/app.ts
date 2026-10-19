@@ -1,3 +1,5 @@
+import { richtextResolveEndpoint } from "../richtext/endpoints/resolve.endpoint.ts";
+import { richtextTargetsEndpoint } from "../richtext/endpoints/targets.endpoint.ts";
 import { adminBrand } from "../admin/merge/merge-options.ts";
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
@@ -56,6 +58,8 @@ export function createApp(core: Core, site?: string) {
   writes.route("/", exitEndpoint());
   if (core.admin.bar) writes.route("/", adminBarEndpoint(core, core.admin.bar));
   writes.route("/", loadEndpoint(core));
+  writes.route("/", richtextTargetsEndpoint(core));
+  writes.route("/", richtextResolveEndpoint(core));
   mountRoutes(writes, plugins, "routes");
   if (media) writes.route("/media", media.writes);
   writes.route("/", collections.writes);
@@ -64,13 +68,16 @@ export function createApp(core: Core, site?: string) {
   const api = new Hono<Env>().basePath(API_BASE);
   api.onError(handleError);
   api.notFound((c) => c.json({ message: "Not Found" }, 404));
+
   api.use(withCms(core), ...pluginMiddleware(plugins, "publicMiddleware"));
   api.use("/auth/*", sessionHint(core));
   api.route("/", providerEndpoint(core));
   api.route("/", reads);
+
   api.use("/admin/*", noStore);
   api.use("/admin-bar", noStore);
   api.use(csrf(), session(core), ...pluginMiddleware(plugins, "middleware"));
   api.route("/", writes);
+
   return api;
 }

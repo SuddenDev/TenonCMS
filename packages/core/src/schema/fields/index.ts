@@ -1,3 +1,4 @@
+import type { RichtextField } from "./richtext.ts";
 import type { ArrayField, ItemLabels } from "./array.ts";
 import type { BooleanField } from "./boolean.ts";
 import type { Block, BlocksField } from "./blocks.ts";
@@ -42,10 +43,12 @@ export type {
   SelectOption,
   SlugField,
   TextField,
+  RichtextField,
 };
 
 /** One field of a collection, a global or a group. `type` picks the kind of value. */
 export type Field =
+  | RichtextField
   | TextField
   | DateField
   | DateTimeField

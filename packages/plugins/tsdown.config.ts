@@ -25,6 +25,7 @@ export default defineConfig({
     "src/redirects/index.ts",
     "src/redirects/admin.ts",
     "src/example/index.ts",
+    "src/example/admin/richtext.ts",
     "src/example/admin/html/index.ts",
     "src/example/admin/html/bar.ts",
     "src/example/admin/vue/index.ts",

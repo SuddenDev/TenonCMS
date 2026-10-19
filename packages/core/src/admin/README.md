@@ -56,3 +56,7 @@ The endpoint checks the body and the session, then builds the caller's local API
 - Loader input comes from the browser. Core validates the shape (`load-request.ts`), looks the registration up with `Map`s, takes field definitions from the schema, and checks that a document ID belongs to the requested collection.
 - `/schema` never runs a loader. `/admin-brand` returns branding only. Load responses are `Cache-Control: no-store`.
 - The plugin name `admin` is reserved: `/api/cms/admin/load` belongs to this module.
+
+## Rich text extensions
+
+`admin.richtext.extensions` registers a server-safe Tiptap schema with a `clientRef()` browser implementation and optional toolbar controls. The merge retains server extensions separately from the JSON descriptor. See [rich text](../richtext/README.md) for the registration contract and field restrictions.

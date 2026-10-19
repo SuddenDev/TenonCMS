@@ -26,3 +26,7 @@ Vue and React are bundled into their admin chunks, so a host installs neither. P
 ## Styling
 
 Each folder styles the stats and quote pages differently. `admin/html` has a plain `example-plugin.css` under `.example-page`, shared by both pages, imported as `?inline` and injected once. `admin/vue` uses a scoped `<style>`. `admin/react` uses Tailwind utilities that the plugin build compiles (`tailwind.css`, utilities only, no base styles) with `prefix(ex)`, so its classes are `ex:flex` and its theme variables `--ex-*`. The admin's own Tailwind does not see plugin code. Plugin CSS applies to the whole admin page: without the prefix, the plugin's `.flex` would come after the admin's in the same `utilities` layer and beat the admin's `max-sm:hidden`.
+
+## Rich text
+
+`quotes.notes` is a Tiptap JSON field. `notice.ts` is its shared `exampleNotice` schema; `admin/richtext.ts` exports the browser extension and translated toolbar control. The plugin registers them with `admin.richtext.extensions` and a literal `clientRef("integral-cms/plugins/example/admin/richtext#notice")`. Use that feature name in a field’s `allowed` list.

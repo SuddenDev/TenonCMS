@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LinkedDeletionDialog from "@/shared/components/LinkedDeletionDialog.vue";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
@@ -172,6 +173,7 @@ providePanes(row);
     >
       {{ perspectiveError }}
     </p>
+    <LinkedDeletionDialog />
     <TooltipProvider :delay-duration="300">
       <div ref="row" class="flex min-h-0 flex-1 overflow-x-auto">
         <div v-if="route.meta.full" class="flex min-w-0 flex-1 flex-col">

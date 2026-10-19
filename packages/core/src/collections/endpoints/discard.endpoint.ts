@@ -11,8 +11,10 @@ export function discardEndpoint(core: Core) {
     const { name } = collectionOf(collections, c.req.param("name"));
     const doc = await c.var.cms.discard(name, c.req.param("id"), {
       locale: c.req.query("locale"),
+      allowBrokenLinks: c.req.query("allowBrokenLinks") === "true",
       all: c.req.query("all") === "true",
     });
+
     return doc ? c.json(doc) : c.body(null, 204);
   });
 }

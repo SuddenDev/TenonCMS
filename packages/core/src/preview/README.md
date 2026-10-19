@@ -41,13 +41,13 @@ chunk loads only then, so visitors download nothing extra. It mounts into an ope
 `<div data-cms-bar>` on `<html>`. The bar renders the context and calls its actions; the runtime owns all state and
 calls `update()` when the bound documents, the edit mode or an item's data change.
 
+The framework-specific `useDraft()` helpers live in [`integrations/vue/preview.ts`](../integrations/vue/preview.ts) and [`integrations/react/preview.ts`](../integrations/react/preview.ts). Their public imports remain `integral-cms/preview/vue` and `integral-cms/preview/react`.
+
 ## Files
 
 | Path                              | Responsibility                                                                                                                                                                                                                                                              |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `index.ts`                        | Browser-safe public exports.                                                                                                                                                                                                                                                |
-| `vue.ts`                          | `useDraft()` using a Vue shallow ref.                                                                                                                                                                                                                                       |
-| `react.ts`                        | `useDraft()` using React's external store.                                                                                                                                                                                                                                  |
 | `config/types.ts`                 | `Preview`, `Drafts`, `PreviewMessage`, `PreviewOptions` and `Unsubscribe`.                                                                                                                                                                                                  |
 | `config/admin-bar.ts`             | `ADMIN_BAR_POSITIONS` and `checkAdminBarPosition()`.                                                                                                                                                                                                                        |
 | `endpoints/`                      | `POST /preview` sets the preview cookie, `DELETE /preview` clears it.                                                                                                                                                                                                       |
@@ -65,7 +65,7 @@ calls `update()` when the bound documents, the edit mode or an item's data chang
 | `runtime/admin-bar-items.ts`      | `builtIns()` and `composeItems()`: built-in stubs and server-side composition.                                                                                                                                                                                              |
 | `runtime/site-api.ts`             | The site's calls and cookies: session hint, `loadAdminBar()`, `perspective()`, `setPerspective()`.                                                                                                                                                                          |
 
-`index.ts`, `vue.ts` and `react.ts` run in the browser and in server bundles. They MUST NOT import zod or core
+`index.ts` and the Vue/React helpers in `integrations/` run in the browser and in server bundles. They MUST NOT import zod or core
 runtime code. `runtime/` imports only types from `admin/index.d.ts` and loads the bar with a dynamic
 `import("integral-cms/admin/bar")`, which the host's bundler splits into its own chunk. Files in `templates/` MUST import
 only from each other.

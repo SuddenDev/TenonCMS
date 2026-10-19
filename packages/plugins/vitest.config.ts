@@ -7,6 +7,7 @@ const core = (path: string) => fileURLToPath(new URL(`../core/src/${path}`, impo
 export default defineConfig({
   resolve: {
     alias: [
+      { find: /^integral-cms\/richtext$/, replacement: core("richtext/index.ts") },
       { find: /^integral-cms$/, replacement: core("index.ts") },
       { find: /^integral-cms\/client$/, replacement: core("client/index.ts") },
       { find: /^integral-cms\/presets$/, replacement: core("presets/index.ts") },

@@ -22,3 +22,22 @@ export class ValidationError extends Error {
     super(Object.values(errors)[0] ?? "Invalid data");
   }
 }
+
+/** An embedded link affected by deletion. */
+export type LinkedReference = {
+  collection?: string;
+  id?: string;
+  global?: string;
+  field: string;
+  locale?: string;
+  draft?: boolean;
+};
+/** Explicit acknowledgement is required before breaking embedded links. */
+export class LinkedContentError extends Error {
+  readonly code = "LINKED_CONTENT";
+  constructor(public references: LinkedReference[]) {
+    super("Deleting this content will break links");
+  }
+}
+/** Options for operations that can delete a document. */
+export type DeleteOptions = { allowBrokenLinks?: boolean };

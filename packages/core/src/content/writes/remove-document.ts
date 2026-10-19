@@ -1,3 +1,5 @@
+import { breakRichtextLinks } from "../../richtext/integrity/break-links.ts";
+import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { col, target } from "../targets.ts";
 import { locOf } from "../reads/loc-of.ts";
@@ -16,7 +18,13 @@ import { DOCUMENT_LOCALES } from "../../db/queries/document-sql.ts";
 /**
  * `delete`: the hooks around the row delete, then `onDelete` for every reference.
  */
-export async function remove(core: Core, s: Inner, collection: string, id: string) {
+export async function remove(
+  core: Core,
+  s: Inner,
+  collection: string,
+  id: string,
+  options: DeleteOptions = {},
+) {
   const db = await q(core, s);
 
   // A delete removes the row whether it was published or not.
@@ -31,14 +39,18 @@ export async function remove(core: Core, s: Inner, collection: string, id: strin
 
   const base = hookArgs(s, col(collection), { id, doc });
   await runHooks(slot(core, col(collection), "beforeDelete"), "doc", doc, base);
+  await breakRichtextLinks(db, core, collection, id, options.allowBrokenLinks);
+
   await deleteDoc(db, collection, id);
   if (core.localization) await deleteLocales(db, DOCUMENT_LOCALES, id);
+
   await onDelete(db, core.schema, collection, id, {
     update: (collection, id, data, locale) =>
       update(core, locale ? { ...s, locale } : s, collection, id, data, { effect: true }),
     setGlobal: (name, data, locale) =>
       setGlobal(core, locale ? { ...s, locale } : s, name, data, { effect: true }),
-    delete: (collection, id) => s.cms.delete(collection, id),
+    delete: (collection, id) => s.cms.delete(collection, id, options),
   });
+
   await runHooks(slot(core, col(collection), "afterDelete"), "doc", doc, base);
 }

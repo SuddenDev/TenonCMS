@@ -1,3 +1,4 @@
+import type { DeleteOptions } from "../../errors.ts";
 import type { Fn, HookArgs, Slot } from "./index.ts";
 
 /** A document of the media library as stored. Reads add `url`, and for images `src` and `srcset`. */
@@ -61,7 +62,7 @@ export type MediaApi = {
     to: string,
   ): Promise<{ moved: number; failed: { id: string; message: string }[] }>;
   /** Deletes the document with the usual `onDelete` rules, then the file and its variants. */
-  delete(id: string): Promise<void>;
+  delete(id: string, options?: DeleteOptions): Promise<void>;
   /**
    * Brings stored variants in line with the current image options: deletes the ones the options no longer produce and, with
    * `prerender`, renders missing ones. `force` re-renders every variant (without `prerender`: deletes them all, so they

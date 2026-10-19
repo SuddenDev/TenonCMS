@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { withLinkedDeletion, DeletionCancelled } from "@/shared/linked-deletion";
+import PaneExpandButton from "@/shared/components/pane/PaneExpandButton.vue";
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, inject, provide, ref, watch } from "vue";
@@ -117,11 +119,14 @@ async function load() {
     doc.value = {};
     return;
   }
+
   const id = docId.value;
   const d = await client.findById(props.name, id, { populate: false, ...tr.read() });
   if (at !== loads) return;
+
   show(d);
   tr.refresh();
+
   if (joins.value.length) {
     const populate = Object.fromEntries(joins.value.map((j) => [j.key, true]));
     client.findById(props.name, id, { populate, ...tr.read() }).then((j) => {
@@ -140,6 +145,7 @@ watch(tr.active, () => {
 async function save(data: Data<Fields>) {
   if (isNew.value) {
     const created = await client.create(props.name, data, tr.write());
+
     reload();
     emit("saved");
     await router.replace(`${CONTENT}/collections/${props.name}/${created.id}`);
@@ -152,9 +158,11 @@ async function save(data: Data<Fields>) {
 
 async function saveDraft(data: Data<Fields>) {
   const first = isNew.value || (languages.value?.active ?? "") === "missing";
+
   if (isNew.value) {
     doc.value = await client.createDraft(props.name, data, tr.write());
     docId.value = doc.value.id as string;
+
     // The save MAY resolve after the user left, e.g. through the flush on blur or unmount. Then the route stays.
     const { params } = router.currentRoute.value;
     if (params.name === props.name && params.id === "new") {
@@ -162,6 +170,7 @@ async function saveDraft(data: Data<Fields>) {
       await router.replace(`${CONTENT}/collections/${props.name}/${docId.value}`);
     }
   } else doc.value = await client.updateDraft(props.name, docId.value, data, tr.write());
+
   // The first save of a language creates its row.
   if (first) tr.refresh();
   reload();
@@ -177,9 +186,13 @@ async function publish() {
 
 // A document that was never published is deleted.
 async function discard() {
-  const kept = await client.discard(props.name, docId.value, tr.write());
+  const kept = await withLinkedDeletion((options) =>
+    client.discard(props.name, docId.value, { ...tr.write(), ...options }),
+  );
+
   reload();
   emit("saved");
+
   if (kept) {
     show(kept);
     tr.refresh();
@@ -189,12 +202,15 @@ async function discard() {
 // A language action saves the pending edit first, so no autosave lands after it.
 async function translate(action: () => Promise<void>) {
   error.value = "";
+
   try {
     await flush();
     await action();
     reload();
     emit("saved");
   } catch (e) {
+    if (e instanceof DeletionCancelled) return;
+
     error.value = (e as Error).message;
   }
 }
@@ -221,13 +237,18 @@ const discardAll = () =>
 
 async function remove() {
   if (!confirm(t("documents.deleteConfirm"))) return;
+
   error.value = "";
+
   try {
-    await client.delete(props.name, docId.value);
+    await withLinkedDeletion((options) => client.delete(props.name, docId.value, options));
   } catch (e) {
+    if (e instanceof DeletionCancelled) return;
+
     error.value = (e as Error).message;
     return;
   }
+
   reload();
   emit("deleted");
 }
@@ -250,7 +271,7 @@ async function remove() {
         <StatusBadges v-if="doc && drafts" :doc="doc" :languages="languages" />
       </div>
     </template>
-    <template #actions>
+    <template #actions="{ expanded, toggleExpand }">
       <Button
         v-if="collection.preview && !previewing && !isNew"
         as-child
@@ -271,6 +292,7 @@ async function remove() {
         @remove="removeLocale"
         @discard-all="discardAll"
       />
+      <PaneExpandButton :expanded="expanded" @toggle="toggleExpand" />
       <slot name="actions" />
       <Button
         v-if="closable"
@@ -283,7 +305,9 @@ async function remove() {
       </Button>
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
-      <header class="mx-auto w-full max-w-2xl px-6 pt-10 pb-8 sm:px-8">
+      <header
+        class="mx-auto w-full max-w-2xl px-6 pt-10 pb-8 group-data-[expanded=true]/pane:max-w-none sm:px-8"
+      >
         <p class="text-muted-foreground text-xs">{{ text(collection.label) ?? name }}</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ title() }}</h1>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">

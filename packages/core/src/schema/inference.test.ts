@@ -1148,3 +1148,15 @@ describe("localization types", () => {
     expect(run).toBeTypeOf("function");
   });
 });
+
+it("infers rich text JSON and excludes it from filters", () => {
+  const fields = {
+    body: { type: "richtext", required: true },
+    title: { type: "text" },
+  } as const satisfies Fields;
+
+  expectTypeOf<Data<typeof fields>["body"]>().toEqualTypeOf<
+    import("../richtext/config/types.ts").RichtextDocument
+  >();
+  expectTypeOf<FilterKey<typeof fields>>().toEqualTypeOf<"title">();
+});

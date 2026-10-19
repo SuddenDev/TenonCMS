@@ -1,6 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import path from "path";
 
 // The example dev server serves the API. `pnpm dev:<example>` sets CMS_URL.
@@ -8,6 +8,7 @@ const target = process.env.CMS_URL ?? "http://localhost:4321";
 
 export default defineConfig(() => ({
   plugins: [vue(), tailwindcss()],
+  test: { css: { include: [/richtext\/style\.css/] } },
   // vue-i18n feature flags: Composition API only, no devtools in production.
   define: {
     __VUE_I18N_FULL_INSTALL__: false,

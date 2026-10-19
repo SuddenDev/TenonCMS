@@ -12,6 +12,6 @@ export const mediaApi = (core: Core, scope: Scope) =>
     upload: (data, info) => upload(core, scope, data, info),
     update: (id, data) => update(core, scope, id, data),
     renameFolder: (from, to) => renameFolder(core, scope, from, to),
-    delete: (id) => removeMedia(core, scope, id),
+    delete: (id, options) => removeMedia(core, scope, id, options),
     regenerate: (id, options) => regenerate(core, scope, id, options),
   }) satisfies MediaApi as MediaApi;

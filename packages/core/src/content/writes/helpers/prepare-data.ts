@@ -1,3 +1,4 @@
+import { prepareRichtext } from "../../../richtext/writes/prepare-richtext.ts";
 import type { Core } from "../../../cms/runtime/types.ts";
 import type { Name } from "../../../content/targets.ts";
 import type { Fields, Operation } from "../write-document.ts";
@@ -67,9 +68,14 @@ export async function prepareData(
   }
 
   await runFieldHooks("beforeChange", fields, valid, fieldArgs(valid));
-  return parseData(
+
+  const prepared = parseData(
     fields,
     await runHooks(slot(core, name, "beforeChange"), "data", valid, args),
     draft,
   );
+
+  prepareRichtext(core, fields, prepared, source, draft, args.originalDoc);
+
+  return prepared;
 }

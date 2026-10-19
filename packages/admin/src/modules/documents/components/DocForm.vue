@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DeletionCancelled } from "@/shared/linked-deletion";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { CmsError, type Data, type Field, type Fields, type Layout } from "@/shared/api";
@@ -104,9 +105,12 @@ async function attempt(action: () => Promise<void>) {
   error.value = "";
   errors.value = {};
   saved.value = false;
+
   try {
     await action();
   } catch (e) {
+    if (e instanceof DeletionCancelled) return;
+
     errors.value = (e instanceof CmsError && e.body?.errors) || {};
     const fieldErrors = Object.keys(errors.value).some((key) => key !== "");
     error.value =
@@ -127,6 +131,7 @@ const publish = () =>
   attempt(async () => {
     await autosave.flush();
     if (autosave.error.value) throw autosave.error.value;
+
     await props.publish!();
   });
 
@@ -139,6 +144,7 @@ async function discard() {
         : "documents.discardNew",
   );
   if (!confirm(message)) return;
+
   await attempt(async () => {
     await autosave.flush();
     await props.discard!();
@@ -153,7 +159,9 @@ async function discard() {
     @submit.prevent="drafts ? autosave.flush() : submit()"
     @focusout="drafts && autosave.flush()"
   >
-    <div class="mx-auto flex w-full max-w-2xl flex-col px-6 pb-12 sm:px-8">
+    <div
+      class="mx-auto flex w-full max-w-2xl flex-col px-6 pb-12 group-data-[expanded=true]/pane:max-w-none sm:px-8"
+    >
       <FieldLayout
         split
         :fields="fields"

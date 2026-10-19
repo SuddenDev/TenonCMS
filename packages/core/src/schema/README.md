@@ -60,3 +60,5 @@ It checks the `localization` config (not empty, no duplicates, `defaultLocale` i
 Defaults, slugs, custom validators and field hooks share one `eachField()`. Reference checks and population share `isRef()`, `targetOf()` and `relationPaths()`; reference checks and `onDelete` effects use `holdersAt()`. Selection and response filtering share `innerFields()`, `itemFields()` and `mapValue()`.
 
 Browser code MUST import field and schema contracts with `import type`, so zod stays on the server. `condition.ts` MUST stay import-free. The `inference/` types run nothing; after a change there, check both `pnpm typecheck` and the tsdown d.ts build, because the read types sit close to TS2589 and to tsdown's memory limit.
+
+`fields/richtext.ts` declares the standard Tiptap JSON field. The [richtext module](../richtext/README.md) owns its shared schema, feature policy, embedded relations and read decoration.

@@ -1,3 +1,4 @@
+import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Scope } from "../../cms/runtime/types.ts";
 import { type Name } from "../targets.ts";
 import { run } from "../lifecycle/run-operation.ts";
@@ -17,28 +18,42 @@ import { discardLocalized } from "./discard-locale.ts";
  * A localized entry drops the draft of the scope's locale, or with `all` every draft. See `discardLocalized()`.
  * @returns The published document after discarding the draft, or `undefined` if it was deleted or missing.
  */
-export const discard = (core: Core, scope: Scope, name: Name, id?: string, all = false) => {
+export const discard = (
+  core: Core,
+  scope: Scope,
+  name: Name,
+  id?: string,
+  all = false,
+  options: DeleteOptions = {},
+) => {
   const loc = locOf(core, { ...scope, fallback: false }, target(core, name));
 
   if (name.kind === "global")
     return run(core, scope, "setGlobal", name, { global: name.name }, async (s) => {
-      if (loc) return discardLocalized(core, s, name, name.name, loc, all);
+      if (loc) return discardLocalized(core, s, name, name.name, loc, all, options);
+
       const db = await q(core, s);
       await discardGlobalDraft(db, name.name);
+
       const doc = (await loadGlobal(db, name.name)) ?? { publishedAt: null, hasDraft: false };
+
       return (await afterRead(core, s, name, [doc], "setGlobal"))[0];
     });
 
   return run(core, scope, "update", name, { collection: name.name, id }, async (s, args) => {
-    if (loc) return discardLocalized(core, s, name, args.id, loc, all);
+    if (loc) return discardLocalized(core, s, name, args.id, loc, all, options);
+
     const db = await q(core, s);
     const doc = await loadDoc(db, name.name, args.id, true);
     if (!doc) return undefined;
+
     if (doc.publishedAt === null) {
-      await remove(core, s, name.name, args.id);
+      await remove(core, s, name.name, args.id, options);
       return undefined;
     }
+
     const stored = await discardDraft(db, name.name, args.id);
+
     return (await afterRead(core, s, name, [stored], "update"))[0];
   });
 };

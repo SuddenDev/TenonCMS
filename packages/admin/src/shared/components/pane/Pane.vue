@@ -34,7 +34,7 @@ const props = withDefaults(defineProps<PaneProps>(), {
 });
 const { t } = useI18n();
 const { forwardRef, currentElement } = useForwardExpose();
-const { collapsed, hidden, stacked, toggle, back, width, resize } = usePane(
+const { expanded, toggleExpand, collapsed, hidden, stacked, toggle, back, width, resize } = usePane(
   currentElement,
   props.min,
   props.max,
@@ -43,7 +43,7 @@ const { collapsed, hidden, stacked, toggle, back, width, resize } = usePane(
 );
 
 const style = computed(() =>
-  stacked.value
+  stacked.value || expanded.value
     ? { flex: "1 1 0", minWidth: 0 }
     : collapsed.value
       ? { width: `${COLLAPSED}px`, flex: "none" }
@@ -57,6 +57,7 @@ function startResize(e: PointerEvent) {
   const from = width.value;
   const sign = props.handle === "left" ? -1 : 1;
   const move = (ev: PointerEvent) => resize(from + sign * (ev.clientX - e.clientX));
+
   handle.setPointerCapture(e.pointerId);
   handle.addEventListener("pointermove", move);
   handle.addEventListener("pointerup", () => handle.removeEventListener("pointermove", move), {
@@ -68,8 +69,9 @@ function startResize(e: PointerEvent) {
 <template>
   <section
     v-show="!hidden"
+    :data-expanded="expanded"
     :ref="forwardRef"
-    class="border-border bg-background relative flex h-full shrink-0 flex-col border-r"
+    class="group/pane border-border bg-background relative flex h-full shrink-0 flex-col border-r"
     :style="style"
   >
     <Button
@@ -112,16 +114,20 @@ function startResize(e: PointerEvent) {
               </Button>
             </div>
           </slot>
-          <slot name="actions" />
+          <slot name="actions" :expanded="expanded" :toggle-expand="toggleExpand" />
         </header>
       </slot>
       <ScrollArea
         class="min-h-0 flex-1 [&>[data-reka-scroll-area-viewport]>div]:block [&>[data-reka-scroll-area-viewport]>div]:h-full"
+        :class="{
+          '[&>[data-reka-scroll-area-viewport]>div]:mx-auto [&>[data-reka-scroll-area-viewport]>div]:max-w-[80vw]':
+            expanded,
+        }"
       >
         <slot />
       </ScrollArea>
       <div
-        v-if="!grow && !stacked"
+        v-if="!grow && !stacked && !expanded"
         :data-handle="handle"
         class="hover:bg-ring/10 absolute inset-y-0 z-20 w-2 cursor-col-resize touch-none transition-colors data-[handle=left]:-left-1 data-[handle=right]:-right-1"
         role="separator"

@@ -12,6 +12,7 @@
 }
 
 @import "tailwindcss";
+@import "./modules/documents/components/fields/richtext/style.css";
 /* The admin bar builds its own CSS. */
 @source not "./admin-bar";
 @import "tw-animate-css";

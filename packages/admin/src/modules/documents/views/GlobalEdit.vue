@@ -66,6 +66,7 @@ async function load() {
   const at = ++loads;
   const d = await client.getGlobal(name, { populate: false, ...tr.read() });
   if (at !== loads) return;
+
   doc.value = data.value = d;
   tr.refresh();
 }
@@ -90,6 +91,7 @@ const discard = async () => {
 async function saveDraft(body: Data<Fields>) {
   // The first save of a language creates its row.
   const first = languages.value?.active === "missing";
+
   doc.value = await client.setGlobalDraft(name, body, tr.write());
   if (first) tr.refresh();
   emit("saved");
@@ -98,6 +100,7 @@ async function saveDraft(body: Data<Fields>) {
 // A language action saves the pending edit first, so no autosave lands after it.
 async function translate(action: () => Promise<void>) {
   error.value = "";
+
   try {
     await flush();
     await action();
@@ -169,7 +172,9 @@ const discardAll = () =>
       <slot name="actions" />
     </template>
     <div v-if="doc" class="flex min-h-full flex-col">
-      <header class="mx-auto w-full max-w-2xl px-6 pt-10 pb-8 sm:px-8">
+      <header
+        class="mx-auto w-full max-w-2xl px-6 pt-10 pb-8 group-data-[expanded=true]/pane:max-w-none sm:px-8"
+      >
         <p class="text-muted-foreground text-xs">{{ t("documents.global") }}</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ text(global.label) ?? name }}</h1>
         <p v-if="error" class="text-destructive mt-2 text-sm" role="alert">{{ error }}</p>

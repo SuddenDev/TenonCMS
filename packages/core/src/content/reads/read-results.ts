@@ -1,3 +1,4 @@
+import { resolveRichtext } from "../../richtext/reads/resolve-richtext.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { col, type Name, isMedia, target } from "../targets.ts";
 import { q } from "../../cms/runtime/transaction.ts";
@@ -34,6 +35,7 @@ export async function readDocs(
   const before = await beforeRead(core, s, name, docs, operation);
 
   await populate(await q(core, s), collections, fields, before, plan, {
+    richtext: (values) => resolveRichtext(core, s, values),
     drafts: s.perspective === "drafts",
     loc: (collection) => locOf(core, s, collections[collection]),
     // Populated documents run their own collection's read hooks, in the scope of the outer read.

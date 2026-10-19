@@ -1,3 +1,6 @@
+import type { RichtextRegistration } from "../../richtext/config/types.ts";
+import { RICHTEXT_FEATURES, richtextSchema } from "../../richtext/runtime/extensions.ts";
+import { requireRef } from "../describe/registration-checks.ts";
 import type {
   AdminDescriptor,
   AdminOptions,
@@ -17,6 +20,7 @@ import { copyConfig, type Loader } from "../describe/registration-checks.ts";
  */
 export type AdminRuntime = {
   descriptor: AdminDescriptor;
+  richtext: Record<string, RichtextRegistration>;
   fieldLoaders: Map<string, Loader<FieldLoadContext>>;
   pageLoaders: Map<string, Loader<PageLoadContext>>;
   /** `false` without a bar. */
@@ -36,21 +40,46 @@ export function mergeAdmin(plugins: readonly Plugin[], host: AdminOptions = {}):
   const descriptor: AdminDescriptor = { fields: {}, pages: {} };
   const fieldLoaders = new Map<string, Loader<FieldLoadContext>>();
   const pageLoaders = new Map<string, Loader<PageLoadContext>>();
+  const richtext: Record<string, RichtextRegistration> = Object.create(null);
   const barItems = new Map<string, DescribedItem>();
 
   const sources: Source[] = [
     ...plugins.map((p): Source => [`plugin "${p.name}"`, p.admin]),
     [HOST, host],
   ];
+
   for (const [source, admin] of sources) {
     if (!admin) continue;
+
     addBranding(descriptor, admin, source);
+
+    for (const [name, registration] of Object.entries(admin.richtext?.extensions ?? {})) {
+      if (Object.hasOwn(richtext, name) || (RICHTEXT_FEATURES as readonly string[]).includes(name))
+        throw new Error(`integral-cms: duplicate rich text feature "${name}"`);
+
+      requireRef(registration.client, `admin.richtext.extensions.${name}.client`, source);
+      if (!registration.schema)
+        throw new Error(`integral-cms: rich text feature "${name}" needs a schema`);
+
+      richtext[name] = registration;
+      descriptor.richtext ??= { extensions: {} };
+      descriptor.richtext.extensions[name] = { client: registration.client };
+    }
+
     addEntries("fields", descriptor.fields, fieldLoaders, admin.fields, describeField, source);
     addEntries("pages", descriptor.pages, pageLoaders, admin.pages, describePage, source);
     addBarItems(barItems, admin.adminBar, source, source === HOST);
   }
 
-  return { descriptor, fieldLoaders, pageLoaders, bar: buildBar(host.adminBar, barItems) };
+  if (Object.keys(richtext).length) richtextSchema(undefined, richtext);
+
+  return {
+    descriptor,
+    richtext,
+    fieldLoaders,
+    pageLoaders,
+    bar: buildBar(host.adminBar, barItems),
+  };
 }
 
 /** Only branding needed before sign-in is public. */
@@ -76,6 +105,7 @@ function addEntries<D, C>(
   for (const [key, value] of Object.entries(registrations ?? {})) {
     if (Object.hasOwn(descriptors, key))
       throw new Error(`integral-cms: duplicate admin ${kind} key "${key}" in ${source}`);
+
     const { descriptor, loader } = describe(key, value, source);
     descriptors[key] = descriptor;
     if (loader) loaders.set(key, { source, load: loader as never });

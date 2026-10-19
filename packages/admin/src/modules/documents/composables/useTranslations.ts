@@ -1,3 +1,4 @@
+import { withLinkedDeletion } from "@/shared/linked-deletion";
 import { computed, ref } from "vue";
 import { client } from "@/shared/api";
 import { useLocale } from "@/shared/composables/useLocale";
@@ -41,6 +42,7 @@ export function useTranslations(
       reads.value = {};
       return;
     }
+
     const docs = await Promise.all(
       locales.value.map((l) =>
         ("global" in t
@@ -49,6 +51,7 @@ export function useTranslations(
         ).catch(() => undefined),
       ),
     );
+
     loaded.value = true;
     existing.value = docs.find((d) => Array.isArray(d?.locales))?.locales ?? null;
     reads.value = Object.fromEntries(locales.value.map((l, i) => [l, docs[i] as Doc | undefined]));
@@ -56,7 +59,9 @@ export function useTranslations(
 
   function row(l: string): LocaleRow {
     if (existing.value && !existing.value.includes(l)) return undefined;
+
     const d = l === active.value ? doc() : reads.value[l];
+
     return d
       ? { publishedAt: (d.publishedAt as string | null) ?? null, hasDraft: !!d.hasDraft }
       : undefined;
@@ -95,7 +100,9 @@ export function useTranslations(
     const t = target()!;
     return "global" in t
       ? client.discardGlobal(t.global, { all: true })
-      : client.discard(t.collection, t.id, { all: true });
+      : withLinkedDeletion((options) =>
+          client.discard(t.collection, t.id, { all: true, ...options }),
+        );
   };
 
   return {

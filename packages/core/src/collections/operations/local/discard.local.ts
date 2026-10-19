@@ -11,5 +11,6 @@ export const discardLocal =
     const { all = false } = options;
     writable(core, collection);
     draftable(core, col(collection));
-    return discard(core, withLocale(core, scope, options), collection, id, all);
+
+    return discard(core, withLocale(core, scope, options), collection, id, all, options);
   };

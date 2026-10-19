@@ -1,3 +1,4 @@
+import type { RichtextDocument } from "../../richtext/config/types.ts";
 import { type Database } from "../../db/types.ts";
 import { toDoc } from "../../db/map-document.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
@@ -23,6 +24,7 @@ type Collections = Record<string, Collection>;
 
 /** Read hooks of the target collection. They get the loaded documents per field per hop, and MAY replace them. */
 export type ReadHooks = {
+  richtext?(values: RichtextDocument[]): Promise<void>;
   /** Loads targets in the drafts perspective. */
   drafts: boolean;
   /** How a localized target collection reads, in the locale of the outer read. */
@@ -72,6 +74,8 @@ export async function populate(
           const own = items.filter((item) => item.blockType === name);
           await populate(db, collections, group.fields, own, step(child, name, group).child, read);
         }
+    } else if (field.type === "richtext") {
+      await read.richtext?.(docs.map((d) => d[key]).filter(Boolean));
     } else if (isRef(field)) {
       await resolveRef(ctx, docs, key, field);
     } else if (field.type === "join") {
@@ -98,6 +102,7 @@ async function resolveRef(ctx: Hop, docs: Docs, key: string, field: RefField) {
 
   for (const d of docs) {
     if (d[key] == null) continue;
+
     d[key] = field.many ? d[key].map(value).filter(Boolean) : (value(d[key]) ?? null);
   }
 }

@@ -51,12 +51,12 @@
       "default": "./dist/preview/index.mjs"
     },
     "./preview/vue": {
-      "types": "./dist/preview/vue.d.mts",
-      "default": "./dist/preview/vue.mjs"
+      "types": "./dist/integrations/vue/preview.d.mts",
+      "default": "./dist/integrations/vue/preview.mjs"
     },
     "./preview/react": {
-      "types": "./dist/preview/react.d.mts",
-      "default": "./dist/preview/react.mjs"
+      "types": "./dist/integrations/react/preview.d.mts",
+      "default": "./dist/integrations/react/preview.mjs"
     },
     "./vite": {
       "types": "./dist/integrations/vite/index.d.mts",
@@ -128,6 +128,23 @@
     "./admin/mount": {
       "types": "./dist/admin/mount.d.ts",
       "default": "./dist/admin/mount.js"
+    },
+    "./richtext": {
+      "types": "./dist/richtext/index.d.mts",
+      "default": "./dist/richtext/index.mjs"
+    },
+    "./richtext/astro": "./dist/integrations/astro/Richtext.astro",
+    "./richtext/vue": {
+      "types": "./dist/integrations/vue/richtext.d.mts",
+      "default": "./dist/integrations/vue/richtext.mjs"
+    },
+    "./richtext/react": {
+      "types": "./dist/integrations/react/richtext.d.mts",
+      "default": "./dist/integrations/react/richtext.mjs"
+    },
+    "./plugins/example/admin/richtext": {
+      "types": "./dist/plugins/example/admin/richtext.d.mts",
+      "default": "./dist/plugins/example/admin/richtext.mjs"
     }
   },
   "scripts": {
@@ -139,6 +156,18 @@
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
+    "@tiptap/core": "^3.32.0",
+    "@tiptap/extension-highlight": "^3.32.0",
+    "@tiptap/extension-image": "^3.32.0",
+    "@tiptap/extension-list": "^3.32.0",
+    "@tiptap/extension-subscript": "^3.32.0",
+    "@tiptap/extension-superscript": "^3.32.0",
+    "@tiptap/extension-table": "^3.32.0",
+    "@tiptap/extension-text-align": "^3.32.0",
+    "@tiptap/extension-text-style": "^3.32.0",
+    "@tiptap/pm": "^3.32.0",
+    "@tiptap/starter-kit": "^3.32.0",
+    "@tiptap/static-renderer": "^3.32.0",
     "better-auth": "^1.7.5",
     "consola": "^3.4.2",
     "hono": "^4.13.8",

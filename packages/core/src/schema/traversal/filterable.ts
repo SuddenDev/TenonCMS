@@ -6,8 +6,11 @@ import { type Fields } from "../index.ts";
  */
 export function filterable(fields: Fields, key: string) {
   if (!Object.hasOwn(fields, key)) return false;
+
   const field = fields[key];
+
   return (
+    field.type !== "richtext" &&
     field.type !== "group" &&
     field.type !== "array" &&
     field.type !== "blocks" &&

@@ -38,7 +38,10 @@ export function nameOf(node: AstNode): string {
 /** Calls `visit` for every child node and every node in a child list. */
 export function eachChild(node: AstNode, visit: (child: AstNode) => void) {
   for (const value of Object.values(node))
-    if (Array.isArray(value)) value.forEach((child) => visit(child));
+    if (Array.isArray(value))
+      value.forEach((child) => {
+        if (child && typeof child === "object") visit(child);
+      });
     else if (value && typeof value === "object") visit(value);
 }
 
@@ -56,6 +59,7 @@ export async function parseModule(file: string): Promise<Program> {
     isScript(file) || vue
       ? (await transformWithOxc(source, vue ? file + ".ts" : file)).code
       : source;
+
   return parseAst(code);
 }
 
@@ -71,18 +75,22 @@ export function describeModule(ast: Program): ModuleInfo {
     stars: [],
     declarations: new Map(),
   };
+
   for (const node of ast.body) {
     if (node.type === "ImportDeclaration") readImport(info, node);
     if ("source" in node && node.source && typeof node.source.value === "string")
       info.sources.push(node.source.value);
     readExport(info, node);
   }
+
   readDeclarations(info.declarations, ast);
+
   return info;
 }
 
 function readImport(info: ModuleInfo, node: AstNode) {
   const source = String(node.source.value);
+
   for (const specifier of node.specifiers) {
     info.bindings.set(specifier.local.name, {
       source,
@@ -94,6 +102,7 @@ function readImport(info: ModuleInfo, node: AstNode) {
             : "*",
     });
     if (source !== ADMIN_ENTRY) continue;
+
     if (specifier.type === "ImportSpecifier" && nameOf(specifier.imported) === "clientRef")
       info.clientRefNames.add(specifier.local.name);
     if (specifier.type === "ImportNamespaceSpecifier")
@@ -127,8 +136,10 @@ function readExport(info: ModuleInfo, node: AstNode) {
 
 function readDeclarations(declarations: Map<string, AstNode>, node: AstNode) {
   if (!node || typeof node !== "object") return;
+
   if (node.type === "VariableDeclarator" && node.id.type === "Identifier")
     declarations.set(node.id.name, node.init);
   if (node.type === "FunctionDeclaration" && node.id) declarations.set(node.id.name, node);
+
   eachChild(node, (child) => readDeclarations(declarations, child));
 }

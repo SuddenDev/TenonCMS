@@ -9,6 +9,7 @@
     "allowImportingTsExtensions": true,
     "paths": {
       "integral-cms": ["./src/index.ts"],
+      "integral-cms/richtext": ["./src/richtext/index.ts"],
       "integral-cms/admin": ["./src/admin/config.ts"],
       "integral-cms/media/default": ["./src/media/default.ts"],
       "integral-cms/admin/bar": ["./src/admin/bar.d.ts"]

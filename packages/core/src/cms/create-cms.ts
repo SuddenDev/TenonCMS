@@ -1,3 +1,4 @@
+import { checkRichtextConfig } from "../richtext/config/check-config.ts";
 import { mergeAdmin } from "../admin/merge/merge-options.ts";
 import type { User } from "better-auth";
 import { consola } from "consola";
@@ -114,6 +115,9 @@ export function defineCms<
   // check if the schema is valid before proceeding
   checkSchema(schema, populateOption, localization);
 
+  const adminRuntime = mergeAdmin(plugins, admin);
+  checkRichtextConfig(schema, adminRuntime.richtext);
+
   const count = (o: object) => Object.keys(o).length;
   consola
     .withTag("integral")
@@ -148,7 +152,7 @@ export function defineCms<
     getSession,
     localApi: (scope) => createLocalApi(core, scope),
     media: mediaOptions && createMediaCore(mediaOptions, schema),
-    admin: mergeAdmin(plugins, admin),
+    admin: adminRuntime,
   };
 
   /* ── Instance ──────────────────────────────────────────────────────────────────────── */

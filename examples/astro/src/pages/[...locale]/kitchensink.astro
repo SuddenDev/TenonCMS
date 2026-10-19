@@ -1,5 +1,6 @@
 ---
 import { edit } from "integral-cms/preview";
+import Richtext from "integral-cms/richtext/astro";
 import Header from "../../components/Header.astro";
 
 export const prerender = false;
@@ -69,6 +70,7 @@ const rows: [string, unknown][] = [
     <Header />
     <main>
       <h1 data-cms={at("headline")}>{sink.headline ?? "Kitchen sink"}</h1>
+      <Richtext content={sink.body} data-cms={at("body")} />
       {sink.intro && (
         <p style="white-space: pre-wrap" data-cms={at("intro")}>
           {sink.intro}

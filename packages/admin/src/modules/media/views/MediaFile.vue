@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { withLinkedDeletion, DeletionCancelled } from "@/shared/linked-deletion";
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
@@ -57,6 +58,7 @@ async function save() {
   errors.value = {};
   error.value = "";
   saved.value = false;
+
   try {
     show(await client.media.update(id, { ...form.value, alt: form.value.alt || null }));
     saved.value = true;
@@ -71,12 +73,15 @@ async function save() {
 async function remove() {
   error.value = "";
   references.value = [];
+
   try {
-    await client.media.delete(id);
+    await withLinkedDeletion((options) => client.media.delete(id, options));
     await router.push(
       doc.value?.folder ? `${CONTENT}/media/${doc.value.folder}` : `${CONTENT}/media`,
     );
   } catch (e) {
+    if (e instanceof DeletionCancelled) return;
+
     if (e instanceof CmsError && e.status === 409) references.value = e.body.references;
     else error.value = (e as Error).message;
   }

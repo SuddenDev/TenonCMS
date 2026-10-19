@@ -1,3 +1,4 @@
+import { checkRichtextReferences } from "../../../richtext/integrity/check-references.ts";
 import { type Core, type Inner } from "../../../cms/runtime/types.ts";
 import { type Name } from "../../targets.ts";
 import { hookArgs } from "../../lifecycle/hook-args.ts";
@@ -69,6 +70,7 @@ export async function storeDocument(
   place?: LocalePlace,
 ) {
   if (name.kind === "collection") await checkUnique(db, name.name, fields, data, id, place?.loc);
+  if (!effect) await checkRichtextReferences(db, core, fields, data);
   if (!effect) await checkRefs(db, fields, data, id ? { collection: name.name, id } : undefined);
 
   let stored: Record<string, any>;
@@ -83,11 +85,13 @@ export async function storeDocument(
 
   const fieldArgs = (hookData: Record<string, unknown>) => ({ ...args, data: hookData });
   await runFieldHooks("afterChange", fields, stored, fieldArgs(stored));
+
   const doc = await runHooks(
     slot(core, name, "afterChange"),
     "doc",
     stored,
     hookArgs(s, name, { operation, previousDoc: originalDoc }),
   );
+
   return (await afterRead(core, s, name, [doc], operation))[0];
 }

@@ -38,10 +38,13 @@ type Panes = {
   stacked: ComputedRef<boolean>;
   /** The index of the pane shown in the stacked layout; `null` is the last one. */
   active: Ref<number | null>;
+  expanded: Ref<Entry | null>;
   /** The width of the row in px. */
   width: Ref<number>;
 };
 
+export type PaneExpansion = { expanded: ComputedRef<boolean>; toggleExpand(): void };
+export const paneExpansionKey: InjectionKey<PaneExpansion> = Symbol("pane-expansion");
 const key: InjectionKey<Panes> = Symbol("panes");
 
 const byPosition = (a: Entry, b: Entry) =>
@@ -61,27 +64,38 @@ export function providePanes(row: Ref<HTMLElement | undefined>) {
   const list = computed(() => [...entries].filter((e) => e.el).sort(byPosition));
   const stacked = computed(() => width.value < STACK);
   const active = ref<number | null>(null);
+  const expanded = ref<Entry | null>(null);
   // A pane that opens or closes shows the last one again.
   watch(list, () => (active.value = null));
   // Also fires for a link to the current route, which changes nothing else: it opens the last pane.
-  onScopeDispose(useRouter().afterEach(() => (active.value = null)));
+  onScopeDispose(
+    useRouter().afterEach(() => {
+      active.value = null;
+      expanded.value = null;
+    }),
+  );
 
   const collapsed = computed(() => {
     if (stacked.value) return new Set<Entry>();
+
     const all = list.value;
     const out = new Set(all.filter((e) => e.collapsible && e.manual));
     let total = all.reduce((sum, e) => sum + (out.has(e) ? COLLAPSED : e.width), 0);
+
     for (const e of all.slice(0, -1)) {
       if (total <= width.value) break;
       if (!e.collapsible || e.manual !== null) continue;
+
       out.add(e);
       total -= e.width - COLLAPSED;
     }
+
     if (out.size === all.length) out.delete(all.at(-1)!);
+
     return out;
   });
 
-  provide(key, { entries, list, collapsed, stacked, active, width });
+  provide(key, { entries, list, collapsed, stacked, active, expanded, width });
 }
 
 /**
@@ -98,12 +112,24 @@ export function usePane(
   const panes = inject(key)!;
   const entry = reactive({ el, min, max, width, manual: null, collapsible }) as Entry;
   panes.entries.add(entry);
-  onBeforeUnmount(() => panes.entries.delete(entry));
+
+  onBeforeUnmount(() => {
+    panes.entries.delete(entry);
+    if (panes.expanded.value === entry) panes.expanded.value = null;
+  });
+
+  const expanded = computed(() => panes.expanded.value === entry);
+  const toggleExpand = () => {
+    panes.expanded.value = expanded.value ? null : entry;
+  };
+  provide(paneExpansionKey, { expanded, toggleExpand });
 
   const index = computed(() => panes.list.value.indexOf(entry));
   const shown = computed(() => panes.active.value ?? panes.list.value.length - 1);
-  const collapsed = computed(() => panes.collapsed.value.has(entry));
-  const hidden = computed(() => panes.stacked.value && index.value !== shown.value);
+  const collapsed = computed(() => !expanded.value && panes.collapsed.value.has(entry));
+  const hidden = computed(() =>
+    panes.expanded.value ? !expanded.value : panes.stacked.value && index.value !== shown.value,
+  );
   const toggle = () => {
     if (!panes.stacked.value && collapsible) entry.manual = !collapsed.value;
   };
@@ -111,14 +137,19 @@ export function usePane(
   const back = computed(() =>
     panes.stacked.value && index.value > 0 ? () => (panes.active.value = index.value - 1) : null,
   );
+
   // The other panes keep at least their `min`, collapsed ones `COLLAPSED`.
   const resize = (to: number) => {
     const others = panes.list.value
       .filter((e) => e !== entry)
       .reduce((sum, e) => sum + (panes.collapsed.value.has(e) ? COLLAPSED : e.min), 0);
+
     entry.width = Math.max(Math.min(to, max, panes.width.value - others), min);
   };
+
   return {
+    expanded,
+    toggleExpand,
     collapsed,
     collapsible,
     hidden,

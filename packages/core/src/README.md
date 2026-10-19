@@ -2,25 +2,26 @@
 
 A feature-first modular monolith. Each module owns a capability; collections and globals share the content engine. Hono adapts HTTP requests to the scoped local API. Public package imports remain defined by the root barrel and package export map.
 
-| Module          | Responsibility                                                 | Start here                                  |
-| --------------- | -------------------------------------------------------------- | ------------------------------------------- |
-| `cms/`          | Instance construction, configuration and API binding.          | [create-cms.ts](cms/create-cms.ts)          |
-| `collections/`  | Collection config, document operations and endpoints.          | [README](collections/README.md)             |
-| `globals/`      | Global config, singleton operations and endpoints.             | [README](globals/README.md)                 |
-| `content/`      | Shared lifecycle, reads/writes, population and integrity.      | [README](content/README.md)                 |
-| `auth/`         | better-auth provider, caller lookup and session middleware.    | [README](auth/README.md)                    |
-| `http/`         | Hono application assembly, parsing, visibility and errors.     | [app.ts](http/app.ts)                       |
-| `schema/`       | Field/hook contracts, inference, validation and traversal.     | [README](schema/README.md)                  |
-| `db/`           | libsql connection, fixed migrations and named content queries. | [README](db/README.md)                      |
-| `media/`        | Uploads, library actions, images, variants and storage.        | [README](media/README.md)                   |
-| `preview/`      | Preview URL resolution and browser draft/DOM runtime.          | [README](preview/README.md)                 |
-| `client/`       | Browser-safe typed HTTP client.                                | [create-client.ts](client/create-client.ts) |
-| `plugins/`      | Extension contracts, schema merging and named route mounting.  | [README](plugins/README.md)                 |
-| `presets/`      | Ready-made fields, hooks and settings.                         | [README](presets/README.md)                 |
-| `helpers/`      | Import-free render helpers.                                    | [README](helpers/README.md)                 |
-| `admin/`        | Page/build glue and public UI extension contracts.             | [README](admin/README.md)                   |
-| `integrations/` | Astro, Nuxt and Vite adapters with copied runtime files.       | [README](integrations/README.md)            |
-| `tests/`        | Behavior tests against a real in-memory CMS.                   | [README](tests/README.md)                   |
+| Module          | Responsibility                                                    | Start here                                  |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------- |
+| `cms/`          | Instance construction, configuration and API binding.             | [create-cms.ts](cms/create-cms.ts)          |
+| `collections/`  | Collection config, document operations and endpoints.             | [README](collections/README.md)             |
+| `globals/`      | Global config, singleton operations and endpoints.                | [README](globals/README.md)                 |
+| `content/`      | Shared lifecycle, reads/writes, population and integrity.         | [README](content/README.md)                 |
+| `auth/`         | better-auth provider, caller lookup and session middleware.       | [README](auth/README.md)                    |
+| `http/`         | Hono application assembly, parsing, visibility and errors.        | [app.ts](http/app.ts)                       |
+| `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |
+| `db/`           | libsql connection, fixed migrations and named content queries.    | [README](db/README.md)                      |
+| `richtext/`     | Rich-text config, runtime, reads/writes, integrity and endpoints. | [README](richtext/README.md)                |
+| `media/`        | Uploads, library actions, images, variants and storage.           | [README](media/README.md)                   |
+| `preview/`      | Preview URL resolution and browser draft/DOM runtime.             | [README](preview/README.md)                 |
+| `client/`       | Browser-safe typed HTTP client.                                   | [create-client.ts](client/create-client.ts) |
+| `plugins/`      | Extension contracts, schema merging and named route mounting.     | [README](plugins/README.md)                 |
+| `presets/`      | Ready-made fields, hooks and settings.                            | [README](presets/README.md)                 |
+| `helpers/`      | Import-free render helpers.                                       | [README](helpers/README.md)                 |
+| `admin/`        | Page/build glue and public UI extension contracts.                | [README](admin/README.md)                   |
+| `integrations/` | Framework adapters, rich-text components and preview helpers.     | [README](integrations/README.md)            |
+| `tests/`        | Behavior tests against a real in-memory CMS.                      | [README](tests/README.md)                   |
 
 `index.ts` lists the public root exports. `errors.ts` remains import-free for browser consumers. Internal implementations import their owning leaf modules. Feature definitions belong to `config/`; Hono routes to `endpoints/`; use cases to `operations/`; scoped collection/global methods to `operations/local/`.
 
@@ -57,7 +58,7 @@ For `GET /api/cms/globals/general`, follow:
 1. [globals/endpoints/get.endpoint.ts](globals/endpoints/get.endpoint.ts) validates the name and read options. [read-request.ts](http/read-request.ts) chooses the request API and field visibility; drafts require a session plus the preview cookie.
 2. [get.local.ts](globals/operations/local/get.local.ts) checks the name. [get.operation.ts](globals/operations/get.operation.ts) enters the shared lifecycle without opening a read transaction.
 3. [read-global.ts](content/reads/read-global.ts) loads the appropriate perspective using [load-global.query.ts](db/queries/globals/load-global.query.ts).
-4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. The endpoint applies [strip-private-fields.ts](http/strip-private-fields.ts) to the result.
+4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. Embedded rich-text links and images resolve through [resolve-richtext.ts](richtext/reads/resolve-richtext.ts). The endpoint applies [strip-private-fields.ts](http/strip-private-fields.ts) to the result.
 
 Globals retain their own lifecycle: they skip collection `beforeOperation` and `afterOperation`. A never-saved global returns publication metadata with no saved field values.
 

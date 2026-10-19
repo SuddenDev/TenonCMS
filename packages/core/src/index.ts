@@ -32,7 +32,14 @@ export type {
 export { definePlugin, type Plugin } from "./plugins/index.ts";
 
 export type { AuthOptions } from "./auth/config/options.ts";
-export { ConflictError, type Reference, ValidationError } from "./errors.ts";
+export {
+  LinkedContentError,
+  type LinkedReference,
+  type DeleteOptions,
+  ConflictError,
+  type Reference,
+  ValidationError,
+} from "./errors.ts";
 export {
   type BreadcrumbsOptions,
   breadcrumbs,
@@ -43,3 +50,5 @@ export {
   slugify,
   switchTarget,
 } from "./helpers/index.ts";
+
+export type { RichtextDocument, RichtextNode, RichtextReference } from "./richtext/config/types.ts";

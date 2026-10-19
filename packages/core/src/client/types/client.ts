@@ -1,3 +1,5 @@
+import type { RichtextDocument, RichtextTargets } from "../../richtext/config/types.ts";
+import type { DeleteOptions } from "../../errors.ts";
 import type { AdminDescriptor } from "../../admin/index.d.ts";
 import type { Localization } from "../../cms/config/options.ts";
 import type {
@@ -52,10 +54,11 @@ export type LocaleOption<C> = {
 
 /** Options of `discard()` and `discardGlobal()`: one locale's draft, or every draft with `all`. */
 export type DiscardOption<C> =
-  | LocaleOption<C>
+  | (LocaleOption<C> & DeleteOptions)
   | {
       /** Drops the shared draft and the draft of every locale. A document or locale that was never published is deleted. Ignores `locale`. Sent as `?all=true`. */
       all: true;
+      allowBrokenLinks?: boolean;
     };
 
 /** The HTTP client. Names and document types come from `C`, the registered `cms`. See {@link RegisteredCms}. */
@@ -181,7 +184,11 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    * Deletes a document. Needs a session.
    * `DELETE /api/cms/collections/:collection/:id`
    */
-  delete(collection: keyof Collections<C> & string, id: string): Promise<null>;
+  delete(
+    collection: keyof Collections<C> & string,
+    id: string,
+    options?: DeleteOptions,
+  ): Promise<null>;
 
   /**
    * Returns a global. Fields that were never saved are missing.
@@ -346,6 +353,17 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   ): Promise<T>;
 
   /** The media library. See {@link MediaClient}. */
+  richtext: {
+    resolve(
+      document: RichtextDocument,
+      options?: { locale?: string; perspective?: Perspective },
+    ): Promise<RichtextDocument>;
+    search(options?: {
+      query?: string;
+      locale?: string;
+      perspective?: Perspective;
+    }): Promise<RichtextTargets>;
+  };
   media: MediaClient;
 
   /**

@@ -3,6 +3,9 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   entry: [
     "src/index.ts",
+    "src/richtext/index.ts",
+    "src/integrations/vue/richtext.ts",
+    "src/integrations/react/richtext.ts",
     "src/client/index.ts",
     "src/integrations/astro/index.ts",
     "src/integrations/nuxt/index.ts",
@@ -10,8 +13,8 @@ export default defineConfig({
     "src/admin/vue/vue.ts",
     "src/admin/react/react.ts",
     "src/preview/index.ts",
-    "src/preview/vue.ts",
-    "src/preview/react.ts",
+    "src/integrations/vue/preview.ts",
+    "src/integrations/react/preview.ts",
     "src/integrations/vite/index.ts",
     "src/presets/index.ts",
     // Own entries, so `node:fs`, `ipx` and `aws4fetch` stay out of bundles that do not use them.
@@ -35,6 +38,7 @@ export default defineConfig({
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.
   copy: [
+    { from: "src/integrations/astro/Richtext.astro", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/route.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/middleware.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/admin.astro", to: "dist/integrations/astro" },

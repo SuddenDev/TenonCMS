@@ -1,3 +1,4 @@
+import { Notice } from "./notice.ts";
 import { clientRef } from "integral-cms/admin";
 import { defineCollection, defineGlobal, definePlugin, type LocalApi } from "integral-cms";
 
@@ -62,6 +63,7 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
             hooks: { beforeValidate: [({ value }) => value?.trim()] },
           },
           author: { type: "text", default: "Anonymous" },
+          notes: { type: "richtext", allowed: ["bold", "italic", "link", "exampleNotice"] },
           rating: { type: "custom:rating" },
         },
       }),
@@ -119,7 +121,9 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
       api.get("/random", async (c) => {
         const quote = await randomQuote(c.var.cms);
         if (!quote) return c.notFound();
+
         const prefix = (await c.var.cms.getGlobal("quoteSettings")).prefix ?? "Quote of the day";
+
         return c.text(`${prefix}: “${quote.text}” (${quote.author})`);
       }),
 
@@ -129,12 +133,21 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
       api.get("/quotes.csv", async (c) => {
         const quotes = await c.var.cms.find("quotes");
         const rows = quotes.map((q) => [q.text, q.author, q.rating ?? ""].map(csv).join(","));
+
         return c.body(["text,author,rating", ...rows, ""].join("\n"), 200, {
           "content-type": "text/csv; charset=utf-8",
           "content-disposition": 'attachment; filename="quotes.csv"',
         });
       }),
     admin: {
+      richtext: {
+        extensions: {
+          exampleNotice: {
+            schema: Notice,
+            client: clientRef("integral-cms/plugins/example/admin/richtext#notice"),
+          },
+        },
+      },
       fields: {
         rating: { mount: mount.field },
       },

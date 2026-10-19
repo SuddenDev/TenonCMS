@@ -3,6 +3,7 @@ import {
   type Component,
   type ComponentPublicInstance,
   computed,
+  defineAsyncComponent,
   inject,
   useTemplateRef,
   watch,
@@ -30,6 +31,7 @@ const path = computed(() => props.path ?? props.name);
 const fields: Record<string, Component> = {
   text: TextField,
   textarea: TextareaField,
+  richtext: defineAsyncComponent(() => import("./fields/RichtextField.vue")),
   number: NumberField,
   date: DateField,
   datetime: DateField,
@@ -53,11 +55,14 @@ watch(
   (target) => {
     const el = box.value?.$el as HTMLElement | undefined;
     if (!focus || target !== path.value || !el) return;
+
     focus.value = null;
     el.scrollIntoView({ block: "center", behavior: "smooth" });
-    el.querySelector<HTMLElement>("input, textarea, select, button")?.focus({
-      preventScroll: true,
-    });
+    el.querySelector<HTMLElement>("input, textarea, [contenteditable=true], select, button")?.focus(
+      {
+        preventScroll: true,
+      },
+    );
   },
   { immediate: true, flush: "post" },
 );

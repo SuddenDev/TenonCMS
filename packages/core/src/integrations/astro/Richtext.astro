@@ -1,0 +1,9 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { renderRichtext, type RichtextProps } from "integral-cms/richtext";
+
+type Props = RichtextProps & Omit<HTMLAttributes<"div">, "content">;
+const { content, extensions, ...attrs } = Astro.props;
+---
+
+<div {...attrs} set:html={renderRichtext(content, extensions)} />

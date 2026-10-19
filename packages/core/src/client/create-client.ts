@@ -1,3 +1,5 @@
+import type { RichtextDocument } from "../richtext/config/types.ts";
+import type { DeleteOptions } from "../errors.ts";
 import type { Schema } from "../schema/index.ts";
 import { createRequest } from "./create-request.ts";
 import { readQuery, type ReadQuery } from "./read-query.ts";
@@ -85,7 +87,8 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     removeLocale: (name: string, id: string, locale: string) =>
       request("DELETE", `${doc(name, id)}/locales/${enc(locale)}`),
 
-    delete: (name: string, id: string) => request("DELETE", doc(name, id)),
+    delete: (name: string, id: string, options: DeleteOptions = {}) =>
+      request("DELETE", doc(name, id), undefined, options),
 
     getGlobal: (name: string, options: ReadQuery = {}) =>
       request("GET", global(name), undefined, readQuery(options)),
@@ -137,12 +140,21 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       { method = "GET", body, query } = {} as NonNullable<Parameters<Client["request"]>[1]>,
     ) => request(method, path, body, query),
 
+    richtext: {
+      resolve: (
+        document: RichtextDocument,
+        options: { locale?: string; perspective?: Perspective } = {},
+      ) => request("POST", "/admin/richtext/resolve", { document, ...options }),
+      search: (options = {}) => request("GET", "/admin/richtext/targets", undefined, options),
+    },
+
     media: {
       upload,
       update: (id: string, data: unknown) => request("PATCH", `/media/${enc(id)}`, data),
       renameFolder: (from: string, to: string) =>
         request("POST", "/media/folders/rename", { from, to }),
-      delete: (id: string) => request("DELETE", `/media/${enc(id)}`),
+      delete: (id: string, options: DeleteOptions = {}) =>
+        request("DELETE", `/media/${enc(id)}`, undefined, options),
       regenerate: (id: string, options: { force?: boolean } = {}) =>
         request("POST", `/media/${enc(id)}/regenerate`, options),
       folders: () => request("GET", "/media/folders"),

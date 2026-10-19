@@ -16,6 +16,7 @@ const slides = {
 describe("newItem", () => {
   it("has an id, defaults and shaped nested values", () => {
     const item = newItem(slides);
+
     expect(item.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(item).toMatchObject({ title: "Untitled", count: null, meta: { note: null }, tags: [] });
   });
@@ -43,6 +44,7 @@ const content = {
 describe("newItem blocks", () => {
   it("has an id, the blockType and the block's defaults", () => {
     const item = newItem(content, "hero");
+
     expect(item.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(item).toMatchObject({ blockType: "hero", title: "Hi", cta: {} });
     expect(newItem(content, "text")).toMatchObject({ blockType: "text", body: null });
@@ -53,6 +55,7 @@ describe("blocks items", () => {
   it("duplicateItem renews ids in nested blocks and keeps blockType", () => {
     const item = { id: "1", blockType: "cols", cols: [{ id: "2", blockType: "text", body: "x" }] };
     const copy = duplicateItem(item, content);
+
     expect(copy.id).not.toBe("1");
     expect(copy.blockType).toBe("cols");
     expect(copy.cols[0].id).not.toBe("2");
@@ -61,6 +64,7 @@ describe("blocks items", () => {
 
   it("duplicateItem copies an unknown block as is, with a new id", () => {
     const copy = duplicateItem({ id: "1", blockType: "gone", a: 1 }, content);
+
     expect(copy).toMatchObject({ blockType: "gone", a: 1 });
     expect(copy.id).not.toBe("1");
   });
@@ -77,6 +81,7 @@ describe("blocks items", () => {
         { id: "2", blockType: "gone", a: { b: 1 } },
       ],
     }) as any;
+
     expect(out.content).toEqual([
       { id: "1", blockType: "text", body: null },
       { id: "2", blockType: "gone", a: { b: 1 } },
@@ -86,6 +91,7 @@ describe("blocks items", () => {
 
   it("normalize defaults a many select to an empty list", () => {
     const fields = { tags: { type: "select", many: true, options: ["a"] } };
+
     expect(normalize(fields as never, {})).toEqual({ tags: [] });
   });
 });
@@ -93,6 +99,7 @@ describe("blocks items", () => {
 describe("moveItem", () => {
   it("moves up and down without changing the input", () => {
     const list = ["a", "b", "c"];
+
     expect(moveItem(list, 2, 0)).toEqual(["c", "a", "b"]);
     expect(moveItem(list, 0, 1)).toEqual(["b", "a", "c"]);
     expect(list).toEqual(["a", "b", "c"]);
@@ -109,6 +116,7 @@ describe("duplicateItem", () => {
   it("renews ids at every depth and keeps the values", () => {
     const item = { id: "1", title: "A", meta: { note: "n" }, tags: [{ id: "2", name: "x" }] };
     const copy = duplicateItem(item, slides);
+
     expect(copy.id).not.toBe("1");
     expect(copy.tags[0].id).not.toBe("2");
     expect(copy).toMatchObject({ title: "A", meta: { note: "n" }, tags: [{ name: "x" }] });
@@ -122,6 +130,7 @@ describe("itemTitle", () => {
       type: "array",
       fields: { n: { type: "number" }, a: { type: "text" }, b: { type: "textarea" } },
     } as never;
+
     expect(itemTitle({ id: "1", n: 3, a: " ", b: "Hi" }, fields)).toBe("Hi");
     expect(itemTitle({ id: "1", n: 3 }, fields)).toBe("");
   });
@@ -147,9 +156,27 @@ describe("fields", () => {
         },
       },
     } as never;
+
     expect(normalize(fields, undefined)).toEqual({ list: [] });
     expect(normalize(fields, { list: null })).toEqual({ list: [] });
+
     const out = normalize(fields, { list: [{ id: "1", kind: "y", extra: "e" }] }, true) as any;
+
     expect(out.list).toEqual([{ id: "1", kind: "y", extra: null }]);
   });
+});
+
+it("fills rich text defaults from the reactive admin schema", async () => {
+  const { reactive } = await import("vue");
+  const fields = reactive({
+    body: {
+      type: "richtext" as const,
+      default: {
+        type: "doc" as const,
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Start here" }] }],
+      },
+    },
+  });
+
+  expect(normalize(fields, {}, false, true).body).toEqual(fields.body.default);
 });

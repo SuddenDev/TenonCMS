@@ -1,3 +1,4 @@
+import type { DeleteOptions } from "../../errors.ts";
 import type { MediaApi } from "../../schema/hooks/media.ts";
 
 type Options = {
@@ -16,10 +17,11 @@ type Options = {
 /** Options of `publish` and `publishGlobal`. */
 type PublishOptions = { locale?: string };
 /** Options of `discard` and `discardGlobal`. */
-type DiscardOptions = PublishOptions & {
-  /** Drops the shared draft and the draft of every locale. Ignores `locale`. */
-  all?: boolean;
-};
+type DiscardOptions = PublishOptions &
+  DeleteOptions & {
+    /** Drops the shared draft and the draft of every locale. Ignores `locale`. */
+    all?: boolean;
+  };
 type Row = Record<string, any>;
 
 /** Options of `create`, `update` and `setGlobal`. */
@@ -42,7 +44,7 @@ export type LocalApi = {
     data: Record<string, unknown>,
     options?: WriteOptions,
   ): Promise<Row | undefined>;
-  delete(collection: string, id: string): Promise<void>;
+  delete(collection: string, id: string, options?: DeleteOptions): Promise<void>;
   publish(collection: string, id: string, options?: PublishOptions): Promise<Row | undefined>;
   discard(collection: string, id: string, options?: DiscardOptions): Promise<Row | undefined>;
   /** Fills the localized fields of `to` with those of `from`, as a draft. Replaces the pending draft of `to`. */

@@ -1,5 +1,7 @@
 # integrations
 
+Framework adapters, frontend components and preview helpers live here, grouped by framework. Shared rich-text rendering and preview runtime logic stay in their feature modules. Admin mounting helpers stay in `admin/vue/` and `admin/react/`.
+
 Framework integrations:
 
 - `integral-cms/astro`
@@ -8,6 +10,14 @@ Framework integrations:
 
 Each integration points `#integral/config` at the host's `integral.config.ts`, mounts `/api/cms` (`cms.fetch`, see `src/http/`), serves the admin page (`src/admin/`) and starts the preview runtime (`src/preview/`).
 `integral-cms/vite` only serves the admin; the host mounts the API itself. (see the tanstack start example)
+
+## Frontend helpers
+
+- `integral-cms/richtext/astro`: `astro/Richtext.astro`.
+- `integral-cms/richtext/vue` and `integral-cms/richtext/react`: `vue/richtext.ts` and `react/richtext.ts`. Vue also covers Nuxt.
+- `integral-cms/preview/vue` and `integral-cms/preview/react`: `vue/preview.ts` and `react/preview.ts`, exporting `useDraft()`.
+
+These public imports remain independent of the source layout. The TypeScript helpers are tsdown entries; the Astro component is copied into `dist/integrations/astro/` for the host to compile. See [rich text](../richtext/README.md) and [preview](../preview/README.md) for usage.
 
 ## Follow the setup
 

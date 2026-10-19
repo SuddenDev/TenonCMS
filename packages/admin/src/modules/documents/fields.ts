@@ -1,4 +1,4 @@
-import type { InjectionKey, Ref } from "vue";
+import { toRaw, type InjectionKey, type Ref } from "vue";
 import { matchCondition } from "../../../../core/src/schema/condition";
 import { itemFields } from "../../../../core/src/schema/traversal/item-fields";
 import type { Collection, Field, Fields } from "../../../../core/src/schema";
@@ -8,7 +8,7 @@ export function titleField(collection: Pick<Collection, "titleField" | "fields">
   return (
     collection.titleField ??
     Object.keys(collection.fields).find(
-      (k) => !["group", "array", "blocks", "join"].includes(collection.fields[k].type),
+      (k) => !["group", "array", "blocks", "join", "richtext"].includes(collection.fields[k].type),
     ) ??
     ""
   );
@@ -63,16 +63,21 @@ export function normalize(
     Object.entries(fields).flatMap(([k, f]) => {
       if (f.type === "join") return [];
       if (save && !active(f, root, value)) return [[k, null]];
-      const v = value?.[k] === undefined && fill ? structuredClone(f.default) : value?.[k];
+
+      const v = value?.[k] === undefined && fill ? structuredClone(toRaw(f.default)) : value?.[k];
+
       if (f.type === "group") {
         const g = normalize(f.fields, v, save, fill && (f.required || v != null), root);
         return [[k, save && !f.required && isEmpty(g) ? null : g]];
       }
+
       if (f.type === "array" || f.type === "blocks") {
         const items = (Array.isArray(v) ? v : []).flatMap((item) => {
           if (typeof item !== "object" || item === null) return [];
+
           const id = item.id ?? crypto.randomUUID();
           const inner = itemFields(f, item);
+
           // An unknown block has no fields to shape: keep its data.
           if (!inner) return [{ ...item, id }];
           return [
@@ -85,6 +90,7 @@ export function normalize(
         });
         return [[k, items]];
       }
+
       if (f.type === "boolean") return [[k, v ?? false]];
       if ("many" in f && f.many) return [[k, v ?? []]];
       return [[k, v === "" || v === undefined ? null : v]];

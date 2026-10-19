@@ -10,6 +10,7 @@
     "jsx": "preserve",
     "types": ["vite/client"],
     "paths": {
+      "integral-cms/richtext": ["../core/src/richtext/index.ts"],
       "@/*": ["./src/*"],
       "integral-cms": ["../core/src/index.ts"]
     }

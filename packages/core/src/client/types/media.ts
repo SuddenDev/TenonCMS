@@ -1,3 +1,4 @@
+import type { DeleteOptions } from "../../errors.ts";
 import type { MediaRead, MediaUpdate } from "../../schema/index.ts";
 import type { UploadOptions } from "./options.ts";
 
@@ -25,7 +26,7 @@ export type MediaClient = {
    * Deletes a file. Throws a `CmsError` with status `409` and `references` while a `restrict` field uses it.
    * `DELETE /api/cms/media/:id`
    */
-  delete(id: string): Promise<null>;
+  delete(id: string, options?: DeleteOptions): Promise<null>;
   /**
    * Brings the stored variants of one file in line with the current image options. `force` re-renders all of them.
    * Throws a `CmsError` with status `404` for a missing file, or when the image provider stores no variants.

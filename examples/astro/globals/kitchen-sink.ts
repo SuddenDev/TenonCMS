@@ -52,6 +52,12 @@ export const kitchenSink = defineGlobal({
     },
 
     // Text
+    body: {
+      type: "richtext",
+      tab: "text",
+      label: { en: "Rich text", de: "Formatierter Text" },
+      description: "Tiptap JSON with internal links and media relations.",
+    },
     intro: { type: "textarea", tab: "text", minLength: 10, description: "At least 10 characters." },
     code: {
       type: "text",

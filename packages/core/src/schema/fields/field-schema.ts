@@ -1,3 +1,4 @@
+import { richtextFieldSchema } from "./richtext.ts";
 import type { z } from "zod";
 import { type StoredField, type GroupField, type ArrayField, type BlocksField } from "./index.ts";
 import { textSchema } from "./text.ts";
@@ -20,6 +21,8 @@ export function fieldSchema(
   on: boolean,
 ): z.ZodType {
   switch (field.type) {
+    case "richtext":
+      return richtextFieldSchema();
     case "text":
     case "textarea":
       return textSchema(field, on);

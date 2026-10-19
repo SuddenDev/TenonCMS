@@ -1,3 +1,4 @@
+import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { type Name } from "../targets.ts";
 import { q } from "../../cms/runtime/transaction.ts";
@@ -27,6 +28,7 @@ export async function discardLocalized(
   id: string,
   loc: Loc,
   all: boolean,
+  options: DeleteOptions = {},
 ) {
   const db = await q(core, s);
 
@@ -37,6 +39,7 @@ export async function discardLocalized(
       publishedAt: null,
       hasDraft: false,
     };
+
     return (await afterRead(core, s, name, [doc], "setGlobal"))[0];
   }
 
@@ -44,11 +47,13 @@ export async function discardLocalized(
   if (!shared) return undefined;
 
   await discardLocaleDrafts(db, DOCUMENT_LOCALES, id, all ? undefined : loc.locale);
+
   const rows = (await loadLocaleDoc(db, name, id, true, loc))!.locales;
   if (shared.publishedAt === null && (all || !rows.length)) {
-    await remove(core, s, name.name, id);
+    await remove(core, s, name.name, id, options);
     return undefined;
   }
+
   if (all) await discardDraft(db, name.name, id);
 
   const doc = await loadLocaleDoc(db, name, id, false, loc);

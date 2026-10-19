@@ -448,7 +448,7 @@ export type AdminBarOptions = {
  * Admin customization. Pass it as `defineCms({ admin })`, inline or from an imported module. Check an extracted
  * object with `satisfies AdminOptions`.
  *
- * Only `load` functions run on the server. Everything else is JSON or a `clientRef()` to browser code.
+ * Loaders and rich text schema extensions run on the server. Browser implementations use `clientRef()`.
  * @example
  * admin: {
  *   name: "My site",
@@ -463,6 +463,8 @@ export type AdminBarOptions = {
  * }
  */
 export type AdminOptions = {
+  /** Tiptap extensions supplied by the host or plugins. */
+  richtext?: import("integral-cms/richtext").RichtextOptions;
   /** Name of the CMS in the sidebar, the login and the page title. Defaults to `integral-cms`. */
   name?: string;
   /** Wide logo for the sidebar header and the login. Defaults to the icon, then to a placeholder. */
@@ -538,7 +540,13 @@ export type AdminBarItemDescriptor = {
  * What `GET /schema` sends as `admin`: branding and the active registrations of the plugins and the host,
  * without functions, request data or secrets.
  */
-export type AdminDescriptor = Omit<AdminOptions, "fields" | "pages" | "adminBar"> & {
+export type AdminDescriptor = Omit<AdminOptions, "fields" | "pages" | "adminBar" | "richtext"> & {
+  richtext?: {
+    extensions: Record<
+      string,
+      { client: ClientRef<import("integral-cms/richtext").RichtextBrowserExtension> }
+    >;
+  };
   fields: Record<string, FieldDescriptor>;
   pages: Record<string, PageDescriptor>;
 };

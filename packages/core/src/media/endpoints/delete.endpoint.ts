@@ -8,7 +8,9 @@ import { scope } from "./request-context.ts";
 export function deleteEndpoints(core: Core) {
   const api = new Hono<Env>();
   api.delete("/:id", async (c) => {
-    await removeMedia(core, scope(c), c.req.param("id"));
+    await removeMedia(core, scope(c), c.req.param("id"), {
+      allowBrokenLinks: c.req.query("allowBrokenLinks") === "true",
+    });
     return c.body(null, 204);
   });
   return api;

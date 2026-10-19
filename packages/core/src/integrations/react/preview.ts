@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { type Drafts, getDrafts, merge, preview, subscribe } from "./index.ts";
+import { type Drafts, getDrafts, merge, preview, subscribe } from "../../preview/index.ts";
 
 const none: Drafts = {};
 
@@ -12,5 +12,6 @@ const none: Drafts = {};
 export function useDraft<T>(collection: string, doc: T): T {
   useEffect(() => void preview(), []);
   const drafts = useSyncExternalStore(subscribe, getDrafts, () => none);
+
   return useMemo(() => merge(collection, doc, drafts), [collection, doc, drafts]);
 }
