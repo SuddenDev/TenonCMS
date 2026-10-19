@@ -3,21 +3,47 @@ import { type Kysely, sql } from "kysely";
 import { API_BASE } from "../../client/index.ts";
 import type { Database } from "../../db/types.ts";
 import type { AuthOptions } from "./options.ts";
+import type { EmailApi, EmailTemplates, EmailTemplateData } from "../../email/types.ts";
+import { emailTemplates } from "../../email/templates.ts";
 
 type UserCreate = NonNullable<
   NonNullable<NonNullable<BetterAuthOptions["databaseHooks"]>["user"]>["create"]
 >;
 type BeforeCreate = Parameters<NonNullable<UserCreate["before"]>>;
 
-export function authOptions<A extends AuthOptions>(db: Kysely<Database>, secret: string, host: A) {
+export function authOptions<A extends AuthOptions>(
+  db: Kysely<Database>,
+  secret: string,
+  host: A,
+  email?: { api: EmailApi; templates?: Partial<EmailTemplates> },
+) {
+  const { emailAndPassword, emailVerification, ...options } = host;
   const create = host.databaseHooks?.user?.create;
+  const send =
+    email &&
+    ((key: keyof EmailTemplates) => async (data: EmailTemplateData) => {
+      const content = await (email.templates?.[key] ?? emailTemplates[key])(data);
+      await email.api.send({ ...content, to: data.user.email });
+    });
   return {
-    ...host,
+    ...options,
     basePath: `${API_BASE}/auth`,
     secret,
     database: { db, type: "sqlite" as const },
     // The admin login needs email and password, so core MUST force it on.
-    emailAndPassword: { ...host.emailAndPassword, enabled: true },
+    emailAndPassword: {
+      ...emailAndPassword,
+      enabled: true,
+      ...(send && {
+        sendResetPassword: emailAndPassword?.sendResetPassword ?? send("resetPassword"),
+      }),
+    },
+    emailVerification: send
+      ? {
+          ...emailVerification,
+          sendVerificationEmail: emailVerification?.sendVerificationEmail ?? send("verifyEmail"),
+        }
+      : emailVerification,
     databaseHooks: {
       ...host.databaseHooks,
       user: {

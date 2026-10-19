@@ -17,6 +17,7 @@ export default defineConfig({
     "src/integrations/react/preview.ts",
     "src/integrations/vite/index.ts",
     "src/presets/index.ts",
+    "src/email/smtp.ts",
     // Own entries, so `node:fs`, `ipx` and `aws4fetch` stay out of bundles that do not use them.
     "src/media/storage/local/index.ts",
     "src/media/storage/s3/index.ts",

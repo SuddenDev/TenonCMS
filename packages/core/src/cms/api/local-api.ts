@@ -1,4 +1,5 @@
 import type { DeleteOptions } from "../../errors.ts";
+import type { EmailApi } from "../../email/types.ts";
 import type { MediaApi } from "../../schema/hooks/media.ts";
 
 type Options = {
@@ -34,6 +35,8 @@ export type WriteOptions = {
 
 /** The local API with untyped names and data, as hooks get it. */
 export type LocalApi = {
+  /** Server-side delivery with the configured adapter. Sends immediately. */
+  email: EmailApi;
   find(collection: string, options?: Options): Promise<Row[]>;
   findOne(collection: string, options: Options): Promise<Row | undefined>;
   findById(collection: string, id: string, options?: Options): Promise<Row | undefined>;

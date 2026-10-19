@@ -28,6 +28,7 @@ import { removeGlobalLocaleLocal } from "../../globals/operations/local/remove-l
  */
 export function createLocalApi(core: Core, scope: Scope): LocalApi {
   return {
+    email: core.email,
     find: findLocal(core, scope),
     findOne: findOneLocal(core, scope),
     findById: findByIdLocal(core, scope),

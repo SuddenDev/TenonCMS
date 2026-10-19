@@ -19,6 +19,10 @@
       "types": "./dist/client/index.d.mts",
       "default": "./dist/client/index.mjs"
     },
+    "./email/smtp": {
+      "types": "./dist/email/smtp.d.mts",
+      "default": "./dist/email/smtp.mjs"
+    },
     "./register": {
       "types": "./dist/client/register.d.ts"
     },
@@ -175,6 +179,7 @@
     "image-size": "^2.0.4",
     "ipx": "4.0.0-beta.1",
     "kysely": "^0.29.0",
+    "nodemailer": "^10.1.7",
     "radashi": "^12.9.6",
     "zod": "^4.6.5"
   },

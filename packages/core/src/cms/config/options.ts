@@ -1,5 +1,6 @@
 import type { AdminOptions } from "../../admin/index.d.ts";
 import type { AuthOptions } from "../../auth/config/options.ts";
+import type { EmailOptions } from "../../email/types.ts";
 import type { mediaCollection } from "../../media/config/collection.ts";
 import type { MediaOptions } from "../../media/config/options.ts";
 import type { Plugin } from "../../plugins/index.ts";
@@ -124,6 +125,8 @@ export type CmsOptions<
   // `& AuthOptions` types hook parameters. Inference alone leaves them `any`.
   /** better-auth options. Core owns `database`, `basePath` and `secret`. */
   auth?: A & AuthOptions;
+  /** Server-side delivery and authentication email templates. Omitted: sending rejects. */
+  email?: EmailOptions;
   /** Hooks for every collection and global. */
   hooks?: RootHooks;
   /**

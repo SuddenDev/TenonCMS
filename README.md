@@ -1256,6 +1256,90 @@ import { mountAdmin } from "integral-cms/admin/mount";
 mountAdmin("#admin");
 ```
 
+## Email
+
+Email is optional and server-side. Configure a transport and sender once:
+
+```ts
+import { defineCms } from "integral-cms";
+import { smtp } from "integral-cms/email/smtp";
+
+export default defineCms({
+  // Your collections, database and secret…
+  email: {
+    adapter: smtp({
+      host: process.env.SMTP_HOST,
+      port: 465,
+      secure: true,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+    }),
+    from: "My Site <hello@example.com>",
+  },
+});
+```
+
+`smtp()` uses Nodemailer 10's ESM build and connects only when sending. For STARTTLS, use port 587 and `secure: false`; the adapter requires TLS by default. Nodemailer documents Workers support with Node.js compatibility. For Workers use port 465 with `secure: true` and leave pooling off; port 25 is blocked. This does not enable the CMS's other planned Workers features.
+
+Any server code can send, including an Astro route or Nuxt server endpoint, without a plugin:
+
+```ts
+import cms from "./integral.config";
+
+await cms.email.send({
+  to: "team@example.com",
+  replyTo: "reader@example.com",
+  subject: "Contact request",
+  text: "I would like to know more.",
+  html: "<p>I would like to know more.</p>",
+});
+```
+
+`to` accepts a string or array. Supply `text`, `html`, or both. The configured `from` applies to every message. Without email configuration, sending rejects with a configuration error. SMTP and adapter failures reject the call. SMTP acceptance does not guarantee inbox delivery; partial recipient rejection can happen after other recipients accept the message.
+
+The browser calls a framework endpoint with `fetch()` or Nuxt's `$fetch()`. For an endpoint registered through a plugin, use the existing `publicRoutes` or session-protected `routes`, including dynamic paths such as `/:topic`, and call it with `client.request('/contact/sales', { method: 'POST', body })`. Its handler can send through `c.var.cms.email.send()`. `client.request()` always targets `/api/cms`; there is no generic browser email endpoint. Hosts MUST validate input, choose recipients and templates on the server, and enforce authorization and abuse protection on submission endpoints.
+
+With email configured, password-reset and email-verification callbacks use default text/HTML templates. Replace either renderer with a function returning `{ subject, text?, html? }`; asynchronous functions work too:
+
+```ts
+email: {
+  adapter: smtp({ /* SMTP options */ }),
+  from: "My Site <hello@example.com>",
+  templates: {
+    resetPassword: ({ user, url }) => ({
+      subject: "Reset your password",
+      text: `Hello ${user.name}, reset your password: ${url}`,
+    }),
+    verifyEmail: ({ user, url }) => ({
+      subject: "Verify your email",
+      text: `Hello ${user.name}, verify your email: ${url}`,
+    }),
+  },
+}
+```
+
+The defaults escape names and URLs in HTML; replacement templates MUST escape any values they interpolate into HTML. Explicit `auth.emailAndPassword.sendResetPassword` and `auth.emailVerification.sendVerificationEmail` callbacks take precedence. Requiring verification or sending on sign-up stays an explicit Better Auth option. Auth screens and magic-link activation are separate features.
+
+For another provider, implement `EmailAdapter` from `integral-cms`:
+
+```ts
+import type { EmailAdapter } from "integral-cms";
+
+const adapter: EmailAdapter = {
+  async send(message) {
+    const response = await fetch("https://your-provider.example/send", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(message),
+    });
+    if (!response.ok) throw new Error("Email delivery failed");
+  },
+};
+```
+
+Map `message` to the provider's API as needed. It contains `from`, `to`, `subject`, optional `replyTo`, and text/HTML bodies. Core imports no SMTP runtime unless the host imports `integral-cms/email/smtp`.
+
+Sending awaits the provider immediately, with no queue or automatic retry. In hooks, it can happen before the content transaction commits and cannot be rolled back. Use a separate delivery workflow when mail must depend on a successful commit.
+
 ## Auth
 
 `auth` is [better-auth](https://better-auth.com)'s options object. It is better-auth's API and follows better-auth's versioning.
@@ -1588,6 +1672,7 @@ Working:
 - Astro integration, Nuxt module, TanStack Start via `integralAdmin()`; dev, preview and production on Node
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions
+- Server-side email with an SMTP adapter, replaceable authentication templates and custom adapters
 
 Roadmap, roughly in order:
 

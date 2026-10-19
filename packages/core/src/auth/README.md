@@ -12,6 +12,8 @@
 
 The provider endpoint runs before core CSRF/session middleware. Protected feature routes run after both checks. Request-scoped reads reuse `get-caller.ts`, including its existing public fallback when session lookup fails.
 
+When `email` is configured, `authOptions()` supplies password-reset and verification callbacks through the instance's [email module](../email/README.md). Host callbacks take precedence. Verification requirements and automatic sends stay under the host's Better Auth options.
+
 `sessionHint()` runs on `/auth/*`, before the provider endpoint. It reads the session cookie name from better-auth's
 options (`getCookies()`) and compares names without the secure prefix. A set session cookie sets `integral-session=1`
 (not `HttpOnly`, `Lax`, path `/`, `Secure` when the session cookie is); a cleared or expired one clears it. The hint

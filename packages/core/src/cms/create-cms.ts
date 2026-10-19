@@ -32,6 +32,7 @@ import { localizedKeys } from "../schema/traversal/localized-fields.ts";
 import { createRuntime } from "./runtime/create-runtime.ts";
 import type { Core, Perspective } from "./runtime/types.ts";
 import { outerScope } from "./runtime/operation-context.ts";
+import { createEmail } from "../email/create-email.ts";
 
 /**
  * Creates a CMS instance.
@@ -60,6 +61,7 @@ export function defineCms<
   database,
   secret,
   auth: host = {} as A,
+  email: emailOptions,
   populate: populateOptions = {} as P,
   hooks: rootHooks = {},
   plugins = [] as unknown as PL,
@@ -134,12 +136,19 @@ export function defineCms<
     ]),
     ...Object.entries<Global>(schema.globals).map(([n, e]): [string, Global] => [`global:${n}`, e]),
   ];
-  const { db, auth, getSession } = createRuntime<A>(database, secret, host, {
-    current: Object.fromEntries(
-      entries.map(([id, e]) => [id, e.localized ? localizedKeys(e) : null]),
-    ),
-    defaultLocale: localization?.defaultLocale ?? "",
-  });
+  const email = createEmail(emailOptions);
+  const { db, auth, getSession } = createRuntime<A>(
+    database,
+    secret,
+    host,
+    {
+      current: Object.fromEntries(
+        entries.map(([id, e]) => [id, e.localized ? localizedKeys(e) : null]),
+      ),
+      defaultLocale: localization?.defaultLocale ?? "",
+    },
+    emailOptions && { api: email, templates: emailOptions.templates },
+  );
 
   const core: Core = {
     schema,
@@ -150,6 +159,7 @@ export function defineCms<
     db,
     auth,
     getSession,
+    email,
     localApi: (scope) => createLocalApi(core, scope),
     media: mediaOptions && createMediaCore(mediaOptions, schema),
     admin: adminRuntime,

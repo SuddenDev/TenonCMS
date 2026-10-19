@@ -32,6 +32,16 @@ export type {
 export { definePlugin, type Plugin } from "./plugins/index.ts";
 
 export type { AuthOptions } from "./auth/config/options.ts";
+export type {
+  EmailAdapter,
+  EmailApi,
+  EmailContent,
+  EmailMessage,
+  EmailOptions,
+  EmailTemplate,
+  EmailTemplateData,
+  EmailTemplates,
+} from "./email/types.ts";
 export {
   LinkedContentError,
   type LinkedReference,

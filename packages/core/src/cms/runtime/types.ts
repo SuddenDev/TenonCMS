@@ -2,6 +2,7 @@ import type { AdminRuntime } from "../../admin/merge/merge-options.ts";
 import { type Database } from "../../db/types.ts";
 import type { Localization } from "../config/options.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
+import type { EmailApi } from "../../email/types.ts";
 import { type Plugin } from "../../plugins/index.ts";
 import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
 import type { BetterAuthOptions, User } from "better-auth";
@@ -33,6 +34,8 @@ export type Core = {
   localization?: Localization;
   /** The resolved `media` option. Missing without it. */
   media?: MediaCore;
+  /** Instance-owned server-side delivery. Rejects without email configuration. */
+  email: EmailApi;
   /**
    * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the
    * bar. `admin.bar` is `false` with `admin: { adminBar: false }`, which mounts no `/admin-bar` route.

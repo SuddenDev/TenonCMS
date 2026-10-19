@@ -1,4 +1,5 @@
 import type { DeleteOptions } from "../../errors.ts";
+import type { EmailApi } from "../../email/types.ts";
 import type {
   AlternatesOf,
   Checked,
@@ -76,6 +77,8 @@ type DiscardOptions<L extends string> =
  * (`never` without `localization`).
  */
 export type Api<T extends Schema, D extends number, L extends string = string> = {
+  /** Server-side delivery with the configured adapter. Sends immediately. */
+  email: EmailApi;
   /**
    * Lists documents of a collection, newest first.
    * In `where`, `null` matches documents where the field is empty or missing, and `undefined` adds no filter.
