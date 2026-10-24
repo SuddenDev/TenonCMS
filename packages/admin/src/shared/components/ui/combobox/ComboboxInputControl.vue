@@ -27,7 +27,10 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
   <ComboboxInput
     data-slot="combobox-input"
     :class="
-      cn('flex-1 outline-hidden disabled:cursor-not-allowed disabled:opacity-50', props.class)
+      cn(
+        'flex-1 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
+        props.class,
+      )
     "
     v-bind="{ ...$attrs, ...forwarded }"
   />
