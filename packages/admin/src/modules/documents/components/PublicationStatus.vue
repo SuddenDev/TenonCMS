@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useTimeoutFn } from "@vueuse/core";
+import { useTimeZone } from "@/shared/composables/useTimeZone";
 import { useI18n } from "vue-i18n";
 import { usePerspective } from "@/shared/composables/usePerspective";
 import { ago } from "@/shared/utils";
@@ -14,6 +15,7 @@ const props = defineProps<{
   missing?: boolean;
 }>();
 const { t, locale } = useI18n();
+const { timeZone } = useTimeZone();
 const { perspective, set, switching } = usePerspective();
 const open = ref(false);
 const { start: close, stop: keepOpen } = useTimeoutFn(() => (open.value = false), 150, {
@@ -24,7 +26,12 @@ function show() {
   open.value = true;
 }
 const dateFormat = computed(
-  () => new Intl.DateTimeFormat(locale.value, { dateStyle: "long", timeStyle: "medium" }),
+  () =>
+    new Intl.DateTimeFormat(locale.value, {
+      dateStyle: "long",
+      timeStyle: "medium",
+      timeZone: timeZone.value,
+    }),
 );
 const published = computed(() => !props.missing && !!props.doc.publishedAt);
 const draft = computed(

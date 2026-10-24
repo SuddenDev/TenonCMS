@@ -3,8 +3,7 @@ import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   CalendarDateTime,
-  getLocalTimeZone,
-  parseAbsoluteToLocal,
+  parseAbsolute,
   parseDate,
   toCalendarDate,
   today,
@@ -12,6 +11,7 @@ import {
 } from "@internationalized/date";
 import type { FieldProps } from "./types";
 import { text } from "@/shared/i18n";
+import { useTimeZone } from "@/shared/composables/useTimeZone";
 import FieldFrame from "./FieldFrame.vue";
 import Icon from "@/shared/components/Icon.vue";
 import { Calendar } from "@/shared/components/ui/calendar";
@@ -28,12 +28,13 @@ const dateLocale = computed(
   () =>
     navigator.languages.find((language) => language.split("-")[0] === locale.value) ?? locale.value,
 );
+const { timeZone } = useTimeZone();
 const open = ref(false);
 const datetime = computed(() => props.field.type === "datetime");
 const parsed = computed(() => {
   if (!model.value) return undefined;
   try {
-    return datetime.value ? parseAbsoluteToLocal(model.value) : parseDate(model.value);
+    return datetime.value ? parseAbsolute(model.value, timeZone.value) : parseDate(model.value);
   } catch {
     return undefined;
   }
@@ -51,7 +52,8 @@ const label = computed(() => {
     month: "2-digit",
     day: "2-digit",
     ...(datetime.value && { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-  }).format(parsed.value.toDate(getLocalTimeZone()));
+    timeZone: timeZone.value,
+  }).format(parsed.value.toDate(timeZone.value));
 });
 
 function selectDate(value: DateValue | undefined) {
@@ -62,7 +64,7 @@ function selectDate(value: DateValue | undefined) {
   if (datetime.value) {
     const [hour, minute, second] = time.value.split(":").map(Number);
     model.value = new CalendarDateTime(value.year, value.month, value.day, hour, minute, second)
-      .toDate(getLocalTimeZone())
+      .toDate(timeZone.value)
       .toISOString();
   } else {
     model.value = toCalendarDate(value).toString();
@@ -73,10 +75,10 @@ function selectDate(value: DateValue | undefined) {
 function setTime(value: string | number) {
   const input = String(value);
   if (!/^\d{2}:\d{2}(:\d{2})?$/.test(input)) return;
-  const date = selected.value ?? today(getLocalTimeZone());
+  const date = selected.value ?? today(timeZone.value);
   const [hour, minute, second = 0] = input.split(":").map(Number);
   model.value = new CalendarDateTime(date.year, date.month, date.day, hour, minute, second)
-    .toDate(getLocalTimeZone())
+    .toDate(timeZone.value)
     .toISOString();
 }
 
