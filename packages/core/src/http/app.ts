@@ -10,6 +10,8 @@ import type { Env } from "./middleware/types.ts";
 import { withCms } from "./middleware/with-cms.middleware.ts";
 import { session } from "../auth/middleware/session.middleware.ts";
 import { providerEndpoint } from "../auth/endpoints/provider.endpoint.ts";
+import { statusEndpoint } from "../auth/endpoints/status.endpoint.ts";
+import { passwordEndpoint } from "../auth/endpoints/password.endpoint.ts";
 import { sessionHint } from "../auth/middleware/session-hint.middleware.ts";
 import { pluginMiddleware } from "../plugins/http/collect-middleware.ts";
 import { mountRoutes } from "../plugins/http/mount-routes.ts";
@@ -46,6 +48,7 @@ export function createApp(core: Core, site?: string) {
   const reads = new Hono<Env>().get("/admin-brand", (c) =>
     c.json(adminBrand(core.admin.descriptor)),
   );
+  reads.route("/", statusEndpoint(core));
   reads.route("/", localizationEndpoint(core.localization));
   mountRoutes(reads, plugins, "publicRoutes");
   if (media) reads.route("/media", media.reads);
@@ -57,6 +60,7 @@ export function createApp(core: Core, site?: string) {
   writes.route("/", enterEndpoint());
   writes.route("/", exitEndpoint());
   if (core.admin.bar) writes.route("/", adminBarEndpoint(core, core.admin.bar));
+  writes.route("/", passwordEndpoint(core));
   writes.route("/", loadEndpoint(core));
   writes.route("/", richtextTargetsEndpoint(core));
   writes.route("/", richtextResolveEndpoint(core));

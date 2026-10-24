@@ -1,5 +1,7 @@
 import { createAuthMiddleware } from "better-auth/api";
 import { admin as adminPlugin, anonymous, twoFactor } from "better-auth/plugins";
+import { passkey } from "@better-auth/passkey";
+import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { admin, base, fresh, origin, setup, status, tables, tmpDb, type Env } from "./setup.ts";
@@ -39,6 +41,66 @@ describe("auth", () => {
     await client.signUp(admin);
     expect(await client.getSession()).toMatchObject({ user: { email: admin.email } });
     expect(await status(client.signUp({ ...admin, email: "c@d.co" }))).toBe(403);
+  });
+
+  it("reports first-admin setup until a user exists", async () => {
+    expect(await client.request("/auth-status")).toEqual({ setup: true, signUp: true });
+    await client.signUp(admin);
+    await client.signOut();
+    expect(await client.request("/auth-status")).toEqual({ setup: false, signUp: false });
+  });
+
+  it("offers passkeys for the site's host name", async () => {
+    const { client } = setup(defineCms({ ...base, site: "https://example.com" }));
+    const options = await client.request<{ rpId: string }>(
+      "/auth/passkey/generate-authenticate-options",
+    );
+    expect(options.rpId).toBe("example.com");
+  });
+
+  it("keeps the host's own passkey plugin", async () => {
+    const { client } = setup(
+      defineCms({
+        ...base,
+        site: "https://example.com",
+        auth: { plugins: [passkey({ rpID: "cms.test" })] },
+      }),
+    );
+    const options = await client.request<{ rpId: string }>(
+      "/auth/passkey/generate-authenticate-options",
+    );
+    expect(options.rpId).toBe("cms.test");
+  });
+
+  it("stores the admin preferences on the user", async () => {
+    await client.signUp(admin);
+    const update = (body: object) => client.request("/auth/update-user", { method: "POST", body });
+    await update({ language: "de", timezone: "Europe/Berlin" });
+    expect((await client.getSession())?.user).toMatchObject({
+      language: "de",
+      timezone: "Europe/Berlin",
+    });
+    await update({ timezone: null });
+    expect((await client.getSession())?.user).toMatchObject({ language: "de", timezone: null });
+    expect(await status(update({ language: "fr" }))).toBe(400);
+    expect(await status(update({ timezone: "Mars/Base" }))).toBe(400);
+  });
+
+  it("sets a first password, but never replaces one", async () => {
+    const url = tmpDb();
+    const { client } = setup(defineCms({ ...base, database: { url } }));
+    const set = (newPassword: string) =>
+      client.request("/account/password", { method: "POST", body: { newPassword } });
+    expect(await status(set("password456"))).toBe(401);
+    await client.signUp(admin);
+    expect(await status(set("password456"))).toBe(400);
+    const db = createLibsql({ url });
+    await db.execute("DELETE FROM account WHERE providerId = 'credential'");
+    db.close();
+    await set("password456");
+    await client.signOut();
+    await client.signIn({ email: admin.email, password: "password456" });
+    expect(await client.getSession()).not.toBeNull();
   });
 
   it("creates plugin tables at runtime and types plugin endpoints", async () => {

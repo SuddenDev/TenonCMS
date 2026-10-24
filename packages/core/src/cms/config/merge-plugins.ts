@@ -2,7 +2,17 @@ import type { Schema } from "../../schema/index.ts";
 import type { Plugin } from "../../plugins/types.ts";
 
 // Route prefixes core uses under `/api/cms`.
-const reserved = ["auth", "collections", "globals", "schema", "media", "preview", "localization"];
+const reserved = [
+  "account",
+  "auth",
+  "auth-status",
+  "collections",
+  "globals",
+  "schema",
+  "media",
+  "preview",
+  "localization",
+];
 
 /**
  * Add the collections and globals of all plugins to the host's schema

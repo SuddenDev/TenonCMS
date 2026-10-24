@@ -39,6 +39,10 @@ export type Session = {
     emailVerified: boolean;
     /** Avatar URL. */
     image?: string | null;
+    /** Admin language, `en` or `de`. `null` follows the browser. */
+    language?: string | null;
+    /** IANA time zone the admin shows dates in. `null` follows the device. */
+    timezone?: string | null;
     createdAt: string;
     updatedAt: string;
   };

@@ -148,6 +148,11 @@ export function defineCms<
       defaultLocale: localization?.defaultLocale ?? "",
     },
     emailOptions && { api: email, templates: emailOptions.templates },
+    // Without `site`, better-auth falls back to the host of its `baseURL`, else `localhost`.
+    {
+      rpID: site && new URL(site).hostname,
+      rpName: adminRuntime.descriptor.name ?? "integral-cms",
+    },
   );
 
   const core: Core = {
