@@ -1358,14 +1358,26 @@ Sending awaits the provider immediately, with no queue or automatic retry. In ho
 
 ## Auth
 
+The admin signs in at `/login`. While no user exists, every admin URL leads to `/signup`, which creates the first admin. After that, sign-up is closed: `/signup` redirects to `/login`, and the sign-in shows no sign-up link. `GET /api/cms/auth-status` answers `{ setup, signUp }` for custom forms.
+
+**Account settings** in the user menu edit the user's name, admin language and time zone (dates in forms and the publication status follow it; empty follows the device), change the password (other sessions are signed out), set a first password for users without one (`POST /api/cms/account/password`), and add or remove passkeys. Language and time zone are stored on the user as better-auth fields `language` and `timezone`, validated on write; a host's own field of the same name replaces core's.
+
+Admins can sign in with a passkey. Core registers better-auth's `passkey()` plugin with the host name of `site` as the relying party ID (without `site`: `localhost`) and the admin `name` as its display name. Add your own `passkey()` to `auth.plugins` to configure it; it replaces core's. Adding a passkey needs a recent sign-in.
+
+The admin's **Forgot password?** link sends a reset email and opens a form for a new password. It needs the `email` configuration above or your own `auth.emailAndPassword.sendResetPassword` callback. Requests show the same confirmation for existing and unknown accounts; invalid or expired links offer a new request. Custom admin paths work, and a successful reset returns to sign-in.
+
+Host apps can use `client.requestPasswordReset({ email, redirectTo })` and `client.resetPassword({ token, newPassword })` for their own forms. `redirectTo` is the trusted URL of that form. Better Auth checks password rules and token expiry, and consumes a successful reset token once. Existing-session revocation follows `auth.emailAndPassword.revokeSessionsOnPasswordReset`.
+
+For local SMTP testing, the Astro example accepts `SMTP_URL` and `EMAIL_FROM` (see `examples/astro/.env.example`). Set `SMTP_URL=smtp://127.0.0.1:1025` for a local email catcher on port 1025. Development permits a catcher without TLS; production requires TLS. Start the example, choose **Forgot password?**, and open the link in the catcher's inbox.
+
 `auth` is [better-auth](https://better-auth.com)'s options object. It is better-auth's API and follows better-auth's versioning.
 
 - Core owns `database`, `basePath` and `secret`. It always turns `emailAndPassword` on, because the admin login needs it; your other email options stay.
 - `modelName` is not accepted: core reads the `user` table by name, so auth tables keep their default names.
-- Only the first user can sign up without a session. After that, any user creation without a signed-in session returns 403, on every endpoint (email sign-up, social sign-in, magic link, other plugins). A signed-in admin can create more users, for example with the `admin()` plugin. Server code that calls better-auth without a request is trusted.
+- Only the first user can sign up without a session (`/auth-status` reports `setup`). After that, any user creation without a signed-in session returns 403, on every endpoint (email sign-up, social sign-in, magic link, other plugins). A signed-in admin can create more users, for example with the `admin()` plugin. Server code that calls better-auth without a request is trusted.
 - Tables of plugins are created at runtime on the first database access. There is no CLI step.
 - Core's first-user rule runs before your `databaseHooks.user.create.before`.
-- The admin login supports email and password only. Plugins that need UI (2FA, passkey, magic link) work on the server, but not in the admin yet.
+- The admin supports email/password, passkeys and password reset. Plugins that need other UI (2FA, magic link) work on the server, but not in the admin yet.
 
 Coming from Payload, the auth hooks map to better-auth's request hooks:
 
