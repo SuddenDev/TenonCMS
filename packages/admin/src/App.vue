@@ -1,19 +1,35 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
-import { computed, inject, provide } from "vue";
-import { useRoute } from "vue-router";
-import Login from "@/modules/auth/components/Login.vue";
+import { computed, inject, provide, watchEffect } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useSession } from "@/modules/auth/composables/useSession";
 import { layouts } from "@/shared/layouts";
 import { useTheme } from "@/shared/composables/useTheme";
 import { useBrand } from "@/shared/composables/useBrand";
-import { optionsKey, sessionKey } from "@/shared/options";
+import { CONTENT, optionsKey, sessionKey } from "@/shared/options";
 import { Toaster } from "@/shared/components/ui/sonner";
 
 const { user, loading, load, signOut, expire, error } = useSession();
 const route = useRoute();
+const router = useRouter();
 
-provide(sessionKey, { user, signOut, expire });
+provide(sessionKey, { user, load, signOut, expire });
+
+// Without a session, an admin view sends the visitor to the sign-in, which sends them back after it.
+watchEffect(() => {
+  if (loading.value || error.value) return;
+  if (!user.value && !route.meta.auth)
+    void router.replace({
+      path: "/login",
+      query: route.path === CONTENT ? {} : { redirect: route.fullPath },
+    });
+  else if (user.value && route.meta.guest) void router.replace(back(route.query.redirect));
+});
+
+// Only a path inside the admin, never another origin.
+function back(redirect: unknown) {
+  return typeof redirect === "string" && /^\/(?!\/)/.test(redirect) ? redirect : "/";
+}
 
 // Applied here, so the theme also holds on screens without the sidebar, like the login.
 useTheme();
@@ -47,9 +63,10 @@ useHead(() => ({
 </script>
 
 <template>
-  <div v-if="loading" />
+  <RouterView v-if="route.meta.auth" :key="viewKey" />
+  <div v-else-if="loading" />
   <p v-else-if="error" role="alert" class="p-4">{{ error }}</p>
-  <Login v-else-if="!user" @done="load" />
+  <div v-else-if="!user" />
   <component :is="layout" v-else>
     <RouterView :key="viewKey" />
   </component>

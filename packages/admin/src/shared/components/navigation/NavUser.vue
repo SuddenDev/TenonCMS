@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, inject } from "vue";
+import { computed, inject, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import Icon from "@/shared/components/Icon.vue";
 import { useTheme } from "@/shared/composables/useTheme";
 import { useAdminLocale } from "@/shared/i18n";
 import { localeLabel } from "@/shared/locale";
 import { sessionKey } from "@/shared/options";
+import UserSettings from "@/modules/auth/components/UserSettings.vue";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ import {
 const { t } = useI18n();
 const { user, signOut } = inject(sessionKey)!;
 const theme = useTheme();
+const settings = ref(false);
 const { locale, locales } = useAdminLocale();
 const themes = [
   { value: "light", label: "nav.light", icon: "sun" },
@@ -81,10 +83,15 @@ const initials = computed(() =>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSeparator />
+      <DropdownMenuItem @select="settings = true">
+        <Icon name="user-cog" />
+        {{ t("account.settings") }}
+      </DropdownMenuItem>
       <DropdownMenuItem @select="signOut">
         <Icon name="log-out" />
         {{ t("nav.logOut") }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
+  <UserSettings v-if="user" v-model:open="settings" />
 </template>

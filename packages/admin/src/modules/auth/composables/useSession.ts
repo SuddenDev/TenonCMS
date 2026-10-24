@@ -1,7 +1,10 @@
 import { configureKey } from "@/shared/options";
-import { inject, onMounted, onUnmounted, ref } from "vue";
+import { inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { client, schema, type Session } from "@/shared/api";
 import { readPerspective } from "@/shared/composables/usePerspective";
+import { useTimeZone } from "@/shared/composables/useTimeZone";
+import { useAdminLocale } from "@/shared/i18n";
+import { updateUser } from "../account";
 
 /** The signed-in user and the schema. `schema` fills in once a session exists. */
 export function useSession() {
@@ -9,6 +12,8 @@ export function useSession() {
   const error = ref("");
   const user = ref<Session["user"] | null>(null);
   const loading = ref(true);
+  const { locale, locales } = useAdminLocale();
+  const { preferred } = useTimeZone();
 
   async function load() {
     error.value = "";
@@ -29,9 +34,19 @@ export function useSession() {
       return;
     }
     user.value = session?.user ?? null;
+    preferred.value = user.value?.timezone ?? null;
+    const language = (locales as readonly string[]).find((l) => l === user.value?.language);
+    if (language) locale.value = language as typeof locale.value;
     if (user.value && s) schema.value = s;
     loading.value = false;
   }
+
+  // A language chosen anywhere in the admin follows the user to other browsers.
+  watch(locale, (language) => {
+    if (!user.value || user.value.language === language) return;
+    user.value.language = language;
+    updateUser({ language }).catch(console.error);
+  });
 
   // The config can change while the admin is open, e.g. when editing integral.config.ts in dev.
   // Unchanged responses are skipped, so a refresh does not re-render open forms.

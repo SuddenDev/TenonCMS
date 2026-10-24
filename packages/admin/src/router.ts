@@ -20,6 +20,9 @@ import GlobalEdit from "@/modules/documents/views/GlobalEdit.vue";
 import Settings from "@/modules/settings/views/Settings.vue";
 import Media from "@/modules/media/views/Media.vue";
 import Preview from "@/modules/preview/views/Preview.vue";
+import Login from "@/modules/auth/components/Login.vue";
+import PasswordReset from "@/modules/auth/components/PasswordReset.vue";
+import SignUp from "@/modules/auth/components/SignUp.vue";
 
 const { t } = i18n.global;
 const empty = { render: () => null };
@@ -92,6 +95,10 @@ export async function addAdminPages(router: Router, pages: Record<string, PageDe
 
 export function createAdminRouter(base: string) {
   const routes: RouteRecordRaw[] = [
+    { path: "/login", component: Login, meta: { auth: true, guest: true } },
+    { path: "/signup", component: SignUp, meta: { auth: true, guest: true } },
+    { path: "/forgot-password", component: PasswordReset, meta: { auth: true } },
+    { path: "/reset-password", component: PasswordReset, meta: { auth: true } },
     { path: "/", redirect: CONTENT },
     {
       path: CONTENT,

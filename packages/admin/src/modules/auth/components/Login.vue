@@ -1,77 +1,122 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
-import { ref } from "vue";
+import { inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import { client } from "@/shared/api";
-import Themed from "@/shared/components/Themed.vue";
+import { sessionKey } from "@/shared/options";
+import Icon from "@/shared/components/Icon.vue";
 import { Button } from "@/shared/components/ui/button";
-import { useBrand } from "@/shared/composables/useBrand";
 import { Input } from "@/shared/components/ui/input";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/shared/components/ui/field";
+import { useAuthStatus } from "../composables/useAuthStatus";
+import { cancelled, passkeysSupported, signInWithPasskey } from "../passkey";
+import AuthCard from "./AuthCard.vue";
+import PasswordInput from "./PasswordInput.vue";
+import { Separator } from "@/shared/components/ui/separator";
 
-const { name, logo, icon } = useBrand();
-const emit = defineEmits<{ done: [] }>();
-const signUp = ref(false);
-const form = ref({ name: "", email: "", password: "" });
+const { load } = inject(sessionKey)!;
+const route = useRoute();
+const router = useRouter();
+const { t } = useI18n();
+const status = useAuthStatus();
+const form = ref({ email: "", password: "" });
 const error = ref("");
 const busy = ref(false);
+const passkeys = passkeysSupported();
 
-const { t } = useI18n();
-useHead({ title: () => t(signUp.value ? "auth.createAccount" : "auth.signIn") });
+useHead({ title: () => t("auth.signIn") });
 
-async function submit() {
+watch(status, (s) => {
+  if (s?.setup) void router.replace({ path: "/signup", query: route.query });
+});
+
+// The session reload sends the admin on (App.vue).
+async function run(signIn: () => Promise<unknown>) {
+  if (busy.value) return;
   busy.value = true;
   error.value = "";
   try {
-    await (signUp.value ? client.signUp(form.value) : client.signIn(form.value));
-    emit("done");
+    await signIn();
+    await load();
   } catch (e) {
-    error.value = (e as Error).message;
+    if (!cancelled(e)) error.value = (e as Error).message;
   } finally {
     busy.value = false;
   }
 }
+
+const submit = () => run(() => client.signIn(form.value));
+
+// One passkey request at a time: each one replaces the server's challenge cookie.
+let autofill: { abort: AbortController; done: Promise<void> } | undefined;
+onMounted(async () => {
+  if (!passkeys || !(await PublicKeyCredential.isConditionalMediationAvailable?.())) return;
+  const abort = new AbortController();
+  const done = signInWithPasskey({ conditional: true, signal: abort.signal }).then(load, (e) => {
+    if (!cancelled(e)) error.value = (e as Error).message;
+  });
+  autofill = { abort, done };
+});
+onUnmounted(() => autofill?.abort.abort());
+
+async function withPasskey() {
+  autofill?.abort.abort();
+  await autofill?.done;
+  autofill = undefined;
+  await run(() => signInWithPasskey());
+}
 </script>
 
 <template>
-  <div class="bg-muted text-foreground flex min-h-screen items-center justify-center p-4">
-    <form
-      class="border-border bg-card flex w-full max-w-sm flex-col gap-3 rounded-lg border p-6"
-      @submit.prevent="submit"
-    >
-      <Themed
-        v-if="logo ?? icon"
-        :src="(logo ?? icon)!"
-        :alt="name"
-        class="h-10 self-start object-contain"
-      />
-      <h1 class="text-lg font-semibold">
-        {{ t(signUp ? "auth.createFirstAdmin" : "auth.signIn") }}
-      </h1>
-      <label v-if="signUp" class="flex flex-col gap-1 text-sm">
-        {{ t("auth.name") }}
-        <Input v-model="form.name" required autocomplete="name" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm">
-        {{ t("auth.email") }}
-        <Input v-model="form.email" type="email" required autocomplete="email" />
-      </label>
-      <label class="flex flex-col gap-1 text-sm">
-        {{ t("auth.password") }}
-        <Input
-          v-model="form.password"
-          type="password"
-          required
-          minlength="8"
-          :autocomplete="signUp ? 'new-password' : 'current-password'"
-        />
-      </label>
-      <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
-      <Button size="lg" :disabled="busy">
-        {{ t(signUp ? "auth.createAccount" : "auth.signIn") }}
-      </Button>
-      <Button variant="link" size="xs" type="button" class="opacity-80" @click="signUp = !signUp">
-        {{ t(signUp ? "auth.haveAccount" : "auth.firstTime") }}
-      </Button>
+  <AuthCard :title="t('auth.signIn')">
+    <form :aria-busy="busy" @submit.prevent="submit">
+      <FieldGroup>
+        <Field>
+          <FieldLabel for="email">{{ t("auth.email") }}</FieldLabel>
+          <Input
+            id="email"
+            v-model="form.email"
+            type="email"
+            autocomplete="username webauthn"
+            placeholder="email@example.com"
+            required
+          />
+        </Field>
+        <Field>
+          <div class="flex items-center">
+            <FieldLabel for="password">{{ t("auth.password") }}</FieldLabel>
+            <RouterLink
+              to="/forgot-password"
+              class="text-muted-foreground hover:text-foreground ml-auto text-sm underline-offset-4 hover:underline"
+            >
+              {{ t("auth.forgotPassword") }}
+            </RouterLink>
+          </div>
+          <PasswordInput
+            id="password"
+            v-model="form.password"
+            autocomplete="current-password"
+            required
+          />
+        </Field>
+        <p v-if="error" role="alert" class="text-destructive text-sm">{{ error }}</p>
+        <Field>
+          <Button type="submit" size="lg" :disabled="busy">{{ t("auth.signIn") }}</Button>
+          <template v-if="passkeys">
+            <Separator class="my-2" />
+            <Button type="button" variant="outline" size="lg" :disabled="busy" @click="withPasskey">
+              <Icon name="key-round" />{{ t("auth.signInWithPasskey") }}
+            </Button>
+          </template>
+          <FieldDescription v-if="status?.signUp" class="text-center">
+            {{ t("auth.noAccount") }}
+            <RouterLink :to="{ path: '/signup', query: route.query }">{{
+              t("auth.signUp")
+            }}</RouterLink>
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
     </form>
-  </div>
+  </AuthCard>
 </template>

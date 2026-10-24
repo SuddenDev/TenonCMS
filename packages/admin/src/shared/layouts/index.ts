@@ -5,6 +5,10 @@ export const layouts = { default: DefaultLayout };
 
 declare module "vue-router" {
   interface RouteMeta {
+    /** Public authentication screen, without the admin layout. */
+    auth?: boolean;
+    /** Only for visitors: a signed-in admin is sent on to `?redirect=`, else to the start. */
+    guest?: boolean;
     /** The layout that wraps the view. Defaults to `default`. */
     layout?: keyof typeof layouts;
     /** The view renders its own columns next to the menu, instead of one scrolling page. */

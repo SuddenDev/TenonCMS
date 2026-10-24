@@ -22,6 +22,8 @@ export const pageDataKey = Symbol() as InjectionKey<ShallowRef<ExtensionData<any
 export const integralKey = Symbol() as InjectionKey<Omit<IntegralContext, "locale">>;
 export const sessionKey = Symbol() as InjectionKey<{
   user: Ref<Session["user"] | null>;
+  /** Reads the session again, e.g. after a sign-in. */
+  load: () => Promise<void>;
   signOut: () => Promise<void>;
   /** The server answered 401: the session is gone. Shows the sign-in and stops everything behind it. */
   expire: () => void;
