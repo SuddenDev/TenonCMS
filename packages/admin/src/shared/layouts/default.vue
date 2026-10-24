@@ -85,13 +85,7 @@ providePanes(row);
         <RouterLink to="/" class="flex items-center gap-2">
           <Themed v-if="logo" :src="logo" :alt="name" class="h-7 max-w-40 object-contain" />
           <template v-else>
-            <span
-              class="flex size-7 items-center justify-center rounded-md"
-              :class="!icon && 'bg-primary text-primary-foreground'"
-            >
-              <Themed v-if="icon" :src="icon" class="size-7 object-contain" />
-              <Icon v-else name="box" />
-            </span>
+            <Themed :src="icon" class="size-7 object-contain" />
             <span class="text-sm font-medium">{{ name }}</span>
           </template>
         </RouterLink>
