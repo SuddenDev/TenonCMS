@@ -1,8 +1,8 @@
-import type { User } from "better-auth";
+import type { CmsUser } from "../../admin/index.d.ts";
 import { type Core, type Scope, type Inner, type Perspective } from "./types.ts";
 
 /** The scope of a call from outside the CMS: server code or an HTTP request. */
-export const outerScope = (user: User | null, perspective?: Perspective): Scope => ({
+export const outerScope = (user: CmsUser | null, perspective?: Perspective): Scope => ({
   user,
   context: {},
   nested: false,

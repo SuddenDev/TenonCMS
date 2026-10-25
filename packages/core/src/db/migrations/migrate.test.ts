@@ -22,6 +22,9 @@ it("runs CMS migrations once", async () => {
       "cms_global_locales",
       "cms_schema_state",
       "cms_document_locales_locale_idx",
+      "cms_invites",
+      "cms_invites_email_idx",
+      "cms_invites_token_idx",
     ]),
   );
 });

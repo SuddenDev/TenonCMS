@@ -55,3 +55,9 @@ Migration `005_cms_locales` adds three tables:
 A localized collection or global keeps shared fields in `cms_documents` / `cms_globals` and localized fields in the locale row's `data` and `draft`. A locale row is published when its `published_at` is set; the document row's `published_at` tracks the shared fields. Unlocalized entries have no locale rows. A document delete removes its locale rows in the same transaction. A locale removed from the config keeps its rows, and reads ignore them.
 
 `syncLocalized()` runs once per connection, after the migrations (`cms/runtime/create-runtime.ts`). It compares the localized keys per entry with `cms_schema_state` and, in one transaction, moves the changed keys for `data` and `draft`: shared to the default locale's row (a missing row is created with the document's `published_at`), or back to the shared data. Other locales keep their rows. The first run with an empty state only records. The row `kind = 'meta'`, `name = 'defaultLocale'` stores the default locale; a change moves nothing and logs a warning with the number of documents that have no row in the new one. Moves are logged with consola, for example `moved posts.title to locale rows (12 documents)`.
+
+## Invite and user queries
+
+Migration `006_cms_invites` adds `cms_invites`: `id`, `email` (lowercase, unique), `role`, `token_hash` (SHA-256 hex, unique), `invited_by`, `expires_at`, `created_at`. `queries/invites/` inserts, finds by token or email, lists, renews (`RETURNING`), claims (`DELETE … RETURNING`, so a token claims once) and deletes. Queries that check expiry take `now`.
+
+`queries/users/` reads better-auth's `user` table by name with plain SQL: `userExists()` by email, and `otherAdmins()`, the active admins other than one user, for the last-admin guard.

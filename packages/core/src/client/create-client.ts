@@ -168,6 +168,17 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       folders: () => request("GET", "/media/folders"),
     },
 
+    invites: {
+      list: () => request("GET", "/invites"),
+      create: (data: unknown) => request("POST", "/invites", data),
+      resend: (id: string, data: unknown) => request("POST", `/invites/${enc(id)}/resend`, data),
+      revoke: async (id: string) => {
+        await request("DELETE", `/invites/${enc(id)}`);
+      },
+      check: (token: string) => request("POST", "/invites/check", { token }),
+      accept: (data: unknown) => request("POST", "/invites/accept", data),
+    },
+
     preview: {
       enter: async (perspective: Perspective = "drafts") => {
         await request("POST", "/preview", { perspective });

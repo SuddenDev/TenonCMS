@@ -5,6 +5,7 @@ import type { mediaCollection } from "../../media/config/collection.ts";
 import type { MediaOptions } from "../../media/config/options.ts";
 import type { Plugin } from "../../plugins/index.ts";
 import type { settings } from "../../presets/settings.ts";
+import type { RoleOptions } from "../../users/roles.ts";
 import type { CheckRefs, Collection, Global, MediaApi, RootHooks } from "../../schema/index.ts";
 
 export type PopulateOptions = {
@@ -127,6 +128,11 @@ export type CmsOptions<
   auth?: A & AuthOptions;
   /** Server-side delivery and authentication email templates. Omitted: sending rejects. */
   email?: EmailOptions;
+  /**
+   * Extra user roles, keyed by name (`[a-z0-9-]`). `admin` (manages users) and `editor` are built in and MUST NOT
+   * be listed. A role only names a group of users: every role edits all content.
+   */
+  roles?: Record<string, RoleOptions>;
   /** Hooks for every collection and global. */
   hooks?: RootHooks;
   /**

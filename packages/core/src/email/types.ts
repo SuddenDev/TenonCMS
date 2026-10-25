@@ -26,10 +26,23 @@ export type EmailTemplateData = {
 /** Renders an authentication email on the server. */
 export type EmailTemplate = (data: EmailTemplateData) => EmailContent | Promise<EmailContent>;
 
-/** Replacements for the built-in authentication emails. */
+/** Values passed to the invite template. The invited person has no account yet. */
+export type InviteTemplateData = {
+  email: string;
+  role: { name: string; label: string };
+  url: string;
+  inviter: { name: string; email: string };
+  site: string;
+};
+
+/** Renders the invite email on the server. */
+export type InviteTemplate = (data: InviteTemplateData) => EmailContent | Promise<EmailContent>;
+
+/** Replacements for the built-in authentication and invite emails. */
 export type EmailTemplates = {
   resetPassword: EmailTemplate;
   verifyEmail: EmailTemplate;
+  invite: InviteTemplate;
 };
 
 /** Optional server-side email delivery. No mail is sent without an adapter. */

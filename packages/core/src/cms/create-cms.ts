@@ -33,6 +33,8 @@ import { createRuntime } from "./runtime/create-runtime.ts";
 import type { Core, Perspective } from "./runtime/types.ts";
 import { outerScope } from "./runtime/operation-context.ts";
 import { createEmail } from "../email/create-email.ts";
+import { emailTemplates } from "../email/templates.ts";
+import { normalizeRoles } from "../users/roles.ts";
 
 /**
  * Creates a CMS instance.
@@ -70,6 +72,7 @@ export function defineCms<
   localization: localizationOption,
   site,
   admin,
+  roles: roleOptions,
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S, L>) {
   type T = {
@@ -83,6 +86,7 @@ export function defineCms<
   if (site !== undefined && !/^https?:$/.test(URL.parse(site)?.protocol ?? ""))
     throw new Error("integral-cms: `site` MUST be an http(s) URL");
 
+  const roles = normalizeRoles(roleOptions);
   const populateOption = {
     depth: populateOptions.depth ?? 2,
     maxDepth: populateOptions.maxDepth ?? 5,
@@ -147,11 +151,14 @@ export function defineCms<
       ),
       defaultLocale: localization?.defaultLocale ?? "",
     },
-    emailOptions && { api: email, templates: emailOptions.templates },
-    // Without `site`, better-auth falls back to the host of its `baseURL`, else `localhost`.
     {
-      rpID: site && new URL(site).hostname,
-      rpName: adminRuntime.descriptor.name ?? "integral-cms",
+      email: emailOptions && { api: email, templates: emailOptions.templates },
+      // Without `site`, better-auth falls back to the host of its `baseURL`, else `localhost`.
+      relyingParty: {
+        rpID: site && new URL(site).hostname,
+        rpName: adminRuntime.descriptor.name ?? "integral-cms",
+      },
+      roles,
     },
   );
 
@@ -165,6 +172,8 @@ export function defineCms<
     auth,
     getSession,
     email,
+    emailTemplates: emailOptions && { ...emailTemplates, ...emailOptions.templates },
+    roles,
     localApi: (scope) => createLocalApi(core, scope),
     media: mediaOptions && createMediaCore(mediaOptions, schema),
     admin: adminRuntime,

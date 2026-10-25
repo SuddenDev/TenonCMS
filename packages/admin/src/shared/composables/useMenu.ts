@@ -1,10 +1,10 @@
-import { computed } from "vue";
+import { computed, inject } from "vue";
 import { useRoute } from "vue-router";
 import { groupMenu } from "../../../../core/src/admin/browser/menu";
 import type { Nav } from "../../../../core/src/admin/index.d.ts";
 import { schema } from "@/shared/api";
 import { i18n, text } from "@/shared/i18n";
-import { CONTENT, pagePath } from "@/shared/options";
+import { CONTENT, pagePath, sessionKey } from "@/shared/options";
 
 export type MenuItem = {
   label: string;
@@ -107,11 +107,12 @@ export function useSettings() {
 /**
  * The sidebar sections: items with `nav.display` `content` or unset, each in its `group` (default
  * `Content`). Sorted by `order`; equal orders keep their definition order. A Settings entry under
- * `Admin` is added when any item is shown on the Settings page.
+ * `Admin` is added when any item is shown on the Settings page, and a Users entry for admins.
  */
 export function useMenu() {
   const entries = useEntries();
   const settings = useSettings();
+  const session = inject(sessionKey, undefined);
   return computed(() => {
     const items: MenuItem[] = entries.value.filter((e) => e.display === "content");
     const targets = settings.value.flatMap((g) => g.items.map((i) => i.to));
@@ -123,6 +124,14 @@ export function useMenu() {
         order: 100,
         to: `${CONTENT}/settings`,
         also: targets,
+      });
+    if (session?.user.value?.role === "admin")
+      items.push({
+        label: t("nav.users"),
+        icon: "users",
+        group: t("nav.manage"),
+        order: 110,
+        to: "/users",
       });
     return groupMenu(items, t("nav.content"));
   });

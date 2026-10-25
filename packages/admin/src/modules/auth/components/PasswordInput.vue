@@ -8,12 +8,14 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/shared/components/ui/input-group";
-import { passwordChecks, passwordStrength } from "../password";
+import { passwordChecks, passwordStrength, randomPassword } from "../password";
 
 defineOptions({ inheritAttrs: false });
-const { variant = "default" } = defineProps<{
+const { variant = "default", generate = false } = defineProps<{
   /** `register` shows which criteria a new password meets. */
   variant?: "default" | "register";
+  /** Shows a button that fills in a random password and reveals it. */
+  generate?: boolean;
 }>();
 const model = defineModel<string>({ default: "" });
 
@@ -36,6 +38,17 @@ const level = computed(() =>
       :aria-describedby="variant === 'register' && model ? hints : undefined"
     />
     <InputGroupAddon align="inline-end" class="border-l-0 bg-transparent">
+      <InputGroupButton
+        v-if="generate"
+        size="icon-xs"
+        :aria-label="t('auth.generatePassword')"
+        @click="
+          model = randomPassword();
+          visible = true;
+        "
+      >
+        <Icon name="dices" />
+      </InputGroupButton>
       <InputGroupButton
         size="icon-xs"
         :aria-label="t(visible ? 'auth.hidePassword' : 'auth.showPassword')"

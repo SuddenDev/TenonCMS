@@ -1,6 +1,6 @@
 import type { RichtextDocument, RichtextTargets } from "../../richtext/config/types.ts";
 import type { DeleteOptions } from "../../errors.ts";
-import type { AdminDescriptor } from "../../admin/index.d.ts";
+import type { AdminDescriptor, Text } from "../../admin/index.d.ts";
 import type { Localization } from "../../cms/config/options.ts";
 import type {
   Checked,
@@ -14,6 +14,7 @@ import type {
   SelectOf,
   PopulateOf,
 } from "../../schema/index.ts";
+import type { Invite, InviteResult } from "../../users/types.ts";
 import type { MediaClient } from "./media.ts";
 import type { FindOptions } from "./options.ts";
 import type {
@@ -43,6 +44,8 @@ export type Session = {
     language?: string | null;
     /** IANA time zone the admin shows dates in. `null` follows the device. */
     timezone?: string | null;
+    /** `admin`, `editor` or a host role. `null` counts as `editor`. */
+    role?: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -375,6 +378,28 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     }): Promise<RichtextTargets>;
   };
   media: MediaClient;
+
+  /** Invites to the admin. Listing, creating, resending and revoking need an admin's session. */
+  invites: {
+    /** Every invite, expired ones flagged. `GET /api/cms/invites` */
+    list(): Promise<Invite[]>;
+    /**
+     * Invites `email` with `role`. `url` is the admin's invite page; it MUST be on the site's origin. A `CmsError` with
+     * status `502` means sending failed: its `body` is the {@link InviteResult}, so the link can be sent by hand.
+     * `POST /api/cms/invites`
+     */
+    create(data: { email: string; role: string; url: string }): Promise<InviteResult>;
+    /** A new link, so the old one stops working, sent again. `POST /api/cms/invites/:id/resend` */
+    resend(id: string, data: { url: string }): Promise<InviteResult>;
+    /** `DELETE /api/cms/invites/:id` */
+    revoke(id: string): Promise<void>;
+    /** The email, role and role label of a valid token. Public. `POST /api/cms/invites/check` */
+    check(token: string): Promise<{ email: string; role: string; label: Text }>;
+    /** Creates the invited user and signs them in. Public. `POST /api/cms/invites/accept` */
+    accept(data: { token: string; name: string; password: string }): Promise<{
+      user: Session["user"];
+    }>;
+  };
 
   /**
    * The preview cookie. It holds a {@link Perspective}. While it is `drafts`, reads of the signed-in user see drafts,

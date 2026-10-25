@@ -11,4 +11,4 @@
 
 Plugins can provide collections, globals, hooks, media hooks, routes, middleware and admin registrations (`admin`: fields, pages and bar `items`, merged in plugin order before the host's; see [admin](../admin/README.md) and [preview](../preview/README.md#admin-bar)). Public routes run before CSRF/session checks, so plugins MUST enforce any protection their public writes require. Protected routes and middleware receive the session user and scoped CMS API. The bundled plugins (`redirects`, `example`) live in `packages/plugins` and MUST use public exports.
 
-A plugin MAY have no collections or globals and only add `admin`. A plugin never sets the bar `position` or turns the bar off. The name `admin` is reserved, like `account`, `auth`, `auth-status`, `collections`, `globals`, `localization`, `media`, `preview` and `schema`.
+A plugin MAY have no collections or globals and only add `admin`. A plugin never sets the bar `position` or turns the bar off. The name `admin` is reserved, like `account`, `auth`, `auth-status`, `collections`, `globals`, `invites`, `localization`, `media`, `preview` and `schema`.

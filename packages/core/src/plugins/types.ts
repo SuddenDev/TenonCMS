@@ -1,10 +1,9 @@
-import type { PluginAdminOptions } from "../admin/index.d.ts";
-import type { User } from "better-auth";
+import type { CmsUser, PluginAdminOptions } from "../admin/index.d.ts";
 import type { Hono, MiddlewareHandler } from "hono";
 import type { Collection, Global, LocalApi, MediaHooks, RootHooks } from "../schema/index.ts";
 
 /** Hono environment of a plugin's {@link Plugin.routes}: the local API bound to the session user, and the user. */
-export type RouteEnv = { Variables: { cms: LocalApi; user: User } };
+export type RouteEnv = { Variables: { cms: LocalApi; user: CmsUser } };
 /** Hono environment of a plugin's {@link Plugin.publicRoutes}: the local API without a user. */
 export type PublicRouteEnv = { Variables: { cms: LocalApi } };
 

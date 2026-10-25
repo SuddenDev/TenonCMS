@@ -12,6 +12,8 @@ import { session } from "../auth/middleware/session.middleware.ts";
 import { providerEndpoint } from "../auth/endpoints/provider.endpoint.ts";
 import { statusEndpoint } from "../auth/endpoints/status.endpoint.ts";
 import { passwordEndpoint } from "../auth/endpoints/password.endpoint.ts";
+import { acceptEndpoint } from "../users/endpoints/accept.endpoint.ts";
+import { invitesEndpoint } from "../users/endpoints/invites.endpoint.ts";
 import { sessionHint } from "../auth/middleware/session-hint.middleware.ts";
 import { pluginMiddleware } from "../plugins/http/collect-middleware.ts";
 import { mountRoutes } from "../plugins/http/mount-routes.ts";
@@ -35,13 +37,14 @@ import { handleError } from "./errors.ts";
 export function createApp(core: Core, site?: string) {
   const { plugins } = core;
   const media = core.media && mediaRoutes(core);
-  const schemaEndpoint = readEndpoint(
-    core.schema,
+  const schemaEndpoint = readEndpoint(core.schema, {
     media,
     site,
-    core.admin.descriptor,
-    core.localization,
-  );
+    admin: core.admin.descriptor,
+    localization: core.localization,
+    roles: core.roles,
+    email: !!core.emailTemplates,
+  });
   const collections = collectionsRoutes(core);
   const globals = globalsRoutes(core);
 
@@ -49,6 +52,7 @@ export function createApp(core: Core, site?: string) {
     c.json(adminBrand(core.admin.descriptor)),
   );
   reads.route("/", statusEndpoint(core));
+  reads.route("/", acceptEndpoint(core));
   reads.route("/", localizationEndpoint(core.localization));
   mountRoutes(reads, plugins, "publicRoutes");
   if (media) reads.route("/media", media.reads);
@@ -61,6 +65,7 @@ export function createApp(core: Core, site?: string) {
   writes.route("/", exitEndpoint());
   if (core.admin.bar) writes.route("/", adminBarEndpoint(core, core.admin.bar));
   writes.route("/", passwordEndpoint(core));
+  writes.route("/", invitesEndpoint(core, site));
   writes.route("/", loadEndpoint(core));
   writes.route("/", richtextTargetsEndpoint(core));
   writes.route("/", richtextResolveEndpoint(core));
@@ -75,6 +80,10 @@ export function createApp(core: Core, site?: string) {
 
   api.use(withCms(core), ...pluginMiddleware(plugins, "publicMiddleware"));
   api.use("/auth/*", sessionHint(core));
+  api.use("/invites/accept", sessionHint(core));
+  // Invite responses hold tokens.
+  api.use("/invites", noStore);
+  api.use("/invites/*", noStore);
   api.route("/", providerEndpoint(core));
   api.route("/", reads);
 

@@ -19,3 +19,20 @@ it.each(["resetPassword", "verifyEmail"] as const)(
     expect(result.html).not.toContain("<img");
   },
 );
+
+it("renders the invite with the inviter, role, site and link, HTML escaped", async () => {
+  const result = await emailTemplates.invite({
+    email: "new@example.com",
+    role: { name: "editor", label: "Editor" },
+    url: "https://example.com/admin/invite?token=a&b",
+    inviter: { name: "<b>Ada</b>", email: "ada@example.com" },
+    site: "Tom & Jerry",
+  });
+  expect(result.subject).toBe("You are invited to Tom & Jerry");
+  expect(result.text).toContain("<b>Ada</b> invited you to Tom & Jerry as Editor.");
+  expect(result.text).toContain("https://example.com/admin/invite?token=a&b");
+  expect(result.html).toContain("&lt;b&gt;Ada&lt;/b&gt;");
+  expect(result.html).toContain("Tom &amp; Jerry");
+  expect(result.html).toContain('href="https://example.com/admin/invite?token=a&amp;b"');
+  expect(result.html).not.toContain("<b>");
+});

@@ -10,6 +10,7 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `content/`      | Shared lifecycle, reads/writes, population and integrity.         | [README](content/README.md)                 |
 | `auth/`         | better-auth provider, caller lookup and session middleware.       | [README](auth/README.md)                    |
 | `email/`        | Server-side delivery, adapters and authentication templates.      | [README](email/README.md)                   |
+| `users/`        | Roles, invites, their operations and endpoints.                   | [README](users/README.md)                   |
 | `http/`         | Hono application assembly, parsing, visibility and errors.        | [app.ts](http/app.ts)                       |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |
 | `db/`           | libsql connection, fixed migrations and named content queries.    | [README](db/README.md)                      |

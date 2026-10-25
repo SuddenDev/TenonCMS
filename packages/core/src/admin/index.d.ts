@@ -258,10 +258,13 @@ export function clientRef<T = any>(specifier: string): ClientRef<T>;
 
 /* ── Server loaders ─────────────────────────────────────────────────────────────────── */
 
+/** A signed-in user: better-auth's user with its role (`admin`, `editor` or a host role). */
+export type CmsUser = User & { role?: string | null };
+
 /** What every `load` gets. A loader runs on the server and MUST only read. */
 export type LoadContext = {
   /** The signed-in user. */
-  user: User;
+  user: CmsUser;
   /** The local API with that user. Reads follow the user's preview perspective. */
   cms: LocalApi;
   /** The admin language of the user, for text a loader returns. */

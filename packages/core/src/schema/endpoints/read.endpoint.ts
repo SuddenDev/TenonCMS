@@ -4,6 +4,18 @@ import type { Env } from "../../http/middleware/types.ts";
 import type { Localization } from "../../cms/config/options.ts";
 import { isObject } from "../condition.ts";
 import type { Schema } from "../index.ts";
+import type { Role } from "../../users/roles.ts";
+
+/** What `/schema` sends next to the collections and globals. */
+type SchemaExtras = {
+  media?: { regenerate: boolean };
+  site?: string;
+  admin?: AdminDescriptor;
+  localization?: Localization;
+  roles: Role[];
+  /** Whether email is configured. */
+  email: boolean;
+};
 
 /**
  * Serves the schema as JSON on `GET /schema`, for the admin. It is serialized once, without hooks or other functions.
@@ -12,10 +24,7 @@ import type { Schema } from "../index.ts";
  */
 export function readEndpoint(
   schema: Schema,
-  media?: { regenerate: boolean },
-  site?: string,
-  admin?: AdminDescriptor,
-  localization?: Localization,
+  { media, site, admin, localization, roles, email }: SchemaExtras,
 ) {
   const publicSchema = JSON.parse(JSON.stringify(schema, publicValue));
   for (const kind of ["collections", "globals"] as const)
@@ -30,6 +39,8 @@ export function readEndpoint(
       locales: localization.locales,
       defaultLocale: localization.defaultLocale,
     };
+  publicSchema.roles = roles;
+  publicSchema.email = email;
 
   return new Hono<Env>().get("/schema", (c) => c.json(publicSchema));
 }

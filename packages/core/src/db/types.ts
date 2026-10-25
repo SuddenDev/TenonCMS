@@ -59,7 +59,19 @@ export interface Database {
     user_id: string | null;
     created_at: number;
   };
+  cms_invites: {
+    id: string;
+    email: string;
+    role: string;
+    token_hash: string;
+    invited_by: string;
+    expires_at: number;
+    created_at: number;
+  };
 }
+
+/** A row of `cms_invites`. */
+export type InviteRow = Database["cms_invites"];
 
 /**
  * The locale columns of a localized read. `r_*` belong to the requested locale's row, `d_*` to the default locale's;

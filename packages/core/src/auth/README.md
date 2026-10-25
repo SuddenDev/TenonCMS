@@ -5,6 +5,9 @@
 | `config/options.ts`                     | Host better-auth options, reserving core-owned database, base path, secret and model names. |
 | `config/build-options.ts`               | Builds provider options, adds `passkey()` and checks sign-up before host hooks.             |
 | `config/user-fields.ts`                 | `userFields`: the validated `language` and `timezone` preferences on the user.              |
+| `config/access.ts`                      | `userAccess()`: the `admin()` plugin's permissions per role; only `admin` manages users.    |
+| `config/last-admin.ts`                  | `lastAdmin()`: a small plugin that refuses `set-role` when no other active admin is left.   |
+| `config/password-length.ts`             | `passwordLength()`: sign-up's length rules on `/admin/create-user`; `lengthProblem()`.      |
 | `sign-up.ts`                            | `signUpStatus()`: `setup` while no user exists, `signUp` when a visitor MAY sign up.        |
 | `create-auth.ts`                        | Creates the better-auth provider.                                                           |
 | `get-caller.ts`                         | Reads the request session and preview perspective; a cookie alone grants no draft access.   |
@@ -18,7 +21,9 @@ The provider endpoint runs before core CSRF/session middleware. Protected featur
 
 When `email` is configured, `authOptions()` supplies password-reset and verification callbacks through the instance's [email module](../email/README.md). Host callbacks take precedence. Verification requirements and automatic sends stay under the host's Better Auth options.
 
-`signUpStatus()` is the one place that decides whether sign-up is open; the first-user hook and `/auth-status` both read it. Today `signUp` equals `setup`.
+`signUpStatus()` is the one place that decides whether sign-up is open; the create hook and `/auth-status` both read it. Today `signUp` equals `setup`.
+
+`authOptions(db, secret, host, { email, relyingParty, roles })` appends better-auth's `admin()` unless a host plugin has the id `admin`: `userAccess(roles)`, `adminRoles: ["admin"]`, `defaultRole: "editor"`. Admins get every user and session permission except impersonation. `lastAdmin()` and `passwordLength()` are always appended. Core's `user.create.before` (`checkCreate()`) runs before the host's: the first user gets `role: "admin"`; after that a request needs an admin's session; a call without a request is trusted, which is how invite acceptance creates its user. Only `set-role` needs the last-admin guard: the caller of ban or removal is an active admin, and better-auth refuses both on oneself.
 
 `authOptions()` appends better-auth's `passkey()` unless a host plugin has the id `passkey`. `defineCms()` passes the host name of `site` as `rpID` and the admin `name` as `rpName`. The returned options keep the host's plugin type: passkey's endpoint types make the declaration build fail (TS7056), so `auth.api` does not type them.
 

@@ -23,6 +23,11 @@ import Preview from "@/modules/preview/views/Preview.vue";
 import Login from "@/modules/auth/components/Login.vue";
 import PasswordReset from "@/modules/auth/components/PasswordReset.vue";
 import SignUp from "@/modules/auth/components/SignUp.vue";
+import Invite from "@/modules/auth/components/Invite.vue";
+import Users from "@/modules/users/views/Users.vue";
+import UserEdit from "@/modules/users/views/UserEdit.vue";
+import InviteEdit from "@/modules/users/views/InviteEdit.vue";
+import NewUser from "@/modules/users/views/NewUser.vue";
 
 const { t } = i18n.global;
 const empty = { render: () => null };
@@ -99,6 +104,19 @@ export function createAdminRouter(base: string) {
     { path: "/signup", component: SignUp, meta: { auth: true, guest: true } },
     { path: "/forgot-password", component: PasswordReset, meta: { auth: true } },
     { path: "/reset-password", component: PasswordReset, meta: { auth: true } },
+    // Not `guest`: a signed-in user who opens an invite link still sees it.
+    { path: "/invite", component: Invite, meta: { auth: true } },
+    {
+      path: "/users",
+      component: Users,
+      meta: { admin: true, panes: true, breadcrumb: () => t("nav.users") },
+      // The list stays mounted next to the open user.
+      children: [
+        { path: "new", component: NewUser, meta: { panes: true } },
+        { path: "invites/:id", component: InviteEdit, meta: { panes: true } },
+        { path: ":id", component: UserEdit, meta: { panes: true } },
+      ],
+    },
     { path: "/", redirect: CONTENT },
     {
       path: CONTENT,

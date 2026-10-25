@@ -1,11 +1,10 @@
 import type { User } from "better-auth";
-import { authOptions, type RelyingParty } from "../../auth/config/build-options.ts";
+import { authOptions, type CoreAuth } from "../../auth/config/build-options.ts";
 import type { AuthOptions } from "../../auth/config/options.ts";
 import { createAuth } from "../../auth/create-auth.ts";
 import { createDb } from "../../db/create-db.ts";
 import { migrate } from "../../db/migrations/migrate.ts";
 import { syncLocalized } from "../../db/migrations/sync-localized.ts";
-import type { EmailApi, EmailTemplates } from "../../email/types.ts";
 
 type Session = {
   getSession(context: { headers: Headers }): Promise<{ user: User } | null>;
@@ -18,8 +17,7 @@ type Session = {
  * @param host The host's better-auth options
  * @param localized The localized keys of every `collection:<name>` / `global:<name>` (`null` when not localized) and the
  * default locale. After the migrations, the stored state is synced to them.
- * @param email Optional delivery API and authentication template replacements.
- * @param relyingParty The WebAuthn relying party of the admin's passkeys.
+ * @param coreAuth Email delivery, the passkeys' relying party and the roles.
  * @returns `db()` connects and migrates on its first call. `auth()` creates better-auth on its first call.
  * `getSession()` reads the session of a request's headers.
  */
@@ -28,8 +26,7 @@ export function createRuntime<A extends AuthOptions>(
   secret: string,
   host: A,
   localized: { current: Record<string, string[] | null>; defaultLocale: string },
-  email?: { api: EmailApi; templates?: Partial<EmailTemplates> },
-  relyingParty?: RelyingParty,
+  coreAuth?: CoreAuth,
 ) {
   // The same promise serves every call, so the database opens and migrates once.
   let connection:
@@ -38,7 +35,7 @@ export function createRuntime<A extends AuthOptions>(
   const connect = () =>
     (connection ??= (async () => {
       const db = createDb(database.url, database.authToken);
-      const options = authOptions(db, secret, host, email, relyingParty);
+      const options = authOptions(db, secret, host, coreAuth);
       await migrate(db, options);
       await syncLocalized(db, localized.current, localized.defaultLocale);
       return { db, options };

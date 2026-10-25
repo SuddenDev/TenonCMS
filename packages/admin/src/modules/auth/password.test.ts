@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { passwordChecks, passwordStrength } from "./password";
+import { passwordChecks, passwordStrength, randomPassword } from "./password";
 
 it("checks each criterion on its own", () => {
   expect(passwordChecks("")).toEqual({
@@ -23,4 +23,11 @@ it("scores one point per met criterion", () => {
   expect(passwordStrength(passwordChecks("abc"))).toBe(1);
   expect(passwordStrength(passwordChecks("abcdefgh"))).toBe(2);
   expect(passwordStrength(passwordChecks("Abcdefg1!"))).toBe(5);
+});
+
+it("generates a long password that meets every criterion", () => {
+  const a = randomPassword();
+  expect(a).toHaveLength(20);
+  expect(passwordStrength(passwordChecks(a))).toBe(5);
+  expect(randomPassword()).not.toBe(a);
 });

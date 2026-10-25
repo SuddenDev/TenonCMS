@@ -1,11 +1,13 @@
+import type { CmsUser } from "../../admin/index.d.ts";
 import type { AdminRuntime } from "../../admin/merge/merge-options.ts";
 import { type Database } from "../../db/types.ts";
 import type { Localization } from "../config/options.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
-import type { EmailApi } from "../../email/types.ts";
+import type { EmailApi, EmailTemplates } from "../../email/types.ts";
+import type { Role } from "../../users/roles.ts";
 import { type Plugin } from "../../plugins/index.ts";
 import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
-import type { BetterAuthOptions, User } from "better-auth";
+import type { BetterAuthOptions } from "better-auth";
 import type { Kysely } from "kysely";
 
 /**
@@ -24,7 +26,7 @@ export type Core = {
   /** Creates better-auth on the first call. Throws for a bad `secret`. */
   auth: () => Promise<{ handler(request: Request): Promise<Response>; options: BetterAuthOptions }>;
   /** The session of a request's headers, or `null`. */
-  getSession: (headers: Headers) => Promise<{ user: User } | null>;
+  getSession: (headers: Headers) => Promise<{ user: CmsUser } | null>;
   /**
    * The local API of a scope. It sits on `Core`, so operations can create nested APIs for hooks without importing
    * every operation, which would be an import cycle.
@@ -36,6 +38,11 @@ export type Core = {
   media?: MediaCore;
   /** Instance-owned server-side delivery. Rejects without email configuration. */
   email: EmailApi;
+  /** The built-in email templates with the host's replacements. Missing without email configuration. */
+  emailTemplates?: EmailTemplates;
+  /** The built-in roles, then the host's. */
+  roles: Role[];
+
   /**
    * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the
    * bar. `admin.bar` is `false` with `admin: { adminBar: false }`, which mounts no `/admin-bar` route.
@@ -54,7 +61,7 @@ export type Perspective = "published" | "drafts";
 /** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */
 export type Scope = {
   trx?: Kysely<Database>;
-  user: User | null;
+  user: CmsUser | null;
   context: Record<string, unknown>;
   // True inside a hook: the call keeps `context` and runs no `afterError` of its own.
   nested: boolean;

@@ -94,6 +94,26 @@ const cmsMigrations: Record<string, Migration> = {
       )`.execute(db);
     },
   },
+  // Pending invites. Only the hash of a token is stored.
+  "006_cms_invites": {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_invites (
+        id text PRIMARY KEY NOT NULL,
+        email text NOT NULL,
+        role text NOT NULL,
+        token_hash text NOT NULL,
+        invited_by text NOT NULL,
+        expires_at integer NOT NULL,
+        created_at integer NOT NULL
+      )`.execute(db);
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS cms_invites_email_idx ON cms_invites (email)`.execute(
+        db,
+      );
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS cms_invites_token_idx ON cms_invites (token_hash)`.execute(
+        db,
+      );
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables, with its own migration tables. */

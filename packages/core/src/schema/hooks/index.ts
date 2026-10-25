@@ -1,4 +1,4 @@
-import type { User } from "better-auth";
+import type { CmsUser } from "../../admin/index.d.ts";
 import type { LocalApi } from "../../cms/api/local-api.ts";
 
 export type { CollectionHooks } from "./collection.ts";
@@ -35,7 +35,7 @@ export type HookArgs = {
   /** The local API, bound to the current transaction. Nested calls run their own hooks. Untyped. */
   cms: LocalApi;
   /** The session user of an HTTP request or of `cms.withSession()`. `null` without a session and for server calls of the local API. */
-  user: User | null;
+  user: CmsUser | null;
   /** One object shared by all hooks of an operation and every nested call inside it. Use it to pass values along or to stop loops. */
   context: Record<string, unknown>;
   /** Name of the collection. Missing for globals. */

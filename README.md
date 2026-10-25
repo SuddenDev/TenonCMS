@@ -39,7 +39,7 @@ pnpm dev:standalone                                   # http://localhost:3200/ad
 
 Generate a secret with `openssl rand -hex 32`.
 
-On first visit, choose "Create the admin account". Only the first user can sign up.
+On first visit, choose "Create the admin account". Only the first user can sign up; admins invite everyone else under **Users**.
 
 ## Usage
 
@@ -1314,7 +1314,7 @@ await cms.email.send({
 
 The browser calls a framework endpoint with `fetch()` or Nuxt's `$fetch()`. For an endpoint registered through a plugin, use the existing `publicRoutes` or session-protected `routes`, including dynamic paths such as `/:topic`, and call it with `client.request('/contact/sales', { method: 'POST', body })`. Its handler can send through `c.var.cms.email.send()`. `client.request()` always targets `/api/cms`; there is no generic browser email endpoint. Hosts MUST validate input, choose recipients and templates on the server, and enforce authorization and abuse protection on submission endpoints.
 
-With email configured, password-reset and email-verification callbacks use default text/HTML templates. Replace either renderer with a function returning `{ subject, text?, html? }`; asynchronous functions work too:
+With email configured, password-reset, email-verification and invite emails use default text/HTML templates. Replace any renderer with a function returning `{ subject, text?, html? }`; asynchronous functions work too:
 
 ```ts
 email: {
@@ -1328,6 +1328,11 @@ email: {
     verifyEmail: ({ user, url }) => ({
       subject: "Verify your email",
       text: `Hello ${user.name}, verify your email: ${url}`,
+    }),
+    // No account exists yet, so an invite gets the email, role, inviter and site name instead of a user.
+    invite: ({ role, url, inviter, site }) => ({
+      subject: `Join ${site}`,
+      text: `${inviter.name} invited you as ${role.label}: ${url}`,
     }),
   },
 }
@@ -1358,7 +1363,7 @@ Sending awaits the provider immediately, with no queue or automatic retry. In ho
 
 ## Auth
 
-The admin signs in at `/login`. While no user exists, every admin URL leads to `/signup`, which creates the first admin. After that, sign-up is closed: `/signup` redirects to `/login`, and the sign-in shows no sign-up link. `GET /api/cms/auth-status` answers `{ setup, signUp }` for custom forms.
+The admin signs in at `/login`. While no user exists, every admin URL leads to `/signup`, which creates the first admin. After that, sign-up is closed: `/signup` redirects to `/login`, and the sign-in shows no sign-up link. New users join through [invites](#users-and-roles). `GET /api/cms/auth-status` answers `{ setup, signUp }` for custom forms.
 
 **Account settings** in the user menu edit the user's name, admin language and time zone (dates in forms and the publication status follow it; empty follows the device), change the password (other sessions are signed out), set a first password for users without one (`POST /api/cms/account/password`), and add or remove passkeys. Language and time zone are stored on the user as better-auth fields `language` and `timezone`, validated on write; a host's own field of the same name replaces core's.
 
@@ -1368,13 +1373,46 @@ The admin's **Forgot password?** link sends a reset email and opens a form for a
 
 Host apps can use `client.requestPasswordReset({ email, redirectTo })` and `client.resetPassword({ token, newPassword })` for their own forms. `redirectTo` is the trusted URL of that form. Better Auth checks password rules and token expiry, and consumes a successful reset token once. Existing-session revocation follows `auth.emailAndPassword.revokeSessionsOnPasswordReset`.
 
+### Users and roles
+
+Every user has one role. `admin` manages users; `editor` and every other role edit content. The first user becomes an admin, later users are editors unless an admin picks another role. A role only names a group of users for now: every role reads and writes all content. Add your own roles for later access rules, with a label for the admin:
+
+```ts
+defineCms({
+  roles: {
+    author: { label: { en: "Author", de: "Autor" }, description: "Writes posts" },
+  },
+});
+```
+
+Names MUST match `[a-z0-9-]`; `admin` and `editor` are built in and MUST NOT be listed. Hooks, plugin routes and loaders get the role as `user.role` (type `CmsUser`). A user without a role counts as `editor`.
+
+**Users** in the admin's menu, under Manage, is shown to admins. It lists users and pending invites in a pane; a click opens one next to it. An admin can change a user's role (a dropdown), send a password reset (with email configured), sign a user out everywhere, deactivate and reactivate a user (signed out, cannot sign in, content stays), and remove a user. The last active admin cannot be demoted.
+
+**New users.** The "+" opens "New user" with two modes. "Set password" creates the user at once, with a name, a password (the dice button fills in a random one and shows it) and a role; pass the password on yourself. "Invite" asks for an email and a role. With email configured, the person gets a link; without it, or when sending fails, the admin shows the link to copy and send yourself. The link opens the admin's `/invite` page, where the person picks a name and password and is signed in. It works once and expires after 7 days. Resending makes a new link and stops the old one. Revoking deletes the invite.
+
+Core adds better-auth's [`admin()`](https://better-auth.com/docs/plugins/admin) plugin for this, with `admin` as the only role that manages users and no impersonation. Add your own `admin()` to `auth.plugins` to configure it; it replaces core's.
+
+The invite API, for custom screens:
+
+| Route                              | Who    | Does                                                                          |
+| ---------------------------------- | ------ | ----------------------------------------------------------------------------- |
+| `GET /api/cms/invites`             | admins | Every invite, `expired` flagged. Tokens are never listed                      |
+| `POST /api/cms/invites`            | admins | `{ email, role, url }`: creates and sends. `url` MUST be on the site's origin |
+| `POST /api/cms/invites/:id/resend` | admins | `{ url }`: new link, sent again                                               |
+| `DELETE /api/cms/invites/:id`      | admins | Revokes                                                                       |
+| `POST /api/cms/invites/check`      | public | `{ token }`: `{ email, role, label }`, else 404                               |
+| `POST /api/cms/invites/accept`     | public | `{ token, name, password }`: creates the user and sets the session cookie     |
+
+Create and resend answer `{ invite, link, sent }`; 502 with the same body means sending failed and the invite stays. The client has them as `client.invites.list()`, `create()`, `resend()`, `revoke()`, `check()` and `accept()`. The public routes accept only `application/json`. Only the SHA-256 hash of a token is stored.
+
 For local SMTP testing, the Astro example accepts `SMTP_URL` and `EMAIL_FROM` (see `examples/astro/.env.example`). Set `SMTP_URL=smtp://127.0.0.1:1025` for a local email catcher on port 1025. Development permits a catcher without TLS; production requires TLS. Start the example, choose **Forgot password?**, and open the link in the catcher's inbox.
 
 `auth` is [better-auth](https://better-auth.com)'s options object. It is better-auth's API and follows better-auth's versioning.
 
 - Core owns `database`, `basePath` and `secret`. It always turns `emailAndPassword` on, because the admin login needs it; your other email options stay.
 - `modelName` is not accepted: core reads the `user` table by name, so auth tables keep their default names.
-- Only the first user can sign up without a session (`/auth-status` reports `setup`). After that, any user creation without a signed-in session returns 403, on every endpoint (email sign-up, social sign-in, magic link, other plugins). A signed-in admin can create more users, for example with the `admin()` plugin. Server code that calls better-auth without a request is trusted.
+- Only the first user can sign up without a session (`/auth-status` reports `setup`). After that, a request MAY create a user only with the session of a user whose role is `admin`, on every endpoint (email sign-up, social sign-in, magic link, other plugins); anything else returns 403. Invites are the way in for everyone else. Server code that calls better-auth without a request is trusted.
 - Tables of plugins are created at runtime on the first database access. There is no CLI step.
 - Core's first-user rule runs before your `databaseHooks.user.create.before`.
 - The admin supports email/password, passkeys and password reset. Plugins that need other UI (2FA, magic link) work on the server, but not in the admin yet.
@@ -1701,6 +1739,7 @@ Working:
 - SQLite via libsql (local file or Turso), Kysely
 - better-auth options pass through (`auth`): plugins, hooks, sessions
 - Server-side email with an SMTP adapter, replaceable authentication templates and custom adapters
+- Users with roles (`admin`, `editor` and your own), invites by email or copied link, and a Users screen in the admin
 
 Roadmap, roughly in order:
 
@@ -1708,7 +1747,7 @@ Roadmap, roughly in order:
 2. Drafts and published versions
 3. ~~Media uploads with a storage adapter (local disk, S3/R2)~~ Done, see [Media](#media)
 4. Rich text (format still open: Tiptap JSON or Markdown)
-5. Invites, roles and access control
+5. ~~Invites and roles~~ Done, see [Users and roles](#users-and-roles). Access control is next
 6. Cloudflare Workers: D1 driver, per-request bindings
 7. Postgres
 8. SvelteKit adapter

@@ -24,6 +24,7 @@ watchEffect(() => {
       query: route.path === CONTENT ? {} : { redirect: route.fullPath },
     });
   else if (user.value && route.meta.guest) void router.replace(back(route.query.redirect));
+  else if (user.value && route.meta.admin && user.value.role !== "admin") void router.replace("/");
 });
 
 // Only a path inside the admin, never another origin.
@@ -66,7 +67,7 @@ useHead(() => ({
   <RouterView v-if="route.meta.auth" :key="viewKey" />
   <div v-else-if="loading" />
   <p v-else-if="error" role="alert" class="p-4">{{ error }}</p>
-  <div v-else-if="!user" />
+  <div v-else-if="!user || (route.meta.admin && user.role !== 'admin')" />
   <component :is="layout" v-else>
     <RouterView :key="viewKey" />
   </component>

@@ -9,6 +9,8 @@ declare module "vue-router" {
     auth?: boolean;
     /** Only for visitors: a signed-in admin is sent on to `?redirect=`, else to the start. */
     guest?: boolean;
+    /** Only for users with the role `admin`. Others are sent to the start. */
+    admin?: boolean;
     /** The layout that wraps the view. Defaults to `default`. */
     layout?: keyof typeof layouts;
     /** The view renders its own columns next to the menu, instead of one scrolling page. */

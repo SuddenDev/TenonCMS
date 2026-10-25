@@ -6,14 +6,14 @@ Optional server-side delivery, shared by host code, hooks and plugin routes.
 | ----------------- | ------------------------------------------------------------------------- |
 | `types.ts`        | Provider-neutral adapter, message, template, options and API contracts.   |
 | `create-email.ts` | Instance-owned sender, message validation and adapter dispatch.           |
-| `templates.ts`    | Default password-reset and verification text/HTML templates.              |
+| `templates.ts`    | Default password-reset, verification and invite text/HTML templates.      |
 | `smtp.ts`         | Lazy Nodemailer SMTP transport; separate `integral-cms/email/smtp` entry. |
 
 `defineCms({ email: { adapter, from, templates? } })` binds one `EmailApi`. Instances, `withDrafts()`, `withSession()` and scoped local APIs all share it. Without configuration, `email.send()` rejects without connecting to a provider or database.
 
 `send()` validates recipient/header fields and requires a text or HTML body. It supplies the configured sender, strips unknown message keys and awaits `adapter.send()`. The adapter MUST reject delivery failures. SMTP also rejects partial recipient rejection; some recipients can already have accepted the message, so callers MUST NOT retry blindly.
 
-Authentication assembly in `auth/config/build-options.ts` wires default callbacks when email is configured. `templates.resetPassword` and `templates.verifyEmail` can replace the renderers. Explicit Better Auth callbacks win. Verification requirements and automatic sends stay under the host's auth configuration.
+Authentication assembly in `auth/config/build-options.ts` wires default callbacks when email is configured. `templates.resetPassword` and `templates.verifyEmail` can replace the renderers. Explicit Better Auth callbacks win. `templates.invite` gets `InviteTemplateData` (`email`, `role`, `url`, `inviter`, `site`), because no user exists yet; `Core.emailTemplates` holds the defaults merged with the host's, and `users/operations/send-invite.operation.ts` renders it. Verification requirements and automatic sends stay under the host's auth configuration.
 
 The root imports no SMTP runtime. Nodemailer 10's ESM entry documents support for Workers with Node.js compatibility. Use implicit TLS on port 465 for Workers; port 25 is blocked. The CMS's overall Workers support remains a separate concern. SMTP pooling is intended for Node servers; Workers requests MUST NOT share open sockets.
 

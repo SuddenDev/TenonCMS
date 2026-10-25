@@ -8,6 +8,7 @@ const reserved = [
   "auth-status",
   "collections",
   "globals",
+  "invites",
   "schema",
   "media",
   "preview",

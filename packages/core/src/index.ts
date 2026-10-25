@@ -32,6 +32,8 @@ export type {
 export { definePlugin, type Plugin } from "./plugins/index.ts";
 
 export type { AuthOptions } from "./auth/config/options.ts";
+export type { Role, RoleOptions } from "./users/roles.ts";
+export type { CmsUser } from "./admin/index.d.ts";
 export type {
   EmailAdapter,
   EmailApi,
@@ -41,6 +43,8 @@ export type {
   EmailTemplate,
   EmailTemplateData,
   EmailTemplates,
+  InviteTemplate,
+  InviteTemplateData,
 } from "./email/types.ts";
 export {
   LinkedContentError,
