@@ -83,6 +83,13 @@ export const kitchenSink = defineGlobal({
       description: "Private: public reads leave it out.",
       width: "1/2",
     },
+    adminNote: {
+      type: "text",
+      tab: "text",
+      fieldset: "extras",
+      access: { update: ["admin"] },
+      description: "Only admins change it; other roles see it disabled.",
+    },
     length: {
       type: "number",
       tab: "text",

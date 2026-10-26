@@ -1,5 +1,5 @@
 ---
-import { seoMeta } from "integral-cms";
+import { seoMeta, ValidationError } from "integral-cms";
 import { edit } from "integral-cms/preview";
 import Header from "../../../components/Header.astro";
 
@@ -17,6 +17,22 @@ if (!post) return new Response("Not found", { status: 404 });
 const general = await cms.getGlobal("general", { locale });
 const text = await cms.getGlobal("strings", { locale, fallback: false });
 const meta = seoMeta(post, { general });
+
+// The access rules of `comments` let anyone create one. It waits for approval, so the page redirects to a note.
+let input = { name: "", body: "" };
+let errors: Record<string, string> = {};
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  input = { name: String(form.get("name") ?? ""), body: String(form.get("body") ?? "") };
+  try {
+    await cms.create("comments", { post: post.id, ...input });
+    return Astro.redirect(`${Astro.url.pathname}?commented#comments`, 303);
+  } catch (e) {
+    if (!(e instanceof ValidationError)) throw e;
+    errors = e.errors;
+  }
+}
+const comments = await cms.find("comments", { where: { post: post.id }, populate: false });
 ---
 
 <html lang={locale}>
@@ -52,6 +68,29 @@ const meta = seoMeta(post, { general });
     <p style="white-space: pre-wrap" data-cms={edit("posts", post.id, "body")}>
       {post.body}
     </p>
+    <section id="comments">
+      <h2>{text.comments}</h2>
+      {comments.map((comment) => (
+        <article>
+          <strong>{comment.name}</strong>
+          <p style="white-space: pre-wrap">{comment.body}</p>
+        </article>
+      ))}
+      {Astro.url.searchParams.has("commented") && <p role="status">{text.commentThanks}</p>}
+      <form method="post" style="display: grid; gap: 0.5rem; max-width: 30rem">
+        <label>
+          {text.commentName}
+          <input name="name" required maxlength="80" value={input.name} />
+        </label>
+        {errors.name && <p role="alert">{errors.name}</p>}
+        <label>
+          {text.commentBody}
+          <textarea name="body" required maxlength="2000">{input.body}</textarea>
+        </label>
+        {errors.body && <p role="alert">{errors.body}</p>}
+        <button>{text.commentSend}</button>
+      </form>
+    </section>
     <a href="/" data-cms={edit("strings", null, "allPosts")}>
       {text.allPosts}
     </a>

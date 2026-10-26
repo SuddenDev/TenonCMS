@@ -5,13 +5,15 @@ import { ExamplePlugin } from "integral-cms/plugins/example";
 import { RedirectsPlugin } from "integral-cms/plugins/redirects";
 import { strings } from "integral-cms/presets";
 import { authors } from "./collections/authors";
+import { comments } from "./collections/comments";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
 import { kitchenSink } from "./globals/kitchen-sink";
 
 export default defineCms({
   localization: { locales: ["en", "de"], defaultLocale: "en", fallback: false },
-  collections: { posts, authors, pages },
+  roles: { author: { label: { en: "Author", de: "Autor" }, description: "Writes own posts" } },
+  collections: { posts, authors, comments, pages },
   globals: {
     kitchenSink,
     footer: defineGlobal({
@@ -22,6 +24,17 @@ export default defineCms({
     }),
     strings: strings({
       allPosts: { label: "All posts link", default: { en: "All posts", de: "Alle Beiträge" } },
+      comments: { label: "Comments heading", default: { en: "Comments", de: "Kommentare" } },
+      commentName: { label: "Comment name field", default: { en: "Name", de: "Name" } },
+      commentBody: { label: "Comment text field", default: { en: "Comment", de: "Kommentar" } },
+      commentSend: { label: "Comment button", default: { en: "Send", de: "Senden" } },
+      commentThanks: {
+        label: "Comment sent note",
+        default: {
+          en: "Thanks! Your comment shows once it is approved.",
+          de: "Danke! Dein Kommentar erscheint, sobald er freigegeben ist.",
+        },
+      },
     }),
   },
   plugins: [RedirectsPlugin({ locales: ["en", "de"] }), ExamplePlugin({ renderer: "html" })],

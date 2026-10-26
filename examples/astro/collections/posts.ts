@@ -6,6 +6,12 @@ export const posts = defineCollection({
   localized: true,
   titleField: "title",
   permalink: "/posts/{slug}",
+  // Authors write and change their own posts; editors and admins change every post and delete.
+  access: {
+    create: ["admin", "editor", "author"],
+    update: ({ user }) => (user?.role === "author" ? { createdBy: user.id } : true),
+    delete: ["admin", "editor"],
+  },
   fields: {
     title: {
       type: "text",
