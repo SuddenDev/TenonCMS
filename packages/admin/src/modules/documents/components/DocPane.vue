@@ -8,6 +8,7 @@ import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import { useRouter } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
+import { can } from "@/shared/access";
 import {
   keepPaneKey,
   openRefKey,
@@ -67,7 +68,12 @@ provide(
 const collection = computed(() => schema.value.collections?.[props.name]);
 const drafts = computed(() => collection.value?.drafts !== false);
 // The Published view shows the live version. An edit there would replace the pending draft, so the form is inert.
-const readOnly = computed(() => drafts.value && usePerspective().perspective === "published");
+const published = computed(() => drafts.value && usePerspective().perspective === "published");
+// The form is inert, too, when the user MAY NOT create or change the document.
+const editable = computed(() =>
+  can(collection.value, isNew.value ? "create" : "update", doc.value ?? undefined),
+);
+const readOnly = computed(() => published.value || !editable.value);
 const formId = `doc-${props.name}-${props.id}`;
 const error = ref("");
 
@@ -82,10 +88,10 @@ const languages = computed(() =>
   tr.localized.value && tr.loaded.value ? tr.status.value : undefined,
 );
 
-// Joins are read-only. One request resolves all of them.
+// Joins are read-only. One request resolves all of them. A join the user MAY NOT read is left out.
 const joins = computed(() =>
   Object.entries(collection.value?.fields ?? {}).flatMap(([key, f]) =>
-    f.type === "join" ? [{ key, field: f }] : [],
+    f.type === "join" && can(f, "read") ? [{ key, field: f }] : [],
   ),
 );
 const joined = ref<Record<string, Record<string, any>[]>>({});
@@ -311,7 +317,7 @@ async function remove() {
         <p class="text-muted-foreground text-xs">{{ text(collection.label) ?? name }}</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ title() }}</h1>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
-          {{ t("documents.readOnly") }}
+          {{ t(editable ? "documents.readOnly" : "documents.noEdit") }}
         </p>
         <p v-if="collection.description" class="text-muted-foreground mt-2 text-sm">
           {{ text(collection.description) }}
@@ -353,7 +359,13 @@ async function remove() {
         :missing="languages?.active === 'missing'"
         @change="emit('change', $event)"
       >
-        <Button v-if="!isNew" type="button" variant="ghost" size="sm" @click="remove">
+        <Button
+          v-if="!isNew && can(collection, 'delete', doc)"
+          type="button"
+          variant="ghost"
+          size="sm"
+          @click="remove"
+        >
           {{ t("common.delete") }}
         </Button>
         <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>

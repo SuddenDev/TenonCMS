@@ -7,6 +7,7 @@ import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import { useRoute } from "vue-router";
 import { client, schema } from "@/shared/api";
+import { can } from "@/shared/access";
 import { keepPaneKey, reloadKey, titleField } from "@/modules/documents/fields";
 import {
   Pane,
@@ -99,7 +100,13 @@ provide(keepPaneKey, (id) => (kept = id));
   <template v-if="collection">
     <Pane :title="text(collection.label) ?? name">
       <template #actions>
-        <Button as-child variant="ghost" size="icon-sm" :aria-label="t('documents.new')">
+        <Button
+          v-if="can(collection, 'create')"
+          as-child
+          variant="ghost"
+          size="icon-sm"
+          :aria-label="t('documents.new')"
+        >
           <RouterLink :to="`${CONTENT}/collections/${name}/new`"><Icon name="plus" /></RouterLink>
         </Button>
         <PaneMenuOptions

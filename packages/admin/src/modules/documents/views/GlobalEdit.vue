@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import { useRoute } from "vue-router";
 import { client, schema, type Data, type Fields } from "@/shared/api";
+import { can } from "@/shared/access";
 import { ownerKey } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
 import LocaleActions from "@/modules/documents/components/LocaleActions.vue";
@@ -36,7 +37,11 @@ provide(
 );
 const drafts = computed(() => global.value?.drafts !== false);
 // The Published view shows the live version. An edit there would replace the pending draft, so the form is inert.
-const readOnly = computed(() => drafts.value && usePerspective().perspective === "published");
+// It is inert, too, when the user MAY NOT change the global.
+const editable = computed(() => can(global.value, "update"));
+const readOnly = computed(
+  () => !editable.value || (drafts.value && usePerspective().perspective === "published"),
+);
 // `doc` is the latest saved global. `data` is what the form shows; a draft save leaves it, so typing goes on.
 const doc = ref<Record<string, unknown> | null>(null);
 const data = ref<Record<string, unknown>>({});
@@ -179,7 +184,7 @@ const discardAll = () =>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ text(global.label) ?? name }}</h1>
         <p v-if="error" class="text-destructive mt-2 text-sm" role="alert">{{ error }}</p>
         <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
-          {{ t("documents.readOnly") }}
+          {{ t(editable ? "documents.readOnly" : "documents.noEdit") }}
         </p>
         <p v-if="global.description" class="text-muted-foreground mt-2 text-sm">
           {{ text(global.description) }}

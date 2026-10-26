@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { can } from "@/shared/access";
 import { withLinkedDeletion, DeletionCancelled } from "@/shared/linked-deletion";
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { client, CmsError, type MediaRead } from "@/shared/api";
+import { client, CmsError, schema, type MediaRead } from "@/shared/api";
 import { fileIcon, formatSize, mediaDownload } from "@/modules/media/media";
 import Icon from "@/shared/components/Icon.vue";
 import { SheetHeader, SheetTitle, SheetFooter } from "@/shared/components/ui/sheet";
@@ -221,7 +222,12 @@ const referenceLink = (r: Reference) =>
     v-if="doc"
     class="border-border shrink-0 flex-row items-center justify-between border-t px-6 py-4"
   >
-    <MediaDeleteDialog :name="doc.filename" :disabled="busy" @confirm="remove">
+    <MediaDeleteDialog
+      v-if="can(schema.collections?.media, 'delete', doc)"
+      :name="doc.filename"
+      :disabled="busy"
+      @confirm="remove"
+    >
       <Button type="button" variant="ghost" class="text-destructive" :disabled="busy">
         {{ t("common.delete") }}
       </Button>

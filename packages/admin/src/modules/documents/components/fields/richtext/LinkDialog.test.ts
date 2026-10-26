@@ -51,7 +51,6 @@ it("loads the selected title when reopening a saved link outside the search resu
 
   expect(load).toHaveBeenCalledWith("posts", "saved", {
     locale: "en",
-    perspective: "drafts",
     populate: false,
   });
 });
@@ -174,7 +173,6 @@ it("shows the resolved permalink beside a saved reference", async () => {
   expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain("/wrong");
   expect(client.richtext.resolve).toHaveBeenCalledWith(expect.objectContaining({ type: "doc" }), {
     locale: "en",
-    perspective: "drafts",
   });
 });
 

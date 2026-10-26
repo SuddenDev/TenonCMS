@@ -322,6 +322,7 @@ export default {
     publish: "Veröffentlichen",
     publishedAgo: "Veröffentlicht {ago}",
     readOnly: "Veröffentlichte Version. Zum Bearbeiten zu „Entwürfe“ wechseln.",
+    noEdit: "Sie können dies ansehen, aber nicht ändern.",
     saving: "Wird gespeichert …",
     selectDocument: "Dokument auswählen",
     shared: "In allen Sprachen gleich",

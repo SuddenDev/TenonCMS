@@ -9,6 +9,7 @@ import {
   watch,
 } from "vue";
 import { focusKey } from "@/modules/documents/fields";
+import { can } from "@/shared/access";
 import type { FieldProps } from "./fields/types";
 import TextField from "./fields/TextField.vue";
 import TextareaField from "./fields/TextareaField.vue";
@@ -46,6 +47,13 @@ const fields: Record<string, Component> = {
   file: FileField,
 };
 const renderer = computed(() => fields[props.field.type] ?? CustomField);
+// A field the user MAY NOT read is hidden. One they MAY NOT write shows disabled, like `readOnly`.
+const readable = computed(() => can(props.field, "read"));
+const field = computed(() =>
+  can(props.field, props.isNew ? "create" : "update")
+    ? props.field
+    : { ...props.field, readOnly: true },
+);
 
 // Runs after render, so the field's element exists when it mounts with a matching path.
 const box = useTemplateRef<ComponentPublicInstance>("box");
@@ -71,9 +79,10 @@ watch(
 <template>
   <component
     :is="renderer"
-    v-if="field.type !== 'join'"
+    v-if="field.type !== 'join' && readable"
     ref="box"
     v-bind="props"
+    :field="field"
     v-model="model"
     :path="path"
   />

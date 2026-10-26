@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { can } from "@/shared/access";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { client, CmsError, type MediaRead } from "@/shared/api";
+import { client, CmsError, schema, type MediaRead } from "@/shared/api";
 import { childFolders, fits, type MediaRules } from "@/modules/media/media";
 import { uploadFiles } from "../uploads";
 import Icon from "@/shared/components/Icon.vue";
@@ -203,7 +204,11 @@ function choose(d: MediaRead) {
   else selected.value = [...selected.value, d.id];
 }
 
+// New folders exist only until their first upload, so they go with it.
+const uploads = computed(() => can(schema.value.collections?.media, "create"));
+
 async function upload(files: Iterable<FileWithPath> | null | undefined) {
+  if (!uploads.value) return;
   const uploaded = await uploadFiles(files, { folder: folder.value, rules: props.pick });
   for (const doc of uploaded) {
     docs.value = [doc, ...docs.value];
@@ -267,11 +272,17 @@ async function upload(files: Iterable<FileWithPath> | null | undefined) {
 
       <div class="-mr-2 flex flex-wrap items-center justify-end gap-2">
         <slot name="actions" />
-        <Button type="button" variant="outline" :disabled="selectionBusy" @click="startNewFolder">
+        <Button
+          v-if="uploads"
+          type="button"
+          variant="outline"
+          :disabled="selectionBusy"
+          @click="startNewFolder"
+        >
           <Icon name="folder-plus" />
           {{ t("media.newFolder") }}
         </Button>
-        <DropdownMenu>
+        <DropdownMenu v-if="uploads">
           <DropdownMenuTrigger as-child>
             <Button type="button" :disabled="selectionBusy"
               ><Icon name="upload" />{{ t("media.upload") }}<Icon name="chevron-down"

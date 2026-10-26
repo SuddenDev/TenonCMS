@@ -29,7 +29,6 @@ import type { FieldProps } from "./types";
 import LinkDialog from "./richtext/LinkDialog.vue";
 import { decorateReferences } from "./richtext/decorate";
 import { useLocale } from "@/shared/composables/useLocale";
-import { usePerspective } from "@/shared/composables/usePerspective";
 import { controls } from "./richtext/controls";
 import { loadClientRef } from "../../../../../../core/src/admin/browser/lazy-mount";
 import { richtextExtensions } from "../../../../../../core/src/richtext/runtime/extensions";
@@ -49,7 +48,6 @@ const props = defineProps<FieldProps<"richtext">>();
 const model = defineModel<RichtextDocument | null>();
 const { t } = useI18n();
 const { locale } = useLocale();
-const { perspective } = usePerspective();
 const registry = inject(registryKey, {});
 
 // Editor lifecycle
@@ -84,7 +82,7 @@ onMounted(async () => {
 
     const document = model.value ?? empty;
     const initial = richtextReferences(document).length
-      ? await client.richtext.resolve(document, { locale: locale.value, perspective })
+      ? await client.richtext.resolve(document, { locale: locale.value })
       : document;
     if (disposed) return;
 
@@ -187,7 +185,7 @@ async function refreshReferences() {
   const request = ++referenceRequest;
 
   try {
-    const resolved = await client.richtext.resolve(document, { locale: locale.value, perspective });
+    const resolved = await client.richtext.resolve(document, { locale: locale.value });
     if (!disposed && request === referenceRequest && editor.value)
       decorateReferences(editor.value, resolved);
   } catch (error) {

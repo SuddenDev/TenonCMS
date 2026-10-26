@@ -307,6 +307,7 @@ export default {
     publish: "Publish",
     publishedAgo: "Published {ago}",
     readOnly: "Published version. Switch to Drafts to edit.",
+    noEdit: "You can view this but not change it.",
     saving: "Saving…",
     selectDocument: "Select a document",
     shared: "Same in all languages",

@@ -1,3 +1,4 @@
+import { can } from "@/shared/access";
 import { toRaw, type InjectionKey, type Ref } from "vue";
 import { matchCondition } from "../../../../core/src/schema/condition";
 import { itemFields } from "../../../../core/src/schema/traversal/item-fields";
@@ -51,6 +52,7 @@ export const ownerKey: InjectionKey<Readonly<Ref<Owner>>> = Symbol("owner");
  *   A block item also keeps its `blockType`; an item of an unknown block stays as it is.
  * - `fill`: use defaults for missing values. Like on the server, children of an optional group get them only when the group has a value.
  * - On save, a field whose condition is false becomes null. Conditions read the form data as it is, so '' and null count the same.
+ * - On save, a field the user MAY NOT read is left out: its value is not in the form, so `null` would replace it.
  */
 export function normalize(
   fields: Fields,
@@ -62,6 +64,7 @@ export function normalize(
   return Object.fromEntries(
     Object.entries(fields).flatMap(([k, f]) => {
       if (f.type === "join") return [];
+      if (save && !can(f, "read")) return [];
       if (save && !active(f, root, value)) return [[k, null]];
 
       const v = value?.[k] === undefined && fill ? structuredClone(toRaw(f.default)) : value?.[k];

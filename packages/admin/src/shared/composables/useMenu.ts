@@ -3,6 +3,7 @@ import { useRoute } from "vue-router";
 import { groupMenu } from "../../../../core/src/admin/browser/menu";
 import type { Nav } from "../../../../core/src/admin/index.d.ts";
 import { schema } from "@/shared/api";
+import { can } from "@/shared/access";
 import { i18n, text } from "@/shared/i18n";
 import { CONTENT, pagePath, sessionKey } from "@/shared/options";
 
@@ -36,48 +37,52 @@ function entry(
   };
 }
 
-// Every collection, global and page with its `nav` defaults, wherever it is shown.
+// Every collection, global and page the user MAY read, with its `nav` defaults, wherever it is shown.
 function useEntries() {
   return computed<Entry[]>(() => [
-    ...Object.entries(schema.value.collections ?? {}).map(([name, c]) =>
-      // `media` is the media library, with a page of its own.
-      name === "media"
-        ? entry(
-            {
-              label: text(schema.value.admin?.media?.label) ?? t("nav.media"),
-              icon: "image",
-              order: 15,
-              to: `${CONTENT}/media`,
-            },
-            schema.value.admin?.media?.nav,
-          )
-        : entry(
-            {
-              label: text(c.label) ?? name,
-              description: text(c.description),
-              icon: "folder",
-              order: 10,
-              to: `${CONTENT}/collections/${name}`,
-            },
-            c.nav,
-          ),
-    ),
-    ...Object.entries(schema.value.globals ?? {}).map(([name, g]) =>
-      entry(
-        {
-          label: text(g.label) ?? name,
-          description: text(g.description),
-          icon: "settings",
-          order: 20,
-          // Settings globals open next to the Settings list.
-          to:
-            g.nav?.display === "settings"
-              ? `${CONTENT}/settings/globals/${name}`
-              : `${CONTENT}/globals/${name}`,
-        },
-        g.nav,
+    ...Object.entries(schema.value.collections ?? {})
+      .filter(([, c]) => can(c, "read"))
+      .map(([name, c]) =>
+        // `media` is the media library, with a page of its own.
+        name === "media"
+          ? entry(
+              {
+                label: text(schema.value.admin?.media?.label) ?? t("nav.media"),
+                icon: "image",
+                order: 15,
+                to: `${CONTENT}/media`,
+              },
+              schema.value.admin?.media?.nav,
+            )
+          : entry(
+              {
+                label: text(c.label) ?? name,
+                description: text(c.description),
+                icon: "folder",
+                order: 10,
+                to: `${CONTENT}/collections/${name}`,
+              },
+              c.nav,
+            ),
       ),
-    ),
+    ...Object.entries(schema.value.globals ?? {})
+      .filter(([, g]) => can(g, "read"))
+      .map(([name, g]) =>
+        entry(
+          {
+            label: text(g.label) ?? name,
+            description: text(g.description),
+            icon: "settings",
+            order: 20,
+            // Settings globals open next to the Settings list.
+            to:
+              g.nav?.display === "settings"
+                ? `${CONTENT}/settings/globals/${name}`
+                : `${CONTENT}/globals/${name}`,
+          },
+          g.nav,
+        ),
+      ),
     ...Object.entries(schema.value.admin?.pages ?? {}).map(([key, p]) =>
       entry(
         {

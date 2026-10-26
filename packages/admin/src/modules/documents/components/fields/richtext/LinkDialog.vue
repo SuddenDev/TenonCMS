@@ -4,7 +4,6 @@ import { useI18n } from "vue-i18n";
 import { client, schema } from "@/shared/api";
 import { titleField } from "@/modules/documents/fields";
 import { useLocale } from "@/shared/composables/useLocale";
-import { usePerspective } from "@/shared/composables/usePerspective";
 import { text } from "@/shared/i18n";
 import {
   Dialog,
@@ -42,7 +41,6 @@ const open = defineModel<boolean>("open", { required: true });
 
 const { t } = useI18n();
 const { locale } = useLocale();
-const { perspective } = usePerspective();
 
 const query = ref("");
 const href = ref("");
@@ -93,7 +91,7 @@ watch([open, reference], async ([visible, selected], _, onCleanup) => {
   error.value = "";
 
   try {
-    const options = { locale: locale.value, perspective };
+    const options = { locale: locale.value };
     const doc = await client.findById(selected.collection, selected.id, {
       ...options,
       populate: false,
@@ -139,7 +137,6 @@ function search() {
       const found = await client.richtext.search({
         query: query.value,
         locale: locale.value,
-        perspective,
       });
       if (request === requests) groups.value = found.filter((group) => group.items.length);
     } catch (e) {
