@@ -193,9 +193,9 @@ color: { type: 'text', condition: { '/settings.mode': 'advanced' } },
 
 `unique` rejects a value that another document of the collection has, with `Already used` on the field (400). It runs after `beforeChange` hooks, so values set by hooks count. `null` and missing values never collide; comparison is exact and case-sensitive. `defineCms` throws for `unique` in a group, in a global or on other types. Each write scans the collection once per unique field; indexes can come later without API changes.
 
-`private` keeps a value out of public reads. The local API, hooks and the admin (HTTP with a session) read and write it; HTTP without a session neither sends it nor filters by it.
+`private` keeps a value out of public reads: it is a field [access rule](#access-control) `read` of "signed in". The server `cms`, hooks and the admin (HTTP with a session) read and write it; HTTP without a session neither sends it nor filters by it.
 
-- A filter on a private field without a session returns 400, like an unknown field.
+- A filter on a private field without a session returns 400.
 - The rule also applies to populated and joined documents, by the rules of their own collection. On a group, it covers the whole group.
 - Client types make `private` fields optional.
 
@@ -976,10 +976,13 @@ switchTarget(localization, "/about", "de", page.alternates);
 ---
 const { canonical, alternates } = seoMeta(page, { general, seo });
 ---
+
 <html lang={Astro.locals.locale}>
   <head>
     <link rel="canonical" href={canonical} />
-    {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
+    {alternates.map((a) => (
+      <link rel="alternate" hreflang={a.hreflang} href={a.href} />
+    ))}
   </head>
 </html>
 ```
@@ -1381,7 +1384,7 @@ Host apps can use `client.requestPasswordReset({ email, redirectTo })` and `clie
 
 ### Users and roles
 
-Every user has one role. `admin` manages users; `editor` and every other role edit content. The first user becomes an admin, later users are editors unless an admin picks another role. A role only names a group of users for now: every role reads and writes all content. Add your own roles for later access rules, with a label for the admin:
+Every user has one role. `admin` manages users; `editor` and every other role edit content, unless [access rules](#access-control) say otherwise. The first user becomes an admin, later users are editors unless an admin picks another role. Add your own roles, with a label for the admin:
 
 ```ts
 defineCms({
@@ -1443,6 +1446,36 @@ auth: {
   },
 }
 ```
+
+### Access control
+
+`access` decides who MAY read, create, update and delete, on collections, globals (`read`, `update`), the media library (`media.access`) and fields (`read`, `create`, `update`). A rule is `true`, `false`, a list of roles, or a function:
+
+```ts
+defineCollection({
+  access: {
+    create: ["admin", "editor", "author"],
+    // An author changes only their own posts.
+    update: ({ user }) => (user?.role === "author" ? { createdBy: user.id } : true),
+    delete: ["admin", "editor"],
+  },
+  fields: {
+    title: { type: "text" },
+    note: { type: "text", access: { read: ["admin"], update: ["admin"] } },
+  },
+});
+```
+
+- Without a rule, everyone reads published content and signed-in users do the rest. A rule replaces that default, so `create: true` accepts writes without a session.
+- A role list matches signed-in users with one of the roles. There is no admin bypass: `["editor"]` excludes `admin`. Unknown roles throw at startup.
+- A function gets `{ user, cms, context, collection | global, locale }`, plus `draft` and `id` (read), `data` (create, update) or `id` (update, delete), and returns a boolean. `read`, `update` and `delete` MAY return a `where` instead: equality filters on top-level fields, `createdBy` and `updatedBy`. Reads only see matching documents; an update or delete of another document is denied.
+- `update` covers draft saves, publish, discard and the locale actions. Population and rich text links leave out documents the reader MAY NOT read.
+- A field the caller MAY NOT read is missing from every result, and filtering on it is a 400. A field the caller MAY NOT create or update keeps its stored value; the input is dropped.
+- Denied without a session answers 401, with one 403 (`ForbiddenError`).
+- The server `cms` and the `cms` that hooks get skip the rules. HTTP and `cms.withSession(request)` apply them.
+- The admin hides what the user MAY NOT read, and shows read-only what they MAY NOT change. The server stays the authority.
+
+Every document records `createdBy` and `updatedBy`, the ids of the users who created and last changed it (`null` for server code). Readers without a session do not get them.
 
 ## Customize the admin
 

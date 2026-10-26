@@ -5,7 +5,7 @@
 These touch every read and write path. They get harder to add as more code builds on top.
 
 - [x] Users, roles and invites. A role is a field on the user. Invites need email (better-auth, SMTP as in the Astro example).
-- [ ] Access control: `access: { read, create, update, delete }` on collections, globals and fields, like Payload. A rule gets `{ user, doc }` and returns a boolean or a `where` filter. It lives in the local API, next to validation, not in HTTP. Draft reads, `private` and "writes need a session" become rules too.
+- [x] Access control: `access: { read, create, update, delete }` on collections, globals and fields, like Payload. A rule gets `{ user, doc }` and returns a boolean or a `where` filter. It lives in the local API, next to validation, not in HTTP. Draft reads, `private` and "writes need a session" become rules too.
 - [ ] API keys: better-auth's `apiKey` plugin. A key is one more caller that the access rules see.
 - [ ] Edit conflicts: a write sends the `updatedAt` it loaded, and a changed document answers 409 (`ConflictError`). Later: show who else is editing.
 - [ ] Version history: a revisions table and a restore action. It also gives an audit log (who changed what).
