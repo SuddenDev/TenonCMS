@@ -22,7 +22,10 @@ export type Drafts = Record<string, Record<string, unknown>>;
 /** Stops what a call started. */
 export type Unsubscribe = () => void;
 
-/** Messages between the admin and the site, sent with `postMessage`. */
+/** The collections and globals with `visualEditing: false`, whose bound elements edit mode leaves alone. */
+export type Excluded = { collections: string[]; globals: string[] };
+
+/** Messages between the admin and the site, sent with `postMessage`. The admin's `mode` carries `exclude`. */
 export type PreviewMessage =
   | { type: "ready" }
   | {
@@ -33,7 +36,7 @@ export type PreviewMessage =
       /** The locale of the edited document. A draft applies only to page data of the same locale. */
       locale?: string;
     }
-  | { type: "mode"; edit: boolean }
+  | { type: "mode"; edit: boolean; exclude?: Excluded }
   | { type: "highlight"; collection: string | null; id: string | null }
   | { type: "edit"; collection: string; id: string; path: string }
   | { type: "url"; href: string }

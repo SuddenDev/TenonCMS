@@ -21,13 +21,13 @@ const options = {
       },
       fields: { post: { type: "relation", collection: "posts" } },
     },
-    plain: { fields: { title: { type: "text" } } },
+    plain: { visualEditing: false, fields: { title: { type: "text" } } },
     linked: { permalink: "/linked/{slug}", fields: { slug: { type: "text" } } },
   },
   globals: {
     home: { preview: "/", fields: { title: { type: "text" } } },
     linkedGlobal: { permalink: "/linked", fields: { title: { type: "text" } } },
-    plainGlobal: { fields: { title: { type: "text" } } },
+    plainGlobal: { visualEditing: false, fields: { title: { type: "text" } } },
   },
   media: false,
   database: { url: ":memory:" },
@@ -71,6 +71,14 @@ describe("preview", () => {
     expect(schema.collections?.notes.preview).toBe(true);
     expect(schema.collections?.plain).not.toHaveProperty("preview");
     expect(schema.globals?.home.preview).toBe(true);
+  });
+
+  it("sends `visualEditing: false` in the schema", async () => {
+    const { client } = await signedIn();
+    const schema = await client.getSchema();
+    expect(schema.collections?.plain.visualEditing).toBe(false);
+    expect(schema.globals?.plainGlobal.visualEditing).toBe(false);
+    expect(schema.collections?.posts).not.toHaveProperty("visualEditing");
   });
 
   it("resolves a template through one relation hop", async () => {

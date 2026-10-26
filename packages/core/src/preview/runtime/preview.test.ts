@@ -188,6 +188,29 @@ describe("preview", () => {
     expect(lit()).toEqual([]);
   });
 
+  it("leaves the elements of excluded entries alone in edit mode", async () => {
+    window.name = "integral-preview";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    document.body.innerHTML = `<article data-cms="posts:1:body"><p data-cms="comments:9:body">Nice</p></article><footer data-cms="footer::copyright">C</footer>`;
+    stop = preview();
+    await vi.dynamicImportSettled();
+    const exclude = { collections: ["comments"], globals: ["footer"] };
+    const mode = { type: "mode", edit: true, exclude };
+    window.dispatchEvent(
+      new MessageEvent("message", { data: mode, origin: location.origin, source: opener as never }),
+    );
+    const click = (selector: string) => {
+      opener.postMessage.mockClear();
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      document.querySelector(selector)!.dispatchEvent(event);
+      return { prevented: event.defaultPrevented, sent: opener.postMessage.mock.calls[0]?.[0] };
+    };
+    // A comment inside a post opens the post.
+    expect(click("p").sent).toEqual({ type: "edit", collection: "posts", id: "1", path: "body" });
+    expect(click("footer")).toEqual({ prevented: false, sent: undefined });
+  });
+
   it("shows no admin bar in the admin's iframe", () => {
     window.name = "integral-preview";
     hint();

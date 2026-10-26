@@ -1,4 +1,5 @@
 import { isObject } from "../../schema/condition.ts";
+import type { Excluded } from "../config/types.ts";
 import { draftKey, getDrafts } from "./store.ts";
 
 /**
@@ -78,6 +79,31 @@ export function highlight(collection: string | null, id: string | null) {
     if (bound.collection === collection && bound.id === id)
       el.setAttribute("data-cms-highlight", "");
   }
+}
+
+/**
+ * A selector of the elements bound to an excluded collection or global. A collection binding starts with `<name>:` and
+ * a global one with `<name>::`, so a global never matches a collection's rule.
+ * @returns The selector, or `null` when nothing is excluded.
+ */
+export function excludedSelector({ collections, globals }: Excluded) {
+  const starts = (prefix: string) => `[data-cms^="${CSS.escape(prefix)}"]`;
+  const selectors = [
+    ...collections.map((c) => `${starts(`${c}:`)}:not(${starts(`${c}::`)})`),
+    ...globals.map((g) => starts(`${g}::`)),
+  ];
+  return selectors.length ? selectors.join(",") : null;
+}
+
+/**
+ * The element an edit click on `target` picks: the closest bound one that `excluded` does not match.
+ * @returns The element, or `null` when there is none.
+ */
+export function pickBound(target: Element, excluded: string | null) {
+  let el = target.closest("[data-cms]");
+  while (el && excluded && el.matches(excluded))
+    el = el.parentElement?.closest("[data-cms]") ?? null;
+  return el;
 }
 
 /** The documents and globals bound on the page, once each, in page order. A global has an empty id. */

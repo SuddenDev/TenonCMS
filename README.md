@@ -738,6 +738,12 @@ preview();
 // Globals pass `null` as the id: edit("general", null, "title")
 ```
 
+`visualEditing: false` on a collection or global keeps editors from picking it on a page, whatever the page binds: "On this page" leaves it out, and edit mode neither outlines nor opens its elements. A click on one opens the bound element around it, if there is one. Live preview of unsaved changes still applies. Use it for content that visitors write, like comments.
+
+```ts
+defineCollection({ visualEditing: false, fields: { body: { type: "textarea" } } });
+```
+
 Bound elements get the typed text, or the listed attributes, on every keystroke. With edit mode on, a click on one focuses its field in the admin.
 
 The runtime picks its mode from `window.name`:

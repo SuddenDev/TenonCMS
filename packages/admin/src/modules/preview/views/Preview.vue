@@ -12,9 +12,11 @@ import DocPane from "@/modules/documents/components/DocPane.vue";
 import GlobalEdit from "@/modules/documents/views/GlobalEdit.vue";
 import { Icon, useLocale } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
-import PageDocuments, { type PageDocument } from "@/modules/preview/components/PageDocuments.vue";
+import PageDocuments from "@/modules/preview/components/PageDocuments.vue";
 import PreviewPane from "@/modules/preview/components/PreviewPane.vue";
+import type { PageDocument } from "@/modules/preview/page-rows";
 import {
+  excluded,
   type PageMessage,
   siteUrl,
   usePreviewChannel,
@@ -78,7 +80,7 @@ const send = usePreviewChannel(async (message: PageMessage) => {
   }
   if (message.type === "ready") {
     onPage.value = [];
-    send({ type: "mode", edit: edit.value });
+    sendMode();
     broadcast();
     return;
   }
@@ -98,7 +100,9 @@ const send = usePreviewChannel(async (message: PageMessage) => {
   if (message.collection !== name.value || message.id !== id.value) await router.push(to);
   focus.value = message.path;
 });
-watch(edit, (value) => send({ type: "mode", edit: value }));
+// The page learns which entries edit mode leaves alone with every `mode` message.
+const sendMode = () => send({ type: "mode", edit: edit.value, exclude: excluded() });
+watch(edit, sendMode);
 
 function previewUrl(data: Record<string, unknown>): Promise<string | null> {
   const options = { locale: active.value || undefined };

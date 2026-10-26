@@ -22,6 +22,12 @@ export type Collection<F extends Fields = Fields> = Layout & {
   localized?: boolean;
   /** Documents keep a draft next to the published data, saved with `{ draft: true }` and published with `publish()`. Default `true`. */
   drafts?: boolean;
+  /**
+   * Whether editors MAY pick the documents on a page in the visual editor. With `false`, "On this page" leaves them
+   * out, and edit mode neither outlines nor opens their bound elements, whatever a page binds with `edit()`. Live
+   * preview of unsaved changes still applies. Use it for content that visitors write, like comments. Default `true`.
+   */
+  visualEditing?: boolean;
   /** Functions that run on every read, write and delete of this collection. Typed only through `defineCollection()`. */
   hooks?: CollectionHooks<F>;
 };

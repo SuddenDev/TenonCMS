@@ -20,6 +20,12 @@ export type Global<F extends Fields = Fields> = Layout & {
   localized?: boolean;
   /** The global keeps a draft next to the published data, saved with `{ draft: true }` and published with `publishGlobal()`. Default `true`. */
   drafts?: boolean;
+  /**
+   * Whether editors MAY pick the global on a page in the visual editor. With `false`, "On this page" leaves it
+   * out, and edit mode neither outlines nor opens its bound elements, whatever a page binds with `edit()`. Live
+   * preview of unsaved changes still applies. Default `true`.
+   */
+  visualEditing?: boolean;
   /** Functions that run on every read and write of this global. Typed only through `defineGlobal()`. */
   hooks?: GlobalHooks<F>;
 };

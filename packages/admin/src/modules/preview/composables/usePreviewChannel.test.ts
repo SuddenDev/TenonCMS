@@ -2,7 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createApp } from "vue";
 import { schema } from "@/shared/api";
-import { registerPreviewTab, usePreviewChannel } from "./usePreviewChannel";
+import { excluded, registerPreviewTab, usePreviewChannel } from "./usePreviewChannel";
 
 let cleanup = () => {};
 afterEach(() => {
@@ -40,21 +40,30 @@ it("trusts only the preview iframe and registered tabs, with validated message s
   dispatch({ type: "ready" });
   dispatch({ type: "documents", documents: [{ collection: "posts", id: "1" }] });
   expect(receive).toHaveBeenCalledTimes(2);
-  post!({ type: "mode", edit: true });
+  const exclude = { collections: [], globals: [] };
+  post!({ type: "mode", edit: true, exclude });
   expect(postMessage).toHaveBeenCalledWith(
-    { type: "mode", edit: true },
+    { type: "mode", edit: true, exclude },
     { targetOrigin: location.origin },
   );
   const tab = { postMessage: vi.fn(), closed: false } as unknown as Window;
   registerPreviewTab(tab);
   dispatch({ type: "ready" }, tab);
   expect(receive).toHaveBeenCalledTimes(3);
-  post!({ type: "mode", edit: false });
+  post!({ type: "mode", edit: false, exclude });
   expect(tab.postMessage).toHaveBeenCalledWith(
-    { type: "mode", edit: false },
+    { type: "mode", edit: false, exclude },
     { targetOrigin: location.origin },
   );
   cleanup();
   dispatch({ type: "mode", edit: false });
   expect(receive).toHaveBeenCalledTimes(3);
+});
+
+it("lists the collections and globals with `visualEditing: false` for the `mode` message", () => {
+  schema.value = {
+    collections: { posts: { fields: {} }, comments: { visualEditing: false, fields: {} } },
+    globals: { footer: { visualEditing: false, fields: {} }, general: { fields: {} } },
+  };
+  expect(excluded()).toEqual({ collections: ["comments"], globals: ["footer"] });
 });

@@ -2,12 +2,24 @@ import { Idiomorph } from "idiomorph";
 import type { PreviewMessage, Unsubscribe } from "../config/types.ts";
 import { isPreviewMessage } from "./message.ts";
 import { startAdminBar } from "./admin-bar.ts";
-import { boundDocuments, highlight, parseBinding, patch, patchAll } from "./bind-elements.ts";
+import {
+  boundDocuments,
+  excludedSelector,
+  highlight,
+  parseBinding,
+  patch,
+  patchAll,
+  pickBound,
+} from "./bind-elements.ts";
 import { setDraft } from "./store.ts";
 
 const STYLE =
   "[data-cms-edit] [data-cms]:hover{outline:2px dashed #3b82f6;outline-offset:2px;cursor:pointer}" +
   "[data-cms-highlight]{outline:2px solid #3b82f6!important;outline-offset:2px;background:rgb(59 130 246/.08)}";
+
+// The elements of excluded entries get no outline. A click on one goes to the bound element around it.
+const editStyle = (excluded: string | null) =>
+  STYLE + (excluded ? `[data-cms-edit] :is(${excluded}):hover{outline:none;cursor:inherit}` : "");
 
 // Live preview: drafts from the admin patch bound elements, and edit clicks go back to the admin.
 export const startLive = (name: string, morph: boolean, admin: string | false): Unsubscribe => {
@@ -15,8 +27,9 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
   let active = true;
   const channel = openChannel(admin);
   const rerender = createRerender(() => active);
+  let excluded: string | null = null;
   const style = document.createElement("style");
-  style.textContent = STYLE;
+  style.textContent = editStyle(excluded);
   document.head.append(style);
 
   // The bar's switch and the admin's `mode` message both go through `setEditMode()`; the last one wins.
@@ -47,6 +60,10 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
       setDraft(collection, id, locale ? { ...data, locale } : data);
       patchAll(document);
     } else if (message.type === "mode") {
+      if (message.exclude) {
+        excluded = excludedSelector(message.exclude);
+        style.textContent = editStyle(excluded);
+      }
       setEditMode(message.edit);
     } else if (message.type === "highlight") {
       highlight(message.collection, message.id);
@@ -68,7 +85,7 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
 
   const onClick = (e: MouseEvent) => {
     if (!html.hasAttribute("data-cms-edit") || !(e.target instanceof Element)) return;
-    const bound = e.target.closest("[data-cms]");
+    const bound = pickBound(e.target, excluded);
     if (!bound) return;
     e.preventDefault();
     e.stopPropagation();

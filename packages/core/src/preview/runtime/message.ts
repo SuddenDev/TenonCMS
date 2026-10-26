@@ -10,7 +10,7 @@ export function isPreviewMessage(value: unknown): value is PreviewMessage {
     case "ready":
       return true;
     case "mode":
-      return typeof m.edit === "boolean";
+      return typeof m.edit === "boolean" && (m.exclude === undefined || isExcluded(m.exclude));
     case "url":
       return typeof m.href === "string";
     case "documents":
@@ -29,4 +29,11 @@ export function isPreviewMessage(value: unknown): value is PreviewMessage {
     default:
       return false;
   }
+}
+
+// Two lists of names.
+function isExcluded(value: unknown) {
+  const names = (list: unknown) => Array.isArray(list) && list.every((n) => typeof n === "string");
+  const e = value as Record<string, unknown> | null;
+  return !!e && typeof e === "object" && names(e.collections) && names(e.globals);
 }
