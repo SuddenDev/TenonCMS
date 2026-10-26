@@ -7,10 +7,13 @@ import { checkFile } from "./check-file.ts";
 import { effectivePartSize, partUrls, partsOf } from "./parts.ts";
 import { cleanPlace, placeFile } from "./place-file.ts";
 import { removeExpired } from "./remove-expired.ts";
+import { col } from "../../../content/targets.ts";
+import { guard } from "../../../access/rule.ts";
 
 /**
  * Step 1: checks the file, runs `beforeUpload`, reserves a free key and starts the upload in storage.
  * Returns the upload id, the part size and one URL per part.
+ * @throws {ForbiddenError} When `media.access.create` denies, before any byte is stored.
  */
 export async function create(core: Core, scope: Scope, input: Partial<UploadInfo>) {
   const media = mediaOf(core);
@@ -18,6 +21,7 @@ export async function create(core: Core, scope: Scope, input: Partial<UploadInfo
   const { size, mimeType } = checkFile(media, input);
 
   return transaction(core, scope, async (s) => {
+    await guard(core, s, col("media"), "create", { data: input });
     const db = s.trx!;
     await removeExpired(storage, db);
 

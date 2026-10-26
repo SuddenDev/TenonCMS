@@ -51,7 +51,7 @@ export const localeMeta = (
 });
 
 /**
- * Turns a row into a document with its id and every metadata field. A localized `loc` adds `locale`, `locales`
+ * Turns a row into a document with its id and every metadata field, `createdBy` and `updatedBy` included. A localized `loc` adds `locale`, `locales`
  * (the locales with a row in the order of the configuration) and `sharedDraft`.
  */
 export const toDoc = (row: Row, loc?: Loc): Record<string, any> & { id: string } => ({
@@ -60,4 +60,6 @@ export const toDoc = (row: Row, loc?: Loc): Record<string, any> & { id: string }
   id: row.id,
   createdAt: iso(row.created_at),
   updatedAt: iso(row.updated_at),
+  createdBy: row.created_by,
+  updatedBy: row.updated_by,
 });

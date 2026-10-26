@@ -5,9 +5,11 @@ import { slot } from "./collect-hooks.ts";
 import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { type Operation } from "../../schema/index.ts";
 import { runFieldHooks } from "../../schema/runtime/run-field-hooks.ts";
+import { stripDenied } from "../../access/field-access.ts";
 
 /**
- * Runs field `afterRead` hooks per document, then the collection's or global's once for the batch.
+ * Runs field `afterRead` hooks per document, then the collection's or global's once for the batch, then removes what
+ * the caller cannot read (`stripDenied()`). Every read, populated documents and write results pass here.
  * @returns The documents the hooks return.
  */
 export async function afterRead(
@@ -29,7 +31,9 @@ export async function afterRead(
     );
 
   const args = hookArgs(s, name, { operation, draft });
-  return runHooks(slot(core, name, "afterRead"), "docs", docs, args);
+  const result = await runHooks(slot(core, name, "afterRead"), "docs", docs, args);
+  await stripDenied(core, s, name, result);
+  return result;
 }
 
 /**

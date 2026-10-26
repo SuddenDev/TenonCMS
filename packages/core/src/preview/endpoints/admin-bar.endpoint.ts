@@ -6,8 +6,6 @@ import type { AdminBar } from "../../admin/merge/merge-bar.ts";
 import { FAILED, loadBarItem } from "../../admin/load/bar-item.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
 import { adminLocale, isPageUrl } from "../../admin/load/load-request.ts";
-import { caller } from "../../auth/get-caller.ts";
-import { outerScope } from "../../cms/runtime/operation-context.ts";
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
 import { builtIns, composeItems } from "../runtime/admin-bar-items.ts";
@@ -38,9 +36,7 @@ export function adminBarEndpoint(core: Core, bar: AdminBar) {
     const branding = adminBrand(core.admin.descriptor);
     if (mode === "preview-tab") return c.json({ position, items: builtIns(mode), branding });
 
-    const { user, perspective } = await caller(core.getSession, c.req.raw);
-    if (!user) return c.json({ message: "Unauthorized" }, 401);
-    const ctx = { user, cms: core.localApi(outerScope(user, perspective)), locale, url };
+    const ctx = { user: c.var.user, cms: c.var.cms, locale, url };
     const effective = composeItems<AdminBarItemDescriptor>(builtIns(mode), bar.items).filter(
       (item) => !item.hidden,
     );

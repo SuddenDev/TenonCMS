@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
-import { outerScope } from "../../cms/runtime/operation-context.ts";
+import { inner, outerScope } from "../../cms/runtime/operation-context.ts";
 import { withLocale } from "../../content/locale.ts";
 import { locOf } from "../../content/reads/loc-of.ts";
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
@@ -9,19 +9,23 @@ import { beforeRead, afterRead } from "../../content/lifecycle/run-read-hooks.ts
 import { col } from "../../content/targets.ts";
 import type { RichtextTargets } from "../config/types.ts";
 import { ValidationError } from "../../errors.ts";
+import { decide } from "../../access/rule.ts";
 
-/** Protected, bounded title search across collections with public permalinks. */
+/**
+ * `GET /admin/richtext/targets`: a bounded title search across collections with public permalinks, within each
+ * collection's read rule, in the perspective of the preview cookie.
+ * @returns The route. A query longer than 200 characters answers 400.
+ */
 export function richtextTargetsEndpoint(core: Core) {
   return new Hono<Env>().get("/admin/richtext/targets", async (c) => {
     const query = c.req.query("query") ?? "";
-    const perspective = c.req.query("perspective") ?? "published";
-    if (query.length > 200 || !["published", "drafts"].includes(perspective))
-      throw new ValidationError({ query: "Invalid rich text search" });
+    const { perspective } = c.var;
+    if (query.length > 200) throw new ValidationError({ query: "Invalid rich text search" });
 
-    const scope = withLocale(core, outerScope(c.var.user, perspective as "published" | "drafts"), {
+    const scope = withLocale(core, outerScope(c.var.user, perspective), {
       locale: c.req.query("locale"),
     });
-    const s = { ...scope, cms: core.localApi(scope) };
+    const s = inner(core, scope, undefined, {});
     const db = await core.db();
     const results: RichtextTargets = [];
 
@@ -34,8 +38,11 @@ export function richtextTargetsEndpoint(core: Core) {
           ["text", "textarea", "slug"].includes(entry.fields[k].type),
         );
       if (!key) continue;
+      const access = await decide(core, s, col(name), "read", { draft: perspective === "drafts" });
+      if (access === false) continue;
 
       const docs = await findDocs(db, name, {
+        access: typeof access === "object" ? access : undefined,
         limit: 20,
         drafts: perspective === "drafts",
         loc: locOf(core, scope, entry),

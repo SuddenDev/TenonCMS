@@ -11,12 +11,14 @@ import { DOCUMENT_LOCALES, GLOBAL_LOCALES } from "../../db/queries/document-sql.
 import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts";
 import { deleteLocale } from "../../db/queries/locales/delete-locale.query.ts";
 import { locOf } from "../reads/loc-of.ts";
+import { guard } from "../../access/rule.ts";
 
 /**
  * Deletes the locale row of the scope's locale, then runs `afterChange` with the document as it is afterwards.
  *
  * @returns The document in the removed locale, without its localized values, or `undefined` when the document does not exist.
  * @throws {ValidationError} For an unlocalized entry, the default locale, a locale without a version, or the last locale row.
+ * @throws {ForbiddenError} When the `update` rule denies.
  */
 export async function removeLocalized(core: Core, s: Inner, name: Name, id: string | undefined) {
   const entry = target(core, name);
@@ -25,6 +27,7 @@ export async function removeLocalized(core: Core, s: Inner, name: Name, id: stri
   if (loc.locale === loc.defaultLocale)
     throw new ValidationError({ locale: "The default locale cannot be removed" });
 
+  await guard(core, s, name, "update", { id });
   const db = await q(core, s);
   const global = name.kind === "global";
   const before = await loadLocaleDoc(db, name, id ?? "", true, loc);

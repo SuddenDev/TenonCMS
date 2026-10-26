@@ -11,6 +11,10 @@ export interface Database {
     updated_at: number;
     /** `NULL` for a document that was never published. */
     published_at: number | null;
+    /** The id of the user who created the document. `NULL` for server code. */
+    created_by: string | null;
+    /** The id of the user who last changed the document. `NULL` for server code. */
+    updated_by: string | null;
   };
   cms_globals: {
     name: string;
@@ -96,5 +100,5 @@ export type LocaleColumns = {
  */
 export type Row = Pick<
   Selectable<Database["cms_documents"]>,
-  "id" | "data" | "created_at" | "updated_at" | "published_at"
+  "id" | "data" | "created_at" | "updated_at" | "published_at" | "created_by" | "updated_by"
 > & { has_draft: number } & Partial<LocaleColumns>;

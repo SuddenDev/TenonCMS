@@ -12,11 +12,14 @@ import { discardDraft } from "../../db/queries/drafts/discard-draft.query.ts";
 import { target } from "../targets.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { discardLocalized } from "./discard-locale.ts";
+import { guard } from "../../access/rule.ts";
 
 /**
  * Drops the draft. A document that was never published is deleted, with its `onDelete` effects.
  * A localized entry drops the draft of the scope's locale, or with `all` every draft. See `discardLocalized()`.
+ * It needs the `update` rule only: deleting a never-published document this way needs no `delete`.
  * @returns The published document after discarding the draft, or `undefined` if it was deleted or missing.
+ * @throws {ForbiddenError} When the `update` rule denies.
  */
 export const discard = (
   core: Core,
@@ -30,6 +33,7 @@ export const discard = (
 
   if (name.kind === "global")
     return run(core, scope, "setGlobal", name, { global: name.name }, async (s) => {
+      await guard(core, s, name, "update");
       if (loc) return discardLocalized(core, s, name, name.name, loc, all, options);
 
       const db = await q(core, s);
@@ -41,6 +45,7 @@ export const discard = (
     });
 
   return run(core, scope, "update", name, { collection: name.name, id }, async (s, args) => {
+    await guard(core, s, name, "update", { id: args.id });
     if (loc) return discardLocalized(core, s, name, args.id, loc, all, options);
 
     const db = await q(core, s);
@@ -48,7 +53,8 @@ export const discard = (
     if (!doc) return undefined;
 
     if (doc.publishedAt === null) {
-      await remove(core, s, name.name, args.id, options);
+      // Part of the discard, which the `update` rule allowed.
+      await remove(core, { ...s, overrideAccess: true }, name.name, args.id, options);
       return undefined;
     }
 

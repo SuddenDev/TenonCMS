@@ -1,11 +1,19 @@
-import type { Core } from "../../cms/runtime/types.ts";
+import type { Core, Scope } from "../../cms/runtime/types.ts";
+import { col } from "../../content/targets.ts";
 import { distinctValues } from "../../db/queries/media/distinct-values.query.ts";
+import { readAccess } from "../../access/rule.ts";
 
-/** All folders of the library with their parents, sorted. The root `''` is left out. */
-export async function folders(core: Core) {
+/**
+ * The folders of the files the caller of `scope` MAY read, with their parents, sorted. The root `''` is left out.
+ * @returns The folder paths.
+ * @throws {ForbiddenError} When `media.access.read` denies.
+ */
+export async function folders(core: Core, scope: Scope) {
+  const access = await readAccess(core, scope, col("media"));
+  const where = access === true ? {} : access;
   const set = new Set<string>();
 
-  for (const folder of await distinctValues(await core.db(), "media", "folder")) {
+  for (const folder of await distinctValues(await core.db(), "media", "folder", where)) {
     const parts = String(folder ?? "").split("/");
     for (let i = 1; i <= parts.length; i++) set.add(parts.slice(0, i).join("/"));
   }

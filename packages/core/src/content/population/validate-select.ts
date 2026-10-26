@@ -6,7 +6,7 @@ import { type SelectSpec } from "./select-fields.ts";
 
 type Collections = Record<string, Collection>;
 
-const META = ["id", "createdAt", "updatedAt", "publishedAt", "hasDraft"];
+const META = ["id", "createdAt", "updatedAt", "createdBy", "updatedBy", "publishedAt", "hasDraft"];
 const LOCALE_META = ["locale", "locales", "sharedDraft", "alternates"];
 
 /**

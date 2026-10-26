@@ -14,9 +14,11 @@ import { loadDoc } from "../../db/queries/documents/load-document.query.ts";
 import { deleteDoc } from "../../db/queries/documents/delete-document.query.ts";
 import { deleteLocales } from "../../db/queries/locales/delete-locales.query.ts";
 import { DOCUMENT_LOCALES } from "../../db/queries/document-sql.ts";
+import { enforce, permit } from "../../access/rule.ts";
 
 /**
- * `delete`: the hooks around the row delete, then `onDelete` for every reference.
+ * `delete`: the `delete` rule, the hooks around the row delete, then `onDelete` for every reference.
+ * @throws {ForbiddenError} When the rule denies.
  */
 export async function remove(
   core: Core,
@@ -26,16 +28,14 @@ export async function remove(
   options: DeleteOptions = {},
 ) {
   const db = await q(core, s);
+  // A denial comes first, so a caller without the right learns nothing about missing documents.
+  const decision = await permit(core, s, col(collection), "delete", { id });
 
   // A delete removes the row whether it was published or not.
-  const doc = await loadDoc(
-    db,
-    collection,
-    id,
-    true,
-    locOf(core, s, target(core, col(collection))),
-  );
+  const loc = locOf(core, s, target(core, col(collection)));
+  const doc = await loadDoc(db, collection, id, true, loc);
   if (!doc) return;
+  enforce(s, decision, doc);
 
   const base = hookArgs(s, col(collection), { id, doc });
   await runHooks(slot(core, col(collection), "beforeDelete"), "doc", doc, base);

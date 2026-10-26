@@ -11,7 +11,8 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `auth/`         | better-auth provider, caller lookup and session middleware.       | [README](auth/README.md)                    |
 | `email/`        | Server-side delivery, adapters and authentication templates.      | [README](email/README.md)                   |
 | `users/`        | Roles, invites, their operations and endpoints.                   | [README](users/README.md)                   |
-| `http/`         | Hono application assembly, parsing, visibility and errors.        | [app.ts](http/app.ts)                       |
+| `http/`         | Hono application assembly, parsing and errors.                    | [app.ts](http/app.ts)                       |
+| `access/`       | Access rules: decisions, field stripping, `/schema` permissions.  | [README](access/README.md)                  |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |
 | `db/`           | libsql connection, fixed migrations and named content queries.    | [README](db/README.md)                      |
 | `richtext/`     | Rich-text config, runtime, reads/writes, integrity and endpoints. | [README](richtext/README.md)                |
@@ -45,22 +46,22 @@ The local API validates writes and runs hooks for every entry point. HTTP adds s
 
 For `POST /api/cms/collections/posts`, follow:
 
-1. [http/app.ts](http/app.ts) mounts the collection write group after CSRF/session middleware.
+1. [http/app.ts](http/app.ts) mounts the collection write group after CSRF and the optional session middleware.
 2. [collections/endpoints/create.endpoint.ts](collections/endpoints/create.endpoint.ts) checks the target, parses the body and calls the session-bound `cms.create()`.
 3. [cms/api/create-local-api.ts](cms/api/create-local-api.ts) assembles methods. [create.local.ts](collections/operations/local/create.local.ts) binds the scope and checks the name, media restriction and draft eligibility.
 4. [create.operation.ts](collections/operations/create.operation.ts) provides operation arguments to [run-operation.ts](content/lifecycle/run-operation.ts), which opens/reuses the transaction and runs operation hooks.
-5. [write-document.ts](content/writes/write-document.ts) runs defaults, slugs, validation and hooks, then integrity checks and [insert-document.query.ts](db/queries/documents/insert-document.query.ts). It returns through read hooks and operation hooks before commit.
+5. [write-document.ts](content/writes/write-document.ts) checks the `create` rule ([access/rule.ts](access/rule.ts)), drops fields the caller MAY NOT write, runs defaults, slugs, validation and hooks, then integrity checks and [insert-document.query.ts](db/queries/documents/insert-document.query.ts). It returns through read hooks and operation hooks before commit.
 
-Draft create uses the other route in the same endpoint file and the same operation with `draft: true`. It keeps its existing type-only validation and pending-data behavior. A trusted `cms.create()` starts at step 3.
+Draft create uses the other route in the same endpoint file and the same operation with `draft: true`. It keeps its existing type-only validation and pending-data behavior. A trusted `cms.create()` starts at step 3 and skips the rules.
 
 ## Read a global
 
 For `GET /api/cms/globals/general`, follow:
 
-1. [globals/endpoints/get.endpoint.ts](globals/endpoints/get.endpoint.ts) validates the name and read options. [read-request.ts](http/read-request.ts) chooses the request API and field visibility; drafts require a session plus the preview cookie.
+1. [globals/endpoints/get.endpoint.ts](globals/endpoints/get.endpoint.ts) validates the name and read options and calls `c.var.cms`, which `optionalSession()` in [session.middleware.ts](auth/middleware/session.middleware.ts) scopes to the caller; drafts require a session plus the preview cookie.
 2. [get.local.ts](globals/operations/local/get.local.ts) checks the name. [get.operation.ts](globals/operations/get.operation.ts) enters the shared lifecycle without opening a read transaction.
-3. [read-global.ts](content/reads/read-global.ts) loads the appropriate perspective using [load-global.query.ts](db/queries/globals/load-global.query.ts).
-4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. Embedded rich-text links and images resolve through [resolve-richtext.ts](richtext/reads/resolve-richtext.ts). The endpoint applies [strip-private-fields.ts](http/strip-private-fields.ts) to the result.
+3. [read-global.ts](content/reads/read-global.ts) checks the read rule and loads the appropriate perspective using [load-global.query.ts](db/queries/globals/load-global.query.ts).
+4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. Embedded rich-text links and images resolve through [resolve-richtext.ts](richtext/reads/resolve-richtext.ts). `afterRead()` removes the fields the caller MAY NOT read ([access/field-access.ts](access/field-access.ts)).
 
 Globals retain their own lifecycle: they skip collection `beforeOperation` and `afterOperation`. A never-saved global returns publication metadata with no saved field values.
 

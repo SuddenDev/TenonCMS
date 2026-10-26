@@ -1,32 +1,10 @@
 import { admin as adminPlugin } from "better-auth/plugins";
 import { describe, expect, it } from "vitest";
-import { defineCms, type Schema } from "../index.ts";
-import { admin, base, origin, setup } from "./setup.ts";
+import { defineCms } from "../index.ts";
+import { admin, base, post, setup, withAdmin } from "./setup.ts";
 
 const send = async () => {};
 const editor = { name: "Ed", email: "e@b.co", password: "password123" };
-
-type Fetch = ReturnType<typeof setup>["fetch"];
-const post = (fetch: Fetch, path: string, body: unknown) =>
-  fetch(`${origin}/api/cms${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-/** An instance with a signed-in admin, and a helper that creates a user as that admin. */
-async function withAdmin<C extends { schema: Schema; fetch(request: Request): Promise<Response> }>(
-  cms: C = defineCms(base) as never,
-) {
-  const env = setup(cms);
-  await env.client.signUp(admin);
-  const create = async (user: object) => {
-    const res = await post(env.fetch, "/auth/admin/create-user", user);
-    return ((await res.json()) as { user: { id: string; role: string } }).user;
-  };
-  const me = (await env.client.getSession()) as unknown as { user: { id: string; role: string } };
-  return { ...env, cms, create, me: me.user };
-}
 
 describe("roles of users", () => {
   it("makes the first user an admin and later users editors", async () => {

@@ -37,7 +37,7 @@ export type Plugin<
   routes?: (api: Hono<RouteEnv>) => void;
   /**
    * Routes without a session, for the site or the public. Mounted at `/api/cms/<name>`, before CSRF and session checks.
-   * `c.var.cms` has no user. Writes here are unprotected, so these routes SHOULD only read.
+   * `c.var.cms` has no user, so the access rules deny writes unless a rule allows callers without one.
    */
   publicRoutes?: (api: Hono<PublicRouteEnv>) => void;
   /**
@@ -48,7 +48,8 @@ export type Plugin<
    */
   publicMiddleware?: MiddlewareHandler<PublicRouteEnv>;
   /**
-   * Hono middleware for requests with a session: writes, `/schema` and every plugin's `routes`.
+   * Hono middleware for requests with a session: content writes, `/schema` and every plugin's `routes`. Writes
+   * without a session skip it.
    * Runs after the CSRF and session checks, so `c.var.user` is set and `c.var.cms` runs hooks with that user.
    */
   middleware?: MiddlewareHandler<RouteEnv>;

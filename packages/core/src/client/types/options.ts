@@ -16,8 +16,16 @@ export type FindOptions<C extends { schema: Schema }, K extends keyof Collection
   true,
   Locale<C>
 > & {
-  /** Equality filters on field values. `null` matches an empty or missing field. `undefined` adds no filter. */
-  where?: Partial<Record<FilterKey<CollectionFields<C, K>>, string | number | boolean | null>>;
+  /**
+   * Equality filters on field values, and on `createdBy` / `updatedBy` (user ids). `null` matches an empty or missing
+   * field. `undefined` adds no filter.
+   */
+  where?: Partial<
+    Record<
+      FilterKey<CollectionFields<C, K>> | "createdBy" | "updatedBy",
+      string | number | boolean | null
+    >
+  >;
   /** Maximum number of documents. */
   limit?: number;
 };

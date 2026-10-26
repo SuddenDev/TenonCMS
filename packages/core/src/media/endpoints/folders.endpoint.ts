@@ -5,9 +5,9 @@ import { folders } from "../operations/folders.operation.ts";
 import { renameFolder } from "../operations/rename-folder.operation.ts";
 import { body, scope } from "./request-context.ts";
 
-/** Public `GET /folders`: every folder of the library. */
+/** `GET /folders`: the folders of the files the caller MAY read. */
 export function foldersReadEndpoints(core: Core) {
-  return new Hono<Env>().get("/folders", async (c) => c.json(await folders(core)));
+  return new Hono<Env>().get("/folders", async (c) => c.json(await folders(core, scope(c))));
 }
 
 /** Protected `POST /folders/rename`. */

@@ -149,10 +149,8 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     ) => request(method, path, body, query),
 
     richtext: {
-      resolve: (
-        document: RichtextDocument,
-        options: { locale?: string; perspective?: Perspective } = {},
-      ) => request("POST", "/admin/richtext/resolve", { document, ...options }),
+      resolve: (document: RichtextDocument, options: { locale?: string } = {}) =>
+        request("POST", "/admin/richtext/resolve", { document, ...options }),
       search: (options = {}) => request("GET", "/admin/richtext/targets", undefined, options),
     },
 

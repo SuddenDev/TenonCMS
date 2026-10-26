@@ -7,13 +7,16 @@ import { readDocs, readPlan } from "./read-results.ts";
 import { globalMetaKeys } from "../population/validate-select.ts";
 import { localeMeta } from "../../db/map-document.ts";
 import { locOf } from "./loc-of.ts";
+import { decide, enforce } from "../../access/rule.ts";
 
 /**
  * Reads a global for `getGlobal`.
  * @returns The global after read hooks, population and `select`. Fields that were never saved are missing.
+ * @throws {ForbiddenError} When the read rule denies.
  */
 export async function readGlobal(core: Core, s: Inner, name: string, options: ReadOpts) {
   const entry = core.schema.globals[name];
+  enforce(s, await decide(core, s, glob(name), "read", { draft: s.perspective === "drafts" }));
   const { plan, select } = readPlan(core, entry.fields, options, globalMetaKeys(entry.localized));
   const loc = locOf(core, s, entry);
 

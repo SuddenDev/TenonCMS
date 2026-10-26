@@ -46,3 +46,14 @@ it("backfills published_at with updated_at", async () => {
   const globals = await sql`SELECT published_at, draft FROM cms_globals`.execute(db);
   expect(globals.rows).toEqual([{ published_at: 4, draft: null }]);
 });
+
+it("adds the authors of a document, empty for existing rows", async () => {
+  const db = createDb(":memory:");
+  const { error } = await migrator(db).migrateTo("006_cms_invites");
+  if (error) throw error;
+  await sql`INSERT INTO cms_documents (id, collection, data, created_at, updated_at)
+    VALUES ('a', 'posts', '{}', 1, 2)`.execute(db);
+  await migrate(db, { database: { db, type: "sqlite" } });
+  const docs = await sql`SELECT created_by, updated_by FROM cms_documents`.execute(db);
+  expect(docs.rows).toEqual([{ created_by: null, updated_by: null }]);
+});

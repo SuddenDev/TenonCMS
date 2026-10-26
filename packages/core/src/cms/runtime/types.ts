@@ -71,6 +71,8 @@ export type Scope = {
   locale?: string;
   /** Whether a missing value or locale reads as the default locale's. Default: `localization.fallback`. */
   fallback?: boolean;
+  /** Skips the access rules: server code and the `cms` of hooks. HTTP and `withSession()` MUST NOT set it. */
+  overrideAccess: boolean;
 };
 /** The scope hooks and nested calls get, with its bound API. */
 export type Inner = Scope & { cms: LocalApi };

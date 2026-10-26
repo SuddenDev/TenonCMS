@@ -166,6 +166,23 @@ it("protects search and resolution endpoints and returns grouped, bounded result
   ).toBe(true);
 });
 
+it("searches and resolves in the perspective of the preview cookie", async () => {
+  const { setup, admin } = await import("./setup.ts");
+  const cms = make();
+  const { client } = setup(cms);
+  await client.signUp(admin);
+  const page = await cms.create("pages", { title: "Draft page", slug: "draft" }, { draft: true });
+  const found = async () => (await client.richtext.search({ query: "draft" }))[0].items;
+  const href = async () =>
+    (await client.richtext.resolve(link(page.id))).content?.[0].content?.[0].marks?.[0].attrs?.href;
+
+  expect(await found()).toEqual([]);
+  expect(await href()).toBeNull();
+  await client.preview.enter("drafts");
+  expect(await found()).toEqual([{ id: page.id, label: "Draft page" }]);
+  expect(await href()).toBe("/draft");
+});
+
 it("tracks nested references in published content, globals and every locale draft", async () => {
   const cms = defineCms({
     ...base,

@@ -7,8 +7,8 @@ const url = (ids: string[] = [], folders: string[] = []) =>
   `/media/download?${new URLSearchParams([...ids.map((id) => ["id", id]), ...folders.map((folder) => ["folder", folder])])}`;
 
 describe("media downloads", () => {
-  it("requires a session and rejects empty or unsafe selections", async () => {
-    const m = withMedia();
+  it("follows `media.access.read` and rejects empty or unsafe selections", async () => {
+    const m = withMedia({ access: { read: ({ user }) => !!user } });
     expect((await m.fetchWithSession(url(["missing"]))).status).toBe(401);
     await m.client.signUp(admin);
     expect((await m.fetchWithSession(url())).status).toBe(400);

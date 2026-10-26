@@ -51,6 +51,29 @@ export function setup<
   return { cms, fetch, client: createClient<typeof cms>({ baseUrl: origin, fetch }) };
 }
 
+type Fetch = ReturnType<typeof setup>["fetch"];
+/** A JSON `POST` under `/api/cms`. */
+export const post = (fetch: Fetch, path: string, body: unknown) =>
+  fetch(`${origin}/api/cms${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+/** An instance with a signed-in admin, and a helper that creates a user as that admin. */
+export async function withAdmin<
+  C extends { schema: Schema; fetch(request: Request): Promise<Response> },
+>(cms: C = defineCms(base) as never) {
+  const env = setup(cms);
+  await env.client.signUp(admin);
+  const create = async (user: object) => {
+    const res = await post(env.fetch, "/auth/admin/create-user", user);
+    return ((await res.json()) as { user: { id: string; role: string } }).user;
+  };
+  const me = (await env.client.getSession()) as unknown as { user: { id: string; role: string } };
+  return { ...env, cms, create, me: me.user };
+}
+
 /** A fresh instance, a client with its own cookie jar, and a raw fetch under `/api/cms`. */
 export function fresh() {
   const s = setup();

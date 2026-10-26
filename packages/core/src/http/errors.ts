@@ -1,6 +1,6 @@
 import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { LinkedContentError, ConflictError, ValidationError } from "../errors.ts";
+import { LinkedContentError, ConflictError, ForbiddenError, ValidationError } from "../errors.ts";
 import type { Env } from "./middleware/types.ts";
 
 /**
@@ -12,8 +12,8 @@ export const notFound = () => new HTTPException(404, { message: "Not Found" });
 /**
  * Maps a thrown error to a JSON response. Unexpected errors MAY hold internals, so only expected errors send their
  * own message; the rest are logged and answer 500.
- * @returns 400 with `errors` for a `ValidationError`, 409 with `references` for a `ConflictError`, the status of an
- * `HTTPException`, else 500.
+ * @returns 400 with `errors` for a `ValidationError`, 409 with `references` for a `ConflictError`, the status of a
+ * `ForbiddenError` or an `HTTPException`, else 500.
  */
 export const handleError: ErrorHandler<Env> = (err, c) => {
   if (err instanceof ValidationError)
@@ -22,6 +22,7 @@ export const handleError: ErrorHandler<Env> = (err, c) => {
     return c.json({ message: err.message, code: err.code, references: err.references }, 409);
   if (err instanceof ConflictError)
     return c.json({ message: err.message, references: err.references }, 409);
+  if (err instanceof ForbiddenError) return c.json({ message: err.message }, err.status);
   if (err instanceof HTTPException) return c.json({ message: err.message }, err.status);
 
   console.error(err);

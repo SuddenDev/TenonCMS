@@ -99,9 +99,15 @@ export type Select<
 > = {
   [K in keyof F]?: SelectField<Collections, F[K], PopulateSpec, K>;
 } & (Document extends true
-  ? { id?: true; createdAt?: true; updatedAt?: true; publishedAt?: true; hasDraft?: true } & ([
-      L,
-    ] extends [never]
+  ? {
+      id?: true;
+      createdAt?: true;
+      updatedAt?: true;
+      createdBy?: true;
+      updatedBy?: true;
+      publishedAt?: true;
+      hasDraft?: true;
+    } & ([L] extends [never]
       ? {}
       : { locale?: true; locales?: true; sharedDraft?: true; alternates?: true })
   : {});

@@ -35,6 +35,7 @@ import { outerScope } from "./runtime/operation-context.ts";
 import { createEmail } from "../email/create-email.ts";
 import { emailTemplates } from "../email/templates.ts";
 import { normalizeRoles } from "../users/roles.ts";
+import { checkAccess } from "../access/check-access.ts";
 
 /**
  * Creates a CMS instance.
@@ -112,7 +113,9 @@ export function defineCms<
     !!mediaOptions,
     !!localization,
   );
-  const mediaSchema = mediaOptions ? { collections: { media: mediaCollection } } : undefined;
+  const mediaSchema = mediaOptions
+    ? { collections: { media: { ...mediaCollection, access: mediaOptions.access } } }
+    : undefined;
   const schema = {
     ...settingsSchema,
     collections: { ...settingsSchema.collections, ...mediaSchema?.collections },
@@ -120,6 +123,7 @@ export function defineCms<
 
   // check if the schema is valid before proceeding
   checkSchema(schema, populateOption, localization);
+  checkAccess(schema, roles);
 
   const adminRuntime = mergeAdmin(plugins, admin);
   checkRichtextConfig(schema, adminRuntime.richtext);
@@ -187,8 +191,9 @@ export function defineCms<
    * The instance for one caller.
    * @param user The user hooks get. `null` for server code.
    * @param perspective Which version of documents reads return.
+   * @param overrideAccess Whether the access rules are skipped: server code skips them, `withSession()` does not.
    */
-  function createInstance(user: User | null, perspective: Perspective) {
+  function createInstance(user: User | null, perspective: Perspective, overrideAccess: boolean) {
     return {
       schema: schema as unknown as T,
       auth,
@@ -196,17 +201,24 @@ export function defineCms<
       /** The `localization` option with defaults, or `undefined`. `locales` keeps its literal types. */
       localization,
       // The local API is untyped. `Api` adds the schema's types.
-      ...(createLocalApi(core, outerScope(user, perspective)) as unknown as Api<T, D, L>),
+      ...(createLocalApi(core, outerScope(user, perspective, overrideAccess)) as unknown as Api<
+        T,
+        D,
+        L
+      >),
 
       /** Returns a copy whose reads include drafts. */
       withDrafts<S>(this: S): S {
-        return createInstance(user, "drafts") as S; // (`<S>(this: S): S` here and on `withSession` avoids TS2589.)
+        return createInstance(user, "drafts", overrideAccess) as S; // (`<S>(this: S): S` here and on `withSession` avoids TS2589.)
       },
 
-      /** Returns a copy for the session user of `request`. Reads include drafts with the preview cookie. */
+      /**
+       * Returns a copy for the session user of `request`, which the access rules check. Reads include drafts with the
+       * preview cookie.
+       */
       async withSession<S>(this: S, request: Request): Promise<S> {
         const visitor = await caller(getSession, request);
-        return createInstance(visitor.user, visitor.perspective) as S;
+        return createInstance(visitor.user, visitor.perspective, false) as S;
       },
 
       /** Handles `/api/cms` requests. Mount it in any framework that speaks Request/Response. */
@@ -216,7 +228,7 @@ export function defineCms<
     };
   }
 
-  return createInstance(null, "published") as ReturnType<typeof createInstance> & MediaOf<M>;
+  return createInstance(null, "published", true) as ReturnType<typeof createInstance> & MediaOf<M>;
 }
 
 export type Cms<T extends Schema> = ReturnType<

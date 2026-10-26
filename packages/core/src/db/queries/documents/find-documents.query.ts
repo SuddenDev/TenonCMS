@@ -1,10 +1,11 @@
-import { type Db, type Loc, selectDocs, jsonAt } from "../document-sql.ts";
+import { type Db, type Loc, selectDocs, jsonAt, equals } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 import { sql } from "kysely";
 
 /**
- * Documents of a collection, newest first. `where` holds equality filters on top-level keys; `null` means `IS NULL`.
- * The keys MUST be checked against the schema before they get here.
+ * Documents of a collection, newest first. `where` and `access` hold equality filters on top-level keys, `createdBy`
+ * and `updatedBy`; `null` means `IS NULL`. Both apply, so a `where` cannot widen `access`. The keys MUST be checked
+ * against the schema before they get here.
  */
 export async function findDocs(
   db: Db,
@@ -12,6 +13,7 @@ export async function findDocs(
   {
     id,
     where = {},
+    access = {},
     limit,
     search,
     drafts = false,
@@ -19,6 +21,8 @@ export async function findDocs(
   }: {
     id?: string;
     where?: Record<string, unknown>;
+    /** The `where` of the read rule. */
+    access?: Record<string, unknown>;
     limit?: number;
     search?: { key: string; query: string };
     drafts?: boolean;
@@ -29,14 +33,8 @@ export async function findDocs(
   let query = selectDocs(db, collection, drafts, loc);
   if (id !== undefined) query = query.where("cms_documents.id", "=", id);
 
-  for (const [key, value] of Object.entries(where)) {
-    if (value === undefined) continue;
-
-    const field = jsonAt(key, drafts, loc);
-    query = query.where(
-      value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`,
-    );
-  }
+  for (const [key, value] of [...Object.entries(where), ...Object.entries(access)])
+    if (value !== undefined) query = query.where(equals(key, value, drafts, loc));
 
   if (search)
     query = query.where(

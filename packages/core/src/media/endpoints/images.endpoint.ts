@@ -27,7 +27,7 @@ export function imagesEndpoints(core: Core) {
   api.get("/img/:path{.+}", async (c) => {
     const parsed = parseImgPath(c.req.param("path"));
     if (!parsed || !allowlist.has(parsed.id)) return c.json({ message: "Invalid modifiers" }, 400);
-    const doc = await findByKey(core, parsed.key);
+    const doc = await findByKey(core, c.req.raw, parsed.key);
     if (!doc || !hasVariants(images, doc)) throw notFound();
 
     const stored = await storage.get(variantKey(doc.key, parsed.id));

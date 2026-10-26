@@ -36,7 +36,7 @@ A link mark or image node holds `attrs.reference: { collection, id }`. A manuall
 
 `storedRichtext()` removes read decoration for saving. The write pipeline also removes it. Reference identities survive HTML clipboard operations through `data-cms-reference` attributes.
 
-The protected `client.richtext.search({ query, locale, perspective })` method returns collection sections containing at most 20 title matches each. It searches only collections with a `permalink`. `client.richtext.resolve(document, { locale, perspective })` decorates unsaved editor JSON without writing anything.
+The protected `client.richtext.search({ query, locale })` method returns collection sections containing at most 20 title matches each. It searches only collections with a `permalink`. `client.richtext.resolve(document, { locale })` decorates unsaved editor JSON without writing anything. Both read in the perspective of the preview cookie, like every other read.
 
 ## Deletion
 

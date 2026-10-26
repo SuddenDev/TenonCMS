@@ -9,9 +9,9 @@ it("keeps media keys unique and finds them through the index", async () => {
   const db = createDb(":memory:");
   await migrate(db, { database: { db, type: "sqlite" } });
   const file = { key: "a/x.png", filename: "x.png" };
-  const doc = await insertDoc(db, "media", file);
-  await expect(insertDoc(db, "media", file)).rejects.toThrow(/UNIQUE/);
-  await insertDoc(db, "posts", file);
+  const doc = await insertDoc(db, "media", file, null);
+  await expect(insertDoc(db, "media", file, null)).rejects.toThrow(/UNIQUE/);
+  await insertDoc(db, "posts", file, null);
   expect(await mediaByKey(db, "a/x.png")).toEqual(doc);
   expect(await mediaByKey(db, "a/y.png")).toBeUndefined();
   const query = mediaKeyQuery(db, "a/x.png").compile();

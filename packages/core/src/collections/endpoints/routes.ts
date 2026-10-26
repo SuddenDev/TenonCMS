@@ -12,17 +12,18 @@ import { copyLocaleEndpoint } from "./copy-locale.endpoint.ts";
 import { removeLocaleEndpoint } from "./remove-locale.endpoint.ts";
 import { deleteEndpoint } from "./delete.endpoint.ts";
 
+/** Public reads, writes behind the access rules, and protected preview URLs. */
 export function collectionsRoutes(core: Core) {
   return {
     reads: new Hono<Env>().route("/", findEndpoint(core)).route("/", findByIdEndpoint(core)),
     writes: new Hono<Env>()
       .route("/", createEndpoint(core))
-      .route("/", previewUrlEndpoint(core))
       .route("/", updateEndpoint(core))
       .route("/", publishEndpoint(core))
       .route("/", discardEndpoint(core))
       .route("/", copyLocaleEndpoint(core))
       .route("/", removeLocaleEndpoint(core))
       .route("/", deleteEndpoint(core)),
+    previews: new Hono<Env>().route("/", previewUrlEndpoint(core)),
   };
 }

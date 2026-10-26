@@ -12,6 +12,7 @@ import { badSelectPath, metaKeys } from "../population/validate-select.ts";
 import { populate } from "../population/populate.ts";
 import { addAlternates } from "./alternates.ts";
 import { locOf } from "./loc-of.ts";
+import { decide } from "../../access/rule.ts";
 
 /**
  * Runs `beforeRead` on the loaded documents, then population, then `afterRead`, then media URLs, then `alternates`
@@ -31,13 +32,15 @@ export async function readDocs(
   const { fields } = target(core, name);
   const { media } = core;
   const operation = name.kind === "collection" ? "read" : "getGlobal";
+  const drafts = s.perspective === "drafts";
 
   const before = await beforeRead(core, s, name, docs, operation);
 
   await populate(await q(core, s), collections, fields, before, plan, {
     richtext: (values) => resolveRichtext(core, s, values),
-    drafts: s.perspective === "drafts",
+    drafts,
     loc: (collection) => locOf(core, s, collections[collection]),
+    access: (collection) => decide(core, s, col(collection), "read", { draft: drafts }),
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
     before: (collection, docs) => beforeRead(core, s, col(collection), docs, "read"),
     after: (collection, docs) => afterRead(core, s, col(collection), docs, "read"),

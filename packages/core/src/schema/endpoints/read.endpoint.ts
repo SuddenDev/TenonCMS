@@ -1,7 +1,8 @@
-import type { AdminDescriptor } from "../../admin/index.d.ts";
+import type { AdminDescriptor, CmsUser } from "../../admin/index.d.ts";
 import { Hono } from "hono";
 import type { Env } from "../../http/middleware/types.ts";
 import type { Localization } from "../../cms/config/options.ts";
+import type { Perspective } from "../../cms/runtime/types.ts";
 import { isObject } from "../condition.ts";
 import type { Schema } from "../index.ts";
 import type { Role } from "../../users/roles.ts";
@@ -15,16 +16,22 @@ type SchemaExtras = {
   roles: Role[];
   /** Whether email is configured. */
   email: boolean;
+  /** Adds what the session's user MAY do in `perspective` to a copy of the JSON. */
+  permissions?(
+    json: Record<string, any>,
+    user: CmsUser,
+    perspective: Perspective,
+  ): Promise<unknown>;
 };
 
 /**
  * Serves the schema as JSON on `GET /schema`, for the admin. It is serialized once, without hooks or other functions.
- * With `localization`, it adds the locales and the default locale.
+ * With `localization`, it adds the locales and the default locale. `permissions` adds the user's per request.
  * @returns A Hono sub-app with the one route.
  */
 export function readEndpoint(
   schema: Schema,
-  { media, site, admin, localization, roles, email }: SchemaExtras,
+  { media, site, admin, localization, roles, email, permissions }: SchemaExtras,
 ) {
   const publicSchema = JSON.parse(JSON.stringify(schema, publicValue));
   for (const kind of ["collections", "globals"] as const)
@@ -42,16 +49,21 @@ export function readEndpoint(
   publicSchema.roles = roles;
   publicSchema.email = email;
 
-  return new Hono<Env>().get("/schema", (c) => c.json(publicSchema));
+  return new Hono<Env>().get("/schema", async (c) =>
+    c.json(
+      permissions ? await permissions(publicSchema, c.var.user, c.var.perspective) : publicSchema,
+    ),
+  );
 }
 
-// Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here.
+// Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here. `access`
+// holds functions too; the endpoint sends the caller's permissions instead.
 // Only the options of a field, block, collection or global are touched: a field, block, tab or fieldset MAY be named
-// `hooks`, `preview` or `permalink`. `JSON.stringify` drops other functions, like `validate`, itself.
+// `hooks`, `access`, `preview` or `permalink`. `JSON.stringify` drops other functions, like `validate`, itself.
 // The admin only needs to know that a preview exists (`preview` or `permalink`), so either form is sent as `true`.
 function publicValue(this: any, key: string, value: any) {
   if (typeof this?.type !== "string" && !isObject(this?.fields)) return value;
-  if (key === "hooks") return undefined;
+  if (key === "hooks" || key === "access") return undefined;
   if (key === "permalink") return undefined;
   if (key === "preview") return !!value || undefined;
   return value;

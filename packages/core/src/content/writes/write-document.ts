@@ -9,6 +9,8 @@ import type { Db, Loc } from "../../db/queries/document-sql.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { prepareData } from "./helpers/prepare-data.ts";
 import { storeDraft, storeDocument } from "./helpers/store.ts";
+import { guard } from "../../access/rule.ts";
+import { dropDenied } from "../../access/field-access.ts";
 
 export type WriteFlags = {
   /** An `onDelete` effect. It skips id checks, because other relations of the document MAY point to documents that the same delete removes. */
@@ -23,9 +25,11 @@ export type Fields = ReturnType<typeof target>["fields"];
  * Shared by `create`, `update`, `setGlobal` and publish.
  *
  * Draft saves check field types and run before hooks, but skip field validation, integrity checks and after-change hooks.
- * Publish merges the draft over published data.
+ * Publish merges the draft over published data. The access rules run first, except for `onDelete` effects; input
+ * values of fields the caller MAY NOT write are dropped.
  *
  * @returns The written document after read hooks, or `undefined` when an update target is missing.
+ * @throws {ForbiddenError} When the `create` or `update` rule denies.
  */
 export async function write(
   core: Core,
@@ -42,6 +46,8 @@ export async function write(
 
   // A localized entry is written as its merged document in the scope's locale, without fallback.
   const loc = locOf(core, { ...s, fallback: false }, entry);
+  const op = operation === "create" ? "create" : "update";
+  if (!effect) await guard(core, s, name, op, { id, data: input });
 
   // Draft writes and publishes merge over the draft. Other writes merge over published data.
   const source = await loadSource(db, name, id, draft || publish, loc);
@@ -53,6 +59,7 @@ export async function write(
 
   // Prepare data and store either as a draft or as a published document
   const merged = loc && source ? withoutLocaleMeta(source) : source;
+  if (!effect) input = await dropDenied(core, s, name, op, input, merged);
   // An effect in a locale without the document's values MUST NOT fail on their absence.
   const loose = draft || Boolean(effect && loc);
   const data = await prepareData(core, name, operation, input, merged, fields, args, loose, effect);

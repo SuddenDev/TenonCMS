@@ -2,6 +2,7 @@ import type { Nav, Text } from "../../admin/index.d.ts";
 import type { Preview } from "../../preview/config/types.ts";
 import type { Fields, Layout } from "../../schema/fields/index.ts";
 import type { GlobalHooks } from "../../schema/hooks/index.ts";
+import type { GlobalAccess } from "../../access/types.ts";
 
 export type Global<F extends Fields = Fields> = Layout & {
   /** Name in the admin. Defaults to the global key. */
@@ -26,6 +27,8 @@ export type Global<F extends Fields = Fields> = Layout & {
    * preview of unsaved changes still applies. Default `true`.
    */
   visualEditing?: boolean;
+  /** Who MAY read and change the global. Default: everyone reads the published global, signed-in users do the rest. See {@link GlobalAccess}. */
+  access?: GlobalAccess;
   /** Functions that run on every read and write of this global. Typed only through `defineGlobal()`. */
   hooks?: GlobalHooks<F>;
 };

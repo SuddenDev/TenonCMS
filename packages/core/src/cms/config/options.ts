@@ -130,7 +130,7 @@ export type CmsOptions<
   email?: EmailOptions;
   /**
    * Extra user roles, keyed by name (`[a-z0-9-]`). `admin` (manages users) and `editor` are built in and MUST NOT
-   * be listed. A role only names a group of users: every role edits all content.
+   * be listed. `access` rules name roles: `create: ["admin", "author"]`. Without rules, every role edits all content.
    */
   roles?: Record<string, RoleOptions>;
   /** Hooks for every collection and global. */

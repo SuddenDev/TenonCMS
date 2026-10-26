@@ -42,7 +42,7 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 | `operations/update/place.ts`                      | The target place of a file and the free-name check.                                                                |
 | `operations/update/move-file.ts`                  | Moves a file with its variants, and moves it back after a failure.                                                 |
 | `operations/rename-folder.operation.ts`           | Moves every file of a folder.                                                                                      |
-| `operations/folders.operation.ts`                 | Lists every folder.                                                                                                |
+| `operations/folders.operation.ts`                 | Lists the folders of the files the caller MAY read.                                                                |
 | `operations/download-archive.operation.ts`        | Streams selected originals into a ZIP and cancels the active storage read.                                         |
 | `operations/delete.operation.ts`                  | Deletes the document, then the file and its variants.                                                              |
 | `operations/regenerate.operation.ts`              | Brings stored variants in line with the image options.                                                             |
@@ -55,7 +55,7 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 | `variants/render-variants.ts`                     | Renders and stores one or many variants.                                                                           |
 | `variants/move-variants.ts`, `delete-variants.ts` | Moves or deletes a file with its variants.                                                                         |
 | `variants/remove-orphans.ts`                      | Deletes variants of files that no longer exist.                                                                    |
-| `endpoints/routes.ts`                             | Mounts public reads and protected downloads and writes in order.                                                   |
+| `endpoints/routes.ts`                             | Groups the routes: `files` before the caller lookup, `reads` and `writes` behind it.                               |
 | `endpoints/*.endpoint.ts`                         | One Hono sub-app per capability.                                                                                   |
 | `endpoints/serve-file.ts`                         | Document lookup by key, range responses and the sandbox headers of every served file.                              |
 | `endpoints/request-context.ts`                    | Body parsing and the user scope.                                                                                   |

@@ -241,7 +241,17 @@ describe("select", () => {
     await cms.create("posts", { title: "a", body: "b" });
     await cms.find("posts", { select: { title: true } });
     expect(seen).toEqual([
-      ["body", "createdAt", "hasDraft", "id", "publishedAt", "title", "updatedAt"],
+      [
+        "body",
+        "createdAt",
+        "createdBy",
+        "hasDraft",
+        "id",
+        "publishedAt",
+        "title",
+        "updatedAt",
+        "updatedBy",
+      ],
       ["id", "title"],
     ]);
   });

@@ -11,12 +11,17 @@ import { regenerateEndpoints } from "./regenerate.endpoint.ts";
 import { deleteEndpoints } from "./delete.endpoint.ts";
 import { downloadEndpoint } from "./download.endpoint.ts";
 
-/** Public media reads and session-protected downloads and writes. `regenerate` tells `/schema` whether variants can be regenerated. */
+/**
+ * The media routes in three groups. `files` (`/files`, `/img`) mount before the caller lookup and check
+ * `media.access.read` per file. `reads` and `writes` mount behind it, like the other content routes.
+ * @returns The groups, and `regenerate`, which tells `/schema` whether variants can be regenerated.
+ */
 export function mediaRoutes(core: Core) {
-  const reads = new Hono<Env>();
-  reads.route("/", foldersReadEndpoints(core));
-  reads.route("/", filesEndpoints(core));
-  reads.route("/", imagesEndpoints(core));
+  const files = new Hono<Env>();
+  files.route("/", filesEndpoints(core));
+  files.route("/", imagesEndpoints(core));
+
+  const reads = foldersReadEndpoints(core);
 
   const writes = new Hono<Env>();
   writes.route("/", downloadEndpoint(core));
@@ -26,5 +31,5 @@ export function mediaRoutes(core: Core) {
   writes.route("/", regenerateEndpoints(core));
   writes.route("/", deleteEndpoints(core));
 
-  return { reads, writes, regenerate: Boolean(mediaOf(core).images?.provider.render) };
+  return { files, reads, writes, regenerate: Boolean(mediaOf(core).images?.provider.render) };
 }

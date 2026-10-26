@@ -9,6 +9,7 @@ import { decorate } from "../../media/images/decorate.ts";
 import { richtextReferences } from "../runtime/walk.ts";
 import { safeRichtextUrl } from "../runtime/validation.ts";
 import type { RichtextDocument } from "../config/types.ts";
+import { decide, matches } from "../../access/rule.ts";
 
 /** Resolves one rich text field across all owners, with one load per target collection. */
 export async function resolveRichtext(core: Core, scope: Inner, values: RichtextDocument[]) {
@@ -30,13 +31,11 @@ export async function resolveRichtext(core: Core, scope: Inner, values: Richtext
     const entry = core.schema.collections[collection];
     if (!entry) continue;
 
-    const docs = await loadByIds(
-      db,
-      collection,
-      [...ids],
-      scope.perspective === "drafts",
-      locOf(core, scope, entry),
-    );
+    const drafts = scope.perspective === "drafts";
+    const access = await decide(core, scope, col(collection), "read", { draft: drafts });
+    if (access === false) continue;
+    const loaded = await loadByIds(db, collection, [...ids], drafts, locOf(core, scope, entry));
+    const docs = access === true ? loaded : loaded.filter((d) => matches(d, access));
 
     const before = await beforeRead(core, scope, col(collection), docs, "read");
     const after = await afterRead(core, scope, col(collection), before, "read");

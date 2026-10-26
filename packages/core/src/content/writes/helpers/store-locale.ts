@@ -23,6 +23,7 @@ export type LocalePlace = { loc: Loc; exists: boolean };
  * Saves written data of a localized entry: shared keys to the document or global row, localized keys to the row
  * of the scope's locale. `draft` stores both as drafts, the shared one only when its values change; `publish` also clears them.
  * A published write never creates a row for a locale without values, so a write to shared fields leaves other locales alone.
+ * `mode.by` is the author, `null` for server code.
  * @returns The id of the document, or the name of the global.
  */
 export async function saveLocalized(
@@ -31,7 +32,7 @@ export async function saveLocalized(
   id: string | undefined,
   data: Record<string, any>,
   { loc, exists }: LocalePlace,
-  mode: { draft: boolean; publish: boolean },
+  mode: { draft: boolean; publish: boolean; by: string | null },
 ) {
   const { shared, localized } = splitLocale(loc.keys, data);
   const global = name.kind === "global";
@@ -43,12 +44,12 @@ export async function saveLocalized(
     const unchanged = state && JSON.stringify(state.pending) === JSON.stringify(shared);
     if (!unchanged) {
       if (global) await saveGlobalDraft(db, name.name, shared);
-      else if (id) await saveDraft(db, name.name, id, shared);
-      else owner = (await insertDraft(db, name.name, shared)).id;
+      else if (id) await saveDraft(db, name.name, id, shared, mode.by);
+      else owner = (await insertDraft(db, name.name, shared, mode.by)).id;
     }
   } else if (global) await saveGlobal(db, name.name, shared, mode.publish);
-  else if (id) await updateDoc(db, name.name, id, shared, mode.publish);
-  else owner = (await insertDoc(db, name.name, shared)).id;
+  else if (id) await updateDoc(db, name.name, id, shared, mode.publish, mode.by);
+  else owner = (await insertDoc(db, name.name, shared, mode.by)).id;
 
   if (!mode.draft && !exists && Object.values(localized).every((v) => v == null)) return owner!;
 

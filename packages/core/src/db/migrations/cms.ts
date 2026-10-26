@@ -114,6 +114,13 @@ const cmsMigrations: Record<string, Migration> = {
       );
     },
   },
+  // Who created and last changed a document. `NULL` for server code.
+  "007_cms_authors": {
+    async up(db) {
+      await sql`ALTER TABLE cms_documents ADD COLUMN created_by text`.execute(db);
+      await sql`ALTER TABLE cms_documents ADD COLUMN updated_by text`.execute(db);
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables, with its own migration tables. */

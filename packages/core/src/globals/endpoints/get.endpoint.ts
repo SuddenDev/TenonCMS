@@ -2,11 +2,13 @@ import { Hono } from "hono";
 import type { Env } from "../../http/middleware/types.ts";
 import type { Core } from "../../cms/runtime/types.ts";
 import { globalOf } from "./get-target.ts";
-import { readRequest } from "../../http/read-request.ts";
 import { readOptions } from "../../http/query/read-options.ts";
 import { globalMetaKeys } from "../../content/population/validate-select.ts";
-import { stripPrivateFields } from "../../http/strip-private-fields.ts";
 
+/**
+ * `GET /globals/:name`, within the global's read rule.
+ * @returns The route. A bad read option answers 400.
+ */
 export function getEndpoint(core: Core) {
   const { schema } = core;
   const collections = schema.collections ?? {};
@@ -21,9 +23,6 @@ export function getEndpoint(core: Core) {
       globalMetaKeys(schema.globals![name]!.localized),
     );
     if (typeof read === "string") return c.json({ message: read }, 400);
-    const { visibility, api } = await readRequest(core, c.req.raw);
-    return c.json(
-      stripPrivateFields(collections, fields, await api.getGlobal(name, read), visibility),
-    );
+    return c.json(await c.var.cms.getGlobal(name, read));
   });
 }

@@ -1,6 +1,7 @@
 import type { MediaHooks, Modifiers } from "../../schema/index.ts";
 import type { ImageProvider } from "../images/types.ts";
 import type { Storage } from "../storage/types.ts";
+import type { Access } from "../../access/types.ts";
 
 /** The `media.images` option: responsive image variants. */
 export type ImagesOptions = {
@@ -28,6 +29,11 @@ export type MediaOptions = {
   accept?: string[];
   /** Responsive image variants. `false` serves originals only. Default `false`. */
   images?: ImagesOptions | false;
+  /**
+   * Who MAY read, upload, change and delete files. `read` also guards `/files` and `/img`, `update` folder renames and
+   * regeneration (they need `true`), `read` downloads of archives. Defaults like a collection's. See {@link Access}.
+   */
+  access?: Access;
   /** Hooks of the media library. See {@link MediaHooks}. */
   hooks?: MediaHooks;
 };

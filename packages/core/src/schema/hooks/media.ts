@@ -6,6 +6,10 @@ export type MediaDoc = {
   id: string;
   createdAt: string;
   updatedAt: string;
+  /** The id of the user who uploaded the file. `null` for server code. Missing for readers without a user. */
+  createdBy?: string | null;
+  /** The id of the user who last changed the file. `null` for server code. Missing for readers without a user. */
+  updatedBy?: string | null;
   /** Media is published on upload. */
   publishedAt: string | null;
   hasDraft: boolean;

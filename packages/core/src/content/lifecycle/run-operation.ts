@@ -1,4 +1,4 @@
-import { ConflictError, ValidationError } from "../../errors.ts";
+import { ConflictError, ForbiddenError, ValidationError } from "../../errors.ts";
 import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { type Operation } from "../../schema/index.ts";
 import { type Core, type Scope, type Inner, type Stage } from "../../cms/runtime/types.ts";
@@ -41,8 +41,11 @@ export async function run<R>(
     if (!inTransaction) return await body();
     return await (await core.db()).transaction().execute((trx) => body(trx));
   } catch (error) {
-    // Only the outermost call runs `afterError`, after the rollback. 400 and 409 are expected and run none.
-    const expected = error instanceof ValidationError || error instanceof ConflictError;
+    // Only the outermost call runs `afterError`, after the rollback. 400, 401, 403 and 409 are expected and run none.
+    const expected =
+      error instanceof ValidationError ||
+      error instanceof ConflictError ||
+      error instanceof ForbiddenError;
     if (!scope.nested && !expected)
       await afterError(core, inner(core, scope, undefined, context), name, operation, error);
     throw error;

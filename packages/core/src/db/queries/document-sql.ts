@@ -94,6 +94,8 @@ const documentColumns = (drafts: boolean, t: string, loc?: Loc): Array<[string, 
   ["created_at", `${t}created_at`],
   ["updated_at", `${t}updated_at`],
   ["published_at", `${t}published_at`],
+  ["created_by", `${t}created_by`],
+  ["updated_by", `${t}updated_by`],
   ["has_draft", `${t}draft IS NOT NULL`],
   ["data", dataOf(drafts, t)],
   ...(loc
@@ -112,6 +114,8 @@ export const rowColumns = (drafts: boolean) =>
     "created_at",
     "updated_at",
     "published_at",
+    "created_by",
+    "updated_by",
     sql<number>`draft IS NOT NULL`.as("has_draft"),
     sql<string>`${sql.raw(dataOf(drafts))}`.as("data"),
   ] as const;
@@ -146,6 +150,24 @@ export const jsonAt = (
   if (!loc.fallback) return requested;
   return sql`COALESCE(${requested}, json_extract(${sql.raw(dataOf(drafts, "ld."))}, ${at}))`;
 };
+
+// The columns of the meta keys a filter MAY name.
+const AUTHOR_COLUMNS: Record<string, string> = {
+  createdBy: "cms_documents.created_by",
+  updatedBy: "cms_documents.updated_by",
+};
+
+/**
+ * The equality filter `<key> = value` on a top-level key of the data, or on `createdBy` / `updatedBy`. `null` means
+ * `IS NULL`. The key MUST be checked against the schema first; `drafts` and `loc` work as in {@link jsonAt}.
+ * @returns The condition.
+ */
+export function equals(key: string, value: unknown, drafts = false, loc?: Loc) {
+  const field = Object.hasOwn(AUTHOR_COLUMNS, key)
+    ? sql.ref(AUTHOR_COLUMNS[key])
+    : jsonAt(key, drafts, loc);
+  return value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`;
+}
 
 /**
  * Whether the relation at `path` in the JSON column `source` holds `id`. Each {@link Each} step scans the items with

@@ -2,9 +2,21 @@ import { createAuthMiddleware } from "better-auth/api";
 import { admin as adminPlugin, anonymous, twoFactor } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
 import { createClient as createLibsql } from "@libsql/client";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineCms } from "../index.ts";
-import { admin, base, fresh, origin, setup, status, tables, tmpDb, type Env } from "./setup.ts";
+import { clientRef } from "../admin/config.ts";
+import {
+  admin,
+  base,
+  fresh,
+  origin,
+  post,
+  setup,
+  status,
+  tables,
+  tmpDb,
+  type Env,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -204,5 +216,30 @@ describe("auth", () => {
     expect(await status(client.signIn({ ...admin, password: "wrong-password" }))).toBe(401);
     await client.signIn(admin);
     expect(await client.getSession()).not.toBeNull();
+  });
+});
+
+describe("sessions", () => {
+  it("are looked up once per request", async () => {
+    const mount = clientRef("./m");
+    const cms = defineCms({ ...base, admin: { pages: { stats: { mount, load: () => 1 } } } });
+    const { client, fetch } = setup(cms);
+    await client.signUp(admin);
+    const lookups = vi.spyOn((await cms.auth()).api, "getSession");
+    const at = (path: string) => fetch(`${origin}/api/cms${path}`);
+    const load = { kind: "page", key: "stats", params: {}, query: {} };
+
+    for (const send of [
+      () => at("/collections/posts"),
+      () => at("/globals/site"),
+      () => post(fetch, "/collections/posts", { title: "A" }),
+      () => at("/schema"),
+      () => post(fetch, "/admin/load", load),
+      () => at("/admin-bar?url=/&mode=site"),
+    ]) {
+      lookups.mockClear();
+      expect((await send()).status).toBeLessThan(300);
+      expect(lookups, String(send)).toHaveBeenCalledTimes(1);
+    }
   });
 });

@@ -50,7 +50,8 @@ export async function discardLocalized(
 
   const rows = (await loadLocaleDoc(db, name, id, true, loc))!.locales;
   if (shared.publishedAt === null && (all || !rows.length)) {
-    await remove(core, s, name.name, id, options);
+    // Part of the discard, which the `update` rule allowed.
+    await remove(core, { ...s, overrideAccess: true }, name.name, id, options);
     return undefined;
   }
 

@@ -2,6 +2,7 @@ import type { Nav, Text } from "../../admin/index.d.ts";
 import type { Preview } from "../../preview/config/types.ts";
 import type { Fields, Layout } from "../../schema/fields/index.ts";
 import type { CollectionHooks } from "../../schema/hooks/index.ts";
+import type { Access } from "../../access/types.ts";
 
 export type Collection<F extends Fields = Fields> = Layout & {
   /** Name in the admin. Defaults to the collection key. */
@@ -28,6 +29,8 @@ export type Collection<F extends Fields = Fields> = Layout & {
    * preview of unsaved changes still applies. Use it for content that visitors write, like comments. Default `true`.
    */
   visualEditing?: boolean;
+  /** Who MAY read, create, update and delete documents. Default: everyone reads published documents, signed-in users do the rest. See {@link Access}. */
+  access?: Access;
   /** Functions that run on every read, write and delete of this collection. Typed only through `defineCollection()`. */
   hooks?: CollectionHooks<F>;
 };

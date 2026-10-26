@@ -1,3 +1,5 @@
+import { col } from "../../content/targets.ts";
+import { guardAll } from "../../access/rule.ts";
 import { makeZip } from "client-zip";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
 import { q } from "../../cms/runtime/transaction.ts";
@@ -13,8 +15,10 @@ import type { Storage } from "../storage/types.ts";
  * Streams selected originals without buffering files. Only one storage source opens at a time.
  * @returns The ZIP body and attachment filename. Cancelling the body cancels the active source.
  * @throws For an unknown file ID or an unsafe archive path.
+ * @throws {ForbiddenError} Unless `media.access.read` allows without a `where`.
  */
 export async function downloadArchive(core: Core, scope: Scope, ids: string[], folders: string[]) {
+  await guardAll(core, scope, col("media"), "read");
   const all = (await findDocs(await q(core, scope), "media", {})) as MediaDoc[];
   const files = selectedMedia(all, ids, folders);
   if (ids.some((id) => !files.some((file) => file.id === id))) throw notFound();

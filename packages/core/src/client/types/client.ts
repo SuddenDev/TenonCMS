@@ -365,18 +365,14 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     },
   ): Promise<T>;
 
-  /** The media library. See {@link MediaClient}. */
+  /** Rich text links for the admin's editor. Both read in the perspective of the preview cookie, see `preview.enter()`. */
   richtext: {
-    resolve(
-      document: RichtextDocument,
-      options?: { locale?: string; perspective?: Perspective },
-    ): Promise<RichtextDocument>;
-    search(options?: {
-      query?: string;
-      locale?: string;
-      perspective?: Perspective;
-    }): Promise<RichtextTargets>;
+    /** Fills the `href` and `src` of every link in an unsaved document. `POST /api/cms/admin/richtext/resolve` */
+    resolve(document: RichtextDocument, options?: { locale?: string }): Promise<RichtextDocument>;
+    /** Finds link targets by title. `GET /api/cms/admin/richtext/targets` */
+    search(options?: { query?: string; locale?: string }): Promise<RichtextTargets>;
   };
+  /** The media library. See {@link MediaClient}. */
   media: MediaClient;
 
   /** Invites to the admin. Listing, creating, resending and revoking need an admin's session. */

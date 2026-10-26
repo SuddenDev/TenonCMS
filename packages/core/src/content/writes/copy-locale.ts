@@ -5,6 +5,7 @@ import { ValidationError } from "../../errors.ts";
 import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { write } from "./write-document.ts";
+import { guard } from "../../access/rule.ts";
 
 /**
  * Fills the localized fields of the scope's locale (`to`) with those of `from`. `from` is read in the drafts
@@ -13,6 +14,7 @@ import { write } from "./write-document.ts";
  *
  * @returns The written document in `to`, or `undefined` when the document does not exist.
  * @throws {ValidationError} For an unlocalized entry, an unknown or equal locale, or a `from` without a version.
+ * @throws {ForbiddenError} When the `update` rule denies.
  */
 export async function copyLocalized(
   core: Core,
@@ -21,6 +23,7 @@ export async function copyLocalized(
   id: string | undefined,
   from: string,
 ) {
+  await guard(core, s, name, "update", { id });
   const entry = target(core, name);
   const to = s.locale;
   const loc = locOf(core, { ...s, fallback: false }, entry);

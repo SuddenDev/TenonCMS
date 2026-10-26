@@ -9,9 +9,11 @@ import { mediaOf } from "../runtime/create-media-core.ts";
 import { loadMedia } from "../runtime/read-media.ts";
 import { SAFE, serveFile } from "./serve-file.ts";
 import { scope } from "./request-context.ts";
+import { col } from "../../content/targets.ts";
+import { readable } from "../../access/rule.ts";
 
 /**
- * Registers protected downloads of originals with range support or a streamed ZIP.
+ * Registers downloads of originals with range support or a streamed ZIP, behind `media.access.read`.
  * @returns The `GET /download` route.
  */
 export function downloadEndpoint(core: Core) {
@@ -24,7 +26,8 @@ export function downloadEndpoint(core: Core) {
     const headers = { ...SAFE, "cache-control": "private, no-store" };
     if (ids.length === 1 && !folders.length) {
       const doc = await loadMedia(core, scope(c), ids[0]!);
-      const response = doc && (await serveFile(mediaOf(core).storage, doc, c.req.header("range")));
+      if (!(await readable(core, scope(c), col("media"), doc)) || !doc) throw notFound();
+      const response = await serveFile(mediaOf(core).storage, doc, c.req.header("range"));
       if (!response) throw notFound();
       response.headers.set("content-disposition", attachment(doc.filename));
       response.headers.set("cache-control", headers["cache-control"]);

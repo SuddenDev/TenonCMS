@@ -1,4 +1,5 @@
 import type { Text } from "../../admin/index.d.ts";
+import type { FieldAccess } from "../../access/types.ts";
 import type { Condition } from "../condition.ts";
 import type { FieldHooks, Fn, HookArgs, Validate } from "../hooks/index.ts";
 import type { Placement } from "./layout.ts";
@@ -14,8 +15,10 @@ export type Common = Placement & {
    * and the server skips `required`, the built-in checks and `validate`. The type check still runs. See {@link Condition}.
    */
   condition?: Condition;
-  /** Sent over HTTP only with a session, so the admin sees it and public reads do not. Not filterable without a session. On a group, it applies to the whole group. */
+  /** Read only by signed-in users, like `access: { read: ({ user }) => !!user }`. Not filterable without a session. On a group, it applies to the whole group. */
   private?: boolean;
+  /** Who MAY read, create and update the field. On a group, it applies to the whole group. A join takes `read` only. See {@link FieldAccess}. */
+  access?: FieldAccess;
   /**
    * Collection or global must have `localized: true`. Then enabled by default.
    * `false` shares the field between locales in a localized collection or global. Only valid on a top-level field

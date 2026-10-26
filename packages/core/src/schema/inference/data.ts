@@ -65,6 +65,10 @@ export type Meta = {
   id: string;
   createdAt: string;
   updatedAt: string;
+  /** The id of the user who created the document. `null` for server code. Missing for readers without a user. */
+  createdBy?: string | null;
+  /** The id of the user who last changed the document. `null` for server code. Missing for readers without a user. */
+  updatedBy?: string | null;
   /** When the document was last published. `null`: never published. */
   publishedAt: string | null;
   /** Whether a draft is pending. */

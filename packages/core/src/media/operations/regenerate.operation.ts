@@ -7,17 +7,21 @@ import { hasVariants } from "../images/decorate.ts";
 import { variantKey, variantsOf } from "../variants/keys.ts";
 import { removeOrphans } from "../variants/remove-orphans.ts";
 import { renderAll } from "../variants/render-variants.ts";
+import { col } from "../../content/targets.ts";
+import { guardAll } from "../../access/rule.ts";
 
 /**
  * `cms.media.regenerate()`: brings stored variants in line with the current image options. Deletes variants the options no
  * longer produce and, with `prerender`, renders missing ones. `force` re-renders every variant, or deletes them all without
  * `prerender`. Without `id`, runs for every file and deletes the variants of files that no longer exist.
  * Returns `undefined` for a missing document. Throws when the provider has no `render`, because nothing is stored.
+ * `media.access.update` MUST allow without a `where`.
  */
 export async function regenerate(core: Core, scope: Scope, id?: string, { force = false } = {}) {
   const media = mediaOf(core);
   if (!media.images?.provider.render)
     throw new Error("integral-cms: regenerate needs an image provider with `render`");
+  await guardAll(core, scope, col("media"), "update");
 
   const docs = await findDocs(await q(core, scope), "media", id ? { id } : {});
   if (id && !docs.length) return undefined;

@@ -18,6 +18,8 @@ import {
 import { isObject } from "../../schema/condition.ts";
 import { type PopulatePlan, step } from "./populate-plan.ts";
 import type { Kysely } from "kysely";
+import { matches } from "../../access/rule.ts";
+import type { Where } from "../../access/types.ts";
 
 type Docs = Record<string, any>[];
 type Collections = Record<string, Collection>;
@@ -29,6 +31,8 @@ export type ReadHooks = {
   drafts: boolean;
   /** How a localized target collection reads, in the locale of the outer read. */
   loc?(collection: string): Loc | undefined;
+  /** The read rule of the target collection: `false` drops every target, a `Where` the targets outside it. */
+  access(collection: string): Promise<boolean | Where>;
   before(collection: string, docs: Docs): Promise<Docs>;
   after(collection: string, docs: Docs): Promise<Docs>;
   /** Adds the computed URLs of a media document, with the options of the field that holds it. */
@@ -130,9 +134,12 @@ async function resolveJoin(ctx: Hop, docs: Docs, key: string, field: JoinField) 
     d[key] = rows.filter((r) => r.ref === d.id && found.has(r.id)).map((r) => found.get(r.id));
 }
 
-// Loaded documents of the target run its read hooks and the next hop, in the same order as a top-level read.
+// Loaded documents of the target pass its read rule, then run its read hooks and the next hop, in the same order as a
+// top-level read.
 async function hop({ db, collections, read, child }: Hop, collection: string, loaded: Docs) {
-  const before = await read.before(collection, loaded);
+  const access = await read.access(collection);
+  const allowed = access === true ? loaded : access ? loaded.filter((d) => matches(d, access)) : [];
+  const before = await read.before(collection, allowed);
   await populate(db, collections, collections[collection].fields, before, child, read);
   return new Map((await read.after(collection, before)).map((d) => [d.id, d]));
 }

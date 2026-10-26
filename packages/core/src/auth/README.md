@@ -10,14 +10,14 @@
 | `config/password-length.ts`             | `passwordLength()`: sign-up's length rules on `/admin/create-user`; `lengthProblem()`.      |
 | `sign-up.ts`                            | `signUpStatus()`: `setup` while no user exists, `signUp` when a visitor MAY sign up.        |
 | `create-auth.ts`                        | Creates the better-auth provider.                                                           |
-| `get-caller.ts`                         | Reads the request session and preview perspective; a cookie alone grants no draft access.   |
-| `middleware/session.middleware.ts`      | Requires a session and binds the CMS API to its user.                                       |
+| `get-caller.ts`                         | `caller()`: the request's user and preview perspective; a cookie alone grants no drafts.    |
+| `middleware/session.middleware.ts`      | `optionalSession()` binds the CMS API to the caller once; `session` requires a session.     |
 | `middleware/session-hint.middleware.ts` | `sessionHint()`: mirrors the session cookie in the readable `integral-session` hint cookie. |
 | `endpoints/provider.endpoint.ts`        | Delegates GET and POST auth requests to better-auth.                                        |
 | `endpoints/status.endpoint.ts`          | Public `GET /auth-status`: `signUpStatus()`, `no-store`.                                    |
 | `endpoints/password.endpoint.ts`        | Protected `POST /account/password`: better-auth's server-only `setPassword()`.              |
 
-The provider endpoint runs before core CSRF/session middleware. Protected feature routes run after both checks. Request-scoped reads reuse `get-caller.ts`, including its existing public fallback when session lookup fails.
+The provider endpoint runs before core CSRF/session middleware. `caller()` is the only place that turns a request into a user: `optionalSession()`, `cms.withSession()` and the media file routes call it. Without a cookie it looks up nothing, and a failed lookup counts as no user, so public pages keep working with a bad `secret`. Content routes run behind `optionalSession()`; protected feature routes also run behind `session`.
 
 When `email` is configured, `authOptions()` supplies password-reset and verification callbacks through the instance's [email module](../email/README.md). Host callbacks take precedence. Verification requirements and automatic sends stay under the host's Better Auth options.
 

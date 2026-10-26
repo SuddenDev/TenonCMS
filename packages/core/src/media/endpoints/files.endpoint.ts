@@ -11,7 +11,7 @@ export function filesEndpoints(core: Core) {
   const api = new Hono<Env>();
   // No `immutable` caching: keys change when a file moves.
   api.get("/files/:key{.+}", async (c) => {
-    const doc = await findByKey(core, c.req.param("key"));
+    const doc = await findByKey(core, c.req.raw, c.req.param("key"));
     const response = doc && (await serveFile(storage, doc, c.req.header("range")));
     if (!response) throw notFound();
     return response;

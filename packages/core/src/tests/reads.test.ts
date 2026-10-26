@@ -234,7 +234,14 @@ describe("errors", () => {
       (await bad.fetch(new Request(`${origin}/api/cms/collections/posts`, cookie))).status,
     ).toBe(200);
     await expect(bad.auth()).rejects.toThrow(/at least 32 characters/);
-    expect((await bad.fetch(new Request(`${origin}/api/cms/schema`))).status).toBe(500);
+    const signIn = new Request(`${origin}/api/cms/auth/sign-in/email`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin },
+      body: JSON.stringify(admin),
+    });
+    expect((await bad.fetch(signIn)).status).toBe(500);
+    // Without a session, no lookup runs.
+    expect((await bad.fetch(new Request(`${origin}/api/cms/schema`))).status).toBe(401);
   });
 
   it("reject unknown options at the type level", () => {

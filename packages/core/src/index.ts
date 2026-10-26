@@ -33,6 +33,15 @@ export { definePlugin, type Plugin } from "./plugins/index.ts";
 
 export type { AuthOptions } from "./auth/config/options.ts";
 export type { Role, RoleOptions } from "./users/roles.ts";
+export type {
+  Access,
+  AccessArgs,
+  FieldAccess,
+  FieldAccessArgs,
+  GlobalAccess,
+  Rule,
+  Where,
+} from "./access/types.ts";
 export type { CmsUser } from "./admin/index.d.ts";
 export type {
   EmailAdapter,
@@ -51,6 +60,7 @@ export {
   type LinkedReference,
   type DeleteOptions,
   ConflictError,
+  ForbiddenError,
   type Reference,
   ValidationError,
 } from "./errors.ts";

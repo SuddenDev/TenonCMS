@@ -4,9 +4,15 @@ import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
 import { ValidationError } from "../../errors.ts";
 import { cleanFolder } from "../library/names.ts";
 import { update } from "./update/update.operation.ts";
+import { col } from "../../content/targets.ts";
+import { guardAll } from "../../access/rule.ts";
 
-/** `cms.media.renameFolder()`: moves every file under `from` to `to`, one by one. Running it again finishes a partial rename. */
+/**
+ * `cms.media.renameFolder()`: moves every file under `from` to `to`, one by one. Running it again finishes a partial
+ * rename. `media.access.update` MUST allow without a `where`.
+ */
 export async function renameFolder(core: Core, scope: Scope, fromInput: string, toInput: string) {
+  await guardAll(core, scope, col("media"), "update");
   const from = cleanFolder(fromInput);
   const to = cleanFolder(toInput);
   if (!from) throw new ValidationError({ from: "Invalid folder" });

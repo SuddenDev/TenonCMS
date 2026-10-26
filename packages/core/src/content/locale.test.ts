@@ -3,7 +3,7 @@ import type { Core, Scope } from "../cms/runtime/types.ts";
 import { ValidationError } from "../errors.ts";
 import { withLocale } from "./locale.ts";
 
-const scope: Scope = { user: null, context: {}, nested: false };
+const scope: Scope = { user: null, context: {}, nested: false, overrideAccess: true };
 const core = (localization?: Partial<NonNullable<Core["localization"]>>) =>
   ({
     localization: localization && {

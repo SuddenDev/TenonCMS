@@ -19,6 +19,8 @@ const stripMeta = ({
   updatedAt,
   publishedAt,
   hasDraft,
+  createdBy,
+  updatedBy,
   ...data
 }: Record<string, unknown>) => data;
 
