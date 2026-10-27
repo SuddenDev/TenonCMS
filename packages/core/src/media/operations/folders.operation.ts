@@ -1,7 +1,7 @@
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { col } from "../../content/targets.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import { distinctValues } from "../../db/queries/media/distinct-values.query.ts";
-import { readAccess } from "../../access/rule.ts";
+import { readAccess } from "../../access/read.ts";
 
 /**
  * The folders of the files the caller of `scope` MAY read, with their parents, sorted. The root `''` is left out.
@@ -9,7 +9,7 @@ import { readAccess } from "../../access/rule.ts";
  * @throws {ForbiddenError} When `media.access.read` denies.
  */
 export async function folders(core: Core, scope: Scope) {
-  const access = await readAccess(core, scope, col("media"));
+  const access = await readAccess(core, scope, collectionTarget("media"));
   const where = access === true ? {} : access;
   const set = new Set<string>();
 

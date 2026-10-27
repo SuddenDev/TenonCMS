@@ -1,8 +1,8 @@
-import { col } from "../../content/targets.ts";
-import { guardAll } from "../../access/rule.ts";
+import { collectionTarget } from "../../content/targets.ts";
+import { requireAllRead } from "../../access/read.ts";
 import { makeZip } from "client-zip";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
 import { ValidationError } from "../../errors.ts";
 import { notFound } from "../../http/errors.ts";
@@ -18,8 +18,8 @@ import type { Storage } from "../storage/types.ts";
  * @throws {ForbiddenError} Unless `media.access.read` allows without a `where`.
  */
 export async function downloadArchive(core: Core, scope: Scope, ids: string[], folders: string[]) {
-  await guardAll(core, scope, col("media"), "read");
-  const all = (await findDocs(await q(core, scope), "media", {})) as MediaDoc[];
+  await requireAllRead(core, scope, collectionTarget("media"));
+  const all = (await findDocs(await databaseForScope(core, scope), "media", {})) as MediaDoc[];
   const files = selectedMedia(all, ids, folders);
   if (ids.some((id) => !files.some((file) => file.id === id))) throw notFound();
   const roots = [...new Set(folders)].filter(

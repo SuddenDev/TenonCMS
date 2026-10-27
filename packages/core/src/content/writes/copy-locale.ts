@@ -1,10 +1,10 @@
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { type Name, target } from "../targets.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { type ContentTarget, target } from "../targets.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { ValidationError } from "../../errors.ts";
 import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts";
 import { locOf } from "../reads/loc-of.ts";
-import { write } from "./write-document.ts";
+import { writeDocument } from "./write-document.ts";
 import { guard } from "../../access/rule.ts";
 
 /**
@@ -19,7 +19,7 @@ import { guard } from "../../access/rule.ts";
 export async function copyLocalized(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   id: string | undefined,
   from: string,
 ) {
@@ -31,7 +31,7 @@ export async function copyLocalized(
   if (!loc.locales.includes(from)) throw new ValidationError({ from: "Unknown locale" });
   if (from === to) throw new ValidationError({ from: "Source and target locale are equal" });
 
-  const source = await loadLocaleDoc(await q(core, s), name, id ?? "", true, {
+  const source = await loadLocaleDoc(await databaseForScope(core, s), name, id ?? "", true, {
     ...loc,
     locale: from,
   });
@@ -39,8 +39,11 @@ export async function copyLocalized(
   if (!source.locales.includes(from)) throw new ValidationError({ from: "No version to copy" });
 
   const input = Object.fromEntries(loc.keys.map((key) => [key, source[key] ?? null]));
-  const draft = entry.drafts !== false;
-  return name.kind === "global"
-    ? write(core, s, name, "setGlobal", input, { draft })
-    : write(core, s, name, "update", input, { id, draft });
+  return writeDocument(core, s, {
+    target: name,
+    operation: name.kind === "global" ? "setGlobal" : "update",
+    input,
+    id,
+    mode: entry.drafts === false ? "save" : "draft",
+  });
 }

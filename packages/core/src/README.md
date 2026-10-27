@@ -49,8 +49,8 @@ For `POST /api/cms/collections/posts`, follow:
 1. [http/app.ts](http/app.ts) mounts the collection write group after CSRF and the optional session middleware.
 2. [collections/endpoints/create.endpoint.ts](collections/endpoints/create.endpoint.ts) checks the target, parses the body and calls the session-bound `cms.create()`.
 3. [cms/api/create-local-api.ts](cms/api/create-local-api.ts) assembles methods. [create.local.ts](collections/operations/local/create.local.ts) binds the scope and checks the name, media restriction and draft eligibility.
-4. [create.operation.ts](collections/operations/create.operation.ts) provides operation arguments to [run-operation.ts](content/lifecycle/run-operation.ts), which opens/reuses the transaction and runs operation hooks.
-5. [write-document.ts](content/writes/write-document.ts) checks the `create` rule ([access/rule.ts](access/rule.ts)), drops fields the caller MAY NOT write, runs defaults, slugs, validation and hooks, then integrity checks and [insert-document.query.ts](db/queries/documents/insert-document.query.ts). It returns through read hooks and operation hooks before commit.
+4. [create.operation.ts](collections/operations/create.operation.ts) provides operation arguments to [run-operation.ts](content/lifecycle/run-operation.ts), which runs operation hooks and delegates the transaction lifetime to [transaction.ts](cms/runtime/transaction.ts).
+5. [write-document.ts](content/writes/write-document.ts) checks the `create` rule ([access/rule.ts](access/rule.ts)), drops fields the caller MAY NOT write, selects its write mode and source. [prepare-data.ts](content/writes/prepare-data.ts) owns defaults, slugs, validation and before hooks; [persist-document.ts](content/writes/persist-document.ts) owns integrity, after hooks and [insert-document.query.ts](db/queries/documents/insert-document.query.ts). It returns through read hooks and operation hooks before commit.
 
 Draft create uses the other route in the same endpoint file and the same operation with `draft: true`. It keeps its existing type-only validation and pending-data behavior. A trusted `cms.create()` starts at step 3 and skips the rules.
 
@@ -60,7 +60,7 @@ For `GET /api/cms/globals/general`, follow:
 
 1. [globals/endpoints/get.endpoint.ts](globals/endpoints/get.endpoint.ts) validates the name and read options and calls `c.var.cms`, which `optionalSession()` in [session.middleware.ts](auth/middleware/session.middleware.ts) scopes to the caller; drafts require a session plus the preview cookie.
 2. [get.local.ts](globals/operations/local/get.local.ts) checks the name. [get.operation.ts](globals/operations/get.operation.ts) enters the shared lifecycle without opening a read transaction.
-3. [read-global.ts](content/reads/read-global.ts) checks the read rule and loads the appropriate perspective using [load-global.query.ts](db/queries/globals/load-global.query.ts).
+3. [read-global.ts](content/reads/read-global.ts) uses [access/read.ts](access/read.ts) for admission and loads the appropriate perspective using [load-global.query.ts](db/queries/globals/load-global.query.ts).
 4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. Embedded rich-text links and images resolve through [resolve-richtext.ts](richtext/reads/resolve-richtext.ts). `afterRead()` removes the fields the caller MAY NOT read ([access/field-access.ts](access/field-access.ts)).
 
 Globals retain their own lifecycle: they skip collection `beforeOperation` and `afterOperation`. A never-saved global returns publication metadata with no saved field values.
@@ -72,11 +72,11 @@ With `?locale=de`, `readOptions()` in [read-options.ts](http/query/read-options.
 For `POST /api/cms/media/uploads/:id/complete`, follow:
 
 1. [media/endpoints/uploads.endpoint.ts](media/endpoints/uploads.endpoint.ts) runs in the protected media group. `findUpload()` in [upload-row.ts](media/operations/uploads/upload-row.ts) rejects unknown, expired or foreign uploads.
-2. [complete.operation.ts](media/operations/uploads/complete.operation.ts) assembles the stored parts and verifies the expected byte count and image header.
+2. [complete.operation.ts](media/operations/uploads/complete.operation.ts) enters the transaction lifetime, registers rollback cleanup, assembles the stored parts and verifies the expected byte count and image header.
 3. [cms/runtime/transaction.ts](cms/runtime/transaction.ts) binds the transaction scope. Completion calls the shared content writer, runs media `afterUpload` hooks and deletes the unfinished upload row in that transaction.
-4. After the transaction, [render-variants.ts](media/variants/render-variants.ts) prerenders configured variants and [read-media.ts](media/runtime/read-media.ts) decorates the result.
+4. After the actual outer commit, [render-variants.ts](media/variants/render-variants.ts) prerenders configured variants and [read-media.ts](media/runtime/read-media.ts) decorates the result.
 
-The operation retains cleanup on validation/write failure. Upload-table queries still live in media; moving them under a persistence contract is a separate architectural add-on. A local `cms.media.upload()` enters through [upload.operation.ts](media/operations/uploads/upload.operation.ts) and uses the same stages.
+Rollback runs storage abort and file/row cleanup through a live connection. Upload-table queries still live in media; moving them under a persistence contract is a separate architectural add-on. A local `cms.media.upload()` enters through [upload.operation.ts](media/operations/uploads/upload.operation.ts) and uses the same stages.
 
 ## Resolve a preview URL
 

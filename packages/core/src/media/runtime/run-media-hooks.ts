@@ -1,4 +1,4 @@
-import { col } from "../../content/targets.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import type { Core, Inner } from "../../cms/runtime/types.ts";
 import { hookArgs } from "../../content/lifecycle/hook-args.ts";
 import { hookList, runHooks } from "../../schema/runtime/run-hooks.ts";
@@ -17,5 +17,5 @@ export function runMediaHooks<V>(
     ...hookList<(args: any) => unknown>(core.media?.hooks[stage]),
     ...core.plugins.flatMap((p) => hookList<(args: any) => unknown>(p.mediaHooks?.[stage])),
   ];
-  return runHooks(slot, key, value, hookArgs(s, col("media"), extra));
+  return runHooks(slot, key, value, hookArgs(s, collectionTarget("media"), extra));
 }

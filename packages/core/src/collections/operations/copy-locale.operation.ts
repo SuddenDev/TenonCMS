@@ -1,6 +1,6 @@
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { col } from "../../content/targets.ts";
-import { run } from "../../content/lifecycle/run-operation.ts";
+import { collectionTarget } from "../../content/targets.ts";
+import { runOperation } from "../../content/lifecycle/run-operation.ts";
 import { copyLocalized } from "../../content/writes/copy-locale.ts";
 
 /** `scope.locale` is the target locale. */
@@ -11,6 +11,6 @@ export const copyLocale = (
   id: string,
   from: string,
 ) =>
-  run(core, scope, "update", col(collection), { collection, id }, (s, args) =>
-    copyLocalized(core, s, col(collection), args.id, from),
+  runOperation(core, scope, "update", collectionTarget(collection), { collection, id }, (s, args) =>
+    copyLocalized(core, s, collectionTarget(collection), args.id, from),
   );

@@ -1,6 +1,6 @@
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { type Name, target } from "../targets.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { type ContentTarget, target } from "../targets.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { ValidationError } from "../../errors.ts";
 import { hookArgs } from "../lifecycle/hook-args.ts";
 import { slot } from "../lifecycle/collect-hooks.ts";
@@ -20,7 +20,12 @@ import { guard } from "../../access/rule.ts";
  * @throws {ValidationError} For an unlocalized entry, the default locale, a locale without a version, or the last locale row.
  * @throws {ForbiddenError} When the `update` rule denies.
  */
-export async function removeLocalized(core: Core, s: Inner, name: Name, id: string | undefined) {
+export async function removeLocalized(
+  core: Core,
+  s: Inner,
+  name: ContentTarget,
+  id: string | undefined,
+) {
   const entry = target(core, name);
   const loc = locOf(core, { ...s, fallback: false }, entry);
   if (!loc) throw new ValidationError({ "": `"${name.name}" is not localized` });
@@ -28,7 +33,7 @@ export async function removeLocalized(core: Core, s: Inner, name: Name, id: stri
     throw new ValidationError({ locale: "The default locale cannot be removed" });
 
   await guard(core, s, name, "update", { id });
-  const db = await q(core, s);
+  const db = await databaseForScope(core, s);
   const global = name.kind === "global";
   const before = await loadLocaleDoc(db, name, id ?? "", true, loc);
   if (!before) return undefined;

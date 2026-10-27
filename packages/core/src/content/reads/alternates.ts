@@ -1,10 +1,10 @@
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { inner } from "../../cms/runtime/operation-context.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { permalinkUrl } from "../../preview/server/resolve-url.ts";
 import { afterRead } from "../lifecycle/run-read-hooks.ts";
-import { col } from "../targets.ts";
+import { collectionTarget } from "../targets.ts";
 import { locOf } from "./loc-of.ts";
 
 /**
@@ -26,20 +26,20 @@ export async function addAlternates(
 
   const ids = docs.map((d) => d.id as string);
   const urls = new Map<string, Record<string, string>>(ids.map((id) => [id, {}]));
-  const db = await q(core, s);
+  const db = await databaseForScope(core, s);
 
   for (const locale of l.locales) {
     const scope = inner(
       core,
       { ...s, perspective: "published", locale, fallback: false },
-      s.trx,
+      s.transaction,
       s.context,
     );
     const loc = locOf(core, scope, entry);
     const found = await afterRead(
       core,
       scope,
-      col(collection),
+      collectionTarget(collection),
       await loadByIds(db, collection, ids, false, loc),
       "read",
     );

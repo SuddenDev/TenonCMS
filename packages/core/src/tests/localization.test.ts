@@ -79,3 +79,31 @@ describe("localization", () => {
     expect(bad).toThrow();
   });
 });
+
+it("keeps locale read metadata out of field write-rule documents", async () => {
+  const env = setup(
+    defineCms({
+      database: { url: ":memory:" },
+      secret: "x".repeat(32),
+      media: false,
+      settings: false,
+      localization: { locales: ["en", "de"], defaultLocale: "en" },
+      collections: {
+        pages: {
+          localized: true,
+          fields: {
+            title: {
+              type: "text",
+              access: { update: ({ doc }) => !Object.hasOwn(doc ?? {}, "locale") },
+            },
+          },
+        },
+      },
+    }),
+  );
+  const doc = await env.cms.create("pages", { title: "original" });
+  await env.client.signUp(admin);
+  expect(
+    await env.client.update("pages", doc.id, { title: "edited" }, { locale: "en" }),
+  ).toMatchObject({ title: "edited" });
+});

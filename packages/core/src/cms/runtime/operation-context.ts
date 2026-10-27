@@ -10,15 +10,15 @@ export const outerScope = (
 /** The `context` of a call: a nested call keeps its caller's, an outer call starts empty. */
 export const contextOf = (scope: Scope) => (scope.nested ? scope.context : {});
 /**
- * A scope for hooks and nested calls: shares `trx` and `context`, and gets its own bound API. The scope keeps the
+ * A scope for hooks and nested calls: shares its transaction lifetime and `context`, and gets its own bound API. The scope keeps the
  * caller's `overrideAccess`, so the operation checks its caller; the bound API skips the rules, like Payload's.
  */
 export function inner(
   core: Core,
   scope: Scope,
-  trx: Scope["trx"],
+  transaction: Scope["transaction"],
   context: Scope["context"],
 ): Inner {
-  const s: Scope = { ...scope, trx, context, nested: true };
+  const s: Scope = { ...scope, transaction, context, nested: true };
   return { ...s, cms: core.localApi({ ...s, overrideAccess: true }) };
 }

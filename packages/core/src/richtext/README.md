@@ -4,9 +4,9 @@ Owns the Tiptap document format, feature policy, rendering and embedded CMS refe
 
 ## Follow a write
 
-`content/writes/helpers/prepare-data.ts` → `writes/prepare-richtext.ts` → `runtime/validation.ts`
+`content/writes/prepare-data.ts` → `writes/prepare-richtext.ts` → `runtime/validation.ts`
 
-`prepareRichtext()` strips read decoration, preserves server-owned deletion markers and validates changed published content. Before saving, `content/writes/helpers/store.ts` calls `integrity/check-references.ts` to check document and image targets in the write transaction.
+`prepareRichtext()` strips read decoration, preserves server-owned deletion markers and validates changed published content. Before saving, `content/writes/persist-document.ts` calls `integrity/check-references.ts` to check document and image targets in the write transaction.
 
 ## Follow a read
 

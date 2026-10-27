@@ -1,7 +1,7 @@
 import type { Core, Scope } from "../../cms/runtime/types.ts";
 import type { LocalApi } from "../../cms/api/local-api.ts";
-import { glob } from "../../content/targets.ts";
-import { run } from "../../content/lifecycle/run-operation.ts";
+import { globalTarget } from "../../content/targets.ts";
+import { runOperation } from "../../content/lifecycle/run-operation.ts";
 import { readGlobal } from "../../content/reads/read-global.ts";
 
 export async function getGlobal(
@@ -10,7 +10,12 @@ export async function getGlobal(
   name: string,
   options: NonNullable<Parameters<LocalApi["getGlobal"]>[1]> = {},
 ) {
-  return run(core, scope, "getGlobal", glob(name), { global: name, options }, (s, args) =>
-    readGlobal(core, s, name, args.options),
+  return runOperation(
+    core,
+    scope,
+    "getGlobal",
+    globalTarget(name),
+    { global: name, options },
+    (s, args) => readGlobal(core, s, name, args.options),
   );
 }

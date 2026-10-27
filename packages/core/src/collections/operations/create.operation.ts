@@ -1,7 +1,7 @@
 import { type Core, type Scope } from "../../cms/runtime/types.ts";
-import { col } from "../../content/targets.ts";
-import { run } from "../../content/lifecycle/run-operation.ts";
-import { write } from "../../content/writes/write-document.ts";
+import { collectionTarget } from "../../content/targets.ts";
+import { runOperation } from "../../content/lifecycle/run-operation.ts";
+import { writeDocument } from "../../content/writes/write-document.ts";
 
 export const create = (
   core: Core,
@@ -10,11 +10,17 @@ export const create = (
   data: unknown,
   draft = false,
 ) =>
-  run(
+  runOperation(
     core,
     scope,
     "create",
-    col(collection),
+    collectionTarget(collection),
     { collection, data, ...(draft ? { draft } : {}) },
-    (s, args) => write(core, s, col(collection), "create", args.data, { draft }),
+    (scope, args) =>
+      writeDocument(core, scope, {
+        target: collectionTarget(collection),
+        operation: "create",
+        input: args.data,
+        mode: draft ? "draft" : "save",
+      }),
   );

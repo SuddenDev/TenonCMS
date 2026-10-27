@@ -1,3 +1,4 @@
+import { trackWrite } from "../runtime/transaction.ts";
 import type { Core, Scope } from "../runtime/types.ts";
 import type { LocalApi } from "./local-api.ts";
 import { mediaApi } from "../../media/api.ts";
@@ -33,19 +34,19 @@ export function createLocalApi(core: Core, scope: Scope): LocalApi {
     findOne: findOneLocal(core, scope),
     findById: findByIdLocal(core, scope),
     alternatesAt: alternatesAtLocal(core, scope),
-    create: createLocal(core, scope),
-    update: updateLocal(core, scope),
-    publish: publishLocal(core, scope),
-    discard: discardLocal(core, scope),
-    copyLocale: copyLocaleLocal(core, scope),
-    removeLocale: removeLocaleLocal(core, scope),
-    delete: deleteLocal(core, scope),
+    create: trackWrite(scope, createLocal(core, scope)),
+    update: trackWrite(scope, updateLocal(core, scope)),
+    publish: trackWrite(scope, publishLocal(core, scope)),
+    discard: trackWrite(scope, discardLocal(core, scope)),
+    copyLocale: trackWrite(scope, copyLocaleLocal(core, scope)),
+    removeLocale: trackWrite(scope, removeLocaleLocal(core, scope)),
+    delete: trackWrite(scope, deleteLocal(core, scope)),
     getGlobal: getGlobalLocal(core, scope),
-    setGlobal: setGlobalLocal(core, scope),
-    publishGlobal: publishGlobalLocal(core, scope),
-    discardGlobal: discardGlobalLocal(core, scope),
-    copyGlobalLocale: copyGlobalLocaleLocal(core, scope),
-    removeGlobalLocale: removeGlobalLocaleLocal(core, scope),
+    setGlobal: trackWrite(scope, setGlobalLocal(core, scope)),
+    publishGlobal: trackWrite(scope, publishGlobalLocal(core, scope)),
+    discardGlobal: trackWrite(scope, discardGlobalLocal(core, scope)),
+    copyGlobalLocale: trackWrite(scope, copyGlobalLocaleLocal(core, scope)),
+    removeGlobalLocale: trackWrite(scope, removeGlobalLocaleLocal(core, scope)),
     withDrafts: () => core.localApi({ ...scope, perspective: "drafts" }),
     media: core.media && mediaApi(core, scope),
   };

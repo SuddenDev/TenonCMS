@@ -1,28 +1,10 @@
-import type { Core } from "../../cms/runtime/types.ts";
-import { mediaByKey } from "../../db/queries/media/media-by-key.query.ts";
 import type { Storage } from "../storage/types.ts";
-import { caller } from "../../auth/get-caller.ts";
-import { outerScope } from "../../cms/runtime/operation-context.ts";
-import { col } from "../../content/targets.ts";
-import { readable } from "../../access/rule.ts";
 
 /** Headers for every served file. User files MAY be HTML or SVG; they MUST NOT run scripts on the host's origin. */
 export const SAFE = {
   "x-content-type-options": "nosniff",
   "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
 };
-
-/**
- * The media document stored at `key`, if the caller of `request` MAY read it. `undefined` for a missing one, one
- * outside the read rule's `where`, and reserved keys such as `.variants/…`. Without a read rule, no session is looked up.
- * @throws {ForbiddenError} When `media.access.read` denies.
- */
-export async function findByKey(core: Core, request: Request, key: string) {
-  const doc = key.startsWith(".") ? undefined : await mediaByKey(await core.db(), key);
-  if (!core.schema.collections.media.access?.read) return doc;
-  const { user } = await caller(core.getSession, request);
-  return (await readable(core, outerScope(user), col("media"), doc)) ? doc : undefined;
-}
 
 /** `bytes=a-b`, `bytes=a-` or `bytes=-n` of a file of `size` bytes. `null` for a range that does not fit. */
 function parseRange(header: string, size: number) {

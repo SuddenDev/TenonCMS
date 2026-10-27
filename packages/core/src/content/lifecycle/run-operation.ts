@@ -2,8 +2,9 @@ import { ConflictError, ForbiddenError, ValidationError } from "../../errors.ts"
 import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { type Operation } from "../../schema/index.ts";
 import { type Core, type Scope, type Inner, type Stage } from "../../cms/runtime/types.ts";
+import { transaction } from "../../cms/runtime/transaction.ts";
 import { contextOf, inner } from "../../cms/runtime/operation-context.ts";
-import { type Name } from "../targets.ts";
+import { type ContentTarget } from "../targets.ts";
 import { hookArgs } from "./hook-args.ts";
 import { slot } from "./collect-hooks.ts";
 import { consola } from "consola";
@@ -14,11 +15,11 @@ import { consola } from "consola";
  *
  * @returns The result of `fn` after `afterOperation` hooks.
  */
-export async function run<R>(
+export async function runOperation<R>(
   core: Core,
   scope: Scope,
   operation: Operation,
-  name: Name,
+  name: ContentTarget,
   args: Record<string, any>,
   fn: (s: Inner, args: Record<string, any>) => Promise<R>,
 ): Promise<R> {
@@ -27,8 +28,7 @@ export async function run<R>(
   // Globals have no `beforeOperation` and `afterOperation`, root ones included.
   const of = (stage: Stage) => (name.kind === "collection" ? slot(core, name, stage) : undefined);
 
-  const body = async (trx = scope.trx) => {
-    const s = inner(core, scope, trx, context);
+  const body = async (s: Inner) => {
     const base = hookArgs(s, name, { operation, draft: args.draft === true });
 
     const input = await runHooks(of("beforeOperation"), "args", args, base);
@@ -36,10 +36,10 @@ export async function run<R>(
     return runHooks(of("afterOperation"), "result", result, { ...base, args: input });
   };
 
-  const inTransaction = operation !== "read" && operation !== "getGlobal" && !scope.trx;
+  const isWrite = operation !== "read" && operation !== "getGlobal";
   try {
-    if (!inTransaction) return await body();
-    return await (await core.db()).transaction().execute((trx) => body(trx));
+    if (isWrite) return await transaction(core, scope, body);
+    return await body(inner(core, scope, scope.transaction, context));
   } catch (error) {
     // Only the outermost call runs `afterError`, after the rollback. 400, 401, 403 and 409 are expected and run none.
     const expected =
@@ -53,7 +53,13 @@ export async function run<R>(
 }
 
 // An error in an `afterError` hook MUST NOT replace the original.
-async function afterError(core: Core, s: Inner, name: Name, operation: Operation, error: unknown) {
+async function afterError(
+  core: Core,
+  s: Inner,
+  name: ContentTarget,
+  operation: Operation,
+  error: unknown,
+) {
   const args = hookArgs(s, name, { operation, error });
   for (const fn of slot(core, name, "afterError")) {
     try {

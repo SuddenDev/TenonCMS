@@ -1,7 +1,7 @@
 import { type Core, type Scope } from "../../cms/runtime/types.ts";
-import { col } from "../../content/targets.ts";
-import { run } from "../../content/lifecycle/run-operation.ts";
-import { write, type WriteFlags } from "../../content/writes/write-document.ts";
+import { collectionTarget } from "../../content/targets.ts";
+import { runOperation } from "../../content/lifecycle/run-operation.ts";
+import { writeDocument, type WriteMode } from "../../content/writes/write-document.ts";
 
 export const update = (
   core: Core,
@@ -9,14 +9,20 @@ export const update = (
   collection: string,
   id: string,
   data: unknown,
-  { effect, draft }: WriteFlags = {},
+  mode: WriteMode = "save",
 ) =>
-  run(
+  runOperation(
     core,
     scope,
     "update",
-    col(collection),
-    { collection, id, data, ...(draft ? { draft } : {}) },
+    collectionTarget(collection),
+    { collection, id, data, ...(mode === "draft" ? { draft: true } : {}) },
     (s, args) =>
-      write(core, s, col(collection), "update", args.data, { id: args.id, effect, draft }),
+      writeDocument(core, s, {
+        target: collectionTarget(collection),
+        operation: "update",
+        input: args.data,
+        id: args.id,
+        mode,
+      }),
   );

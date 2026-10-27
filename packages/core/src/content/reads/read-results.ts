@@ -1,7 +1,7 @@
 import { resolveRichtext } from "../../richtext/reads/resolve-richtext.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { col, type Name, isMedia, target } from "../targets.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { collectionTarget, type ContentTarget, isMedia, target } from "../targets.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { beforeRead, afterRead } from "../lifecycle/run-read-hooks.ts";
 import { type Fields } from "../../schema/index.ts";
 import { type ReadOpts } from "./read-documents.ts";
@@ -12,7 +12,7 @@ import { badSelectPath, metaKeys } from "../population/validate-select.ts";
 import { populate } from "../population/populate.ts";
 import { addAlternates } from "./alternates.ts";
 import { locOf } from "./loc-of.ts";
-import { decide } from "../../access/rule.ts";
+import { readDecision } from "../../access/read.ts";
 
 /**
  * Runs `beforeRead` on the loaded documents, then population, then `afterRead`, then media URLs, then `alternates`
@@ -22,7 +22,7 @@ import { decide } from "../../access/rule.ts";
 export async function readDocs(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   docs: Record<string, any>[],
   plan: PopulatePlan,
   select: SelectSpec | undefined,
@@ -36,14 +36,14 @@ export async function readDocs(
 
   const before = await beforeRead(core, s, name, docs, operation);
 
-  await populate(await q(core, s), collections, fields, before, plan, {
+  await populate(await databaseForScope(core, s), collections, fields, before, plan, {
     richtext: (values) => resolveRichtext(core, s, values),
     drafts,
     loc: (collection) => locOf(core, s, collections[collection]),
-    access: (collection) => decide(core, s, col(collection), "read", { draft: drafts }),
+    access: (collection) => readDecision(core, s, collectionTarget(collection)),
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
-    before: (collection, docs) => beforeRead(core, s, col(collection), docs, "read"),
-    after: (collection, docs) => afterRead(core, s, col(collection), docs, "read"),
+    before: (collection, docs) => beforeRead(core, s, collectionTarget(collection), docs, "read"),
+    after: (collection, docs) => afterRead(core, s, collectionTarget(collection), docs, "read"),
     media:
       media &&
       ((doc, field) => decorate(media, doc, field.type === "image" ? field.image : undefined)),

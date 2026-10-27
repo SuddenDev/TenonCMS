@@ -19,6 +19,6 @@ export async function placeFile(core: Core, s: Inner, info: UploadInfo) {
   const { folder, filename } = cleanPlace(hooked);
   return {
     folder,
-    filename: freeName(await namesIn(s.trx!, folder), filename),
+    filename: freeName(await namesIn(core, s, folder), filename),
   };
 }

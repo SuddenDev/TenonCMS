@@ -1,7 +1,7 @@
 import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { type Name } from "../targets.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { type ContentTarget } from "../targets.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { afterRead } from "../lifecycle/run-read-hooks.ts";
 import { remove } from "./remove-document.ts";
 import { type Loc, DOCUMENT_LOCALES, GLOBAL_LOCALES } from "../../db/queries/document-sql.ts";
@@ -24,13 +24,13 @@ import { discardGlobalDraft } from "../../db/queries/drafts/discard-global-draft
 export async function discardLocalized(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   id: string,
   loc: Loc,
   all: boolean,
   options: DeleteOptions = {},
 ) {
-  const db = await q(core, s);
+  const db = await databaseForScope(core, s);
 
   if (name.kind === "global") {
     await discardLocaleDrafts(db, GLOBAL_LOCALES, name.name, all ? undefined : loc.locale);

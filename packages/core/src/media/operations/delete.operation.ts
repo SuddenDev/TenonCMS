@@ -1,8 +1,8 @@
 import type { DeleteOptions } from "../../errors.ts";
-import { contextOf, inner } from "../../cms/runtime/operation-context.ts";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { transaction } from "../../cms/runtime/transaction.ts";
+import { afterCommit, transaction } from "../../cms/runtime/transaction.ts";
 import { remove } from "../../content/writes/remove-document.ts";
+import { reserveDeletedKey } from "../library/names-in.ts";
 import { mediaOf } from "../runtime/create-media-core.ts";
 import { loadMedia } from "../runtime/read-media.ts";
 import { runMediaHooks } from "../runtime/run-media-hooks.ts";
@@ -23,12 +23,15 @@ export async function removeMedia(
 
   await transaction(core, scope, async (s) => {
     await runMediaHooks(core, s, "beforeDelete", "doc", doc);
+    const releaseKey = reserveDeletedKey(core, s, doc);
     await remove(core, s, "media", id, options);
+    afterCommit(s, async (outside) => {
+      try {
+        await deleteWithVariants(mediaOf(core).storage, doc.key);
+      } finally {
+        releaseKey();
+      }
+      await runMediaHooks(core, outside, "afterDelete", "doc", doc);
+    });
   });
-
-  // After commit: the file and its variants, then `afterDelete`.
-  await deleteWithVariants(mediaOf(core).storage, doc.key);
-
-  const outside = inner(core, scope, scope.trx, contextOf(scope));
-  await runMediaHooks(core, outside, "afterDelete", "doc", doc);
 }

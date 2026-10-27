@@ -1,5 +1,5 @@
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { type Name, target } from "../targets.ts";
+import { type ContentTarget, target } from "../targets.ts";
 import { hookArgs } from "./hook-args.ts";
 import { slot } from "./collect-hooks.ts";
 import { runHooks } from "../../schema/runtime/run-hooks.ts";
@@ -15,7 +15,7 @@ import { stripDenied } from "../../access/field-access.ts";
 export async function afterRead(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   docs: Record<string, any>[],
   operation: Operation,
   draft = false,
@@ -43,7 +43,7 @@ export async function afterRead(
 export function beforeRead(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   docs: Record<string, any>[],
   operation: Operation,
 ) {

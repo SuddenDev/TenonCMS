@@ -1,6 +1,5 @@
 import type { CmsUser } from "../../admin/index.d.ts";
 import type { AdminRuntime } from "../../admin/merge/merge-options.ts";
-import { type Database } from "../../db/types.ts";
 import type { Localization } from "../config/options.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import type { EmailApi, EmailTemplates } from "../../email/types.ts";
@@ -8,7 +7,9 @@ import type { Role } from "../../users/roles.ts";
 import { type Plugin } from "../../plugins/index.ts";
 import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
 import type { BetterAuthOptions } from "better-auth";
+import type { Database } from "../../db/types.ts";
 import type { Kysely } from "kysely";
+import type { TransactionLifetime } from "./transaction.ts";
 
 /**
  * The internal context of one `defineCms()` instance. It is not public.
@@ -58,9 +59,9 @@ export type Stage = keyof RootHooks;
  */
 export type Perspective = "published" | "drafts";
 
-/** One call of the local API. Calls from inside a hook share `trx`, `user` and `context`. */
+/** One call of the local API. Calls from inside a hook share a transaction lifetime, `user` and `context`. */
 export type Scope = {
-  trx?: Kysely<Database>;
+  transaction?: TransactionLifetime;
   user: CmsUser | null;
   context: Record<string, unknown>;
   // True inside a hook: the call keeps `context` and runs no `afterError` of its own.

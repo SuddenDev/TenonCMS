@@ -18,7 +18,7 @@ import {
 import { isObject } from "../../schema/condition.ts";
 import { type PopulatePlan, step } from "./populate-plan.ts";
 import type { Kysely } from "kysely";
-import { matches } from "../../access/rule.ts";
+import { admittedRows } from "../../access/read.ts";
 import type { Where } from "../../access/types.ts";
 
 type Docs = Record<string, any>[];
@@ -138,7 +138,7 @@ async function resolveJoin(ctx: Hop, docs: Docs, key: string, field: JoinField) 
 // top-level read.
 async function hop({ db, collections, read, child }: Hop, collection: string, loaded: Docs) {
   const access = await read.access(collection);
-  const allowed = access === true ? loaded : access ? loaded.filter((d) => matches(d, access)) : [];
+  const allowed = admittedRows(access, loaded);
   const before = await read.before(collection, allowed);
   await populate(db, collections, collections[collection].fields, before, child, read);
   return new Map((await read.after(collection, before)).map((d) => [d.id, d]));

@@ -1,8 +1,8 @@
 import { ForbiddenError } from "../errors.ts";
 import type { Core, Inner, Scope } from "../cms/runtime/types.ts";
 import { contextOf, inner } from "../cms/runtime/operation-context.ts";
-import { q } from "../cms/runtime/transaction.ts";
-import { type Name, target } from "../content/targets.ts";
+import { databaseForScope } from "../cms/runtime/transaction.ts";
+import { type ContentTarget, target } from "../content/targets.ts";
 import { hookArgs } from "../content/lifecycle/hook-args.ts";
 import { locOf } from "../content/reads/loc-of.ts";
 import { loadDoc } from "../db/queries/documents/load-document.query.ts";
@@ -41,7 +41,7 @@ export async function check<R>(s: Inner, rule: Rule<any, R> | undefined, args: o
 export async function decide(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   op: Op,
   extra: object = {},
 ): Promise<boolean | Where> {
@@ -56,7 +56,13 @@ export async function decide(
  * @returns `true`, or a `Where` the documents MUST match.
  * @throws {ForbiddenError} When the rule returns `false`.
  */
-export async function permit(core: Core, s: Inner, name: Name, op: Op, extra: object = {}) {
+export async function permit(
+  core: Core,
+  s: Inner,
+  name: ContentTarget,
+  op: Op,
+  extra: object = {},
+) {
   const decision = await decide(core, s, name, op, extra);
   if (decision === false) throw denied(s);
   return decision;
@@ -90,7 +96,7 @@ export function enforce(s: Inner, decision: boolean | Where, doc?: Record<string
 export async function guard(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   op: Op,
   extra: { id?: string; data?: unknown } = {},
 ) {
@@ -98,7 +104,7 @@ export async function guard(
   if (decision === true || !extra.id) return enforce(s, decision);
 
   const loc = locOf(core, s, target(core, name));
-  const doc = await loadDoc(await q(core, s), name.name, extra.id, true, loc);
+  const doc = await loadDoc(await databaseForScope(core, s), name.name, extra.id, true, loc);
   if (doc) enforce(s, decision, doc);
 }
 
@@ -106,36 +112,9 @@ export async function guard(
  * For an operation across documents, like a media folder rename: the rule MUST allow without a `where`.
  * @throws {ForbiddenError} When the rule denies or returns a `where`.
  */
-export async function guardAll(core: Core, scope: Scope, name: Name, op: Op) {
-  const s = inner(core, scope, scope.trx, contextOf(scope));
+export async function guardAll(core: Core, scope: Scope, name: ContentTarget, op: Op) {
+  const s = inner(core, scope, scope.transaction, contextOf(scope));
   enforce(s, await decide(core, s, name, op, op === "read" ? { draft: false } : {}));
-}
-
-/**
- * The read rule of the caller of `scope` on published documents, for routes that read outside the local API, like the
- * media folders. `id` names the document when there is one.
- * @returns `true`, or a `Where` the documents MUST match.
- * @throws {ForbiddenError} When the rule denies.
- */
-export async function readAccess(core: Core, scope: Scope, name: Name, id?: string) {
-  const s = inner(core, scope, scope.trx, contextOf(scope));
-  return permit(core, s, name, "read", { draft: false, id });
-}
-
-/**
- * Whether the caller of `scope` MAY read the published document `doc`, for routes that serve it outside a read. The
- * rule runs first, so a denied caller learns nothing about missing documents.
- * @returns `false` for a missing `doc` and one outside the rule's `where`.
- * @throws {ForbiddenError} When the rule denies.
- */
-export async function readable(
-  core: Core,
-  scope: Scope,
-  name: Name,
-  doc: Record<string, any> | undefined,
-) {
-  const decision = await readAccess(core, scope, name, doc?.id);
-  return !!doc && (decision === true || matches(doc, decision));
 }
 
 /** The error of a denied caller: 401 without a user, else 403. */

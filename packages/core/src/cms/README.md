@@ -51,9 +51,11 @@ Inside hooks, use the supplied `cms` for nested calls. This keeps those calls in
 
 ### Transactions
 
-Collection and global writes enter [content/lifecycle/run-operation.ts](../content/lifecycle/run-operation.ts), which opens a transaction when the scope has none. Nested calls reuse it. Reads open no transaction of their own, but use an inherited transaction when present. Globals skip collection `beforeOperation` and `afterOperation` hooks.
+Collection and global writes enter `runOperation()` in [content/lifecycle/run-operation.ts](../content/lifecycle/run-operation.ts). It runs operation hooks and delegates writes to `transaction()` in [runtime/transaction.ts](runtime/transaction.ts), the same owner media uses. Nested writes share its connection, pending commit work and rollback compensation. Reads open no transaction, but use an inherited one. Globals skip collection operation hooks.
 
-Media operations use `transaction()` from [runtime/transaction.ts](runtime/transaction.ts) when they need transactional database work. The helper also binds the nested hook API. `q(core, scope)` returns the scope's transaction when available, otherwise the shared database connection.
+`databaseForScope(core, scope)` returns the scoped connection. `afterCommit()` registers awaited work in order; all commit work runs even if an effect fails, then the first error is rethrown. `onRollback()` registers compensation in reverse order; failures are logged without replacing the write error. Neither queue uses a completed transaction: effects receive a fresh bound API. A failed nested write prevents the outer commit even when a hook catches it. `trackWrite()` includes local validation and streaming failures in this rule; it does not delay immediate email delivery.
+
+Media storage moves and upload resources register compensation as they are created. Media deletion and variant rendering wait for the actual outer commit. Standalone operations await their effects too. Compensation cannot recover from process crashes or unavailable storage.
 
 Unexpected errors from the collection/global lifecycle trigger `afterError` only for the outermost operation, after rollback. Validation and conflict errors skip that stage. The detailed hook and write order belongs to the [content README](../content/README.md).
 

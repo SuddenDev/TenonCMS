@@ -14,7 +14,7 @@ It checks the `localization` config (not empty, no duplicates, `defaultLocale` i
 
 ## Follow a write
 
-`content/writes/helpers/prepare-data.ts` runs the field steps in this order:
+`content/writes/prepare-data.ts` runs the field steps in this order:
 
 `runtime/apply-defaults.ts` → `runtime/fill-slugs.ts` → `runtime/run-field-hooks.ts` → `validation/parse-data.ts` → `runtime/validate-fields.ts`
 

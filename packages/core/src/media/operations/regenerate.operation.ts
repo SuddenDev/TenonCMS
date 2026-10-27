@@ -1,5 +1,5 @@
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
 import type { Modifiers } from "../../schema/index.ts";
 import { type MediaCore, mediaOf } from "../runtime/create-media-core.ts";
@@ -7,7 +7,7 @@ import { hasVariants } from "../images/decorate.ts";
 import { variantKey, variantsOf } from "../variants/keys.ts";
 import { removeOrphans } from "../variants/remove-orphans.ts";
 import { renderAll } from "../variants/render-variants.ts";
-import { col } from "../../content/targets.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import { guardAll } from "../../access/rule.ts";
 
 /**
@@ -21,9 +21,9 @@ export async function regenerate(core: Core, scope: Scope, id?: string, { force 
   const media = mediaOf(core);
   if (!media.images?.provider.render)
     throw new Error("integral-cms: regenerate needs an image provider with `render`");
-  await guardAll(core, scope, col("media"), "update");
+  await guardAll(core, scope, collectionTarget("media"), "update");
 
-  const docs = await findDocs(await q(core, scope), "media", id ? { id } : {});
+  const docs = await findDocs(await databaseForScope(core, scope), "media", id ? { id } : {});
   if (id && !docs.length) return undefined;
 
   const total = { rendered: 0, removed: 0 };

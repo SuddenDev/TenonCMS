@@ -1,5 +1,5 @@
 import type { Core, Inner } from "../cms/runtime/types.ts";
-import { type Name, target } from "../content/targets.ts";
+import { type ContentTarget, target } from "../content/targets.ts";
 import { hookArgs } from "../content/lifecycle/hook-args.ts";
 import { isObject } from "../schema/condition.ts";
 import { itemFields } from "../schema/traversal/item-fields.ts";
@@ -36,7 +36,7 @@ export async function fieldAllowed(
  * A caller without a user also loses `createdBy`, `updatedBy` and the fields of an item of an unknown block. Populated
  * documents are not walked: their own read strips them.
  */
-export async function stripDenied(core: Core, s: Inner, name: Name, docs: Doc[]) {
+export async function stripDenied(core: Core, s: Inner, name: ContentTarget, docs: Doc[]) {
   if (s.overrideAccess) return;
   const base = hookArgs(s, name, {});
   const { fields } = target(core, name);
@@ -83,7 +83,7 @@ function stripVisit({ s, base, doc }: StripPass) {
 export async function dropDenied(
   core: Core,
   s: Inner,
-  name: Name,
+  name: ContentTarget,
   op: "create" | "update",
   input: unknown,
   source?: Doc,

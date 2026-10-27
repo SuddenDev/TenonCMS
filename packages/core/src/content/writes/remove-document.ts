@@ -1,9 +1,9 @@
 import { breakRichtextLinks } from "../../richtext/integrity/break-links.ts";
 import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { col, target } from "../targets.ts";
+import { collectionTarget, target } from "../targets.ts";
 import { locOf } from "../reads/loc-of.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { hookArgs } from "../lifecycle/hook-args.ts";
 import { slot } from "../lifecycle/collect-hooks.ts";
 import { runHooks } from "../../schema/runtime/run-hooks.ts";
@@ -27,18 +27,18 @@ export async function remove(
   id: string,
   options: DeleteOptions = {},
 ) {
-  const db = await q(core, s);
+  const db = await databaseForScope(core, s);
   // A denial comes first, so a caller without the right learns nothing about missing documents.
-  const decision = await permit(core, s, col(collection), "delete", { id });
+  const decision = await permit(core, s, collectionTarget(collection), "delete", { id });
 
   // A delete removes the row whether it was published or not.
-  const loc = locOf(core, s, target(core, col(collection)));
+  const loc = locOf(core, s, target(core, collectionTarget(collection)));
   const doc = await loadDoc(db, collection, id, true, loc);
   if (!doc) return;
   enforce(s, decision, doc);
 
-  const base = hookArgs(s, col(collection), { id, doc });
-  await runHooks(slot(core, col(collection), "beforeDelete"), "doc", doc, base);
+  const base = hookArgs(s, collectionTarget(collection), { id, doc });
+  await runHooks(slot(core, collectionTarget(collection), "beforeDelete"), "doc", doc, base);
   await breakRichtextLinks(db, core, collection, id, options.allowBrokenLinks);
 
   await deleteDoc(db, collection, id);
@@ -46,11 +46,11 @@ export async function remove(
 
   await onDelete(db, core.schema, collection, id, {
     update: (collection, id, data, locale) =>
-      update(core, locale ? { ...s, locale } : s, collection, id, data, { effect: true }),
+      update(core, locale ? { ...s, locale } : s, collection, id, data, "deletion-effect"),
     setGlobal: (name, data, locale) =>
-      setGlobal(core, locale ? { ...s, locale } : s, name, data, { effect: true }),
+      setGlobal(core, locale ? { ...s, locale } : s, name, data, "deletion-effect"),
     delete: (collection, id) => s.cms.delete(collection, id, options),
   });
 
-  await runHooks(slot(core, col(collection), "afterDelete"), "doc", doc, base);
+  await runHooks(slot(core, collectionTarget(collection), "afterDelete"), "doc", doc, base);
 }

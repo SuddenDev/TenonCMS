@@ -1,3 +1,4 @@
+import { publishedMedia } from "../../access/read.ts";
 import { Hono } from "hono";
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
@@ -7,7 +8,7 @@ import { hasVariants } from "../images/decorate.ts";
 import { parseImgPath } from "../images/parse-image-path.ts";
 import { variantKey } from "../variants/keys.ts";
 import { renderVariant } from "../variants/render-variants.ts";
-import { SAFE, findByKey } from "./serve-file.ts";
+import { SAFE } from "./serve-file.ts";
 
 const variantResponse = (body: BodyInit, type: string, length: number) =>
   new Response(body, {
@@ -27,7 +28,7 @@ export function imagesEndpoints(core: Core) {
   api.get("/img/:path{.+}", async (c) => {
     const parsed = parseImgPath(c.req.param("path"));
     if (!parsed || !allowlist.has(parsed.id)) return c.json({ message: "Invalid modifiers" }, 400);
-    const doc = await findByKey(core, c.req.raw, parsed.key);
+    const doc = await publishedMedia(core, c.req.raw, parsed.key);
     if (!doc || !hasVariants(images, doc)) throw notFound();
 
     const stored = await storage.get(variantKey(doc.key, parsed.id));

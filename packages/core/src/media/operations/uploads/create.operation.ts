@@ -1,5 +1,5 @@
 import type { Core, Scope } from "../../../cms/runtime/types.ts";
-import { transaction } from "../../../cms/runtime/transaction.ts";
+import { databaseForScope, onRollback, transaction } from "../../../cms/runtime/transaction.ts";
 import type { UploadInfo } from "../../../schema/index.ts";
 import { keyOf } from "../../library/names.ts";
 import { mediaOf } from "../../runtime/create-media-core.ts";
@@ -7,7 +7,7 @@ import { checkFile } from "./check-file.ts";
 import { effectivePartSize, partUrls, partsOf } from "./parts.ts";
 import { cleanPlace, placeFile } from "./place-file.ts";
 import { removeExpired } from "./remove-expired.ts";
-import { col } from "../../../content/targets.ts";
+import { collectionTarget } from "../../../content/targets.ts";
 import { guard } from "../../../access/rule.ts";
 
 /**
@@ -18,11 +18,10 @@ import { guard } from "../../../access/rule.ts";
 export async function create(core: Core, scope: Scope, input: Partial<UploadInfo>) {
   const media = mediaOf(core);
   const { storage } = media;
-  const { size, mimeType } = checkFile(media, input);
-
   return transaction(core, scope, async (s) => {
-    await guard(core, s, col("media"), "create", { data: input });
-    const db = s.trx!;
+    const { size, mimeType } = checkFile(media, input);
+    await guard(core, s, collectionTarget("media"), "create", { data: input });
+    const db = await databaseForScope(core, s);
     await removeExpired(storage, db);
 
     const { folder, filename } = await placeFile(core, s, { ...cleanPlace(input), mimeType, size });
@@ -30,6 +29,8 @@ export async function create(core: Core, scope: Scope, input: Partial<UploadInfo
     const partSize = effectivePartSize(size, storage.partSize);
     const parts = partsOf({ size, part_size: partSize });
     const { uploadId } = await storage.createUpload(key, { size, mimeType, parts });
+
+    onRollback(s, () => storage.abort(key, uploadId));
 
     // The row reserves the key: `namesIn()` counts unfinished uploads.
     const id = crypto.randomUUID();

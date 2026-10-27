@@ -1,5 +1,4 @@
-import type { Kysely } from "kysely";
-import type { Database } from "../../../db/types.ts";
+import type { Core, Scope } from "../../../cms/runtime/types.ts";
 import { ValidationError } from "../../../errors.ts";
 import type { MediaDoc, MediaUpdate } from "../../../schema/index.ts";
 import { namesIn } from "../../library/names-in.ts";
@@ -20,9 +19,14 @@ export function placeOf(original: MediaDoc, input: MediaUpdate): Place {
  * so a rename that only changes case passes.
  * @throws {ValidationError} `Already used` for a taken name.
  */
-export async function checkFree(db: Kysely<Database>, { folder, filename }: Place, self: MediaDoc) {
+export async function checkFree(
+  core: Core,
+  scope: Scope,
+  { folder, filename }: Place,
+  self: MediaDoc,
+) {
   const isSelf = (name: string) => folder === self.folder && name === self.filename;
-  const taken = (await namesIn(db, folder)).filter((name) => !isSelf(name));
+  const taken = (await namesIn(core, scope, folder)).filter((name) => !isSelf(name));
 
   if (taken.some((name) => name.toLowerCase() === filename.toLowerCase()))
     throw new ValidationError({ filename: "Already used" });

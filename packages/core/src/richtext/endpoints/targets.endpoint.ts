@@ -6,10 +6,10 @@ import { withLocale } from "../../content/locale.ts";
 import { locOf } from "../../content/reads/loc-of.ts";
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
 import { beforeRead, afterRead } from "../../content/lifecycle/run-read-hooks.ts";
-import { col } from "../../content/targets.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import type { RichtextTargets } from "../config/types.ts";
 import { ValidationError } from "../../errors.ts";
-import { decide } from "../../access/rule.ts";
+import { readDecision, canQueryField } from "../../access/read.ts";
 
 /**
  * `GET /admin/richtext/targets`: a bounded title search across collections with public permalinks, within each
@@ -37,8 +37,8 @@ export function richtextTargetsEndpoint(core: Core) {
         Object.keys(entry.fields).find((k) =>
           ["text", "textarea", "slug"].includes(entry.fields[k].type),
         );
-      if (!key) continue;
-      const access = await decide(core, s, col(name), "read", { draft: perspective === "drafts" });
+      if (!key || !(await canQueryField(core, s, collectionTarget(name), key))) continue;
+      const access = await readDecision(core, s, collectionTarget(name));
       if (access === false) continue;
 
       const docs = await findDocs(db, name, {
@@ -49,8 +49,8 @@ export function richtextTargetsEndpoint(core: Core) {
         search: { key, query },
       });
 
-      const before = await beforeRead(core, s, col(name), docs, "read");
-      const after = await afterRead(core, s, col(name), before, "read");
+      const before = await beforeRead(core, s, collectionTarget(name), docs, "read");
+      const after = await afterRead(core, s, collectionTarget(name), before, "read");
 
       results.push({
         collection: name,

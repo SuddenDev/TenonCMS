@@ -1,6 +1,6 @@
 import type { DeleteOptions } from "../../errors.ts";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { col } from "../../content/targets.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import { discard as discardDocument } from "../../content/writes/discard-draft.ts";
 
 export const discard = (
@@ -10,4 +10,4 @@ export const discard = (
   id: string,
   all = false,
   options: DeleteOptions = {},
-) => discardDocument(core, scope, col(collection), id, all, options);
+) => discardDocument(core, scope, collectionTarget(collection), id, all, options);

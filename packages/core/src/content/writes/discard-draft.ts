@@ -1,8 +1,8 @@
 import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Scope } from "../../cms/runtime/types.ts";
-import { type Name } from "../targets.ts";
-import { run } from "../lifecycle/run-operation.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { type ContentTarget } from "../targets.ts";
+import { runOperation } from "../lifecycle/run-operation.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { afterRead } from "../lifecycle/run-read-hooks.ts";
 import { remove } from "./remove-document.ts";
 import { discardGlobalDraft } from "../../db/queries/drafts/discard-global-draft.query.ts";
@@ -24,7 +24,7 @@ import { guard } from "../../access/rule.ts";
 export const discard = (
   core: Core,
   scope: Scope,
-  name: Name,
+  name: ContentTarget,
   id?: string,
   all = false,
   options: DeleteOptions = {},
@@ -32,11 +32,11 @@ export const discard = (
   const loc = locOf(core, { ...scope, fallback: false }, target(core, name));
 
   if (name.kind === "global")
-    return run(core, scope, "setGlobal", name, { global: name.name }, async (s) => {
+    return runOperation(core, scope, "setGlobal", name, { global: name.name }, async (s) => {
       await guard(core, s, name, "update");
       if (loc) return discardLocalized(core, s, name, name.name, loc, all, options);
 
-      const db = await q(core, s);
+      const db = await databaseForScope(core, s);
       await discardGlobalDraft(db, name.name);
 
       const doc = (await loadGlobal(db, name.name)) ?? { publishedAt: null, hasDraft: false };
@@ -44,22 +44,29 @@ export const discard = (
       return (await afterRead(core, s, name, [doc], "setGlobal"))[0];
     });
 
-  return run(core, scope, "update", name, { collection: name.name, id }, async (s, args) => {
-    await guard(core, s, name, "update", { id: args.id });
-    if (loc) return discardLocalized(core, s, name, args.id, loc, all, options);
+  return runOperation(
+    core,
+    scope,
+    "update",
+    name,
+    { collection: name.name, id },
+    async (s, args) => {
+      await guard(core, s, name, "update", { id: args.id });
+      if (loc) return discardLocalized(core, s, name, args.id, loc, all, options);
 
-    const db = await q(core, s);
-    const doc = await loadDoc(db, name.name, args.id, true);
-    if (!doc) return undefined;
+      const db = await databaseForScope(core, s);
+      const doc = await loadDoc(db, name.name, args.id, true);
+      if (!doc) return undefined;
 
-    if (doc.publishedAt === null) {
-      // Part of the discard, which the `update` rule allowed.
-      await remove(core, { ...s, overrideAccess: true }, name.name, args.id, options);
-      return undefined;
-    }
+      if (doc.publishedAt === null) {
+        // Part of the discard, which the `update` rule allowed.
+        await remove(core, { ...s, overrideAccess: true }, name.name, args.id, options);
+        return undefined;
+      }
 
-    const stored = await discardDraft(db, name.name, args.id);
+      const stored = await discardDraft(db, name.name, args.id);
 
-    return (await afterRead(core, s, name, [stored], "update"))[0];
-  });
+      return (await afterRead(core, s, name, [stored], "update"))[0];
+    },
+  );
 };

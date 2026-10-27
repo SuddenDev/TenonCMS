@@ -1,10 +1,10 @@
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { q } from "../../cms/runtime/transaction.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
 import { ValidationError } from "../../errors.ts";
 import { cleanFolder } from "../library/names.ts";
 import { update } from "./update/update.operation.ts";
-import { col } from "../../content/targets.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import { guardAll } from "../../access/rule.ts";
 
 /**
@@ -12,7 +12,7 @@ import { guardAll } from "../../access/rule.ts";
  * rename. `media.access.update` MUST allow without a `where`.
  */
 export async function renameFolder(core: Core, scope: Scope, fromInput: string, toInput: string) {
-  await guardAll(core, scope, col("media"), "update");
+  await guardAll(core, scope, collectionTarget("media"), "update");
   const from = cleanFolder(fromInput);
   const to = cleanFolder(toInput);
   if (!from) throw new ValidationError({ from: "Invalid folder" });
@@ -20,7 +20,7 @@ export async function renameFolder(core: Core, scope: Scope, fromInput: string, 
     throw new ValidationError({ to: "Cannot move a folder into itself" });
 
   // ponytail: loads every media document. Add a SQL prefix filter if libraries grow large.
-  const docs = (await findDocs(await q(core, scope), "media", {})).filter(
+  const docs = (await findDocs(await databaseForScope(core, scope), "media", {})).filter(
     (d) => d.folder === from || String(d.folder).startsWith(`${from}/`),
   );
 

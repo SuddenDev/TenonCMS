@@ -1,11 +1,11 @@
 import { type Inner } from "../../cms/runtime/types.ts";
-import { type Name } from "../targets.ts";
+import { type ContentTarget } from "../targets.ts";
 
 /**
  * Builds the arguments of a hook call.
  * @returns The arguments every hook gets, plus `extra`.
  */
-export function hookArgs<E extends object>(s: Inner, name: Name, extra: E) {
+export function hookArgs<E extends object>(s: Inner, name: ContentTarget, extra: E) {
   return {
     cms: s.cms,
     user: s.user,

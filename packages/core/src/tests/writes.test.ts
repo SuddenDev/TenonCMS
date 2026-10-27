@@ -165,3 +165,23 @@ describe("validation", () => {
     expect(error).toMatchObject({ status: 400, message: expect.stringMatching(/./) });
   });
 });
+
+it("preserves unlocalized fields named like locale metadata across updates", async () => {
+  const cms = defineCms({
+    ...base,
+    media: false,
+    settings: false,
+    collections: {
+      pages: {
+        fields: {
+          locale: { type: "text" },
+          locales: { type: "text" },
+          sharedDraft: { type: "boolean" },
+        },
+      },
+    },
+  });
+  const input = { locale: "custom", locales: "all", sharedDraft: true };
+  const doc = await cms.create("pages", input);
+  expect(await cms.update("pages", doc.id, {})).toMatchObject(input);
+});

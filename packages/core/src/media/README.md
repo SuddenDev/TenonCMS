@@ -12,7 +12,9 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 
 ## Follow a move
 
-`cms.media.update(id, { folder })` enters `operations/update/update.operation.ts`. `placeOf()` (`place.ts`) works out the new folder, filename and key. In one transaction `moveFile()` (`move-file.ts`) checks that the name is free, runs `beforeMove` and moves the file and its variants; then `update()` writes the document and runs `afterMove`. A failed transaction moves the file back with `moveBack()`. `renameFolder()` calls `update()` once per document and reports partial failures.
+`cms.media.update(id, { folder })` enters `operations/update/update.operation.ts`. `placeOf()` (`place.ts`) works out the new folder, filename and key. In one transaction `moveFile()` (`move-file.ts`) checks that the name is free, runs `beforeMove` and moves the file and its variants; then `update()` writes the document and runs `afterMove`. The transaction lifetime registers the inverse move before variants move. Outer rollback reverses moves in order, even after a nested update succeeds. `renameFolder()` calls `update()` once per document and reports partial failures.
+
+Deletion registers `deleteWithVariants()` and `afterDelete` with the same transaction owner. Pending deletions keep their filenames reserved across scopes of the instance in `library/names-in.ts`, so an upload or move cannot overwrite bytes still needed for rollback. Each key is released after its storage cleanup, before its hook runs. Commit hooks receive a fresh API. Upload creation registers resource abort; completion registers abort and file/row cleanup against a live connection after rollback, and schedules prerendering after outer commit using the current document key, or skips it if the document is deleted.
 
 ## Follow a download
 
@@ -40,11 +42,11 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 | `operations/uploads/chunks.ts`                    | Splits bytes or a stream into parts for `upload()`.                                                                |
 | `operations/update/update.operation.ts`           | `alt` changes and moves in one transaction.                                                                        |
 | `operations/update/place.ts`                      | The target place of a file and the free-name check.                                                                |
-| `operations/update/move-file.ts`                  | Moves a file with its variants, and moves it back after a failure.                                                 |
+| `operations/update/move-file.ts`                  | Moves the original, registers its inverse, then moves variants.                                                    |
 | `operations/rename-folder.operation.ts`           | Moves every file of a folder.                                                                                      |
 | `operations/folders.operation.ts`                 | Lists the folders of the files the caller MAY read.                                                                |
 | `operations/download-archive.operation.ts`        | Streams selected originals into a ZIP and cancels the active storage read.                                         |
-| `operations/delete.operation.ts`                  | Deletes the document, then the file and its variants.                                                              |
+| `operations/delete.operation.ts`                  | Deletes the document; schedules files and hooks after outer commit.                                                |
 | `operations/regenerate.operation.ts`              | Brings stored variants in line with the image options.                                                             |
 | `library/names.ts`                                | Filename and folder rules, storage keys, free names and MIME matching. Browser-safe.                               |
 | `library/names-in.ts`                             | Names used by documents and unfinished uploads.                                                                    |
@@ -57,7 +59,7 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 | `variants/remove-orphans.ts`                      | Deletes variants of files that no longer exist.                                                                    |
 | `endpoints/routes.ts`                             | Groups the routes: `files` before the caller lookup, `reads` and `writes` behind it.                               |
 | `endpoints/*.endpoint.ts`                         | One Hono sub-app per capability.                                                                                   |
-| `endpoints/serve-file.ts`                         | Document lookup by key, range responses and the sandbox headers of every served file.                              |
+| `endpoints/serve-file.ts`                         | Range responses and the sandbox headers of every served file.                                                      |
 | `endpoints/request-context.ts`                    | Body parsing and the user scope.                                                                                   |
 | `storage/types.ts`                                | Storage adapter contract.                                                                                          |
 | `storage/local/index.ts`                          | `local()`, `integral-cms/media/local`: file reads, writes, moves and listing.                                      |

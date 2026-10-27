@@ -1,6 +1,6 @@
 import type { Core, Inner } from "../../cms/runtime/types.ts";
-import { q } from "../../cms/runtime/transaction.ts";
-import { col } from "../../content/targets.ts";
+import { databaseForScope } from "../../cms/runtime/transaction.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import { locOf } from "../../content/reads/loc-of.ts";
 import { beforeRead, afterRead } from "../../content/lifecycle/run-read-hooks.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
@@ -9,7 +9,7 @@ import { decorate } from "../../media/images/decorate.ts";
 import { richtextReferences } from "../runtime/walk.ts";
 import { safeRichtextUrl } from "../runtime/validation.ts";
 import type { RichtextDocument } from "../config/types.ts";
-import { decide, matches } from "../../access/rule.ts";
+import { readDecision, admittedRows } from "../../access/read.ts";
 
 /** Resolves one rich text field across all owners, with one load per target collection. */
 export async function resolveRichtext(core: Core, scope: Inner, values: RichtextDocument[]) {
@@ -25,20 +25,20 @@ export async function resolveRichtext(core: Core, scope: Inner, values: Richtext
 
   const resolved = new Map<string, Record<string, any>>();
   const urls = new Map<string, string | null>();
-  const db = await q(core, scope);
+  const db = await databaseForScope(core, scope);
 
   for (const [collection, ids] of groups) {
     const entry = core.schema.collections[collection];
     if (!entry) continue;
 
     const drafts = scope.perspective === "drafts";
-    const access = await decide(core, scope, col(collection), "read", { draft: drafts });
+    const access = await readDecision(core, scope, collectionTarget(collection));
     if (access === false) continue;
     const loaded = await loadByIds(db, collection, [...ids], drafts, locOf(core, scope, entry));
-    const docs = access === true ? loaded : loaded.filter((d) => matches(d, access));
+    const docs = admittedRows(access, loaded);
 
-    const before = await beforeRead(core, scope, col(collection), docs, "read");
-    const after = await afterRead(core, scope, col(collection), before, "read");
+    const before = await beforeRead(core, scope, collectionTarget(collection), docs, "read");
+    const after = await afterRead(core, scope, collectionTarget(collection), before, "read");
 
     for (const doc of after) {
       const key = `${collection}:${doc.id}`;

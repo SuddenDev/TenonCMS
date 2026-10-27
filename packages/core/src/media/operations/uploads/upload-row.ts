@@ -1,6 +1,6 @@
 import type { Kysely, Selectable } from "kysely";
 import type { Core, Scope } from "../../../cms/runtime/types.ts";
-import { q } from "../../../cms/runtime/transaction.ts";
+import { databaseForScope } from "../../../cms/runtime/transaction.ts";
 import type { Database } from "../../../db/types.ts";
 
 // An upload takes four steps, each its own request: `create`, `putPart` per part (proxied storage only), then
@@ -14,7 +14,7 @@ export const DAY = 24 * 60 * 60 * 1000;
 
 /** The upload `id` of the scope's user, or `undefined` for an unknown, expired or foreign one. */
 export async function findUpload(core: Core, scope: Scope, id: string) {
-  const db = await q(core, scope);
+  const db = await databaseForScope(core, scope);
   const row = await db
     .selectFrom("cms_uploads")
     .selectAll()

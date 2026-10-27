@@ -1,7 +1,7 @@
 import type { DeleteOptions } from "../../errors.ts";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { col } from "../../content/targets.ts";
-import { run } from "../../content/lifecycle/run-operation.ts";
+import { collectionTarget } from "../../content/targets.ts";
+import { runOperation } from "../../content/lifecycle/run-operation.ts";
 import { remove } from "../../content/writes/remove-document.ts";
 
 export async function deleteDocument(
@@ -11,7 +11,12 @@ export async function deleteDocument(
   id: string,
   options: DeleteOptions = {},
 ) {
-  return run(core, scope, "delete", col(collection), { collection, id }, (s, args) =>
-    remove(core, s, collection, args.id, options),
+  return runOperation(
+    core,
+    scope,
+    "delete",
+    collectionTarget(collection),
+    { collection, id },
+    (s, args) => remove(core, s, collection, args.id, options),
   );
 }

@@ -1,7 +1,7 @@
 import type { CmsUser } from "../admin/index.d.ts";
 import type { Core, Inner, Perspective } from "../cms/runtime/types.ts";
 import { inner, outerScope } from "../cms/runtime/operation-context.ts";
-import { col, glob } from "../content/targets.ts";
+import { collectionTarget, globalTarget } from "../content/targets.ts";
 import { hookArgs } from "../content/lifecycle/hook-args.ts";
 import type { Fields } from "../schema/index.ts";
 import { fieldAllowed } from "./field-access.ts";
@@ -28,8 +28,8 @@ export async function withPermissions(
   const draft = perspective === "drafts";
 
   const entries = [
-    ...Object.entries(core.schema.collections).map(([n, e]) => [col(n), e] as const),
-    ...Object.entries(core.schema.globals).map(([n, e]) => [glob(n), e] as const),
+    ...Object.entries(core.schema.collections).map(([n, e]) => [collectionTarget(n), e] as const),
+    ...Object.entries(core.schema.globals).map(([n, e]) => [globalTarget(n), e] as const),
   ];
   for (const [name, entry] of entries) {
     const target = out[`${name.kind}s`][name.name];
