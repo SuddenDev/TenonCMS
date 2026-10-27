@@ -1,0 +1,136 @@
+# Media
+
+Every instance has a media library: uploads into folders, `image` and `file` fields, and responsive images. Files live on the local disk or in S3 (any S3-compatible service, R2 included).
+
+## Setup
+
+Without a `media` option, or with `media: true`, files go to `./.uploads` and images get WebP variants at quality 85, rendered at upload. That is `local({ dir: resolve('.uploads') })` and `ipx({ prerender: true })`. `media: false` turns the library off.
+
+For your own storage, limits or images, pass an object:
+
+```ts
+import { defineCms } from "integral-cms";
+import { local } from "integral-cms/media/local";
+import { ipx } from "integral-cms/media/ipx";
+
+export default defineCms({
+  // ...
+  media: {
+    storage: local({ dir: "/var/lib/my-site/uploads" }),
+    maxSize: 5 * 1024 ** 3,
+    accept: ["image/*", "video/*", "application/pdf"],
+    images: {
+      provider: ipx(),
+      presets: { avatar: { width: 128, height: 128, fit: "cover" } },
+    },
+    hooks: { afterUpload: [scan] },
+  },
+});
+```
+
+| Option                            | Default                        | What it does                                       |
+| --------------------------------- | ------------------------------ | -------------------------------------------------- |
+| `storage`                         | required                       | `local()` or `s3()`, or your own adapter           |
+| `maxSize`                         | 100 MB                         | Largest accepted file                              |
+| `accept`                          | all types                      | Allowed MIME types, `type/*` wildcards allowed     |
+| `images`                          | `false`                        | Responsive variants, or `false` for originals only |
+| `images.provider`                 | required with `images`         | `ipx()`, `cloudflare()`, or your own               |
+| `images.format`, `images.quality` | `'webp'`, `85`                 | Default modifiers                                  |
+| `images.sizes`                    | `[320, 640, 1024, 1536, 1920]` | Widths for `srcset`                                |
+| `images.presets`                  | `{}`                           | Named modifier sets                                |
+| `images.maxSize`                  | 50 MB                          | Larger images get dimensions but no variants       |
+| `hooks`                           | none                           | Media hooks, see [below](#media-hooks)             |
+
+- With `media: false`, core adds no routes, and `image` and `file` fields throw at startup.
+- `media` is a reserved collection, plugin and route name.
+- `nuxt preview` runs the server from inside `.output/`, so a relative `./.uploads` lands in the build output. Pass an absolute `dir` there, as the Nuxt example does.
+- On Cloudflare Workers (the `workerd` export condition), `integral-cms/media/local`, `integral-cms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `s3()` and `cloudflare()`.
+
+## Image and file fields
+
+Fields store the media id like a relation, and reads resolve it:
+
+```ts
+hero: { type: 'image', required: true, image: { sizes: [800, 1600], quality: 70 } },
+avatar: { type: 'image', maxSize: 2 * 1024 ** 2, image: { preset: 'avatar' } },
+gallery: { type: 'image', many: true, onDelete: 'set-null' },
+attachments: { type: 'file', many: true, accept: ['application/pdf'] },
+download: { type: 'file', folder: 'downloads' },
+```
+
+- A populated `image` has `url` (the original), `src`, `srcset`, `width`, `height`, `alt`, `mimeType`, `size`, `folder`, `filename` and `key`. A `file` is the same without `src`, `srcset` and the dimensions. With `populate: false` both are ids.
+- `src` and `srcset` come from the field's `image` options: `images.format` and `quality`, then the preset, then the field's own modifiers. Widths at or above the original's are dropped. A fixed `width` without `sizes` gives `1x` / `2x`.
+- `accept` and `maxSize` are checked on write against the file (400 on the field). An `image` field takes `image/*` only.
+- `onDelete` defaults to `'restrict'`: deleting a used file is a 409 with `references`. `'set-null'` is allowed, `'cascade'` is not.
+- `folder` is where "Upload new" in the admin uploads to.
+- `populate` and `select` take `true` on an image or file, nothing deeper.
+
+## The media API
+
+Media documents live in the `media` collection. Read them with `find('media')` or `GET /api/cms/collections/media`. Write them only through the media API. Collection and root hooks do not run for `media`.
+
+```ts
+const doc = await cms.media.upload(bytes, {
+  folder: "blog",
+  filename: "hero.jpg",
+  mimeType: "image/jpeg",
+});
+await cms.media.update(doc.id, { alt: "Harbour at dusk" });
+await cms.media.update(doc.id, { folder: "blog/2026" }); // moves the file
+await cms.media.renameFolder("blog", "news");
+await cms.media.delete(doc.id);
+```
+
+`client.media` has the same methods over HTTP, plus `folders()`. `client.media.upload(file, { folder, onProgress, signal })` uploads in parts, 4 at a time, and retries a failed part 3 times. The admin uses it, and a site MAY use it too.
+
+- A name that is taken gets a counter on upload (`hero-1.jpg`). A rename never does: a taken name is 400 `Already used`. Names compare case-insensitively.
+- Folders are the `folder` strings of their files. A folder exists while it holds a file.
+- Storage changes first, then the database, then storage cleanup. A failure leaves at most a stray file, never a document without its file.
+
+## Storage
+
+### Local disk
+
+`local({ dir, partSize = 16 MB, baseUrl? })` keeps files in `dir`, one folder per media folder. Core serves them at `/api/cms/media/files/<key>` (with `Range` support). Set `baseUrl` when your web server serves `dir` itself.
+
+- It needs a persistent disk: Node, Bun or Deno on a server. It does not suit Workers or ephemeral serverless filesystems.
+- Parts go through your server. **Every part is one request of up to `partSize`**, so a reverse proxy's body limit (nginx `client_max_body_size`) MUST be larger than `partSize`.
+
+### S3 and R2
+
+`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl, partSize = 16 MB })` signs with `aws4fetch` (install it), so it runs on Node and Workers. The browser uploads parts straight to the bucket. `publicUrl` is where the bucket is public.
+
+- Bucket CORS MUST allow `PUT` from the admin origin and expose the `ETag` header. Without `ETag` an upload fails with a message that names the CORS setting.
+- Add a lifecycle rule that aborts incomplete multipart uploads after one day.
+- R2: `region: 'auto'`, `endpoint: 'https://<account>.r2.cloudflarestorage.com'`.
+- MinIO: `endpoint: 'http://localhost:9000'` (`docker run -p 9000:9000 minio/minio server /data`).
+
+Unfinished uploads are aborted after 24 hours. An upload can have up to 10 000 parts, and the part size grows for larger files.
+
+## Image providers
+
+- **`ipx({ prerender? })`** from `integral-cms/media/ipx` (`ipx` and sharp come with integral-cms): core renders variants on first request at `/api/cms/media/img/<modifiers>/<key>` and stores them under `.variants/<key>/`. Only modifier sets your config can produce are served. `prerender: true` renders them all right after upload.
+- **`cloudflare()`** from `integral-cms/media/cloudflare`: URLs for Cloudflare's image transformations (`/cdn-cgi/image/...`) on your zone. Core renders nothing.
+- **Your own**: an object with `getImage(src, modifiers)` that returns `{ url }`, for imgproxy, Bunny or Vercel. Add `render(key, modifiers, storage)` if core should serve the variants.
+
+SVG and images above `images.maxSize` get the original as `src` and an empty `srcset`.
+
+### After changing image options
+
+Run `cms.media.regenerate()`, or "Regenerate variants" on the admin's Media page. It deletes stored variants the options no longer produce and, with `prerender`, renders missing ones. `force: true` re-renders all of them, for example after a sharp upgrade. `POST /api/cms/media/:id/regenerate` does one file.
+
+It exists only for providers with `render`. With `cloudflare()` nothing is stored, and new URLs take effect on their own.
+
+## Media hooks
+
+Set them in `media.hooks`, or on plugins as `mediaHooks`. The host's run first, then each plugin's. They receive `cms` and `user` and run in the operation's transaction, except `afterDelete`.
+
+| Hook                           | When                          | Gets                                             | Can                                                   |
+| ------------------------------ | ----------------------------- | ------------------------------------------------ | ----------------------------------------------------- |
+| `beforeUpload`                 | before any bytes              | `data`: `folder`, `filename`, `mimeType`, `size` | return changed `folder` / `filename`; throw to reject |
+| `afterUpload`                  | file stored, document created | `doc`, `read()`                                  | throw to delete document and file                     |
+| `beforeChange` / `afterChange` | `alt` edits                   | `data` / `doc`                                   | change data; react                                    |
+| `beforeMove` / `afterMove`     | filename or folder change     | `doc`, `from`, `to`                              | throw to block; react, for example purge a CDN        |
+| `beforeDelete` / `afterDelete` | delete                        | `doc`                                            | throw to block; react after the file is gone          |
+
+`read()` streams the file from storage. With S3 it costs a GET.
