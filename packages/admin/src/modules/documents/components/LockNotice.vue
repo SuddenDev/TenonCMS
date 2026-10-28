@@ -5,9 +5,11 @@ import {
   Item,
   ItemContent,
   ItemTitle,
+  ItemMedia,
   ItemDescription,
   ItemActions,
 } from "@/shared/components/ui/item";
+import Icon from "@/shared/components/Icon.vue";
 
 // `holder`: the user who holds the edit lock. `lost`: they took it over from this user.
 defineProps<{ holder: { name: string }; lost: boolean }>();
@@ -17,6 +19,12 @@ const { t } = useI18n();
 
 <template>
   <Item variant="outline" class="mt-4 border-amber-500/30 bg-amber-500/10">
+    <ItemMedia
+      variant="icon"
+      class="size-10 rounded-[6px] border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:border-amber-500/30 dark:bg-amber-500/5 dark:text-amber-500"
+    >
+      <Icon name="circle-alert" class="text-base" />
+    </ItemMedia>
     <ItemContent>
       <ItemTitle>{{ t("documents.conflictHeadline") }}</ItemTitle>
       <ItemDescription>
