@@ -28,6 +28,7 @@ Server code   ---------> scoped local API ---^
 - `defineCms()` builds everything inside a closure. There is no global state, so several instances can coexist.
 - Config is assembled in a fixed order: merge plugins, add the settings globals, add media, then check the whole schema. Invalid config throws at startup.
 - Database and auth are lazy. Nothing connects at import time, and the secret is checked on first auth use, so public pages keep working with a bad config.
+- `withDatabase(cms, database)` builds a copy of the instance on another database, with its own connection, migrations, auth and HTTP app. Schema, options, media and email stay shared. The Cloudflare adapter gives each Durable Object a copy bound to its storage.
 
 ## Module map
 
@@ -51,7 +52,7 @@ Server code   ---------> scoped local API ---^
 | `plugins/`                     | The plugin contract                                                |
 | `presets/`, `helpers/`         | Ready-made fields and hooks; small helpers such as `seoMeta()`     |
 | `admin/`                       | The contract between core and the admin app                        |
-| `integrations/`                | Astro, Nuxt and Vite adapters                                      |
+| `integrations/`                | Astro, Nuxt, Vite and Cloudflare adapters                          |
 | `tests/`                       | The integration suite                                              |
 
 Group by feature, not by technical layer. Inside a feature, split into config, endpoints, operations and queries only where each really exists.

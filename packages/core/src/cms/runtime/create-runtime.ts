@@ -3,7 +3,7 @@ import { authOptions, type CoreAuth } from "../../auth/config/build-options.ts";
 import type { AuthOptions } from "../../auth/config/options.ts";
 import { apiKeyCaller } from "../../auth/api-key-caller.ts";
 import { createAuth } from "../../auth/create-auth.ts";
-import { createDb } from "../../db/create-db.ts";
+import { createDb, type DatabaseOptions } from "../../db/create-db.ts";
 import { migrate } from "../../db/migrations/migrate.ts";
 import { syncLocalized } from "../../db/migrations/sync-localized.ts";
 
@@ -13,7 +13,7 @@ type Session = {
 
 /**
  * Create the database and auth of the CMS. Both are lazy and nothing connects at import time.
- * @param database The database url and token
+ * @param database The libsql url and token, or a Kysely dialect
  * @param secret The secret of better-auth, checked when auth is first used
  * @param host The host's better-auth options
  * @param localized The localized keys of every `collection:<name>` / `global:<name>` (`null` when not localized) and the
@@ -23,24 +23,28 @@ type Session = {
  * `getSession()` reads the session of a request's headers. `getApiKey()` verifies an API key.
  */
 export function createRuntime<A extends AuthOptions>(
-  database: { url: string; authToken?: string },
+  database: DatabaseOptions,
   secret: string,
   host: A,
   localized: { current: Record<string, string[] | null>; defaultLocale: string },
   coreAuth?: CoreAuth,
 ) {
-  // The same promise serves every call, so the database opens and migrates once.
+  // The same promise serves every call, so the database opens and migrates once. A failed attempt is dropped, so the
+  // next call tries again.
   let connection:
     | Promise<{ db: ReturnType<typeof createDb>; options: ReturnType<typeof authOptions<A>> }>
     | undefined;
   const connect = () =>
     (connection ??= (async () => {
-      const db = createDb(database.url, database.authToken);
+      const db = createDb(database);
       const options = authOptions(db, secret, host, coreAuth);
       await migrate(db, options);
       await syncLocalized(db, localized.current, localized.defaultLocale);
       return { db, options };
-    })());
+    })().catch((error: unknown) => {
+      connection = undefined;
+      throw error;
+    }));
 
   const db = async () => (await connect()).db;
 

@@ -20,6 +20,8 @@ export type Options = AdapterOptions & {
 /**
  * Astro integration for integral-cms. Injects `/api/cms`, the admin page and the preview runtime, and sets
  * `Astro.locals.integral` to the CMS instance of the request's user.
+ * With the `@astrojs/cloudflare` adapter, the CMS runs in a Durable Object bound as `CMS`: `/api/cms` goes to it, and
+ * `Astro.locals.integral` is the HTTP client over it.
  * @example
  * // astro.config.mjs
  * integrations: [integralCms({ admin: '/cms' })]
@@ -30,6 +32,7 @@ export default function integralCms({
   preview = true,
 }: Options = {}): AstroIntegration {
   let entryPath: string;
+  let cloudflare = false;
   return {
     name: "integral-cms",
     hooks: {
@@ -42,10 +45,12 @@ export default function integralCms({
         updateConfig,
       }) {
         entryPath = fileURLToPath(new URL(entry, config.root));
+        cloudflare = config.adapter?.name === "@astrojs/cloudflare";
+        const runtime = cloudflare ? "./cloudflare/" : "./";
 
         injectRoute({
           pattern: `${API_BASE}/[...path]`,
-          entrypoint: new URL("./route.ts", import.meta.url),
+          entrypoint: new URL(`${runtime}route.ts`, import.meta.url),
           prerender: false,
         });
 
@@ -66,7 +71,10 @@ export default function integralCms({
           );
         }
 
-        addMiddleware({ entrypoint: new URL("./middleware.ts", import.meta.url), order: "pre" });
+        addMiddleware({
+          entrypoint: new URL(`${runtime}middleware.ts`, import.meta.url),
+          order: "pre",
+        });
 
         updateConfig({
           vite: {
@@ -75,15 +83,21 @@ export default function integralCms({
             define: faviconDefine(fileURLToPath(config.publicDir)),
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.
             // Dev does not bundle. Keeping core internal there lets Vite reload it when `dist/` changes.
-            ssr: command === "dev" ? {} : { external: ["integral-cms"] },
+            // Workers have no native bindings and MUST bundle core.
+            ssr: command === "dev" || cloudflare ? {} : { external: ["integral-cms"] },
           },
         });
+      },
+
+      // Every wake of the CMS object parses the bundle again. Vite leaves server code unminified by default.
+      "astro:build:setup"({ vite, target }) {
+        if (cloudflare && target === "server") vite.build = { ...vite.build, minify: true };
       },
 
       "astro:config:done"({ injectTypes }) {
         // Astro's type injection takes a string. This is the only generated code.
         const module = JSON.stringify(entryPath.replace(/\.[cm]?[jt]s$/, ""));
-        injectTypes({ filename: "types.d.ts", content: appTypes(module) });
+        injectTypes({ filename: "types.d.ts", content: appTypes(module, cloudflare) });
         injectTypes({ filename: "config.d.ts", content: configTypes(module) });
       },
     },
@@ -92,11 +106,13 @@ export default function integralCms({
 
 // Types `Astro.locals.integral`, `locale`, `path` and the client's `Register`.
 // `export {}` makes it a module, so `declare module` augments the client instead of replacing it.
-function appTypes(module: string) {
+function appTypes(module: string, cloudflare: boolean) {
+  const cms = `typeof import(${module}).default`;
+  const integral = cloudflare ? `import('integral-cms/client').Client<${cms}>` : cms;
   return `declare global {
   namespace App {
     interface Locals {
-      integral: typeof import(${module}).default
+      integral: ${integral}
       locale: import('integral-cms/client').Locale<typeof import(${module}).default> | undefined
       path: string
     }

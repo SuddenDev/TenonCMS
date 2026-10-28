@@ -6,7 +6,7 @@ import { migrator } from "./cms.ts";
 import { syncLocalized } from "./sync-localized.ts";
 
 async function tmpDb() {
-  const db = createDb(":memory:");
+  const db = createDb({ url: ":memory:" });
   const { error } = await migrator(db).migrateToLatest();
   if (error) throw error;
   return db;

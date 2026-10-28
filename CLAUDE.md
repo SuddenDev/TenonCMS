@@ -7,7 +7,7 @@ Packages:
 - `packages/core` publishes as `integral-cms`
 - `packages/plugins` (private): the bundled plugins
 - `packages/admin` (private): the Vue admin
-- `examples/{astro,nuxt,tanstack-start,standalone}`
+- `examples/{astro,nuxt,tanstack-start,standalone,cloudflare}`
 
 ## Where to look
 
@@ -25,7 +25,7 @@ Read the doc for an area before you change it. Update it in the same change.
 | Plugins                                                | [docs/dev/plugins.md](docs/dev/plugins.md)                   |
 | Live preview, admin bar                                | [docs/dev/preview.md](docs/dev/preview.md)                   |
 | Admin (core contract and Vue app)                      | [docs/dev/admin.md](docs/dev/admin.md)                       |
-| Astro, Nuxt, Vite adapters                             | [docs/dev/integrations.md](docs/dev/integrations.md)         |
+| Astro, Nuxt, Vite, Cloudflare adapters                 | [docs/dev/integrations.md](docs/dev/integrations.md)         |
 | Examples                                               | [docs/dev/examples.md](docs/dev/examples.md)                 |
 | Why it is built this way                               | [docs/dev/design-decisions.md](docs/dev/design-decisions.md) |
 | Known traps (check when something behaves strangely)   | [docs/dev/gotchas.md](docs/dev/gotchas.md)                   |
@@ -57,6 +57,7 @@ Read the doc for an area before you change it. Update it in the same change.
 - `packages/core/src/tests/*.test.ts` is the integration suite, one file per area (`access`, `drafts`, `media`, `richtext` and so on; list the folder). Add HTTP behavior there.
   - Each test builds a real `defineCms()` on `:memory:` libsql and drives it through `createClient()`.
   - `setup.ts` has the shared schema and helpers: `fresh()`, `relational()`, `seed()`, `localized()` / `seeded()`, `withMedia()`. `fixtures.ts` has tiny images.
+- `*.workerd.test.ts` runs in workerd (Vitest project `workerd`), inside the Worker of `src/tests/workerd/`. `tsc` skips these files, because the Workers types clash with the DOM and Node types.
 - Examples and adapters have no tests yet. Verify them with the [smoke tests](docs/dev/smoke-tests.md).
 
 ## Rules that apply everywhere

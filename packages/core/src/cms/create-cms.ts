@@ -29,6 +29,7 @@ import { defaultMedia } from "integral-cms/media/default";
 import { mediaCollection } from "../media/config/collection.ts";
 import { localizedKeys } from "../schema/traversal/localized-fields.ts";
 import { createRuntime } from "./runtime/create-runtime.ts";
+import type { DatabaseOptions } from "../db/create-db.ts";
 import type { Caller, Core } from "./runtime/types.ts";
 import { outerScope } from "./runtime/operation-context.ts";
 import { createEmail } from "../email/create-email.ts";
@@ -143,56 +144,76 @@ export function defineCms<
     ]),
     ...Object.entries<Global>(schema.globals).map(([n, e]): [string, Global] => [`global:${n}`, e]),
   ];
-  const email = createEmail(emailOptions);
-  const { db, auth, getSession, getApiKey } = createRuntime<A>(
-    database,
-    secret,
-    host,
-    {
-      current: Object.fromEntries(
-        entries.map(([id, e]) => [id, e.localized ? localizedKeys(e) : null]),
-      ),
-      defaultLocale: localization?.defaultLocale ?? "",
-    },
-    {
-      email: emailOptions && { api: email, templates: emailOptions.templates },
-      // Without `site`, better-auth falls back to the host of its `baseURL`, else `localhost`.
-      relyingParty: {
-        rpID: site && new URL(site).hostname,
-        rpName: adminRuntime.descriptor.name ?? "integral-cms",
-      },
-      roles,
-    },
-  );
 
-  const core: Core = {
-    schema,
-    plugins,
-    rootHooks,
-    populate: populateOption,
-    localization,
-    db,
-    auth,
-    getSession,
-    getApiKey,
-    email,
-    emailTemplates: emailOptions && { ...emailTemplates, ...emailOptions.templates },
-    roles,
-    localApi: (scope) => createLocalApi(core, scope),
-    media: mediaOptions && createMediaCore(mediaOptions, schema),
-    admin: adminRuntime,
+  // localization
+  const localized = {
+    current: Object.fromEntries(
+      entries.map(([id, e]) => [id, e.localized ? localizedKeys(e) : null]),
+    ),
+    defaultLocale: localization?.defaultLocale ?? "",
   };
+
+  // email service
+  const email = createEmail(emailOptions);
+
+  // auth
+  const coreAuth = {
+    email: emailOptions && { api: email, templates: emailOptions.templates },
+    // Without `site`, better-auth falls back to the host of its `baseURL`, else `localhost`.
+    relyingParty: {
+      rpID: site && new URL(site).hostname,
+      rpName: adminRuntime.descriptor.name ?? "integral-cms",
+    },
+    roles,
+  };
+
+  // media
+  const media = mediaOptions && createMediaCore(mediaOptions, schema);
+
+  /** The part of an instance bound to one database: connection, auth and the HTTP app. */
+  function bindDatabase(database: DatabaseOptions) {
+    const { db, auth, getSession, getApiKey } = createRuntime<A>(
+      database,
+      secret,
+      host,
+      localized,
+      coreAuth,
+    );
+
+    const core: Core = {
+      schema,
+      plugins,
+      rootHooks,
+      populate: populateOption,
+      localization,
+      db,
+      auth,
+      getSession,
+      getApiKey,
+      email,
+      emailTemplates: emailOptions && { ...emailTemplates, ...emailOptions.templates },
+      roles,
+      localApi: (scope) => createLocalApi(core, scope),
+      media,
+      admin: adminRuntime,
+    };
+    return { core, auth, app: createApp(core, site) };
+  }
 
   /* ── Instance ──────────────────────────────────────────────────────────────────────── */
 
-  const app = createApp(core, site);
-
   /**
    * The instance for one caller.
+   * @param bound The database part from `bindDatabase()`.
    * @param visitor The user or API key hooks get, none for server code, and which version of documents reads return.
    * @param overrideAccess Whether the access rules are skipped: server code skips them, `withSession()` does not.
    */
-  function createInstance(visitor: Caller, overrideAccess: boolean) {
+  function createInstance(
+    bound: ReturnType<typeof bindDatabase>,
+    visitor: Caller,
+    overrideAccess: boolean,
+  ) {
+    const { core, auth, app } = bound;
     return {
       schema: schema as unknown as T,
       auth,
@@ -204,7 +225,7 @@ export function defineCms<
 
       /** Returns a copy whose reads include drafts. */
       withDrafts<S>(this: S): S {
-        return createInstance({ ...visitor, perspective: "drafts" }, overrideAccess) as S; // (`<S>(this: S): S` here and on `withSession` avoids TS2589.)
+        return createInstance(bound, { ...visitor, perspective: "drafts" }, overrideAccess) as S; // (`<S>(this: S): S` here and on `withSession` avoids TS2589.)
       },
 
       /**
@@ -212,7 +233,7 @@ export function defineCms<
        * with the preview cookie.
        */
       async withSession<S>(this: S, request: Request): Promise<S> {
-        return createInstance(await caller(core, request), false) as S;
+        return createInstance(bound, await caller(core, request), false) as S;
       },
 
       /** Handles `/api/cms` requests. Mount it in any framework that speaks Request/Response. */
@@ -222,10 +243,11 @@ export function defineCms<
     };
   }
 
-  return createInstance({ user: null, perspective: "published" }, true) as ReturnType<
-    typeof createInstance
-  > &
-    MediaOf<M>;
+  const root = (database: DatabaseOptions) =>
+    createInstance(bindDatabase(database), { user: null, perspective: "published" }, true);
+  const cms = root(database);
+  copies.set(cms, root);
+  return cms as ReturnType<typeof createInstance> & MediaOf<M>;
 }
 
 export type Cms<T extends Schema> = ReturnType<
@@ -240,3 +262,19 @@ export type Cms<T extends Schema> = ReturnType<
     string
   >
 >;
+
+// The instance of each `defineCms()` call, mapped to how it builds a copy on another database.
+const copies = new WeakMap<object, (database: DatabaseOptions) => object>();
+
+/**
+ * A copy of `cms` on another database, with its own connection, migrations and auth. Schema and options stay shared.
+ * The Durable Object adapter binds each object's storage this way.
+ * @param cms The instance that `defineCms()` returns, not one from `withSession()` or `withDrafts()`.
+ * @returns A server instance, like the one `defineCms()` returns.
+ */
+export function withDatabase<C extends object>(cms: C, database: DatabaseOptions): C {
+  const copy = copies.get(cms);
+  if (!copy)
+    throw new Error("integral-cms: `withDatabase()` takes the instance from `defineCms()`");
+  return copy(database) as C;
+}

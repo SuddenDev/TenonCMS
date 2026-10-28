@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
@@ -10,10 +10,13 @@
     "paths": {
       "integral-cms": ["./src/index.ts"],
       "integral-cms/richtext": ["./src/richtext/index.ts"],
+      "integral-cms/cloudflare": ["./src/integrations/cloudflare/index.ts"],
       "integral-cms/admin": ["./src/admin/config.ts"],
       "integral-cms/media/default": ["./src/media/default.ts"],
       "integral-cms/admin/bar": ["./src/admin/bar.d.ts"]
     }
   },
-  "include": ["src", "env.d.ts"]
+  "include": ["src", "env.d.ts"],
+  // They need the Workers types, which clash with the DOM and Node types of the rest. Vitest runs them unchecked.
+  "exclude": ["src/**/*.workerd.test.ts", "src/tests/workerd"]
 }

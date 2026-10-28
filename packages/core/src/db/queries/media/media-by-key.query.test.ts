@@ -6,7 +6,7 @@ import { insertDoc } from "../documents/insert-document.query.ts";
 import { mediaByKey, mediaKeyQuery } from "./media-by-key.query.ts";
 
 it("keeps media keys unique and finds them through the index", async () => {
-  const db = createDb(":memory:");
+  const db = createDb({ url: ":memory:" });
   await migrate(db, { database: { db, type: "sqlite" } });
   const file = { key: "a/x.png", filename: "x.png" };
   const doc = await insertDoc(db, "media", file, null);

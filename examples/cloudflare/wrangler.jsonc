@@ -1,0 +1,30 @@
+{
+  "name": "integral-cms-example",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-10-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CMS",
+        "class_name": "CmsObject",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["CmsObject"],
+    },
+  ],
+  // `wrangler deploy` creates the bucket when it is missing. Local dev simulates it.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "integral-cms-example-media",
+    },
+  ],
+  "images": {
+    "binding": "IMAGES",
+  },
+}

@@ -6,6 +6,7 @@ import type { MediaOptions } from "../../media/config/options.ts";
 import type { Plugin } from "../../plugins/index.ts";
 import type { settings } from "../../presets/settings.ts";
 import type { RoleOptions } from "../../users/roles.ts";
+import type { DatabaseOptions } from "../../db/create-db.ts";
 import type { CheckRefs, Collection, Global, MediaApi, RootHooks } from "../../schema/index.ts";
 
 export type PopulateOptions = {
@@ -120,7 +121,8 @@ export type CmsOptions<
   plugins?: PL;
   /** Defaults for reads that resolve relations. */
   populate?: P;
-  database: { url: string; authToken?: string };
+  /** The libsql database, or a host-given Kysely dialect. */
+  database: DatabaseOptions;
   /** Secret for signing sessions. MUST be at least 32 random characters in production. */
   secret: string;
   // `& AuthOptions` types hook parameters. Inference alone leaves them `any`.

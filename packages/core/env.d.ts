@@ -9,6 +9,17 @@ declare module "#integral/config" {
   export default cms;
 }
 
+// The Workers runtime, with the binding of the CMS object.
+declare module "cloudflare:workers" {
+  export const env: {
+    CMS: {
+      getByName(
+        name: string,
+      ): import("./src/integrations/cloudflare/object-client.ts").DurableObjectStub;
+    };
+  };
+}
+
 declare module "#app" {
   export * from "nuxt/app";
 }

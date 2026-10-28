@@ -5,7 +5,7 @@ import { migrate } from "./migrate.ts";
 import { migrator } from "./cms.ts";
 
 it("runs CMS migrations once", async () => {
-  const db = createDb(":memory:");
+  const db = createDb({ url: ":memory:" });
   const auth = { database: { db, type: "sqlite" as const } };
   await migrate(db, auth);
   await migrate(db, auth);
@@ -30,7 +30,7 @@ it("runs CMS migrations once", async () => {
 });
 
 it("backfills published_at with updated_at", async () => {
-  const db = createDb(":memory:");
+  const db = createDb({ url: ":memory:" });
   const { error } = await migrator(db).migrateTo("003_cms_media_key");
   if (error) throw error;
   await sql`INSERT INTO cms_documents (id, collection, data, created_at, updated_at)
@@ -48,7 +48,7 @@ it("backfills published_at with updated_at", async () => {
 });
 
 it("adds the authors of a document, empty for existing rows", async () => {
-  const db = createDb(":memory:");
+  const db = createDb({ url: ":memory:" });
   const { error } = await migrator(db).migrateTo("006_cms_invites");
   if (error) throw error;
   await sql`INSERT INTO cms_documents (id, collection, data, created_at, updated_at)

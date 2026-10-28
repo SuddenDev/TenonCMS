@@ -52,7 +52,7 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `library/names-in.ts`                             | Names used by documents and unfinished uploads.                                                                    |
 | `library/selection.ts`                            | Folder containment, recursive file selection and move destinations. Browser-safe.                                  |
 | `images/`                                         | Provider types, modifiers, variant selection, allowlist, `/img` path parsing and URL decoration.                   |
-| `images/ipx.ts`, `images/cloudflare.ts`           | Providers; `integral-cms/media/ipx` and `integral-cms/media/cloudflare`.                                           |
+| `images/ipx.ts`, `images/cloudflare.ts`           | Providers; `integral-cms/media/ipx` and `integral-cms/media/cloudflare` (Images binding or `/cdn-cgi/image` URLs). |
 | `variants/keys.ts`                                | Variant key layout and listing.                                                                                    |
 | `variants/render-variants.ts`                     | Renders and stores one or many variants.                                                                           |
 | `variants/move-variants.ts`, `delete-variants.ts` | Moves or deletes a file with its variants.                                                                         |
@@ -69,6 +69,7 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `storage/s3/client.ts`                            | Signed requests and URLs for one bucket.                                                                           |
 | `storage/s3/multipart.ts`                         | Multipart uploads to presigned URLs, and multipart copies above 5 GB.                                              |
 | `storage/s3/encoding.ts`                          | RFC 3986 key paths and XML text.                                                                                   |
+| `storage/r2/index.ts`                             | `r2()`, `integral-cms/media/r2`: R2 through a bucket binding, with proxied multipart uploads.                      |
 | `default.ts`                                      | Local storage and prerendered IPX; `integral-cms/media/default`.                                                   |
 | `workerd.ts`                                      | What Workers resolve for local, IPX and the default: errors instead of Node code.                                  |
 

@@ -35,6 +35,37 @@ const posts = await Astro.locals.integral.find("posts");
 - Pages with `prerender = false` read live content. Prerendered pages read content at build time.
 - Secrets go through `astro:env`. See `examples/astro/integral.config.ts`.
 
+### Astro on Cloudflare
+
+With `@astrojs/cloudflare` as the adapter, the CMS runs inside a Durable Object. The integration detects the adapter. See `examples/cloudflare`.
+
+```ts
+// integral.config.ts
+import { durableObject } from "integral-cms/cloudflare";
+export default defineCms({ database: durableObject(), secret: CMS_SECRET /* ... */ });
+
+// src/worker.ts, set as `main` in wrangler.jsonc
+import { handle } from "@astrojs/cloudflare/handler";
+import { integralObject } from "integral-cms/cloudflare";
+import cms from "../integral.config";
+
+export const CmsObject = integralObject(cms);
+export default { fetch: handle } satisfies ExportedHandler<Env>;
+```
+
+```jsonc
+// wrangler.jsonc
+"main": "./src/worker.ts",
+"durable_objects": { "bindings": [{ "name": "CMS", "class_name": "CmsObject" }] },
+"migrations": [{ "tag": "v1", "new_sqlite_classes": ["CmsObject"] }],
+```
+
+- The binding MUST be named `CMS`. All content lives in one object, `env.CMS.getByName("cms")`.
+- `Astro.locals.integral` is the [HTTP client](reading.md) over the object, not the local API. It forwards the request's cookie, so the session user's access rules apply, and the preview cookie shows drafts. Compared with the local API: no `withSession()` or `withDrafts()` (the cookie decides), `localization()` is an async method, new drafts go through `createDraft()`, and there is no `email` or `auth`. Writes need a session or an API key.
+- Pages that read the CMS MUST NOT be prerendered: no object exists at build time. Set `output: "server"`. A prerendered page that reads it fails the build.
+- The server bundle is minified, because every wake of the object parses it again.
+- Media: `r2(env.MEDIA)` and `cloudflare({ binding: env.IMAGES })`, with `env` from `cloudflare:workers`. See [media](media.md#r2-binding). The adapter adds the `IMAGES` binding and a KV `SESSION` binding by default; `wrangler deploy` creates the bucket and namespace for bindings without an ID, once R2 is enabled on the account.
+
 ## Nuxt
 
 ```ts

@@ -1,0 +1,23 @@
+{
+  "name": "example-cloudflare",
+  "version": "0.17.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "deploy": "astro build && wrangler deploy",
+    "types": "wrangler types",
+    "typecheck": "wrangler types > /dev/null && astro sync && tsc --noEmit"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.4.3",
+    "astro": "^7.4.0",
+    "integral-cms": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "wrangler": "^4.154.0"
+  }
+}

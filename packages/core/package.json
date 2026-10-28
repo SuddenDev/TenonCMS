@@ -26,6 +26,10 @@
     "./register": {
       "types": "./dist/client/register.d.ts"
     },
+    "./cloudflare": {
+      "types": "./dist/integrations/cloudflare/index.d.mts",
+      "default": "./dist/integrations/cloudflare/index.mjs"
+    },
     "./astro": {
       "types": "./dist/integrations/astro/index.d.mts",
       "default": "./dist/integrations/astro/index.mjs"
@@ -115,6 +119,10 @@
       "types": "./dist/media/storage/s3/index.d.mts",
       "default": "./dist/media/storage/s3/index.mjs"
     },
+    "./media/r2": {
+      "types": "./dist/media/storage/r2/index.d.mts",
+      "default": "./dist/media/storage/r2/index.mjs"
+    },
     "./media/ipx": {
       "types": "./dist/media/images/ipx.d.mts",
       "workerd": "./dist/media/workerd.mjs",
@@ -186,6 +194,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.9",
+    "@cloudflare/workers-types": "^5.20261028.1",
     "@nuxt/kit": "^4.5.2",
     "@nuxt/nitro-server": "4.5.2",
     "@nuxt/schema": "^4.5.2",

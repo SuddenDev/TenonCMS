@@ -15,21 +15,25 @@ These touch every read and write path. They get harder to add as more code build
 Each new query is one more to port, and the test app should run on a real deploy target.
 
 - [ ] Postgres and PGlite together (one dialect). PGlite also fits tests and local dev. The JSON SQL (`json_extract`, `json_each`, `holdsAt()`) needs a layer per dialect.
-- [ ] Cloudflare Workers: D1 driver or Durable Objects, bindings per request, R2 through the S3 adapter, Cloudflare Images.
+- [ ] Cloudflare Workers: D1 driver or Durable Objects, bindings per request, R2 (`r2()` binding or `s3()`), Cloudflare Images (`cloudflare({ binding })`).
 - [ ] Vercel: Node functions with Turso or Postgres.
-- [ ] Durable Object SQLite as the Cloudflare store, preferred over D1: D1 has no transactions that stay open across `await`, and writes rely on them (hooks, nested `cms` calls, `onDelete`). The object's `ctx.storage.transaction()` takes an async callback.
-  - `defineCms()` runs inside the object, on a Kysely dialect over `ctx.storage.sql` next to the libsql one. better-auth uses the same Kysely instance.
-  - The host's `cms` and `cms.fetch` forward each call to the object over RPC (one hop per call). Decide what crosses: session, request headers for `withSession()`.
-  - Check: no savepoints or nested transactions (`transaction.ts` reuses the outer one), better-auth migrations, JSON functions.
-  - Cost: one object fits the included duration even when active 24/7. Keep it short-lived: uploads go straight to R2, images through Cloudflare Images, no long `await`s in hooks. Cache public reads, because the object sits in one region.
-  - Prototype first: one write whose hook does a nested write, plus a forced error that must roll back both.
+- [ ] Durable Object SQLite as the Cloudflare store, preferred over D1: D1 has no transactions that stay open across `await`, and writes rely on them (hooks, nested `cms` calls, `onDelete`).
+  - [x] Prototype (a spike, removed after the move into core). Go. Results in [design decisions](docs/dev/design-decisions.md#durable-objects).
+  - [x] Move `durableObjectDialect()` into core (`integral-cms/cloudflare`), with the spike's tests. Adds `durableObject()` and `integralObject()`.
+  - [x] Host code reads and writes through `createClient({ fetch: (req) => env.CMS.getByName("cms").fetch(req) })`: typed from the schema, errors arrive as `CmsError`, privileged writes use an API key. No RPC proxy until something needs the local API's trust inside the object (RPC drops error classes: `ConflictError` arrives as a plain `Error`).
+  - [ ] An example or starter on Cloudflare (Worker + object, `createClient()` over the object's `fetch`, minified), then a real deploy. `examples/cloudflare` runs locally with R2 and Cloudflare Images through bindings; the deploy is open.
+  - Cost: one object fits the included duration even when active 24/7. Keep it short-lived: no long `await`s in hooks. `r2()` proxies uploads and file reads through the object; move them to presigned URLs (`s3()`) and the Worker or a public bucket if that costs too much. Cache public reads, because the object sits in one region.
   - The same object can later hold WebSockets for presence and multiplayer (Hibernation API).
-- [ ] [celld](https://celld.dev/): a self-hosted Workers and Durable Objects runtime with the data in your own bucket. Once the Durable Objects target works, run it there too.
+- [ ] [celld](https://celld.dev/): a self-hosted Workers and Durable Objects runtime with the data in your own bucket. Skipped while it is in beta (v0.6.2 on 2026-10-28). Its docs list `sql.exec()`, `transaction()` and `blockConcurrencyWhile()`. `celld deploy` stops on unknown `wrangler.jsonc` keys such as `minify`.
 - [ ] Media defaults per target: `local('./.uploads')` does not work serverless.
 - [ ] Rate limits: better-auth keeps them in memory by default, which serverless instances do not share.
+- [ ] Bundle size (the spike: 934 KiB gzipped, 664 KiB minified; `examples/cloudflare`: 2.0 MB minified, 575 KB gzipped). Every wake of an object parses it again.
+  - [ ] Passkeys opt-in: `@better-auth/passkey` and its WebAuthn and certificate libraries are 626 KiB raw, always bundled (`auth/config/build-options.ts`).
+  - [ ] Maybe: check and render rich text on the server without tiptap and ProseMirror (962 KiB raw). Only if size becomes a problem, because the checks MUST match the editor's schema.
 
 ## 3. Driven by the test app
 
+- [ ] Fix TS2589: a `relation` inside `blocks` makes `find()` on that collection too deep to type. Found by the spike.
 - [ ] Frontend components for Nuxt, Astro and React: image (`srcset` is computed already), rich text renderer, maybe a blocks renderer. Build one framework first, then port.
 - [ ] Search: in the admin first (`LIKE` on title fields), later FTS5 / `tsvector` and a shared function. Depends on the database work.
 - [ ] Jobs and cron: one protected `POST /jobs/run`, triggered per platform (Cloudflare Cron Triggers, Vercel Cron, an interval on Node).
@@ -43,7 +47,7 @@ Each new query is one more to port, and the test app should run on a real deploy
 
 - [ ] Export and import: backups, moving between databases, seeding.
 - [ ] Field renames: a small content migration (`renameField`), because a renamed field orphans its stored JSON.
-- [ ] OpenAPI spec, generated from the zod schemas and `/schema`.
+- [ ] OpenAPI spec, generated from the zod schemas and `/schema`. Generated SDKs (hey-api) build on it for consumers without TypeScript; TypeScript hosts keep `createClient()`.
 - [ ] CLI for starters (`create-integral`): framework, database, deploy target, sample content. Needs export and import.
 - [ ] Docs, then npm.
 

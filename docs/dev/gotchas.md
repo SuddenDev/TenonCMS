@@ -12,6 +12,8 @@ Each of these cost a debugging round. Check here when something behaves strangel
   - Nitro 2 (Nuxt) does not trace the binary, so the Nuxt module adds it by hand. Nitro 3 (TanStack Start) traces it on its own.
 - `tsdown` `copy` with a directory `from` nests that directory under `to`. Use the parent as `to`.
 - Build on the OS and CPU you deploy to. libsql ships one binary per platform.
+- esbuild (wrangler) reads the nearest `tsconfig.json` of each file. In this repo that applies core's `paths` to `packages/core/dist`, so `integral-cms/media/default` resolves to `src/` and pulls in IPX and sharp. Pass `--tsconfig tsconfig.json` to wrangler. Published installs ship no tsconfig and are not affected. Vite builds (the Astro adapter on Cloudflare) do not read `paths`.
+- `wrangler deploy` cannot create an R2 bucket on an account without R2. It skips the bucket, treats the binding as inherited, and the first deploy fails with `inherit binding 'MEDIA' is invalid: previous version does not have binding named 'MEDIA'`. Enable R2 in the Cloudflare dashboard first (`wrangler r2 bucket list` answers code 10042 until then).
 
 **Watchers and build output**
 
@@ -55,6 +57,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - A `defineCms({ ... } as never)` call infers the media type as `never`, and distributive conditionals then hit TS2589. Keep the media type check non-distributive and apply it to the return value.
 - Typing the auth plugins with better-auth's `passkey()` breaks the declaration build (`defineCms` cannot be named without `@simplewebauthn/server`). Cast it, and destructure `plugins` out of the host options first, or the spread intersects both types into `never`.
 - `defineCms()` infers literal locales through a `const` type parameter. The locale type is `never` without `localization` and `string` for an untyped instance. Check both builds after changing read options or locale metadata.
+- A `relation` inside `blocks` makes the read types of that collection hit TS2589 in `find()`. Open bug, see `todo.md`.
 - `@ts-expect-error` covers the next line only. When the formatter wraps a call, the directive MUST sit directly above the line with the invalid value.
 
 ## Server, data and HTTP

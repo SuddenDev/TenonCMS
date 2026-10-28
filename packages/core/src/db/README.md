@@ -1,6 +1,6 @@
 # DB
 
-Content persistence through Kysely and libsql (SQLite or Turso). The module owns the connection, the fixed tables, their migrations and the content queries. It does not validate data or run hooks; that is [content](../content/README.md). Media operations still own the `cms_uploads` queries.
+Content persistence through Kysely and libsql (SQLite or Turso), or a SQLite Kysely dialect from the host (`database: { dialect }`), such as Durable Object storage. The module owns the connection, the fixed tables, their migrations and the content queries. It does not validate data or run hooks; that is [content](../content/README.md). Media operations still own the `cms_uploads` queries.
 
 ## Follow a read
 
@@ -22,8 +22,9 @@ A joined query reads two tables with the same column names, so conditions and `O
 | ------------------------------ | --------------------------------------------------------------------------------------------------- |
 | `index.ts`                     | Entry barrel for connection, types, mapping, dialect and migration helpers.                         |
 | `types.ts`                     | Document, global and upload table contracts and the perspective row shape.                          |
-| `create-db.ts`                 | Connect Kysely to the libsql dialect.                                                               |
+| `create-db.ts`                 | Connect Kysely to libsql (`url`) or a host-given SQLite dialect (`dialect`).                        |
 | `adapters/libsql.ts`           | Kysely driver and interactive transaction behavior.                                                 |
+| `adapters/durable-object.ts`   | Kysely driver over Durable Object storage: transactions through `storage.transaction()`.            |
 | `map-document.ts`              | Decode JSON, merge locale rows and attach document/global metadata.                                 |
 | `migrations/cms.ts`            | CMS migration keys/bodies and Kysely migrator. Shipped migrations MUST NOT change.                  |
 | `migrations/migrate.ts`        | Run CMS migrations, then better-auth migrations.                                                    |

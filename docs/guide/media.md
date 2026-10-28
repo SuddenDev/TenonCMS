@@ -1,6 +1,6 @@
 # Media
 
-Every instance has a media library: uploads into folders, `image` and `file` fields, and responsive images. Files live on the local disk or in S3 (any S3-compatible service, R2 included).
+Every instance has a media library: uploads into folders, `image` and `file` fields, and responsive images. Files live on the local disk, in S3 (any S3-compatible service, R2 included) or in R2 through a Workers binding.
 
 ## Setup
 
@@ -30,7 +30,7 @@ export default defineCms({
 
 | Option                            | Default                        | What it does                                       |
 | --------------------------------- | ------------------------------ | -------------------------------------------------- |
-| `storage`                         | required                       | `local()` or `s3()`, or your own adapter           |
+| `storage`                         | required                       | `local()`, `s3()`, `r2()`, or your own adapter     |
 | `maxSize`                         | 100 MB                         | Largest accepted file                              |
 | `accept`                          | all types                      | Allowed MIME types, `type/*` wildcards allowed     |
 | `images`                          | `false`                        | Responsive variants, or `false` for originals only |
@@ -44,7 +44,7 @@ export default defineCms({
 - With `media: false`, core adds no routes, and `image` and `file` fields throw at startup.
 - `media` is a reserved collection, plugin and route name.
 - `nuxt preview` runs the server from inside `.output/`, so a relative `./.uploads` lands in the build output. Pass an absolute `dir` there, as the Nuxt example does.
-- On Cloudflare Workers (the `workerd` export condition), `integral-cms/media/local`, `integral-cms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `s3()` and `cloudflare()`.
+- On Cloudflare Workers (the `workerd` export condition), `integral-cms/media/local`, `integral-cms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `r2()` (or `s3()`) and `cloudflare()`.
 
 ## Image and file fields
 
@@ -105,12 +105,21 @@ await cms.media.delete(doc.id);
 - R2: `region: 'auto'`, `endpoint: 'https://<account>.r2.cloudflarestorage.com'`.
 - MinIO: `endpoint: 'http://localhost:9000'` (`docker run -p 9000:9000 minio/minio server /data`).
 
+### R2 binding
+
+`r2(env.MEDIA, { partSize = 16 MB, publicUrl? })` from `integral-cms/media/r2` stores files in R2 through a bucket binding (`env` from `cloudflare:workers`). It needs no keys and no CORS, and `wrangler dev` simulates the bucket. Core serves files at `/api/cms/media/files/<key>`; set `publicUrl` when the bucket has a public domain.
+
+- Parts go through the Worker and, with `integralObject()`, through the CMS object. Each part is held in memory, and `partSize` is at least 5 MB, as R2 requires.
+- A move reads and writes the file, because bindings cannot copy.
+
 Unfinished uploads are aborted after 24 hours. An upload can have up to 10 000 parts, and the part size grows for larger files.
 
 ## Image providers
 
 - **`ipx({ prerender? })`** from `integral-cms/media/ipx` (`ipx` and sharp come with integral-cms): core renders variants on first request at `/api/cms/media/img/<modifiers>/<key>` and stores them under `.variants/<key>/`. Only modifier sets your config can produce are served. `prerender: true` renders them all right after upload.
-- **`cloudflare()`** from `integral-cms/media/cloudflare`: URLs for Cloudflare's image transformations (`/cdn-cgi/image/...`) on your zone. Core renders nothing.
+- **`cloudflare({ binding?, prerender? })`** from `integral-cms/media/cloudflare`:
+  - With `binding: env.IMAGES` (the Images binding), core renders variants through Cloudflare Images like `ipx()` does: at `/api/cms/media/img/<modifiers>/<key>`, stored under `.variants/<key>/`. `wrangler dev` renders them locally.
+  - Without it: URLs for Cloudflare's image transformations (`/cdn-cgi/image/...`) on your zone. Core renders nothing.
 - **Your own**: an object with `getImage(src, modifiers)` that returns `{ url }`, for imgproxy, Bunny or Vercel. Add `render(key, modifiers, storage)` if core should serve the variants.
 
 SVG and images above `images.maxSize` get the original as `src` and an empty `srcset`.
@@ -119,7 +128,7 @@ SVG and images above `images.maxSize` get the original as `src` and an empty `sr
 
 Run `cms.media.regenerate()`, or "Regenerate variants" on the admin's Media page. It deletes stored variants the options no longer produce and, with `prerender`, renders missing ones. `force: true` re-renders all of them, for example after a sharp upgrade. `POST /api/cms/media/:id/regenerate` does one file.
 
-It exists only for providers with `render`. With `cloudflare()` nothing is stored, and new URLs take effect on their own.
+It exists only for providers with `render`. With `cloudflare()` without a binding nothing is stored, and new URLs take effect on their own.
 
 ## Media hooks
 

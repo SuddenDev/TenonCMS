@@ -8,6 +8,7 @@ Every example has its instance in `integral.config.ts` at the project root and i
 | `examples/nuxt`           | `useIntegral()` composables, localization with the same setup as Astro, runtime config for secrets, Vue admin renderer.                                                                                               |
 | `examples/tanstack-start` | No adapter package: `integralAdmin()`, a server route for the API and one for the admin, server functions in loaders, React admin renderer.                                                                           |
 | `examples/standalone`     | Headless: no site. API and admin on Vite and Nitro. Has media with `ipx()` and an `array` field.                                                                                                                      |
+| `examples/cloudflare`     | Astro on Cloudflare: the CMS in a Durable Object, pages read through the client over it. Posts, authors, media in R2 with Cloudflare Images. Secret in `.dev.vars` (copy `.dev.vars.example`).                        |
 
 ## Astro in more detail
 
@@ -15,6 +16,14 @@ Every example has its instance in `integral.config.ts` at the project root and i
 - **Comments** is the access-rule example: visitors can create, readers see only approved ones, only `admin` and `editor` can moderate. The post page lists them and handles its own form post.
 - A `strings` global (the `strings()` preset) holds translated site text.
 - The post and kitchen-sink pages are server-rendered, so new posts show in dev without a restart.
+
+## Cloudflare in more detail
+
+- `src/worker.ts` is the Worker entry: it exports `CmsObject` and hands requests to Astro.
+- `pnpm run deploy` builds and deploys (plain `pnpm deploy` is a pnpm command of its own). `wrangler deploy` alone uploads the last build: it reads `dist/server/wrangler.json`, which `astro build` writes.
+- Cloudflare defaults throughout: R2 binding `MEDIA` (`r2()`), Images binding `IMAGES` (`cloudflare({ binding })`), and the adapter's KV `SESSION`. The bindings have no IDs, so `wrangler dev` simulates them and `wrangler deploy` creates them. R2 MUST be enabled on the account first (see [gotchas](gotchas.md)).
+- Server bundle (2026-10-28, minified): 2.0 MB, 577 KB gzipped.
+- Smoke test the build without touching the example's state: `astro build`, then `wrangler dev -c dist/server/wrangler.json --persist-to <temp dir>`. Uploads to `r2()` MUST send each part's `etag` to `complete`.
 
 ## Conventions
 

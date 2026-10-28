@@ -8,6 +8,7 @@ export default defineConfig({
     "src/integrations/react/richtext.ts",
     "src/client/index.ts",
     "src/integrations/astro/index.ts",
+    "src/integrations/cloudflare/index.ts",
     "src/integrations/nuxt/index.ts",
     "src/admin/config.ts",
     "src/admin/vue/vue.ts",
@@ -21,6 +22,7 @@ export default defineConfig({
     // Own entries, so `node:fs`, `ipx` and `aws4fetch` stay out of bundles that do not use them.
     "src/media/storage/local/index.ts",
     "src/media/storage/s3/index.ts",
+    "src/media/storage/r2/index.ts",
     "src/media/images/ipx.ts",
     "src/media/images/cloudflare.ts",
     "src/media/default.ts",
@@ -43,6 +45,7 @@ export default defineConfig({
     { from: "src/integrations/astro/route.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/middleware.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/admin.astro", to: "dist/integrations/astro" },
+    { from: "src/integrations/astro/cloudflare", to: "dist/integrations/astro" },
     { from: "src/integrations/nuxt/runtime", to: "dist/integrations/nuxt" },
     { from: "src/client/register.d.ts", to: "dist/client" },
     // The admin's Vite build writes mount.js next to these.

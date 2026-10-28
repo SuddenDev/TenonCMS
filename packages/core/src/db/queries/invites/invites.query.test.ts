@@ -23,7 +23,7 @@ const invite = {
 };
 
 beforeEach(async () => {
-  db = createDb(":memory:");
+  db = createDb({ url: ":memory:" });
   await migrate(db, { database: { db, type: "sqlite" } });
   await insertInvite(db, invite);
 });

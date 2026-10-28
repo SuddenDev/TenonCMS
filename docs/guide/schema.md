@@ -48,6 +48,8 @@ export default defineCms({
 });
 ```
 
+`database` also takes `{ dialect }`, a SQLite Kysely dialect you build. Its transactions MUST stay open across `await`. On Cloudflare, use `database: durableObject()` from `integral-cms/cloudflare` and export `integralObject(cms)` from the Worker entry: the CMS then runs inside a Durable Object, and code outside it reads and writes through `createClient()` over the object's `fetch`.
+
 `defineGlobal()` works the same for globals: one document per name, such as site settings. Auth options are in [Auth, users and access](./auth-and-access.md).
 
 ## Field types
