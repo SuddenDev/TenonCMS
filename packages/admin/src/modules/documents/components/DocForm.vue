@@ -24,6 +24,8 @@ import Icon from "@/shared/components/Icon.vue";
 // `missing`: the active language has no version yet, so there is nothing to publish before the first edit.
 // `layout`: the tabs and fieldsets of the collection or global.
 // `reload`: loads the stored document again. It is offered when a save answers 409 because someone else saved first.
+// Without `save` and `saveDraft` the form only shows data and has no status bar.
+// `changed`: marks these top-level fields and fades the others, to show what a version changed.
 const props = defineProps<{
   id?: string;
   fields: Fields;
@@ -40,6 +42,7 @@ const props = defineProps<{
   defaults?: Record<string, unknown>;
   missing?: boolean;
   reload?: () => unknown;
+  changed?: string[];
 }>();
 // `change`: the form state as it would be saved, on every edit and once on load.
 const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
@@ -192,21 +195,29 @@ async function discard() {
         :errors="errors"
       >
         <template #field="{ name, field }">
-          <FieldInput
-            v-model="data[name]"
-            :name="name"
-            :field="field"
-            :root="data"
-            :siblings="{ fields, data }"
-            :is-new="isNew"
-            :errors="errors"
-            :shared="shared(field)"
-            :placeholders="inherited(field)"
-          />
+          <div
+            :class="
+              changed && (changed.includes(name) ? 'border-primary border-l-2 pl-3' : 'opacity-50')
+            "
+          >
+            <span v-if="changed?.includes(name)" class="sr-only">{{ t("versions.changed") }}</span>
+            <FieldInput
+              v-model="data[name]"
+              :name="name"
+              :field="field"
+              :root="data"
+              :siblings="{ fields, data }"
+              :is-new="isNew"
+              :errors="errors"
+              :shared="shared(field)"
+              :placeholders="inherited(field)"
+            />
+          </div>
         </template>
       </FieldLayout>
     </div>
     <footer
+      v-if="save || saveDraft"
       class="bg-background border-border sticky bottom-0 z-10 mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-3"
     >
       <template v-if="conflicted">

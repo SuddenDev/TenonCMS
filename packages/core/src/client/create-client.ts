@@ -98,6 +98,15 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       await request("DELETE", `${doc(name, id)}/lock`);
     },
 
+    versions: (name: string, id: string, { locale }: Write = {}) =>
+      request("GET", `${doc(name, id)}/versions`, undefined, { locale }),
+
+    version: (name: string, id: string, version: string) =>
+      request("GET", `${doc(name, id)}/versions/${enc(version)}`),
+
+    restoreVersion: (name: string, id: string, version: string) =>
+      request("POST", `${doc(name, id)}/versions/${enc(version)}/restore`),
+
     delete: (name: string, id: string, options: DeleteOptions = {}) =>
       request("DELETE", doc(name, id), undefined, options),
 
@@ -128,6 +137,15 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     unlockGlobal: async (name: string) => {
       await request("DELETE", `${global(name)}/lock`);
     },
+
+    globalVersions: (name: string, { locale }: Write = {}) =>
+      request("GET", `${global(name)}/versions`, undefined, { locale }),
+
+    globalVersion: (name: string, version: string) =>
+      request("GET", `${global(name)}/versions/${enc(version)}`),
+
+    restoreGlobalVersion: (name: string, version: string) =>
+      request("POST", `${global(name)}/versions/${enc(version)}/restore`),
 
     previewUrl: async (name: string, data: unknown, { locale }: { locale?: string } = {}) =>
       (await request("POST", `${collection(name)}/preview-url`, data, { locale })).url,

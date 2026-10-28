@@ -18,6 +18,7 @@ import type {
 import type { Invite, InviteResult } from "../../users/types.ts";
 import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
 import type { Lock } from "../../locks/types.ts";
+import type { Version, VersionWithData } from "../../versions/types.ts";
 import type { MediaClient } from "./media.ts";
 import type { FindOptions } from "./options.ts";
 import type {
@@ -209,6 +210,36 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   unlock(collection: keyof Collections<C> & string, id: string): Promise<void>;
 
   /**
+   * The versions of a document in one locale, newest first. Needs a session and the right to update.
+   * `GET /api/cms/collections/:collection/:id/versions`
+   */
+  versions(
+    collection: keyof Collections<C> & string,
+    id: string,
+    options?: LocaleOption<C>,
+  ): Promise<Version[]>;
+
+  /**
+   * One version of a document with its data. Fields the caller MAY NOT read are left out.
+   * `GET /api/cms/collections/:collection/:id/versions/:version`
+   */
+  version(
+    collection: keyof Collections<C> & string,
+    id: string,
+    version: string,
+  ): Promise<VersionWithData>;
+
+  /**
+   * Writes a version back as the draft of its locale, or saves it when the collection has `drafts: false`.
+   * `POST /api/cms/collections/:collection/:id/versions/:version/restore`
+   */
+  restoreVersion<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    version: string,
+  ): Promise<Doc<CollectionFields<C, K>>>;
+
+  /**
    * Deletes a document. Needs a session.
    * `DELETE /api/cms/collections/:collection/:id`
    */
@@ -302,6 +333,27 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    * `DELETE /api/cms/globals/:name/lock`
    */
   unlockGlobal(name: keyof Globals<C> & string): Promise<void>;
+
+  /**
+   * The versions of a global, like {@link Client.versions}.
+   * `GET /api/cms/globals/:name/versions`
+   */
+  globalVersions(name: keyof Globals<C> & string, options?: LocaleOption<C>): Promise<Version[]>;
+
+  /**
+   * One version of a global, like {@link Client.version}.
+   * `GET /api/cms/globals/:name/versions/:version`
+   */
+  globalVersion(name: keyof Globals<C> & string, version: string): Promise<VersionWithData>;
+
+  /**
+   * Writes a version of a global back, like {@link Client.restoreVersion}.
+   * `POST /api/cms/globals/:name/versions/:version/restore`
+   */
+  restoreGlobalVersion<K extends keyof Globals<C> & string>(
+    name: K,
+    version: string,
+  ): Promise<Partial<Data<GlobalFields<C, K>>> & GlobalMeta>;
 
   /**
    * The live preview URL of a document from its unsaved form state, relative to the site origin. `null`: no preview

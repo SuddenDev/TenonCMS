@@ -72,6 +72,23 @@ export interface Database {
     /** When the holder last claimed or renewed the lock. */
     locked_at: number;
   };
+  cms_versions: {
+    id: string;
+    /** `collection:<name>` or `global:<name>`. */
+    target: string;
+    /** The document id. `''` for a global. */
+    doc_id: string;
+    /** `NULL` when the entry is not localized. */
+    locale: string | null;
+    status: "draft" | "published";
+    /** The written data. For a localized entry, the merged document of `locale`. */
+    data: string;
+    /** `NULL` for server code. */
+    created_by: string | null;
+    created_at: number;
+    /** A draft version is updated in place while the same user keeps editing. */
+    updated_at: number;
+  };
   cms_invites: {
     id: string;
     email: string;

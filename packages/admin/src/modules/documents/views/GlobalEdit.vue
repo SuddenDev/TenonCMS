@@ -8,7 +8,8 @@ import { client, schema, type Data, type Fields } from "@/shared/api";
 import { can } from "@/shared/access";
 import { ownerKey } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
-import LocaleActions from "@/modules/documents/components/LocaleActions.vue";
+import DocActions from "@/modules/documents/components/DocActions.vue";
+import VersionHistory from "@/modules/documents/components/VersionHistory.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { useTranslations } from "@/modules/documents/composables/useTranslations";
 import { useLock } from "@/modules/documents/composables/useLock";
@@ -85,11 +86,26 @@ async function load() {
 }
 load();
 
-// The form unmounts meanwhile, so no edit lands in the wrong language.
+// The form unmounts meanwhile, so no edit lands in the wrong language. The history is per language, so it closes.
 watch(tr.active, () => {
   doc.value = null;
+  history.value = false;
   load();
 });
+
+// The history replaces the form. Pending edits save first, so a restore cannot be overwritten by them.
+const history = ref(false);
+async function openHistory() {
+  await flush();
+  history.value = true;
+}
+
+async function restoreVersion(version: string) {
+  await client.restoreGlobalVersion(name, version);
+  history.value = false;
+  await load();
+  emit("saved");
+}
 
 // A write sends the `updatedAt` it builds on, so a newer save of someone else answers 409.
 const saveOptions = () => ({
@@ -179,18 +195,30 @@ const discardAll = () =>
       >
         <RouterLink :to="`/presentation/globals/${name}`"><Icon name="eye" /></RouterLink>
       </Button>
-      <LocaleActions
-        v-if="languages && !readOnly"
-        :languages="languages"
-        :locale="tr.active.value!"
-        :default-locale="defaultLocale!"
+      <DocActions
+        :history="editable && !history"
+        :languages="readOnly ? undefined : languages"
+        :locale="tr.active.value"
+        :default-locale="defaultLocale"
+        @history="openHistory"
         @copy="copy"
         @remove="removeLocale"
         @discard-all="discardAll"
       />
       <slot name="actions" />
     </template>
-    <div v-if="doc" class="flex min-h-full flex-col">
+    <VersionHistory
+      v-if="doc && history"
+      :fields="global.fields"
+      :layout="global"
+      :list="() => client.globalVersions(name, tr.write())"
+      :get="(v) => client.globalVersion(name, v)"
+      :restore="restoreVersion"
+      :drafts="drafts"
+      :can-restore="!readOnly"
+      @close="history = false"
+    />
+    <div v-else-if="doc" class="flex min-h-full flex-col">
       <header
         class="mx-auto w-full max-w-2xl px-6 pt-10 pb-8 group-data-[expanded=true]/pane:max-w-none sm:px-8"
       >

@@ -61,6 +61,8 @@ References inside array and block items follow `Step[]` paths (`schema/traversal
 
 `writes/remove-document.ts` deletes the row first and applies `onDelete` effects in the same transaction. Effects use the original scope, so a cascade that comes back to a deleted row finds nothing and cycles end. Hooks MUST make nested calls through the `cms` they get, so the calls join the transaction.
 
+`writes/persist-document.ts` records a version after each save (`db/queries/versions/record-version.query.ts`). Draft saves of one user merge into one version until a 30-minute break. `writes/remove-document.ts` deletes the versions with the document. See [versions](../versions/README.md).
+
 `writes/write-document.ts` compares the caller's `updatedAt` with the loaded source, after access and before any hook. A mismatch throws `ConflictError`. Publish passes the token through `writes/publish-document.ts`.
 
 ## Locales

@@ -22,6 +22,11 @@ export type Global<F extends Fields = Fields> = Layout & {
   /** The global keeps a draft next to the published data, saved with `{ draft: true }` and published with `publishGlobal()`. Default `true`. */
   drafts?: boolean;
   /**
+   * The most versions kept per global and language. Recording one more deletes the oldest. Use `Infinity` to keep
+   * every version. Default `100`.
+   */
+  maxVersions?: number;
+  /**
    * Whether editors MAY pick the global on a page in the visual editor. With `false`, "On this page" leaves it
    * out, and edit mode neither outlines nor opens its bound elements, whatever a page binds with `edit()`. Live
    * preview of unsaved changes still applies. Default `true`.

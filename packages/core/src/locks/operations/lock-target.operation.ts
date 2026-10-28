@@ -3,7 +3,7 @@ import type { CmsUser } from "../../admin/index.d.ts";
 import { inner, outerScope } from "../../cms/runtime/operation-context.ts";
 import { guard } from "../../access/rule.ts";
 import { LOCK_TTL } from "../../client/constants.ts";
-import type { ContentTarget } from "../../content/targets.ts";
+import { type ContentTarget, targetKey } from "../../content/targets.ts";
 import { claimLock } from "../../db/queries/locks/claim-lock.query.ts";
 import type { Lock } from "../types.ts";
 
@@ -22,7 +22,7 @@ export async function lockTarget(
   await guard(core, inner(core, outerScope({ user }), undefined, {}), name, "update", { id });
 
   const holder = await claimLock(await core.db(), {
-    target: `${name.kind}:${name.name}`,
+    target: targetKey(name),
     id: id ?? "",
     userId: user.id,
     takeover,

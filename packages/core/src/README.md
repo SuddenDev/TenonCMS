@@ -13,6 +13,7 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `users/`        | Roles, invites, their operations and endpoints.                   | [README](users/README.md)                   |
 | `api-keys/`     | API key management: operations and endpoints.                     | [README](api-keys/README.md)                |
 | `locks/`        | Edit locks for the admin: claim, renew, take over, free.          | [README](locks/README.md)                   |
+| `versions/`     | Version history: list, read and restore past versions.            | [README](versions/README.md)                |
 | `http/`         | Hono application assembly, parsing and errors.                    | [app.ts](http/app.ts)                       |
 | `access/`       | Access rules: decisions, field stripping, `/schema` permissions.  | [README](access/README.md)                  |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |

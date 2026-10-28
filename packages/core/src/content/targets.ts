@@ -20,6 +20,9 @@ export function globalTarget(name: string): ContentTarget {
   return { kind: "global", name };
 }
 
+/** The key of a target in `cms_locks` and `cms_versions`: `collection:<name>` or `global:<name>`. */
+export const targetKey = ({ kind, name }: ContentTarget) => `${kind}:${name}`;
+
 /**
  * Looks up the schema entry of a target.
  * @returns The fields and hooks of the collection or global.

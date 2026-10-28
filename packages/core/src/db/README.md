@@ -35,6 +35,7 @@ A joined query reads two tables with the same column names, so conditions and `O
 | `queries/locales/`             | Upsert, discard, delete and load the locale rows of a document or global.                           |
 | `queries/references/`          | Existing IDs, uniqueness, reverse references (also in locale rows) and populated joins.             |
 | `queries/media/`               | Indexed media-key lookup and distinct library values.                                               |
+| `queries/versions/`            | Record (draft saves merge), list, read and delete versions.                                         |
 
 `cms_documents` holds one JSON row per document; `cms_globals` holds one per global. Both have pending `draft` data and `published_at` (`NULL` before first publication). Published reads see published rows and `data`. Draft reads see every row and `COALESCE(draft, data)`.
 

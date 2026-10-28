@@ -2,7 +2,7 @@ import { type Loc } from "./queries/document-sql.ts";
 import { mergeLocale } from "../content/reads/merge-locale.ts";
 import { type LocaleColumns, type Row } from "./types.ts";
 
-const iso = (time: number) => new Date(time).toISOString();
+export const iso = (time: number) => new Date(time).toISOString();
 
 type Meta = Pick<Row, "data" | "updated_at" | "published_at" | "has_draft"> &
   Partial<LocaleColumns>;

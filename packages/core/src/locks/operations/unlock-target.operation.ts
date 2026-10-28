@@ -1,6 +1,6 @@
 import type { Core } from "../../cms/runtime/types.ts";
 import type { CmsUser } from "../../admin/index.d.ts";
-import type { ContentTarget } from "../../content/targets.ts";
+import { type ContentTarget, targetKey } from "../../content/targets.ts";
 import { releaseLock } from "../../db/queries/locks/release-lock.query.ts";
 
 /** Frees the user's edit lock on a document, or on a global without `id`. Someone else's lock stays. */
@@ -10,5 +10,5 @@ export async function unlockTarget(
   name: ContentTarget,
   id: string | undefined,
 ) {
-  await releaseLock(await core.db(), `${name.kind}:${name.name}`, id ?? "", user.id);
+  await releaseLock(await core.db(), targetKey(name), id ?? "", user.id);
 }

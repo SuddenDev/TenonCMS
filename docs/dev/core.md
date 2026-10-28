@@ -40,6 +40,7 @@ Server code   ---------> scoped local API ---^
 | `access/`                      | Access rules and permissions                                       |
 | `auth/`, `users/`, `api-keys/` | Sign-in (better-auth), roles, invites, API keys                    |
 | `locks/`                       | Edit locks for the admin                                           |
+| `versions/`                    | Version history: list, read, restore                               |
 | `http/`                        | The Hono app and its route order                                   |
 | `client/`                      | The typed browser client                                           |
 | `db/`                          | Tables, migrations, SQL                                            |

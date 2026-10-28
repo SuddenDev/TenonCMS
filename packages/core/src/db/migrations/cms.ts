@@ -133,6 +133,25 @@ const cmsMigrations: Record<string, Migration> = {
       )`.execute(db);
     },
   },
+  // Past versions of documents and globals. `doc_id` is `''` for a global, `locale` `NULL` without localization.
+  "009_cms_versions": {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_versions (
+        id text PRIMARY KEY NOT NULL,
+        target text NOT NULL,
+        doc_id text NOT NULL,
+        locale text,
+        status text NOT NULL,
+        data text NOT NULL,
+        created_by text,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL
+      )`.execute(db);
+      await sql`CREATE INDEX IF NOT EXISTS cms_versions_doc_idx ON cms_versions (target, doc_id, created_at)`.execute(
+        db,
+      );
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables, with its own migration tables. */

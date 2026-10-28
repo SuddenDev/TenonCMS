@@ -14,7 +14,9 @@ import { saveGlobal } from "../../db/queries/globals/save-global.query.ts";
 import { updateDoc } from "../../db/queries/documents/update-document.query.ts";
 import { insertDoc } from "../../db/queries/documents/insert-document.query.ts";
 import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts";
+import { recordVersion } from "../../db/queries/versions/record-version.query.ts";
 import { actorId } from "../../cms/runtime/operation-context.ts";
+import { target, targetKey } from "../targets.ts";
 import type { WriteState } from "./write-document.ts";
 import { persistLocalized } from "./persist-localized.ts";
 
@@ -66,6 +68,17 @@ export async function persistDocument(state: WriteState, data: Record<string, an
       ? await updateDoc(db, name.name, id, data, isPublish, by)
       : await insertDoc(db, name.name, data, by);
   }
+
+  if (mode !== "deletion-effect")
+    await recordVersion(db, {
+      target: targetKey(name),
+      docId: name.kind === "global" ? "" : stored.id,
+      locale: locale?.locale ?? null,
+      status: isDraft ? "draft" : "published",
+      data,
+      by,
+      max: target(core, name).maxVersions,
+    });
 
   if (isDraft) return (await afterRead(core, scope, name, [stored], operation, true))[0];
 

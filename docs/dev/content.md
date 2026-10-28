@@ -14,7 +14,7 @@ Create, update and set-global run these steps in one transaction:
 6. Custom `validate`
 7. `beforeChange` hooks, then parse again
 8. Uniqueness and reference checks
-9. Save
+9. Save, then record the version
 10. `afterChange`, `afterRead`, `afterOperation`
 
 At each hook stage the order is: field hooks, then the collection or global, then plugins, then root hooks.
@@ -23,6 +23,14 @@ At each hook stage the order is: field hooks, then the collection or global, the
 - **Draft saves** skip custom validation, uniqueness and reference checks, and `afterChange`. **Publishing** runs the full pipeline over the pending data. **Discard** drops the draft, or deletes a never-published document.
 - Globals have no operation hooks.
 - **Edit conflicts**: the token is `updatedAt` in milliseconds. Draft saves and publishes bump it too, since `updated_at` is per row. The check runs inside the write transaction, so SQLite fails a concurrent writer instead of letting it overwrite. Two writes in the same millisecond pass; a version column fixes that if it ever matters.
+
+## Versions
+
+- `persistDocument()` records a version after every save, in the same transaction. It is the one place every write passes: saves, drafts, publishes, copied locales and restores. `onDelete` effects record none.
+- A version holds the written data. For a localized entry, that is the merged document of the written locale, so versions are per locale.
+- A draft updates the newest version in place when that one is a draft by the same user in the same locale, saved within the last 30 minutes. Payload does the same with autosave; without it, every 800 ms autosave would add a row.
+- Restore is a plain `update` or `setGlobal` with the version's data as the user (`versions/`), so access, hooks and validation run, and it records a new version.
+- An insert deletes the oldest versions of that document and locale beyond `maxVersions` (default 100), in the same transaction. Deleting a document deletes its versions.
 
 ## A read
 

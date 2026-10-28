@@ -39,6 +39,8 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 - **Perspective**: the preview cookie holds drafts or published. In the published view, forms are read-only, because an edit there would replace the pending draft.
 - **Languages**: the content language is separate from the interface language. In the Drafts view, forms load the active language without fallback. The Published view keeps the fallback, because it shows what the site shows.
 - **Interface language**: vue-i18n, with English and German. A missing key in one language fails the typecheck. Host text is `string | { en, de }`.
+- **The "…" menu** (`DocActions`) has labeled groups: **Document** (History) for a saved entry the user MAY update, and **Translation** (Copy from, Copy to, Remove translation, Discard all) while the form is editable. The copy submenus label their languages too.
+- **History**: `VersionHistory` replaces the form in `DocPane` and `GlobalEdit`. Opening it saves pending edits first. A version opens in `DocForm` without save handlers, so it is read-only and has no status bar and no autosave. `changedKeys()` (`modules/documents/versions.ts`) compares it with the version before it; `DocForm`'s `changed` marks those top-level fields and fades the rest. A change inside a group, array or blocks field marks the whole field. The list is split into calendar groups by `groupByTime()`. Both views have a back button at the top. Restore is off while the form would be read-only (Published view, someone else's lock). A language switch closes it.
 - **Fields** are rendered by one recursive component. Conditions, layout (tabs, fieldsets, widths), lists and blocks are handled there.
 
 ## UI rules

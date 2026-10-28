@@ -77,6 +77,26 @@ The admin lets one person edit a document or global at a time, like Payload and 
 
 A claim answers `{ mine, user: { id, name } }`: whether you hold the lock, and who does. It needs a session and the right to update; API keys cannot lock. The client has `lock`, `unlock`, `lockGlobal` and `unlockGlobal`.
 
+### Version history
+
+Every document and global keeps its past versions, per language. In the admin, open **…** → **History**. The list is grouped by time (today, yesterday, this week, this month, last month, older). An opened version marks the fields it changed against the version before it.
+
+- A publish, and every save without drafts, adds a **Published** version.
+- Draft saves add an **Edited** version. A user's autosaves update that one version until someone else saves, it is published, or 30 minutes pass without a save. So typing does not add a version per keystroke, and a later editing session gets its own version.
+- Each version names its user. Server code records none.
+- **Restore** writes a version back as the draft of its language, through the normal write: access rules, hooks and validation apply. Publish it to go live. Without drafts, restore saves it at once.
+- Each document keeps its newest 100 versions per language; recording one more deletes the oldest. Set `maxVersions` on the collection or global to change it, or `Infinity` to keep every version. Deleting a document deletes its versions.
+- The history needs a session and the right to update. A version leaves out the fields you MAY NOT read.
+
+| Action           | Request                                                         |
+| ---------------- | --------------------------------------------------------------- |
+| List             | `GET /api/cms/collections/:name/:id/versions?locale=de`         |
+| Read one         | `GET /api/cms/collections/:name/:id/versions/:version`          |
+| Restore          | `POST /api/cms/collections/:name/:id/versions/:version/restore` |
+| Global: the same | on `/api/cms/globals/:name/versions`                            |
+
+A list entry is `{ id, status, locale, user, createdAt, updatedAt }`; reading one adds `data`. The client has `versions`, `version`, `restoreVersion`, `globalVersions`, `globalVersion` and `restoreGlobalVersion`.
+
 ## Over HTTP
 
 With a session:

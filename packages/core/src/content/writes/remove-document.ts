@@ -1,7 +1,7 @@
 import { breakRichtextLinks } from "../../richtext/integrity/break-links.ts";
 import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { collectionTarget, target } from "../targets.ts";
+import { collectionTarget, target, targetKey } from "../targets.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { hookArgs } from "../lifecycle/hook-args.ts";
@@ -13,6 +13,7 @@ import { setGlobal } from "../../globals/operations/set.operation.ts";
 import { loadDoc } from "../../db/queries/documents/load-document.query.ts";
 import { deleteDoc } from "../../db/queries/documents/delete-document.query.ts";
 import { deleteLocales } from "../../db/queries/locales/delete-locales.query.ts";
+import { deleteVersions } from "../../db/queries/versions/delete-versions.query.ts";
 import { DOCUMENT_LOCALES } from "../../db/queries/document-sql.ts";
 import { enforce, permit } from "../../access/rule.ts";
 
@@ -43,6 +44,7 @@ export async function remove(
 
   await deleteDoc(db, collection, id);
   if (core.localization) await deleteLocales(db, DOCUMENT_LOCALES, id);
+  await deleteVersions(db, targetKey(collectionTarget(collection)), id);
 
   await onDelete(db, core.schema, collection, id, {
     update: (collection, id, data, locale) =>

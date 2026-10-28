@@ -41,6 +41,7 @@ export type {
   NewApiKey,
 } from "./api-keys/types.ts";
 export type { Lock } from "./locks/types.ts";
+export type { Version, VersionWithData } from "./versions/types.ts";
 export type {
   Access,
   AccessArgs,
