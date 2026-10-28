@@ -9,6 +9,7 @@ export function hookArgs<E extends object>(s: Inner, name: ContentTarget, extra:
   return {
     cms: s.cms,
     user: s.user,
+    apiKey: s.apiKey,
     context: s.context,
     [name.kind]: name.name,
     draft: false,

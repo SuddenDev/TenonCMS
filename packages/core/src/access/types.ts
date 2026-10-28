@@ -9,7 +9,7 @@ export type Where = Record<string, string | number | boolean | null>;
 /** What every rule gets: the caller and the `cms` of hooks, which skips the rules. */
 export type AccessArgs = Pick<
   HookArgs,
-  "user" | "cms" | "context" | "collection" | "global" | "locale"
+  "user" | "apiKey" | "cms" | "context" | "collection" | "global" | "locale"
 >;
 
 /**

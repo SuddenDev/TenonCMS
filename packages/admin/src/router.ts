@@ -28,6 +28,9 @@ import Users from "@/modules/users/views/Users.vue";
 import UserEdit from "@/modules/users/views/UserEdit.vue";
 import InviteEdit from "@/modules/users/views/InviteEdit.vue";
 import NewUser from "@/modules/users/views/NewUser.vue";
+import ApiKeys from "@/modules/api-keys/views/ApiKeys.vue";
+import ApiKeyEdit from "@/modules/api-keys/views/ApiKeyEdit.vue";
+import NewApiKey from "@/modules/api-keys/views/NewApiKey.vue";
 
 const { t } = i18n.global;
 const empty = { render: () => null };
@@ -115,6 +118,15 @@ export function createAdminRouter(base: string) {
         { path: "new", component: NewUser, meta: { panes: true } },
         { path: "invites/:id", component: InviteEdit, meta: { panes: true } },
         { path: ":id", component: UserEdit, meta: { panes: true } },
+      ],
+    },
+    {
+      path: "/api-keys",
+      component: ApiKeys,
+      meta: { admin: true, panes: true, breadcrumb: () => t("nav.apiKeys") },
+      children: [
+        { path: "new", component: NewApiKey, meta: { panes: true } },
+        { path: ":id", component: ApiKeyEdit, meta: { panes: true } },
       ],
     },
     { path: "/", redirect: CONTENT },

@@ -34,6 +34,13 @@ export { definePlugin, type Plugin } from "./plugins/index.ts";
 export type { AuthOptions } from "./auth/config/options.ts";
 export type { Role, RoleOptions } from "./users/roles.ts";
 export type {
+  ApiKey,
+  ApiKeyCaller,
+  ApiKeyOp,
+  ApiKeyPermissions,
+  NewApiKey,
+} from "./api-keys/types.ts";
+export type {
   Access,
   AccessArgs,
   FieldAccess,

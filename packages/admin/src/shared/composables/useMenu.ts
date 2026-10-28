@@ -131,13 +131,22 @@ export function useMenu() {
         also: targets,
       });
     if (session?.user.value?.role === "admin")
-      items.push({
-        label: t("nav.users"),
-        icon: "users",
-        group: t("nav.manage"),
-        order: 110,
-        to: "/users",
-      });
+      items.push(
+        {
+          label: t("nav.users"),
+          icon: "users",
+          group: t("nav.manage"),
+          order: 110,
+          to: "/users",
+        },
+        {
+          label: t("nav.apiKeys"),
+          icon: "key-round",
+          group: t("nav.manage"),
+          order: 120,
+          to: "/api-keys",
+        },
+      );
     return groupMenu(items, t("nav.content"));
   });
 }

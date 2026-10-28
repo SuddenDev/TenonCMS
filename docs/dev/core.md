@@ -31,26 +31,26 @@ Server code   ---------> scoped local API ---^
 
 ## Module map
 
-| Folder in `src/`           | Owns                                                               |
-| -------------------------- | ------------------------------------------------------------------ |
-| `cms/`                     | Builds an instance, binds the scoped local API, assembles config   |
-| `collections/`, `globals/` | Config, endpoints and operations for each kind of content          |
-| `content/`                 | The shared engine: write and read pipelines, population, integrity |
-| `schema/`                  | Field types, validation, hook contracts, type inference, traversal |
-| `access/`                  | Access rules and permissions                                       |
-| `auth/`, `users/`          | Sign-in (better-auth), roles, invites                              |
-| `http/`                    | The Hono app and its route order                                   |
-| `client/`                  | The typed browser client                                           |
-| `db/`                      | Tables, migrations, SQL                                            |
-| `media/`                   | Uploads, storage, image variants                                   |
-| `richtext/`                | Tiptap documents, links, rendering                                 |
-| `email/`                   | Email adapters and templates                                       |
-| `preview/`                 | Live preview runtime, preview URLs, the site's admin bar           |
-| `plugins/`                 | The plugin contract                                                |
-| `presets/`, `helpers/`     | Ready-made fields and hooks; small helpers such as `seoMeta()`     |
-| `admin/`                   | The contract between core and the admin app                        |
-| `integrations/`            | Astro, Nuxt and Vite adapters                                      |
-| `tests/`                   | The integration suite                                              |
+| Folder in `src/`               | Owns                                                               |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `cms/`                         | Builds an instance, binds the scoped local API, assembles config   |
+| `collections/`, `globals/`     | Config, endpoints and operations for each kind of content          |
+| `content/`                     | The shared engine: write and read pipelines, population, integrity |
+| `schema/`                      | Field types, validation, hook contracts, type inference, traversal |
+| `access/`                      | Access rules and permissions                                       |
+| `auth/`, `users/`, `api-keys/` | Sign-in (better-auth), roles, invites, API keys                    |
+| `http/`                        | The Hono app and its route order                                   |
+| `client/`                      | The typed browser client                                           |
+| `db/`                          | Tables, migrations, SQL                                            |
+| `media/`                       | Uploads, storage, image variants                                   |
+| `richtext/`                    | Tiptap documents, links, rendering                                 |
+| `email/`                       | Email adapters and templates                                       |
+| `preview/`                     | Live preview runtime, preview URLs, the site's admin bar           |
+| `plugins/`                     | The plugin contract                                                |
+| `presets/`, `helpers/`         | Ready-made fields and hooks; small helpers such as `seoMeta()`     |
+| `admin/`                       | The contract between core and the admin app                        |
+| `integrations/`                | Astro, Nuxt and Vite adapters                                      |
+| `tests/`                       | The integration suite                                              |
 
 Group by feature, not by technical layer. Inside a feature, split into config, endpoints, operations and queries only where each really exists.
 

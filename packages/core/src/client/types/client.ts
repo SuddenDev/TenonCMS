@@ -15,6 +15,7 @@ import type {
   PopulateOf,
 } from "../../schema/index.ts";
 import type { Invite, InviteResult } from "../../users/types.ts";
+import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
 import type { MediaClient } from "./media.ts";
 import type { FindOptions } from "./options.ts";
 import type {
@@ -395,6 +396,31 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     accept(data: { token: string; name: string; password: string }): Promise<{
       user: Session["user"];
     }>;
+  };
+
+  /** API keys. For admins only, with a session: a key cannot manage keys. */
+  apiKeys: {
+    /** Every key, revoked ones included. `GET /api/cms/api-keys` */
+    list(): Promise<ApiKey[]>;
+    /**
+     * Creates a key with the grid `permissions`. Unknown targets and operations are a 400. `expiresIn` is in seconds,
+     * between 1 and 365 days; without it the key does not expire. The result holds the key itself, which is never
+     * shown again. `POST /api/cms/api-keys`
+     */
+    create(data: {
+      name: string;
+      permissions: ApiKeyPermissions;
+      expiresIn?: number;
+    }): Promise<NewApiKey>;
+    /**
+     * Gives a key a new secret. Its id, grid and expiry stay; the old secret stops at once. The result holds the new
+     * secret, which is never shown again. A revoked key is a 404. `POST /api/cms/api-keys/:id/roll`
+     */
+    roll(id: string): Promise<NewApiKey>;
+    /** Disables a key. It stays listed. `POST /api/cms/api-keys/:id/revoke` */
+    revoke(id: string): Promise<void>;
+    /** Deletes a key for good. `DELETE /api/cms/api-keys/:id` */
+    delete(id: string): Promise<void>;
   };
 
   /**

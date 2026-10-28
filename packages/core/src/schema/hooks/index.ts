@@ -1,4 +1,5 @@
 import type { CmsUser } from "../../admin/index.d.ts";
+import type { ApiKeyCaller } from "../../api-keys/types.ts";
 import type { LocalApi } from "../../cms/api/local-api.ts";
 
 export type { CollectionHooks } from "./collection.ts";
@@ -36,6 +37,8 @@ export type HookArgs = {
   cms: LocalApi;
   /** The session user of an HTTP request or of `cms.withSession()`. `null` without a session and for server calls of the local API. */
   user: CmsUser | null;
+  /** The API key of an HTTP request or of `cms.withSession()`. A key caller has no `user`. */
+  apiKey?: ApiKeyCaller;
   /** One object shared by all hooks of an operation and every nested call inside it. Use it to pass values along or to stop loops. */
   context: Record<string, unknown>;
   /** Name of the collection. Missing for globals. */

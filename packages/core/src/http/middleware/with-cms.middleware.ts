@@ -10,6 +10,6 @@ import type { Env } from "./types.ts";
 export const withCms =
   (core: Core): MiddlewareHandler<Env> =>
   async (c, next) => {
-    c.set("cms", core.localApi(outerScope(null)));
+    c.set("cms", core.localApi(outerScope({ user: null })));
     await next();
   };

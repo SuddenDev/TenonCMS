@@ -11,6 +11,7 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `auth/`         | better-auth provider, caller lookup and session middleware.       | [README](auth/README.md)                    |
 | `email/`        | Server-side delivery, adapters and authentication templates.      | [README](email/README.md)                   |
 | `users/`        | Roles, invites, their operations and endpoints.                   | [README](users/README.md)                   |
+| `api-keys/`     | API key management: operations and endpoints.                     | [README](api-keys/README.md)                |
 | `http/`         | Hono application assembly, parsing and errors.                    | [app.ts](http/app.ts)                       |
 | `access/`       | Access rules: decisions, field stripping, `/schema` permissions.  | [README](access/README.md)                  |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |

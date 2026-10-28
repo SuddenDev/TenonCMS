@@ -1,6 +1,7 @@
 import type { User } from "better-auth";
 import { authOptions, type CoreAuth } from "../../auth/config/build-options.ts";
 import type { AuthOptions } from "../../auth/config/options.ts";
+import { apiKeyCaller } from "../../auth/api-key-caller.ts";
 import { createAuth } from "../../auth/create-auth.ts";
 import { createDb } from "../../db/create-db.ts";
 import { migrate } from "../../db/migrations/migrate.ts";
@@ -19,7 +20,7 @@ type Session = {
  * default locale. After the migrations, the stored state is synced to them.
  * @param coreAuth Email delivery, the passkeys' relying party and the roles.
  * @returns `db()` connects and migrates on its first call. `auth()` creates better-auth on its first call.
- * `getSession()` reads the session of a request's headers.
+ * `getSession()` reads the session of a request's headers. `getApiKey()` verifies an API key.
  */
 export function createRuntime<A extends AuthOptions>(
   database: { url: string; authToken?: string },
@@ -54,5 +55,7 @@ export function createRuntime<A extends AuthOptions>(
   const getSession = async (headers: Headers) =>
     ((await auth()).api as unknown as Session).getSession({ headers });
 
-  return { db, auth, getSession };
+  const getApiKey = async (key: string) => apiKeyCaller(await auth(), key);
+
+  return { db, auth, getSession, getApiKey };
 }

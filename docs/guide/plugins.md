@@ -64,7 +64,7 @@ A plugin is an object from `definePlugin()`:
 | `routes`           | `(api) => api.get(…)` on a Hono sub-app at `/api/cms/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, and `c.var.user` is that user           |
 | `publicRoutes`     | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                                             |
 | `publicMiddleware` | Hono middleware for every `/api/cms` request, auth included, before any route. `c.var.cms` has no user. Return a response to stop the request (rate limits, logging, headers) |
-| `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set                                          |
+| `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set. API key requests skip it                |
 | `admin`            | Fields, pages and admin bar `items`, like your [`admin`](./admin.md). A plugin sets no bar `position` and never turns the bar off. Merged before yours, in plugin order       |
 
 - Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` is 409, anything else is 500.

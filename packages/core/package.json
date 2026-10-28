@@ -159,6 +159,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@better-auth/api-key": "1.7.5",
     "@better-auth/passkey": "1.7.5",
     "@libsql/client": "^0.18.0",
     "@tiptap/core": "^3.32.0",

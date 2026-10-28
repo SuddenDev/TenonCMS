@@ -7,6 +7,11 @@ export type ClientOptions = {
   baseUrl?: string;
   /** Custom `fetch`, e.g. one that forwards cookies. Defaults to the global `fetch`. */
   fetch?: typeof fetch;
+  /**
+   * An API key, sent as `x-api-key` on every request. The client then acts as the key, within its permissions. For
+   * server code only: a key MUST NOT reach a browser.
+   */
+  apiKey?: string;
 };
 
 /** Options of `find` and `findOne` for collection `K`. */

@@ -25,9 +25,13 @@ export function richtextResolveEndpoint(core: Core) {
     if (body.locale !== undefined && typeof body.locale !== "string")
       throw new ValidationError({ locale: "Invalid locale" });
 
-    const scope = withLocale(core, outerScope(c.var.user, c.var.perspective), {
-      locale: body.locale,
-    });
+    const scope = withLocale(
+      core,
+      outerScope({ user: c.var.user, perspective: c.var.perspective }),
+      {
+        locale: body.locale,
+      },
+    );
 
     await resolveRichtext(core, inner(core, scope, undefined, {}), [body.document]);
 

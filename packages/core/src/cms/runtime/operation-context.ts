@@ -1,12 +1,14 @@
-import type { CmsUser } from "../../admin/index.d.ts";
-import { type Core, type Scope, type Inner, type Perspective } from "./types.ts";
+import { type Caller, type Core, type Scope, type Inner } from "./types.ts";
 
 /** The scope of a call from outside the CMS: server code (`overrideAccess`) or an HTTP request. */
 export const outerScope = (
-  user: CmsUser | null,
-  perspective?: Perspective,
+  { user, apiKey, perspective }: Partial<Caller> & Pick<Caller, "user">,
   overrideAccess = false,
-): Scope => ({ user, context: {}, nested: false, perspective, overrideAccess });
+): Scope => ({ user, apiKey, context: {}, nested: false, perspective, overrideAccess });
+
+/** Who `createdBy` and `updatedBy` record: the user's id, `key:<id>` for an API key, or `null`. */
+export const actorId = (scope: Scope) =>
+  scope.apiKey ? `key:${scope.apiKey.id}` : (scope.user?.id ?? null);
 /** The `context` of a call: a nested call keeps its caller's, an outer call starts empty. */
 export const contextOf = (scope: Scope) => (scope.nested ? scope.context : {});
 /**

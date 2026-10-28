@@ -10,6 +10,7 @@ import { emailTemplates } from "../../email/templates.ts";
 import { signUpStatus } from "../sign-up.ts";
 import { BUILT_IN_ROLES, type Role } from "../../users/roles.ts";
 import { userAccess } from "./access.ts";
+import { apiKeyRoutesOff, apiKeys } from "./api-keys.ts";
 import { lastAdmin } from "./last-admin.ts";
 import { passwordLength } from "./password-length.ts";
 import { userFields } from "./user-fields.ts";
@@ -51,14 +52,16 @@ export function authOptions<A extends AuthOptions>(
     secret,
     database: { db, type: "sqlite" as const },
     user: { ...user, additionalFields: { ...userFields, ...user?.additionalFields } },
-    // The admin signs in with passkeys and manages users with `admin()`. A host's plugin with the same id replaces
-    // core's. Typed as the host's plugins: their endpoint types break the declaration build (TS7056).
+    // The admin signs in with passkeys and manages users with `admin()`. API keys come from `apiKey()`. A host's
+    // plugin with the same id replaces core's. Typed as the host's plugins: their endpoint types break the declaration build (TS7056).
     plugins: [
       ...plugins,
       ...(has("passkey") ? [] : [passkey(relyingParty)]),
       ...(has("admin")
         ? []
         : [admin({ ...userAccess(roles), adminRoles: ["admin"], defaultRole: "editor" })]),
+      ...(has("api-key") ? [] : [apiKeys()]),
+      apiKeyRoutesOff(),
       lastAdmin(db),
       passwordLength(),
     ] as A["plugins"],

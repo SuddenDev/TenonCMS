@@ -8,10 +8,10 @@ The Hono app mounts feature routes in a fixed order. The order is the security m
 
 1. CMS binding, then public plugin middleware
 2. Session hint cookie on `/auth/*`, then auth routes and the **open** routes: admin branding, auth status, invites check and accept, `/localization`, public plugin routes, media files and images
-3. **CSRF**, then `optionalSession` (one session lookup per request)
+3. **CSRF** (skipped with an API key), then `optionalSession` (one caller lookup per request)
 4. Content **reads** (collections, globals, media folders)
 5. Protected plugin middleware, then content **writes**. Access rules decide here.
-6. `session` (401 without one), then all other protected routes
+6. `session` (401 without one), then `apiKeyReach()`, then all other protected routes
 
 - Routes after `optionalSession` MUST use the request's scoped `cms`, user and perspective. They MUST NOT look up the session again.
 - Every write route outside the content writes MUST sit behind `session`.
@@ -32,6 +32,17 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 - Passkeys are on unless the host adds its own. Users have `language` and `timezone` fields.
 - `admin` and `editor` are built-in roles. Hosts add roles with `roles`. A missing role counts as `editor`.
 - The last active admin cannot be demoted.
+
+## API keys
+
+- A key is better-auth's `apiKey()`. Its grid is better-auth's `permissions`: `{ "collection:posts": ["read"], schema: ["read"] }`. It never becomes a session, so better-auth's own endpoints ignore it.
+- A key is its own caller. `caller()` checks `x-api-key` before the cookie and returns `{ user: null, apiKey: { id, name, permissions }, perspective: "published" }`. A key that is not valid (unknown, revoked, expired) throws 401.
+- `apiKey` sits on `Scope`, `HookArgs` and `AccessArgs`. `decide()` checks the grid in the local API, so it holds for `withSession()` too. Writes that run no rule (upload parts, completion, abort) call `requireKeyGrant()`.
+- `session` lets a key through to `apiKeyReach()`, which allows only `/schema` with `schema: ["read"]`. Every other route behind `session` answers 403 to a key, plugin `routes` included: their `RouteEnv` promises `c.var.user`.
+- `createdBy` / `updatedBy` hold `actorId(scope)`: the user id, or `key:<id>`. better-auth ids hold no `:`. Uploads record the same actor.
+- CSRF is skipped for a request with the header. A cross-site form cannot set it, and a cross-origin fetch with it needs a preflight, which fails.
+- Only admins manage keys. better-auth's `/api-key/*` routes are closed over HTTP (`apiKeyRoutesOff()`). Core's `/api-keys` creates keys through better-auth without a request. Revoking sets `enabled = 0`; deleting removes the row. better-auth has no rotation, so rolling replaces `key` and `start` in place with `newApiKeySecret()`, which uses better-auth's exported `defaultKeyHasher` and the length `apiKeys()` sets.
+- Verifying a key writes its `lastRequest`. better-auth's per-key rate limit is off.
 
 ## Invites
 

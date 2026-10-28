@@ -2,7 +2,6 @@ import { richtextResolveEndpoint } from "../richtext/endpoints/resolve.endpoint.
 import { richtextTargetsEndpoint } from "../richtext/endpoints/targets.endpoint.ts";
 import { adminBrand } from "../admin/merge/merge-options.ts";
 import { Hono } from "hono";
-import { csrf } from "hono/csrf";
 import { API_BASE } from "../client/constants.ts";
 import type { Core } from "../cms/runtime/types.ts";
 import { mediaRoutes } from "../media/endpoints/routes.ts";
@@ -15,6 +14,8 @@ import { passwordEndpoint } from "../auth/endpoints/password.endpoint.ts";
 import { acceptEndpoint } from "../users/endpoints/accept.endpoint.ts";
 import { invitesEndpoint } from "../users/endpoints/invites.endpoint.ts";
 import { sessionHint } from "../auth/middleware/session-hint.middleware.ts";
+import { apiKeyReach, csrfUnlessApiKey } from "../auth/middleware/api-key.middleware.ts";
+import { apiKeysEndpoint } from "../api-keys/endpoints/api-keys.endpoint.ts";
 import { pluginMiddleware } from "../plugins/http/collect-middleware.ts";
 import { mountRoutes } from "../plugins/http/mount-routes.ts";
 import { collectionsRoutes } from "../collections/endpoints/routes.ts";
@@ -46,7 +47,7 @@ export function createApp(core: Core, site?: string) {
     localization: core.localization,
     roles: core.roles,
     email: !!core.emailTemplates,
-    permissions: (json, user, perspective) => withPermissions(core, json, user, perspective),
+    permissions: (json, visitor) => withPermissions(core, json, visitor),
   });
   const collections = collectionsRoutes(core);
   const globals = globalsRoutes(core);
@@ -78,6 +79,7 @@ export function createApp(core: Core, site?: string) {
   if (core.admin.bar) signedIn.route("/", adminBarEndpoint(core, core.admin.bar));
   signedIn.route("/", passwordEndpoint(core));
   signedIn.route("/", invitesEndpoint(core, site));
+  signedIn.route("/", apiKeysEndpoint(core));
   signedIn.route("/", loadEndpoint(core));
   signedIn.route("/", richtextTargetsEndpoint(core));
   signedIn.route("/", richtextResolveEndpoint(core));
@@ -92,21 +94,23 @@ export function createApp(core: Core, site?: string) {
   api.use(withCms(core), ...pluginMiddleware(plugins, "publicMiddleware"));
   api.use("/auth/*", sessionHint(core));
   api.use("/invites/accept", sessionHint(core));
-  // Invite responses hold tokens.
+  // Invite responses hold tokens, a created or rolled API key its secret.
   api.use("/invites", noStore);
   api.use("/invites/*", noStore);
+  api.use("/api-keys", noStore);
+  api.use("/api-keys/*", noStore);
   api.route("/", providerEndpoint(core));
   api.route("/", open);
 
   api.use("/admin/*", noStore);
   api.use("/admin-bar", noStore);
   // CSRF lets reads through.
-  api.use(csrf(), optionalSession(core));
+  api.use(csrfUnlessApiKey(), optionalSession(core));
   api.route("/", reads);
   // `use()` MUST get a path when the list MAY be empty.
   api.use("*", ...pluginMiddleware(plugins, "middleware").map(withSession));
   api.route("/", writes);
-  api.use(session);
+  api.use(session, apiKeyReach());
   api.route("/", signedIn);
 
   return api;

@@ -1,5 +1,6 @@
 import type { Core, Scope } from "../../../cms/runtime/types.ts";
 import { databaseForScope, onRollback, transaction } from "../../../cms/runtime/transaction.ts";
+import { actorId } from "../../../cms/runtime/operation-context.ts";
 import type { UploadInfo } from "../../../schema/index.ts";
 import { keyOf } from "../../library/names.ts";
 import { mediaOf } from "../../runtime/create-media-core.ts";
@@ -45,7 +46,7 @@ export async function create(core: Core, scope: Scope, input: Partial<UploadInfo
         size,
         part_size: partSize,
         adapter_upload_id: uploadId,
-        user_id: scope.user?.id ?? null,
+        user_id: actorId(scope),
         created_at: Date.now(),
       })
       .execute();

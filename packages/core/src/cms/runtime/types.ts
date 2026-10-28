@@ -1,4 +1,5 @@
 import type { CmsUser } from "../../admin/index.d.ts";
+import type { ApiKeyCaller } from "../../api-keys/types.ts";
 import type { AdminRuntime } from "../../admin/merge/merge-options.ts";
 import type { Localization } from "../config/options.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
@@ -28,6 +29,8 @@ export type Core = {
   auth: () => Promise<{ handler(request: Request): Promise<Response>; options: BetterAuthOptions }>;
   /** The session of a request's headers, or `null`. */
   getSession: (headers: Headers) => Promise<{ user: CmsUser } | null>;
+  /** The key of an API key's secret, or `null` for a key that is not valid. */
+  getApiKey: (key: string) => Promise<ApiKeyCaller | null>;
   /**
    * The local API of a scope. It sits on `Core`, so operations can create nested APIs for hooks without importing
    * every operation, which would be an import cycle.
@@ -59,10 +62,15 @@ export type Stage = keyof RootHooks;
  */
 export type Perspective = "published" | "drafts";
 
+/** Who calls over HTTP or `withSession()`: a session's user, an API key, or neither. */
+export type Caller = { user: CmsUser | null; apiKey?: ApiKeyCaller; perspective: Perspective };
+
 /** One call of the local API. Calls from inside a hook share a transaction lifetime, `user` and `context`. */
 export type Scope = {
   transaction?: TransactionLifetime;
   user: CmsUser | null;
+  /** The API key of the call. A key caller has no `user`. */
+  apiKey?: ApiKeyCaller;
   context: Record<string, unknown>;
   // True inside a hook: the call keeps `context` and runs no `afterError` of its own.
   nested: boolean;

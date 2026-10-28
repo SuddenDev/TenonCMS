@@ -1,3 +1,4 @@
+import { actorId } from "../../cms/runtime/operation-context.ts";
 import type { WriteState } from "./write-document.ts";
 import { splitLocale } from "./split-locale.ts";
 import { DOCUMENT_LOCALES, GLOBAL_LOCALES } from "../../db/queries/document-sql.ts";
@@ -20,7 +21,7 @@ export async function persistLocalized(state: WriteState, data: Record<string, a
   const loc = state.locale!;
   const isDraft = mode === "draft";
   const isPublish = mode === "publish";
-  const by = scope.user?.id ?? null;
+  const by = actorId(scope);
   const exists = source?.locales.includes(loc.locale) ?? false;
   const { shared, localized } = splitLocale(loc.keys, data);
   const global = name.kind === "global";

@@ -33,7 +33,8 @@ export async function fieldAllowed(
 
 /**
  * Removes what the caller of `s` cannot read from `docs`, in place: read-denied fields, inside groups and items too.
- * A caller without a user also loses `createdBy`, `updatedBy` and the fields of an item of an unknown block. Populated
+ * A caller without a user or key loses `createdBy` and `updatedBy`, and one without a user the fields of an item of an
+ * unknown block. Populated
  * documents are not walked: their own read strips them.
  */
 export async function stripDenied(core: Core, s: Inner, name: ContentTarget, docs: Doc[]) {
@@ -44,7 +45,7 @@ export async function stripDenied(core: Core, s: Inner, name: ContentTarget, doc
   const joins = Object.entries(fields).filter(([, f]) => f.type === "join");
 
   for (const doc of docs) {
-    if (!s.user) {
+    if (!s.user && !s.apiKey) {
       delete doc.createdBy;
       delete doc.updatedBy;
     }

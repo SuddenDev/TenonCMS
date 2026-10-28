@@ -4,14 +4,25 @@ import type { UploadOptions } from "./types/index.ts";
 
 type Part = { n: number; url: string };
 
-type Uploader = { request: Request; baseUrl: string; fetchFn: typeof fetch };
+type Uploader = {
+  request: Request;
+  baseUrl: string;
+  fetchFn: typeof fetch;
+  auth: Record<string, string>;
+};
 
 /**
  * Binds `client.media.upload()` to one client. Retries, progress and cancellation stay within that client.
+ * @param auth Headers for proxied parts. Direct parts (S3) MUST NOT get them.
  * @returns `upload(file, options)`, which resolves to the media document.
  */
-export function createUpload(request: Request, baseUrl: string, fetchFn: typeof fetch) {
-  const uploader: Uploader = { request, baseUrl, fetchFn };
+export function createUpload(
+  request: Request,
+  baseUrl: string,
+  fetchFn: typeof fetch,
+  auth: Record<string, string> = {},
+) {
+  const uploader: Uploader = { request, baseUrl, fetchFn, auth };
 
   return async function upload(
     file: Blob & { name?: string },
@@ -55,7 +66,7 @@ export function createUpload(request: Request, baseUrl: string, fetchFn: typeof 
 // Sends one part and returns its ETag. Proxied parts (a path) answer `{ etag }`; direct ones (S3) send the header.
 // A 4xx other than 408 and 429 is final; anything else is retried 3 times with backoff.
 async function putPart(
-  { baseUrl, fetchFn }: Uploader,
+  { baseUrl, fetchFn, auth }: Uploader,
   url: string,
   blob: Blob,
   signal?: AbortSignal,
@@ -67,6 +78,7 @@ async function putPart(
     const res = await fetchFn(proxied ? `${baseUrl}${url}` : url, {
       method: "PUT",
       body: blob,
+      headers: proxied ? auth : undefined,
       signal,
     }).catch((error) => {
       if (signal?.aborted || attempt >= 3) throw error;

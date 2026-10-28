@@ -14,6 +14,7 @@ import { saveGlobal } from "../../db/queries/globals/save-global.query.ts";
 import { updateDoc } from "../../db/queries/documents/update-document.query.ts";
 import { insertDoc } from "../../db/queries/documents/insert-document.query.ts";
 import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts";
+import { actorId } from "../../cms/runtime/operation-context.ts";
 import type { WriteState } from "./write-document.ts";
 import { persistLocalized } from "./persist-localized.ts";
 
@@ -34,7 +35,7 @@ export async function persistDocument(state: WriteState, data: Record<string, an
   } = state;
   const isDraft = mode === "draft";
   const isPublish = mode === "publish";
-  const by = scope.user?.id ?? null;
+  const by = actorId(scope);
 
   if (!isDraft) {
     if (name.kind === "collection") await checkUnique(db, name.name, fields, data, id, locale);

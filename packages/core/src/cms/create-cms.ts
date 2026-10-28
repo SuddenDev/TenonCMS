@@ -1,6 +1,5 @@
 import { checkRichtextConfig } from "../richtext/config/check-config.ts";
 import { mergeAdmin } from "../admin/merge/merge-options.ts";
-import type { User } from "better-auth";
 import { consola } from "consola";
 import { createApp } from "../http/index.ts";
 import { caller } from "../auth/get-caller.ts";
@@ -30,7 +29,7 @@ import { defaultMedia } from "integral-cms/media/default";
 import { mediaCollection } from "../media/config/collection.ts";
 import { localizedKeys } from "../schema/traversal/localized-fields.ts";
 import { createRuntime } from "./runtime/create-runtime.ts";
-import type { Core, Perspective } from "./runtime/types.ts";
+import type { Caller, Core } from "./runtime/types.ts";
 import { outerScope } from "./runtime/operation-context.ts";
 import { createEmail } from "../email/create-email.ts";
 import { emailTemplates } from "../email/templates.ts";
@@ -145,7 +144,7 @@ export function defineCms<
     ...Object.entries<Global>(schema.globals).map(([n, e]): [string, Global] => [`global:${n}`, e]),
   ];
   const email = createEmail(emailOptions);
-  const { db, auth, getSession } = createRuntime<A>(
+  const { db, auth, getSession, getApiKey } = createRuntime<A>(
     database,
     secret,
     host,
@@ -175,6 +174,7 @@ export function defineCms<
     db,
     auth,
     getSession,
+    getApiKey,
     email,
     emailTemplates: emailOptions && { ...emailTemplates, ...emailOptions.templates },
     roles,
@@ -189,11 +189,10 @@ export function defineCms<
 
   /**
    * The instance for one caller.
-   * @param user The user hooks get. `null` for server code.
-   * @param perspective Which version of documents reads return.
+   * @param visitor The user or API key hooks get, none for server code, and which version of documents reads return.
    * @param overrideAccess Whether the access rules are skipped: server code skips them, `withSession()` does not.
    */
-  function createInstance(user: User | null, perspective: Perspective, overrideAccess: boolean) {
+  function createInstance(visitor: Caller, overrideAccess: boolean) {
     return {
       schema: schema as unknown as T,
       auth,
@@ -201,24 +200,19 @@ export function defineCms<
       /** The `localization` option with defaults, or `undefined`. `locales` keeps its literal types. */
       localization,
       // The local API is untyped. `Api` adds the schema's types.
-      ...(createLocalApi(core, outerScope(user, perspective, overrideAccess)) as unknown as Api<
-        T,
-        D,
-        L
-      >),
+      ...(createLocalApi(core, outerScope(visitor, overrideAccess)) as unknown as Api<T, D, L>),
 
       /** Returns a copy whose reads include drafts. */
       withDrafts<S>(this: S): S {
-        return createInstance(user, "drafts", overrideAccess) as S; // (`<S>(this: S): S` here and on `withSession` avoids TS2589.)
+        return createInstance({ ...visitor, perspective: "drafts" }, overrideAccess) as S; // (`<S>(this: S): S` here and on `withSession` avoids TS2589.)
       },
 
       /**
-       * Returns a copy for the session user of `request`, which the access rules check. Reads include drafts with the
-       * preview cookie.
+       * Returns a copy for the session user or API key of `request`, which the access rules check. Reads include drafts
+       * with the preview cookie.
        */
       async withSession<S>(this: S, request: Request): Promise<S> {
-        const visitor = await caller(getSession, request);
-        return createInstance(visitor.user, visitor.perspective, false) as S;
+        return createInstance(await caller(core, request), false) as S;
       },
 
       /** Handles `/api/cms` requests. Mount it in any framework that speaks Request/Response. */
@@ -228,7 +222,10 @@ export function defineCms<
     };
   }
 
-  return createInstance(null, "published", true) as ReturnType<typeof createInstance> & MediaOf<M>;
+  return createInstance({ user: null, perspective: "published" }, true) as ReturnType<
+    typeof createInstance
+  > &
+    MediaOf<M>;
 }
 
 export type Cms<T extends Schema> = ReturnType<

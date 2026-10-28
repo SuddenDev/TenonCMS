@@ -29,8 +29,8 @@ export type Plugin<
   /** Hooks of the media library. They run after the host's `media.hooks`. See {@link MediaHooks}. */
   mediaHooks?: MediaHooks;
   /**
-   * Routes that need a session, for admin pages. Mounted at `/api/cms/<name>`, after CSRF and session checks.
-   * `c.var.cms` runs hooks with the session user; `c.var.user` is that user.
+   * Routes that need a session, for admin pages. Mounted at `/api/cms/<name>`, after CSRF and session checks. API keys
+   * get 403. `c.var.cms` runs hooks with the session user; `c.var.user` is that user.
    * @example
    * routes: (api) => api.post('/import', async (c) => c.json(await c.var.cms.create('redirects', await c.req.json())))
    */
@@ -49,7 +49,7 @@ export type Plugin<
   publicMiddleware?: MiddlewareHandler<PublicRouteEnv>;
   /**
    * Hono middleware for requests with a session: content writes, `/schema` and every plugin's `routes`. Writes
-   * without a session skip it.
+   * without a session skip it, API key writes included.
    * Runs after the CSRF and session checks, so `c.var.user` is set and `c.var.cms` runs hooks with that user.
    */
   middleware?: MiddlewareHandler<RouteEnv>;

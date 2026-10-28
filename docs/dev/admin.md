@@ -19,7 +19,7 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 ## The app
 
 - Vue 3, vue-router, Tailwind v4, built in Vite library mode. Vue is bundled and the CSS is inlined and injected by the mount function.
-- Source is split by feature (`modules/auth`, `documents`, `media`, `preview`, `settings`, `users`) plus `shared/`. Imports across folders use the `@/` alias.
+- Source is split by feature (`modules/api-keys`, `auth`, `documents`, `media`, `preview`, `settings`, `users`) plus `shared/`. Imports across folders use the `@/` alias.
 - Types for registrations come from one file in core, which is the only copy.
 - Two build outputs: the admin (`mount.js`) and the site's admin bar (`bar.js`).
 

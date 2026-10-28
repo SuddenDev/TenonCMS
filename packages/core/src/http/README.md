@@ -10,12 +10,12 @@ Endpoints live in their feature folders: `../collections/endpoints/`, `../global
 
 ```
 withCms → plugins' publicMiddleware → auth/* or open routes
-        → csrf → optionalSession → content reads
+        → csrf (skipped with an API key) → optionalSession → content reads
         → plugins' middleware (with a session) → content writes
-        → session → protected routes
+        → session → apiKeyReach → protected routes
 ```
 
-`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, and `user` when a session exists. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session. `handleError()` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403.
+`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, `user` with a session and `apiKey` with an API key. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session or a key; `apiKeyReach()` lets a key reach only `/schema` there, with `read` on `schema`. `handleError()` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403.
 
 ## Follow a public read
 

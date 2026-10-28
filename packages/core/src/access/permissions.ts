@@ -1,5 +1,4 @@
-import type { CmsUser } from "../admin/index.d.ts";
-import type { Core, Inner, Perspective } from "../cms/runtime/types.ts";
+import type { Caller, Core, Inner } from "../cms/runtime/types.ts";
 import { inner, outerScope } from "../cms/runtime/operation-context.ts";
 import { collectionTarget, globalTarget } from "../content/targets.ts";
 import { hookArgs } from "../content/lifecycle/hook-args.ts";
@@ -11,21 +10,16 @@ import type { FieldAccess } from "./types.ts";
 type Json = Record<string, any>;
 
 /**
- * Adds what `user` MAY do to a copy of the `/schema` JSON, for the admin: `access` with every operation on each
- * collection and global (`true`, `false`, or a `where` the admin matches a document against), and `access` with the
- * denied operations (`false`) on each field. Rules run without a document, `id` or `data`, and `read` in the admin's
- * `perspective`; the server stays the authority.
+ * Adds what the caller MAY do to a copy of the `/schema` JSON, for the admin and API keys: `access` with every
+ * operation on each collection and global (`true`, `false`, or a `where` the admin matches a document against), and
+ * `access` with the denied operations (`false`) on each field. Rules run without a document, `id` or `data`, and
+ * `read` in the caller's `perspective`; the server stays the authority.
  * @returns The copy.
  */
-export async function withPermissions(
-  core: Core,
-  json: Json,
-  user: CmsUser,
-  perspective: Perspective,
-) {
+export async function withPermissions(core: Core, json: Json, visitor: Caller) {
   const out = structuredClone(json);
-  const s = inner(core, outerScope(user, perspective), undefined, {});
-  const draft = perspective === "drafts";
+  const s = inner(core, outerScope(visitor), undefined, {});
+  const draft = visitor.perspective === "drafts";
 
   const entries = [
     ...Object.entries(core.schema.collections).map(([n, e]) => [collectionTarget(n), e] as const),

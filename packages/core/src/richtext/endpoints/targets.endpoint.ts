@@ -22,7 +22,7 @@ export function richtextTargetsEndpoint(core: Core) {
     const { perspective } = c.var;
     if (query.length > 200) throw new ValidationError({ query: "Invalid rich text search" });
 
-    const scope = withLocale(core, outerScope(c.var.user, perspective), {
+    const scope = withLocale(core, outerScope({ user: c.var.user, perspective }), {
       locale: c.req.query("locale"),
     });
     const s = inner(core, scope, undefined, {});

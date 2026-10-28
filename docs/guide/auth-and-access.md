@@ -144,6 +144,90 @@ For custom screens:
 
 The Astro example accepts `SMTP_URL` and `EMAIL_FROM` (see `examples/astro/.env.example`). Set `SMTP_URL=smtp://127.0.0.1:1025` for a local email catcher on port 1025. Development permits a catcher without TLS. Production requires TLS. Start the example, choose **Forgot password?**, and open the link in the catcher's inbox.
 
+## API keys
+
+An API key lets a script or another service use the API without signing in. Examples: a build that reads content, or a shop module that syncs products.
+
+- A key is its own caller, not a user. The admin who created it is recorded, but the key does not act as them.
+- A grid on the key decides what it MAY do (see below).
+- A key reads published content only. The preview cookie is ignored.
+- A key that is unknown, revoked or expired gets 401. It never falls back to a visitor's read.
+- Only a hash of the key is stored. The key itself is shown once, when it is created.
+
+Send the key as `x-api-key`, or pass it to the client. Keep keys on the server: a key MUST NOT reach a browser.
+
+```ts
+import { createClient } from "integral-cms/client";
+
+const client = createClient({ baseUrl: "https://example.com", apiKey: process.env.CMS_API_KEY });
+const posts = await client.find("posts");
+```
+
+**The grid**
+
+A key holds operations per target, picked at creation:
+
+```ts
+{
+  "collection:posts": ["create", "read", "update", "delete"],
+  "collection:media": ["read", "create"],
+  "global:site": ["read", "update"],
+  schema: ["read"],
+}
+```
+
+- Every collection takes `create`, `read`, `update` and `delete`, plugin collections and `media` included. A media upload needs `create` on `collection:media`, and so do its parts and its abort.
+- Every global takes `read` and `update`. `schema` takes `read`: `GET /api/cms/schema`, with `access` showing what the key MAY do.
+- A target the key does not hold is a 403. A collection added later is not granted to existing keys.
+- Unknown targets and operations are a 400 at creation.
+
+**Access rules and keys**
+
+The grid is checked first, in the local API, so it holds for `cms.withSession(request)` too. Then the target's rule:
+
+| Rule             | For a key                                                   |
+| ---------------- | ----------------------------------------------------------- |
+| missing          | Allowed: the grid replaces the default                      |
+| a list of roles  | Allowed: the grid replaces it                               |
+| `true` / `false` | As written, so `delete: false` holds for keys too           |
+| a function       | Runs with `user: null` and `apiKey`, so it MAY narrow a key |
+
+Field rules run as for a visitor: a role list or `private` hides the field from a key, a function rule decides. Rules and hooks get `apiKey` as `{ id, name, permissions }`.
+
+```ts
+access: {
+  update: ({ user, apiKey }) => !!user || apiKey?.name === "Shop sync",
+}
+```
+
+**Authors**
+
+`createdBy` and `updatedBy` hold `key:<id>` for a key's writes. Filter on it like on a user id: `where: { createdBy: "key:abc" }`. A key reads `createdBy` and `updatedBy`.
+
+**What a key never reaches**
+
+A key never reads drafts. Previews, users, invites, passwords, key management, plugin `routes` and better-auth's own routes answer 403 to a key. Plugin `middleware` does not run for a key, as for a visitor. Public plugin routes work as for anyone.
+
+**Managing keys**
+
+**API keys**, under Manage in the admin menu, is for admins only. It creates keys with the grid, and shows each key's grid, creator, last use and state.
+
+- **Roll** gives a key a new secret. The old one stops at once. The id, grid, expiry and `key:<id>` authors stay.
+- **Revoke** disables a key at once. It stays listed, so `key:<id>` in `createdBy` keeps a name.
+- **Delete** removes it for good.
+
+| Route                               | Does                                                                       |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| `GET /api/cms/api-keys`             | Every key, revoked ones included, with `permissions`, `creator`, `enabled` |
+| `POST /api/cms/api-keys`            | `{ name, permissions, expiresIn? }`: the new key with `key`                |
+| `POST /api/cms/api-keys/:id/roll`   | A new secret for an active key: the key with `key`. A revoked key is a 404 |
+| `POST /api/cms/api-keys/:id/revoke` | Disables the key                                                           |
+| `DELETE /api/cms/api-keys/:id`      | Deletes the key                                                            |
+
+`expiresIn` is in seconds, from 1 to 365 days. Without it, the key does not expire. The client has `client.apiKeys.list()`, `create()`, `roll()`, `revoke()` and `delete()`. These routes need an admin's session: a key cannot manage keys.
+
+Core adds better-auth's [`apiKey()`](https://better-auth.com/docs/plugins/api-key) plugin without its per-key rate limit and without sessions for keys. Its own `/api/cms/auth/api-key/*` routes are closed.
+
 ## Access control
 
 `access` decides who MAY read, create, update and delete. It works on collections, globals (`read`, `update`), the media library (`media.access`) and fields (`read`, `create`, `update`). A rule is `true`, `false`, a list of roles, or a function.

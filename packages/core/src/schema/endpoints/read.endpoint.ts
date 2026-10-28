@@ -1,8 +1,8 @@
-import type { AdminDescriptor, CmsUser } from "../../admin/index.d.ts";
+import type { AdminDescriptor } from "../../admin/index.d.ts";
 import { Hono } from "hono";
 import type { Env } from "../../http/middleware/types.ts";
 import type { Localization } from "../../cms/config/options.ts";
-import type { Perspective } from "../../cms/runtime/types.ts";
+import type { Caller } from "../../cms/runtime/types.ts";
 import { isObject } from "../condition.ts";
 import type { Schema } from "../index.ts";
 import type { Role } from "../../users/roles.ts";
@@ -16,17 +16,13 @@ type SchemaExtras = {
   roles: Role[];
   /** Whether email is configured. */
   email: boolean;
-  /** Adds what the session's user MAY do in `perspective` to a copy of the JSON. */
-  permissions?(
-    json: Record<string, any>,
-    user: CmsUser,
-    perspective: Perspective,
-  ): Promise<unknown>;
+  /** Adds what the caller MAY do to a copy of the JSON. */
+  permissions?(json: Record<string, any>, visitor: Caller): Promise<unknown>;
 };
 
 /**
  * Serves the schema as JSON on `GET /schema`, for the admin. It is serialized once, without hooks or other functions.
- * With `localization`, it adds the locales and the default locale. `permissions` adds the user's per request.
+ * With `localization`, it adds the locales and the default locale. `permissions` adds the caller's per request.
  * @returns A Hono sub-app with the one route.
  */
 export function readEndpoint(
@@ -51,7 +47,13 @@ export function readEndpoint(
 
   return new Hono<Env>().get("/schema", async (c) =>
     c.json(
-      permissions ? await permissions(publicSchema, c.var.user, c.var.perspective) : publicSchema,
+      permissions
+        ? await permissions(publicSchema, {
+            user: c.var.user ?? null,
+            apiKey: c.var.apiKey,
+            perspective: c.var.perspective,
+          })
+        : publicSchema,
     ),
   );
 }

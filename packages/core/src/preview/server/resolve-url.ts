@@ -20,7 +20,7 @@ export type UrlLocale = { locale?: string; localization?: Localization };
  */
 export function urlLocale(core: Core, locale?: string): UrlLocale {
   return {
-    locale: withLocale(core, outerScope(null), { locale }).locale,
+    locale: withLocale(core, outerScope({ user: null }), { locale }).locale,
     localization: core.localization,
   };
 }

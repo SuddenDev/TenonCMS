@@ -36,6 +36,8 @@ export async function check<R>(s: Inner, rule: Rule<any, R> | undefined, args: o
 
 /**
  * Decides operation `op` on a collection or global for the caller of `s`. A scope with `overrideAccess` is allowed.
+ * An API key MUST hold `op` on the target. Its grant replaces a role list and the default; `false` and a function
+ * rule still apply.
  * @returns `true`, `false`, or a `Where` the documents MUST match.
  */
 export async function decide(
@@ -46,8 +48,12 @@ export async function decide(
   extra: object = {},
 ): Promise<boolean | Where> {
   if (s.overrideAccess) return true;
-  const access = target(core, name).access as Access | undefined;
-  return check(s, access?.[op] ?? DEFAULTS[op], hookArgs(s, name, extra));
+  const rule = (target(core, name).access as Access | undefined)?.[op];
+  if (s.apiKey) {
+    if (!keyGrants(s, name, op)) return false;
+    if (rule === undefined || Array.isArray(rule)) return true;
+  }
+  return check(s, rule ?? DEFAULTS[op], hookArgs(s, name, extra));
 }
 
 /**
@@ -117,7 +123,20 @@ export async function guardAll(core: Core, scope: Scope, name: ContentTarget, op
   enforce(s, await decide(core, s, name, op, op === "read" ? { draft: false } : {}));
 }
 
-/** The error of a denied caller: 401 without a user, else 403. */
+/**
+ * For a write that runs no rule, like an upload's parts.
+ * @throws {ForbiddenError} 403 for an API key without `op` on the target.
+ */
+export function requireKeyGrant(scope: Scope, name: ContentTarget, op: Op) {
+  if (!scope.overrideAccess && scope.apiKey && !keyGrants(scope, name, op))
+    throw new ForbiddenError(403);
+}
+
+/** Whether the API key of `scope` holds `op` on the target. */
+const keyGrants = (scope: Scope, name: ContentTarget, op: Op) =>
+  !!scope.apiKey?.permissions[`${name.kind}:${name.name}`]?.includes(op);
+
+/** The error of a denied caller: 401 without a user or key, else 403. */
 function denied(s: Inner) {
-  return new ForbiddenError(s.user ? 403 : 401);
+  return new ForbiddenError(s.user || s.apiKey ? 403 : 401);
 }

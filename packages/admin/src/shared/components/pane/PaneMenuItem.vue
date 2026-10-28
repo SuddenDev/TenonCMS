@@ -91,7 +91,7 @@ const elementProps = computed(() =>
         <slot name="subtitle">{{ subtitle }}</slot>
       </span>
     </span>
-    <span v-if="$slots.end" data-slot="pane-menu-item-end" class="flex shrink-0 opacity-50">
+    <span v-if="$slots.end" data-slot="pane-menu-item-end" class="flex shrink-0 [&>svg]:opacity-50">
       <slot name="end" />
     </span>
   </Primitive>

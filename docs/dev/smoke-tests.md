@@ -1,6 +1,6 @@
 # Smoke tests
 
-Run these against an example after a change in an adapter, media, localization or invites.
+Run these against an example after a change in an adapter, media, localization, invites or API keys.
 
 - Give every run its own temp `DATABASE_URL` and temp uploads dir. Media defaults to `./.uploads` in the example.
 - Never delete files inside `examples/*`. Clean up only your temp paths, by absolute path.
@@ -16,6 +16,21 @@ curl -s $B/
 ```
 
 Expect 200, 201, and the post in the page HTML.
+
+API keys: create a read-only and a writing key for `posts` as the admin, then call without the cookie and without `Origin`.
+
+```sh
+R=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
+  -d '{"name":"Read","permissions":{"collection:posts":["read"]}}' $B/api/cms/api-keys | node -pe 'JSON.parse(require("fs").readFileSync(0)).key')
+W=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
+  -d '{"name":"Write","permissions":{"collection:posts":["read","create"]}}' $B/api/cms/api-keys | node -pe 'JSON.parse(require("fs").readFileSync(0)).key')
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $R" $B/api/cms/collections/posts
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $R" -H 'content-type: application/json' -d '{"title":"No","slug":"no"}' $B/api/cms/collections/posts
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $W" -H 'content-type: application/json' -d '{"title":"Key","slug":"key"}' $B/api/cms/collections/posts
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: nope" $B/api/cms/collections/posts
+```
+
+Expect 200, 403, 201 and 401.
 
 Media, on the standalone example (`B=127.0.0.1:3200` or a production build on another port): upload a PNG in one part, then fetch the original and a variant.
 

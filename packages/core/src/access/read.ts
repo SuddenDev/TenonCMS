@@ -62,7 +62,7 @@ export async function checkReadWhere(
   const denied = (key: string) => new ValidationError({ [key]: "Not filterable" });
   for (const key of Object.keys(where ?? {})) {
     if (key === "createdBy" || key === "updatedBy") {
-      if (!scope.user && !scope.overrideAccess) throw denied(key);
+      if (!scope.user && !scope.apiKey && !scope.overrideAccess) throw denied(key);
       continue;
     }
     if (!Object.hasOwn(fields, key)) throw new Error(`Unknown field "${key}"`);
@@ -105,6 +105,8 @@ export async function readable(
 export async function publishedMedia(core: Core, request: Request, key: string) {
   const doc = key.startsWith(".") ? undefined : await mediaByKey(await core.db(), key);
   if (core.schema.collections.media.access?.read === undefined) return doc;
-  const { user } = await caller(core.getSession, request);
-  return (await readable(core, outerScope(user), collectionTarget("media"), doc)) ? doc : undefined;
+  const visitor = await caller(core, request);
+  return (await readable(core, outerScope(visitor), collectionTarget("media"), doc))
+    ? doc
+    : undefined;
 }

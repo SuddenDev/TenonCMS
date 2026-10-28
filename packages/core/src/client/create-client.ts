@@ -1,6 +1,7 @@
 import type { RichtextDocument } from "../richtext/config/types.ts";
 import type { DeleteOptions } from "../errors.ts";
 import type { Schema } from "../schema/index.ts";
+import { API_KEY_HEADER } from "./constants.ts";
 import { createRequest } from "./create-request.ts";
 import { readQuery, type ReadQuery } from "./read-query.ts";
 import type {
@@ -36,9 +37,11 @@ type Discard = DiscardOption<{ localization: { locales: string[] } }>;
 export function createClient<C extends { schema: Schema } = RegisteredCms>({
   baseUrl = "",
   fetch: fetchFn = fetch,
+  apiKey,
 }: ClientOptions = {}): Client<C> {
-  const request = createRequest(baseUrl, fetchFn);
-  const upload = createUpload(request, baseUrl, fetchFn);
+  const auth: Record<string, string> = apiKey ? { [API_KEY_HEADER]: apiKey } : {};
+  const request = createRequest(baseUrl, fetchFn, auth);
+  const upload = createUpload(request, baseUrl, fetchFn, auth);
 
   const enc = encodeURIComponent;
   const collection = (name: string) => `/collections/${enc(name)}`;
@@ -175,6 +178,18 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       },
       check: (token: string) => request("POST", "/invites/check", { token }),
       accept: (data: unknown) => request("POST", "/invites/accept", data),
+    },
+
+    apiKeys: {
+      list: () => request("GET", "/api-keys"),
+      create: (data: unknown) => request("POST", "/api-keys", data),
+      roll: (id: string) => request("POST", `/api-keys/${enc(id)}/roll`),
+      revoke: async (id: string) => {
+        await request("POST", `/api-keys/${enc(id)}/revoke`);
+      },
+      delete: async (id: string) => {
+        await request("DELETE", `/api-keys/${enc(id)}`);
+      },
     },
 
     preview: {
