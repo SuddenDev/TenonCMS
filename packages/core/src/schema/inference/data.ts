@@ -79,7 +79,12 @@ export type Meta = {
 export type Doc<F extends Fields> = Data<F> & Meta;
 
 /** The meta of a global read. A `select` leaves it out. */
-export type GlobalMeta<S = true> = [S] extends [true] ? Pick<Meta, "publishedAt" | "hasDraft"> : {};
+export type GlobalMeta<S = true> = [S] extends [true]
+  ? Pick<Meta, "publishedAt" | "hasDraft"> & {
+      /** When the global last changed. Missing for a global that was never saved. */
+      updatedAt?: string;
+    }
+  : {};
 
 /** A populated `file` field: a document of the media library. */
 export type File = Meta & {

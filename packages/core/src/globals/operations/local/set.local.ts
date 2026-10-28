@@ -16,5 +16,6 @@ export const setGlobalLocal =
       name,
       data,
       draft ? "draft" : "save",
+      options.updatedAt,
     ))!;
   };

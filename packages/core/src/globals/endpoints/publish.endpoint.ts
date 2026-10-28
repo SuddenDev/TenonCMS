@@ -8,6 +8,11 @@ export function publishEndpoint(core: Core) {
 
   return new Hono<Env>().post("/globals/:name/publish", async (c) => {
     const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
-    return c.json(await c.var.cms.publishGlobal(name, { locale: c.req.query("locale") }));
+    return c.json(
+      await c.var.cms.publishGlobal(name, {
+        locale: c.req.query("locale"),
+        updatedAt: c.req.query("updatedAt"),
+      }),
+    );
   });
 }

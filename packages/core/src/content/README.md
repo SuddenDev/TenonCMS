@@ -61,6 +61,8 @@ References inside array and block items follow `Step[]` paths (`schema/traversal
 
 `writes/remove-document.ts` deletes the row first and applies `onDelete` effects in the same transaction. Effects use the original scope, so a cascade that comes back to a deleted row finds nothing and cycles end. Hooks MUST make nested calls through the `cms` they get, so the calls join the transaction.
 
+`writes/write-document.ts` compares the caller's `updatedAt` with the loaded source, after access and before any hook. A mismatch throws `ConflictError`. Publish passes the token through `writes/publish-document.ts`.
+
 ## Locales
 
 `withLocale()` (`locale.ts`) puts `locale` and `fallback` on the scope. An option wins over the scope's value, which a nested call inherits, and the defaults are `localization.defaultLocale` and `localization.fallback`. An unknown locale, or any locale without `localization`, throws a `ValidationError`. Hooks get `locale` from the scope. Unlocalized collections and globals ignore it.

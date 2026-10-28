@@ -11,6 +11,8 @@ import DocForm from "@/modules/documents/components/DocForm.vue";
 import LocaleActions from "@/modules/documents/components/LocaleActions.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { useTranslations } from "@/modules/documents/composables/useTranslations";
+import { useLock } from "@/modules/documents/composables/useLock";
+import LockNotice from "@/modules/documents/components/LockNotice.vue";
 import { Icon, Pane, useLocale, usePerspective } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
@@ -39,9 +41,15 @@ const drafts = computed(() => global.value?.drafts !== false);
 // The Published view shows the live version. An edit there would replace the pending draft, so the form is inert.
 // It is inert, too, when the user MAY NOT change the global.
 const editable = computed(() => can(global.value, "update"));
-const readOnly = computed(
-  () => !editable.value || (drafts.value && usePerspective().perspective === "published"),
-);
+const published = computed(() => drafts.value && usePerspective().perspective === "published");
+// One editor at a time: the form is inert while someone else holds the lock.
+const lock = useLock({
+  claim: (takeover) => client.lockGlobal(name, { takeover }),
+  release: () => client.unlockGlobal(name),
+  active: () => editable.value && !published.value,
+  onRegain: () => load(),
+});
+const readOnly = computed(() => !editable.value || published.value || !!lock.holder.value);
 // `doc` is the latest saved global. `data` is what the form shows; a draft save leaves it, so typing goes on.
 const doc = ref<Record<string, unknown> | null>(null);
 const data = ref<Record<string, unknown>>({});
@@ -83,9 +91,15 @@ watch(tr.active, () => {
   load();
 });
 
-const save = async (body: Data<Fields>) => show(await client.setGlobal(name, body, tr.write()));
+// A write sends the `updatedAt` it builds on, so a newer save of someone else answers 409.
+const saveOptions = () => ({
+  ...tr.write(),
+  updatedAt: doc.value?.updatedAt as string | undefined,
+});
+
+const save = async (body: Data<Fields>) => show(await client.setGlobal(name, body, saveOptions()));
 const publish = async () => {
-  show(await client.publishGlobal(name, tr.write()));
+  show(await client.publishGlobal(name, saveOptions()));
   tr.refresh();
 };
 const discard = async () => {
@@ -97,7 +111,7 @@ async function saveDraft(body: Data<Fields>) {
   // The first save of a language creates its row.
   const first = languages.value?.active === "missing";
 
-  doc.value = await client.setGlobalDraft(name, body, tr.write());
+  doc.value = await client.setGlobalDraft(name, body, saveOptions());
   if (first) tr.refresh();
   emit("saved");
 }
@@ -183,7 +197,13 @@ const discardAll = () =>
         <p class="text-muted-foreground text-xs">{{ t("documents.global") }}</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ text(global.label) ?? name }}</h1>
         <p v-if="error" class="text-destructive mt-2 text-sm" role="alert">{{ error }}</p>
-        <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
+        <LockNotice
+          v-if="lock.holder.value"
+          :holder="lock.holder.value"
+          :lost="lock.lost.value"
+          @takeover="lock.takeOver"
+        />
+        <p v-else-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           {{ t(editable ? "documents.readOnly" : "documents.noEdit") }}
         </p>
         <p v-if="global.description" class="text-muted-foreground mt-2 text-sm">
@@ -203,6 +223,7 @@ const discardAll = () =>
         :defaults="tr.defaults.value"
         :missing="languages?.active === 'missing'"
         v-bind="drafts ? { saveDraft, publish, discard } : { save }"
+        :reload="load"
         @change="emit('change', $event)"
       />
     </div>

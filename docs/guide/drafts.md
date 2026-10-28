@@ -46,6 +46,37 @@ await cms.discardGlobal("general");
 
 `drafts: false` on a collection or global turns this off. Then `{ draft: true }` and `discard` throw a `ValidationError`. The media library has no drafts.
 
+## Edit conflicts
+
+A save, draft save or publish MAY send the `updatedAt` it loaded. If someone saved since, the write throws a `ConflictError` (HTTP 409) and changes nothing. Without `updatedAt` the last write wins.
+
+```ts
+const post = await cms.withDrafts().findById("posts", id);
+await cms.update("posts", id, { title: "New" }, { draft: true, updatedAt: post.updatedAt });
+```
+
+- It works on `update`, `publish`, `setGlobal` and `publishGlobal`. Over HTTP it is the `?updatedAt=` query.
+- In a localized entry, `updatedAt` is the later of the shared row and the locale's row. A save in another locale does not conflict, unless it changes shared fields.
+- The admin sends it with every save. On a 409 it shows a message and a Reload button. Reload drops your unsaved edits.
+- The 409 body has `code: "CHANGED"`. A delete that `restrict` references block also answers 409, without that code.
+
+### Edit locks
+
+The admin lets one person edit a document or global at a time, like Payload and WordPress.
+
+- Opening the form claims the lock. The admin renews it every 30 seconds and frees it when you leave. Without a renewal, a lock expires after 90 seconds (`LOCK_TTL`).
+- Others see "Anna is editing this", a read-only form and a **Take over** button. Once the lock is free, their form becomes editable again and loads the latest version.
+- A takeover moves the lock at once. The first editor learns it on the next renewal, and their form turns read-only.
+- Locks only guide the admin. The API does not enforce them; the `updatedAt` check protects writes.
+
+| Action              | Request                                                                         |
+| ------------------- | ------------------------------------------------------------------------------- |
+| Claim or renew      | `POST /api/cms/collections/:name/:id/lock`, `{ "takeover": true }` to take over |
+| Free                | `DELETE /api/cms/collections/:name/:id/lock`                                    |
+| Global: claim, free | `POST`, `DELETE` on `/api/cms/globals/:name/lock`                               |
+
+A claim answers `{ mine, user: { id, name } }`: whether you hold the lock, and who does. It needs a session and the right to update; API keys cannot lock. The client has `lock`, `unlock`, `lockGlobal` and `unlockGlobal`.
+
 ## Over HTTP
 
 With a session:

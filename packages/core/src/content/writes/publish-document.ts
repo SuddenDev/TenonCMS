@@ -7,10 +7,22 @@ import { writeDocument } from "./write-document.ts";
  * A publish is an `update` or `setGlobal` of the draft: the whole pipeline runs on `COALESCE(draft, data)`.
  * @returns The published document/global after the operation.
  */
-export const publish = (core: Core, scope: Scope, name: ContentTarget, id?: string) => {
+export const publish = (
+  core: Core,
+  scope: Scope,
+  name: ContentTarget,
+  id?: string,
+  updatedAt?: string,
+) => {
   if (name.kind === "global")
     return runOperation(core, scope, "setGlobal", name, { global: name.name }, (s) =>
-      writeDocument(core, s, { target: name, operation: "setGlobal", input: {}, mode: "publish" }),
+      writeDocument(core, s, {
+        target: name,
+        operation: "setGlobal",
+        input: {},
+        mode: "publish",
+        updatedAt,
+      }),
     );
 
   return runOperation(core, scope, "update", name, { collection: name.name, id }, (s, args) =>
@@ -20,6 +32,7 @@ export const publish = (core: Core, scope: Scope, name: ContentTarget, id?: stri
       input: {},
       id: args.id,
       mode: "publish",
+      updatedAt,
     }),
   );
 };

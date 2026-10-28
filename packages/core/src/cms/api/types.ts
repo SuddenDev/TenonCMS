@@ -1,4 +1,4 @@
-import type { DeleteOptions } from "../../errors.ts";
+import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { EmailApi } from "../../email/types.ts";
 import type {
   AlternatesOf,
@@ -144,7 +144,7 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
     collection: K,
     id: string,
     data: Record<string, unknown>,
-    options?: WriteOptions & LocaleOption<L>,
+    options?: WriteOptions & LocaleOption<L> & ConflictOptions,
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /**
@@ -155,7 +155,7 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
   publish<K extends keyof Collections<T> & string>(
     collection: K,
     id: string,
-    options?: LocaleOption<L>,
+    options?: LocaleOption<L> & ConflictOptions,
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /**
@@ -213,14 +213,14 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
   setGlobal<K extends keyof Globals<T> & string>(
     name: K,
     data: Record<string, unknown>,
-    options?: WriteOptions & LocaleOption<L>,
-  ): Promise<GlobalData<T, K>>;
+    options?: WriteOptions & LocaleOption<L> & ConflictOptions,
+  ): Promise<GlobalData<T, K> & GlobalMeta>;
 
   /** Publishes the draft of a global, like `publish()`. */
   publishGlobal<K extends keyof Globals<T> & string>(
     name: K,
-    options?: LocaleOption<L>,
-  ): Promise<GlobalData<T, K>>;
+    options?: LocaleOption<L> & ConflictOptions,
+  ): Promise<GlobalData<T, K> & GlobalMeta>;
 
   /** Drops the draft of a global and returns the published one. Like {@link Api.discard}, it takes `locale` or `{ all: true }`. */
   discardGlobal<K extends keyof Globals<T> & string>(

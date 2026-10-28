@@ -9,6 +9,7 @@ export const setGlobal = (
   name: string,
   data: unknown,
   mode: WriteMode = "save",
+  updatedAt?: string,
 ) =>
   runOperation(
     core,
@@ -22,5 +23,6 @@ export const setGlobal = (
         operation: "setGlobal",
         input: args.data,
         mode,
+        updatedAt,
       }),
   );

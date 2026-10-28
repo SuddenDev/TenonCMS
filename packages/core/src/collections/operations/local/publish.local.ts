@@ -8,5 +8,5 @@ export const publishLocal =
   (core: Core, scope: Scope): LocalApi["publish"] =>
   async (collection, id, options = {}) => {
     writable(core, collection);
-    return publish(core, withLocale(core, scope, options), collection, id);
+    return publish(core, withLocale(core, scope, options), collection, id, options.updatedAt);
   };

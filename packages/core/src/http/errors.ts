@@ -21,7 +21,7 @@ export const handleError: ErrorHandler<Env> = (err, c) => {
   if (err instanceof LinkedContentError)
     return c.json({ message: err.message, code: err.code, references: err.references }, 409);
   if (err instanceof ConflictError)
-    return c.json({ message: err.message, references: err.references }, 409);
+    return c.json({ message: err.message, code: err.code, references: err.references }, 409);
   if (err instanceof ForbiddenError) return c.json({ message: err.message }, err.status);
   if (err instanceof HTTPException) return c.json({ message: err.message }, err.status);
 

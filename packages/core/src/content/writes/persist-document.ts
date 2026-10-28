@@ -55,7 +55,7 @@ export async function persistDocument(state: WriteState, data: Record<string, an
       stored = (await loadGlobal(db, name.name, true))!;
     } else {
       await saveGlobal(db, name.name, data, isPublish);
-      stored = isPublish ? (await loadGlobal(db, name.name))! : data;
+      stored = (await loadGlobal(db, name.name))!;
     }
   } else if (isDraft) {
     stored = id

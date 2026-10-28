@@ -1,5 +1,5 @@
 import type { RichtextDocument, RichtextTargets } from "../../richtext/config/types.ts";
-import type { DeleteOptions } from "../../errors.ts";
+import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { AdminDescriptor, Text } from "../../admin/index.d.ts";
 import type { Localization } from "../../cms/config/options.ts";
 import type {
@@ -7,6 +7,7 @@ import type {
   Data,
   Doc,
   GlobalLocaleMeta,
+  GlobalMeta,
   Locale,
   Read,
   ReadOptions,
@@ -16,6 +17,7 @@ import type {
 } from "../../schema/index.ts";
 import type { Invite, InviteResult } from "../../users/types.ts";
 import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
+import type { Lock } from "../../locks/types.ts";
 import type { MediaClient } from "./media.ts";
 import type { FindOptions } from "./options.ts";
 import type {
@@ -117,7 +119,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     collection: K,
     id: string,
     data: Partial<Data<CollectionFields<C, K>>>,
-    options?: LocaleOption<C>,
+    options?: LocaleOption<C> & ConflictOptions,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
@@ -139,7 +141,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     collection: K,
     id: string,
     data: Partial<Data<CollectionFields<C, K>>>,
-    options?: LocaleOption<C>,
+    options?: LocaleOption<C> & ConflictOptions,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
@@ -150,7 +152,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   publish<K extends keyof Collections<C> & string>(
     collection: K,
     id: string,
-    options?: LocaleOption<C>,
+    options?: LocaleOption<C> & ConflictOptions,
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
@@ -189,6 +191,24 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
+   * Claims or renews the caller's edit lock on a document. A lock someone else holds stays theirs and the answer
+   * names them, unless `takeover` is set. A lock lasts `LOCK_TTL` without a renewal. Needs a session and the right to
+   * update; an API key MAY NOT lock.
+   * `POST /api/cms/collections/:collection/:id/lock`
+   */
+  lock(
+    collection: keyof Collections<C> & string,
+    id: string,
+    options?: { takeover?: boolean },
+  ): Promise<Lock>;
+
+  /**
+   * Frees the caller's edit lock on a document. Someone else's lock stays. Needs a session.
+   * `DELETE /api/cms/collections/:collection/:id/lock`
+   */
+  unlock(collection: keyof Collections<C> & string, id: string): Promise<void>;
+
+  /**
    * Deletes a document. Needs a session.
    * `DELETE /api/cms/collections/:collection/:id`
    */
@@ -210,6 +230,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     options?: Checked<O, Collections<C>, GlobalFields<C, K>, Depth<C>, false, Locale<C>>,
   ): Promise<
     Partial<Read<Collections<C>, GlobalFields<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>> &
+      GlobalMeta<SelectOf<O>> &
       GlobalLocaleMeta<Globals<C>[K], Locale<C>, SelectOf<O>>
   >;
 
@@ -220,8 +241,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   setGlobal<K extends keyof Globals<C> & string>(
     name: K,
     data: Partial<Data<GlobalFields<C, K>>>,
-    options?: LocaleOption<C>,
-  ): Promise<Data<GlobalFields<C, K>>>;
+    options?: LocaleOption<C> & ConflictOptions,
+  ): Promise<Data<GlobalFields<C, K>> & GlobalMeta>;
 
   /**
    * Changes the top-level fields of a global's draft. The published data stays. Needs a session.
@@ -230,8 +251,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   setGlobalDraft<K extends keyof Globals<C> & string>(
     name: K,
     data: Partial<Data<GlobalFields<C, K>>>,
-    options?: LocaleOption<C>,
-  ): Promise<Partial<Data<GlobalFields<C, K>>>>;
+    options?: LocaleOption<C> & ConflictOptions,
+  ): Promise<Partial<Data<GlobalFields<C, K>>> & GlobalMeta>;
 
   /**
    * Publishes the draft of a global. Throws a `CmsError` with status `400` for invalid data. Needs a session.
@@ -239,8 +260,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    */
   publishGlobal<K extends keyof Globals<C> & string>(
     name: K,
-    options?: LocaleOption<C>,
-  ): Promise<Data<GlobalFields<C, K>>>;
+    options?: LocaleOption<C> & ConflictOptions,
+  ): Promise<Data<GlobalFields<C, K>> & GlobalMeta>;
 
   /**
    * Drops the draft of a global and returns the published one. Like {@link Client.discard}, it takes `locale` or
@@ -269,6 +290,18 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     name: K,
     locale: Locale<C>,
   ): Promise<Partial<Data<GlobalFields<C, K>>>>;
+
+  /**
+   * Claims or renews the caller's edit lock on a global, like {@link Client.lock}.
+   * `POST /api/cms/globals/:name/lock`
+   */
+  lockGlobal(name: keyof Globals<C> & string, options?: { takeover?: boolean }): Promise<Lock>;
+
+  /**
+   * Frees the caller's edit lock on a global, like {@link Client.unlock}.
+   * `DELETE /api/cms/globals/:name/lock`
+   */
+  unlockGlobal(name: keyof Globals<C> & string): Promise<void>;
 
   /**
    * The live preview URL of a document from its unsaved form state, relative to the site origin. `null`: no preview

@@ -1,5 +1,5 @@
 import type { RichtextDocument } from "../richtext/config/types.ts";
-import type { DeleteOptions } from "../errors.ts";
+import type { ConflictOptions, DeleteOptions } from "../errors.ts";
 import type { Schema } from "../schema/index.ts";
 import { API_KEY_HEADER } from "./constants.ts";
 import { createRequest } from "./create-request.ts";
@@ -17,6 +17,7 @@ import { createUpload } from "./upload.ts";
 type FindQuery = ReadQuery & { where?: object; limit?: number };
 // The implementation is untyped, so the locale is a plain string.
 type Write = LocaleOption<{ localization: { locales: string[] } }>;
+type Save = Write & ConflictOptions;
 type Discard = DiscardOption<{ localization: { locales: string[] } }>;
 
 /**
@@ -69,17 +70,17 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     create: (name: string, data: unknown, { locale }: Write = {}) =>
       request("POST", collection(name), data, { locale }),
 
-    update: (name: string, id: string, data: unknown, { locale }: Write = {}) =>
-      request("PUT", doc(name, id), data, { locale }),
+    update: (name: string, id: string, data: unknown, { locale, updatedAt }: Save = {}) =>
+      request("PUT", doc(name, id), data, { locale, updatedAt }),
 
     createDraft: (name: string, data: unknown, { locale }: Write = {}) =>
       request("POST", `${collection(name)}/draft`, data, { locale }),
 
-    updateDraft: (name: string, id: string, data: unknown, { locale }: Write = {}) =>
-      request("PUT", `${doc(name, id)}/draft`, data, { locale }),
+    updateDraft: (name: string, id: string, data: unknown, { locale, updatedAt }: Save = {}) =>
+      request("PUT", `${doc(name, id)}/draft`, data, { locale, updatedAt }),
 
-    publish: (name: string, id: string, { locale }: Write = {}) =>
-      request("POST", `${doc(name, id)}/publish`, undefined, { locale }),
+    publish: (name: string, id: string, { locale, updatedAt }: Save = {}) =>
+      request("POST", `${doc(name, id)}/publish`, undefined, { locale, updatedAt }),
 
     discard: (name: string, id: string, options: Discard = {}) =>
       request("DELETE", `${doc(name, id)}/draft`, undefined, options),
@@ -90,20 +91,27 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     removeLocale: (name: string, id: string, locale: string) =>
       request("DELETE", `${doc(name, id)}/locales/${enc(locale)}`),
 
+    lock: (name: string, id: string, { takeover = false } = {}) =>
+      request("POST", `${doc(name, id)}/lock`, { takeover }),
+
+    unlock: async (name: string, id: string) => {
+      await request("DELETE", `${doc(name, id)}/lock`);
+    },
+
     delete: (name: string, id: string, options: DeleteOptions = {}) =>
       request("DELETE", doc(name, id), undefined, options),
 
     getGlobal: (name: string, options: ReadQuery = {}) =>
       request("GET", global(name), undefined, readQuery(options)),
 
-    setGlobal: (name: string, data: unknown, { locale }: Write = {}) =>
-      request("PUT", global(name), data, { locale }),
+    setGlobal: (name: string, data: unknown, { locale, updatedAt }: Save = {}) =>
+      request("PUT", global(name), data, { locale, updatedAt }),
 
-    setGlobalDraft: (name: string, data: unknown, { locale }: Write = {}) =>
-      request("PUT", `${global(name)}/draft`, data, { locale }),
+    setGlobalDraft: (name: string, data: unknown, { locale, updatedAt }: Save = {}) =>
+      request("PUT", `${global(name)}/draft`, data, { locale, updatedAt }),
 
-    publishGlobal: (name: string, { locale }: Write = {}) =>
-      request("POST", `${global(name)}/publish`, undefined, { locale }),
+    publishGlobal: (name: string, { locale, updatedAt }: Save = {}) =>
+      request("POST", `${global(name)}/publish`, undefined, { locale, updatedAt }),
 
     discardGlobal: (name: string, options: Discard = {}) =>
       request("DELETE", `${global(name)}/draft`, undefined, options),
@@ -113,6 +121,13 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
 
     removeGlobalLocale: (name: string, locale: string) =>
       request("DELETE", `${global(name)}/locales/${enc(locale)}`),
+
+    lockGlobal: (name: string, { takeover = false } = {}) =>
+      request("POST", `${global(name)}/lock`, { takeover }),
+
+    unlockGlobal: async (name: string) => {
+      await request("DELETE", `${global(name)}/lock`);
+    },
 
     previewUrl: async (name: string, data: unknown, { locale }: { locale?: string } = {}) =>
       (await request("POST", `${collection(name)}/preview-url`, data, { locale })).url,

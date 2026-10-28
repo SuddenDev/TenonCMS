@@ -16,6 +16,7 @@ import { invitesEndpoint } from "../users/endpoints/invites.endpoint.ts";
 import { sessionHint } from "../auth/middleware/session-hint.middleware.ts";
 import { apiKeyReach, csrfUnlessApiKey } from "../auth/middleware/api-key.middleware.ts";
 import { apiKeysEndpoint } from "../api-keys/endpoints/api-keys.endpoint.ts";
+import { locksEndpoint } from "../locks/endpoints/locks.endpoint.ts";
 import { pluginMiddleware } from "../plugins/http/collect-middleware.ts";
 import { mountRoutes } from "../plugins/http/mount-routes.ts";
 import { collectionsRoutes } from "../collections/endpoints/routes.ts";
@@ -80,6 +81,7 @@ export function createApp(core: Core, site?: string) {
   signedIn.route("/", passwordEndpoint(core));
   signedIn.route("/", invitesEndpoint(core, site));
   signedIn.route("/", apiKeysEndpoint(core));
+  signedIn.route("/", locksEndpoint(core));
   signedIn.route("/", loadEndpoint(core));
   signedIn.route("/", richtextTargetsEndpoint(core));
   signedIn.route("/", richtextResolveEndpoint(core));

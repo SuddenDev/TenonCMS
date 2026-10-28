@@ -11,7 +11,10 @@ export function setEndpoint(core: Core) {
     .put("/globals/:name", async (c) => {
       const { name } = globalOf(schema.globals ?? {}, c.req.param("name"));
       return c.json(
-        await c.var.cms.setGlobal(name, await parseBody(c.req), { locale: c.req.query("locale") }),
+        await c.var.cms.setGlobal(name, await parseBody(c.req), {
+          locale: c.req.query("locale"),
+          updatedAt: c.req.query("updatedAt"),
+        }),
       );
     })
     .put("/globals/:name/draft", async (c) => {
@@ -20,6 +23,7 @@ export function setEndpoint(core: Core) {
         await c.var.cms.setGlobal(name, await parseBody(c.req), {
           draft: true,
           locale: c.req.query("locale"),
+          updatedAt: c.req.query("updatedAt"),
         }),
       );
     });

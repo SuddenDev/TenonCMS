@@ -63,6 +63,15 @@ export interface Database {
     user_id: string | null;
     created_at: number;
   };
+  cms_locks: {
+    /** `collection:<name>` or `global:<name>`. */
+    target: string;
+    /** The document id. `''` for a global. */
+    id: string;
+    user_id: string;
+    /** When the holder last claimed or renewed the lock. */
+    locked_at: number;
+  };
   cms_invites: {
     id: string;
     email: string;
@@ -84,6 +93,7 @@ export type InviteRow = Database["cms_invites"];
 export type LocaleColumns = {
   r_data: string | null;
   d_data: string | null;
+  r_updated_at: number | null;
   r_published_at: number | null;
   r_has_draft: number;
   d_published_at: number | null;

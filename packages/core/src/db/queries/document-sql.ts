@@ -73,6 +73,7 @@ export const localeJoins = (drafts: boolean, loc: Loc, locales: LocaleOwner, own
 const localeColumns = (drafts: boolean): Array<[string, string]> => [
   ["r_data", dataOf(drafts, "lr.")],
   ["d_data", dataOf(drafts, "ld.")],
+  ["r_updated_at", "lr.updated_at"],
   ["r_published_at", "lr.published_at"],
   ["r_has_draft", "lr.draft IS NOT NULL"],
   ["d_published_at", "ld.published_at"],

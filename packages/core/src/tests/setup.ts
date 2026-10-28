@@ -86,7 +86,11 @@ export type Env = ReturnType<typeof fresh>;
 /** The meta of a global that was never published. */
 export const unpublished = { publishedAt: null, hasDraft: false };
 /** The meta of a published document or global without a draft. */
-export const published = { publishedAt: expect.any(String), hasDraft: false };
+export const published = {
+  updatedAt: expect.any(String),
+  publishedAt: expect.any(String),
+  hasDraft: false,
+};
 
 export const admin = { name: "Admin", email: "a@b.co", password: "password123" };
 

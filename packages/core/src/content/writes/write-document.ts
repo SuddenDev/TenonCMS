@@ -11,6 +11,7 @@ import { prepareData } from "./prepare-data.ts";
 import { persistDocument } from "./persist-document.ts";
 import { guard } from "../../access/rule.ts";
 import { dropDenied } from "../../access/field-access.ts";
+import { ConflictError } from "../../errors.ts";
 
 export type WriteMode = "save" | "draft" | "publish" | "deletion-effect";
 export type WriteOperation = "create" | "update" | "setGlobal";
@@ -21,6 +22,8 @@ type WriteRequest = {
   input: unknown;
   id?: string;
   mode?: WriteMode;
+  /** The `updatedAt` the caller loaded. A newer stored document refuses the write. */
+  updatedAt?: string;
 };
 
 /** Facts of one write, shared only by its preparation and persistence stages. */
@@ -47,6 +50,7 @@ export type WriteState = {
  * Owns access, source selection, preparation and persistence for saves, drafts, publishing and deletion effects.
  * Drafts run before hooks and type checks, but skip custom validation, integrity and after-change hooks.
  * Publish compares hooks against published content. Deletion effects bypass access and reference checks.
+ * A stale `updatedAt` throws a `ConflictError` after access and before any hook.
  * @returns The document after read hooks, or `undefined` for a missing update target.
  */
 export async function writeDocument(core: Core, scope: Inner, request: WriteRequest) {
@@ -67,6 +71,9 @@ export async function writeDocument(core: Core, scope: Inner, request: WriteRequ
     locale,
   );
   if (id && !source) return undefined;
+  // ponytail: millisecond token. Two writes in the same millisecond pass; add a version column if that matters.
+  if (request.updatedAt && source?.updatedAt !== request.updatedAt)
+    throw new ConflictError([], "Changed since it was loaded", "CHANGED");
   const originalDoc =
     mode === "publish" ? await loadSource(database, name, id, false, locale) : source;
   const sourceData = locale && source ? withoutLocaleMeta(source) : source;

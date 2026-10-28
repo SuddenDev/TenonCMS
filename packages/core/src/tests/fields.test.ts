@@ -367,7 +367,6 @@ describe("private", () => {
         name: "A",
         id: p.id,
         createdAt: expect.any(String),
-        updatedAt: expect.any(String),
         ...published,
       });
     expect(await client.getGlobal("site")).toEqual({ name: "S", ...published });
@@ -452,7 +451,6 @@ describe("private", () => {
       name: "A",
       id: p.id,
       createdAt: expect.any(String),
-      updatedAt: expect.any(String),
       ...published,
     });
   });

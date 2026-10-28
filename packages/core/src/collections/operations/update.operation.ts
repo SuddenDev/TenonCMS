@@ -10,6 +10,7 @@ export const update = (
   id: string,
   data: unknown,
   mode: WriteMode = "save",
+  updatedAt?: string,
 ) =>
   runOperation(
     core,
@@ -24,5 +25,6 @@ export const update = (
         input: args.data,
         id: args.id,
         mode,
+        updatedAt,
       }),
   );

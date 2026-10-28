@@ -269,7 +269,7 @@ describe("hooks", () => {
       },
     });
     const cms = defineCms({ ...db, collections: {}, globals: { site } });
-    expect(await cms.setGlobal("site", { name: "a" })).toEqual({ name: "a" });
+    expect(await cms.setGlobal("site", { name: "a" })).toEqual({ name: "a", ...published });
     expect(calls).toEqual(["beforeValidate", "name", "beforeChange", "afterChange", "afterRead"]);
     calls = [];
     expect(await cms.getGlobal("site")).toEqual({ name: "a", ...published });

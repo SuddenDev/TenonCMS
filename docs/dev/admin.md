@@ -34,6 +34,8 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 
 - **Permissions** come from the schema endpoint. The admin hides entries without `read`, renders forms read-only without write rights, and hides actions it cannot do.
 - **Drafts**: with drafts on, the form autosaves a draft shortly after the last edit. Save sends one request at a time. A draft save never resets the form. A new document is created by its first draft save.
+- **Edit locks**: `DocPane` and `GlobalEdit` hold the lock through `useLock()` while the form is editable (Drafts view, update allowed, not new). It renews every `LOCK_TTL / 3` and frees on unmount. While someone else holds it, `LockNotice` names them and offers Take over, and the form is inert. Renewals keep claiming, so the lock comes back once they leave; `onRegain` then reloads the doc.
+- **Edit conflicts**: every save and publish sends the `updatedAt` of the latest saved doc. A 409 with `code: "CHANGED"` makes `DocForm` show a message and a Reload button (`reload` prop), which drops the unsaved edits.
 - **Perspective**: the preview cookie holds drafts or published. In the published view, forms are read-only, because an edit there would replace the pending draft.
 - **Languages**: the content language is separate from the interface language. In the Drafts view, forms load the active language without fallback. The Published view keeps the fallback, because it shows what the site shows.
 - **Interface language**: vue-i18n, with English and German. A missing key in one language fails the typecheck. Host text is `string | { en, de }`.

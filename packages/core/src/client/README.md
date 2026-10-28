@@ -43,7 +43,7 @@ A part upload retries a network error, a 5xx, a 408 and a 429 3 times with backo
 `Locale<C>` (from `schema/inference/locale.ts`, exported by `integral-cms/client`) is the union of the instance's `localization.locales`, `never` without it; the admin's untyped client allows any string.
 
 - Reads take `locale`, `fallback` and `alternates`, sent as `?locale=`, `?fallback=` and `?alternates=`.
-- Writes, drafts and `publish()` take `{ locale }`. `discard()` and `discardGlobal()` take `{ locale }` or `{ all: true }` (`?all=true`).
+- Writes, drafts and `publish()` take `{ locale }`. Saves, draft saves and publishes also take `{ updatedAt }` (`?updatedAt=`): a newer stored version answers 409. `discard()` and `discardGlobal()` take `{ locale }` or `{ all: true }` (`?all=true`).
 - `copyLocale(name, id, { from, to })` and `removeLocale(name, id, locale)` call `/collections/:name/:id/locales/…`; `copyGlobalLocale()` and `removeGlobalLocale()` call `/globals/:name/locales/…`.
 - `previewUrl()` and `previewGlobalUrl()` take `{ locale }` as the third argument.
 - `localization()` fetches the public `GET /localization` once and keeps the promise per client; a failed request is not kept. The result is the normalized config (`locales`, `defaultLocale`, `fallback`, `routing`), or `null` without `localization`.

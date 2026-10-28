@@ -3,10 +3,17 @@
 /** A document or global that holds a reference. */
 export type Reference = { collection: string; id: string } | { global: string };
 
-/** Thrown when a delete hits `restrict` references. HTTP returns 409 with `references`. */
+/**
+ * Thrown when a delete hits `restrict` references, or with `code: "CHANGED"` when a write sends an `updatedAt` that
+ * is no longer current. HTTP returns 409 with `references` and `code`.
+ */
 export class ConflictError extends Error {
-  constructor(public references: Reference[]) {
-    super("Referenced by other documents");
+  constructor(
+    public references: Reference[] = [],
+    message = "Referenced by other documents",
+    public code?: "CHANGED",
+  ) {
+    super(message);
   }
 }
 
@@ -51,3 +58,11 @@ export class LinkedContentError extends Error {
 }
 /** Options for operations that can delete a document. */
 export type DeleteOptions = { allowBrokenLinks?: boolean };
+/** Options of a save, draft save or publish. */
+export type ConflictOptions = {
+  /**
+   * The `updatedAt` of the document or global as it was loaded. When it changed since, the write throws a
+   * `ConflictError` (HTTP 409) and changes nothing. Default: no check, the last write wins.
+   */
+  updatedAt?: string;
+};

@@ -40,6 +40,7 @@ export type {
   ApiKeyPermissions,
   NewApiKey,
 } from "./api-keys/types.ts";
+export type { Lock } from "./locks/types.ts";
 export type {
   Access,
   AccessArgs,
@@ -66,6 +67,7 @@ export {
   LinkedContentError,
   type LinkedReference,
   type DeleteOptions,
+  type ConflictOptions,
   ConflictError,
   ForbiddenError,
   type Reference,

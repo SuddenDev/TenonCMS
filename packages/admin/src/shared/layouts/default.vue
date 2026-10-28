@@ -56,9 +56,9 @@ providePanes(row);
 <template>
   <div class="bg-background flex h-svh flex-col overflow-hidden">
     <header
-      class="border-border flex h-12 shrink-0 items-center justify-between gap-3 border-b px-3"
+      class="border-border flex h-12 shrink-0 items-center justify-between gap-5 border-b px-3"
     >
-      <div class="flex items-center gap-2">
+      <div class="flex flex-1 items-center gap-2">
         <Sheet>
           <SheetTrigger as-child>
             <Button variant="ghost" size="icon-sm" class="sm:hidden" :aria-label="t('nav.menu')">
@@ -90,7 +90,7 @@ providePanes(row);
           </template>
         </RouterLink>
       </div>
-      <nav class="flex items-center gap-1 max-sm:hidden">
+      <nav class="flex flex-1 items-center gap-1 max-sm:hidden">
         <Button
           v-for="t in tools"
           :key="t.to"
@@ -101,7 +101,7 @@ providePanes(row);
           <RouterLink :to="t.to">{{ t.label }}</RouterLink>
         </Button>
       </nav>
-      <div class="flex items-center gap-1.5">
+      <div class="flex shrink grow-0 items-center gap-1.5">
         <Button as-child variant="ghost" size="sm" class="gap-1.5 text-xs max-sm:hidden">
           <a href="/" rel="noopener noreferrer"
             ><Icon name="globe" class="" /><span>{{ t("nav.goToSite") }}</span></a

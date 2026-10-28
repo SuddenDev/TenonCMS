@@ -20,6 +20,8 @@ import DocForm from "@/modules/documents/components/DocForm.vue";
 import LocaleActions from "@/modules/documents/components/LocaleActions.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { useTranslations } from "@/modules/documents/composables/useTranslations";
+import { useLock } from "@/modules/documents/composables/useLock";
+import LockNotice from "@/modules/documents/components/LockNotice.vue";
 import { Pane, Icon, useLocale, usePerspective } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
@@ -73,7 +75,14 @@ const published = computed(() => drafts.value && usePerspective().perspective ==
 const editable = computed(() =>
   can(collection.value, isNew.value ? "create" : "update", doc.value ?? undefined),
 );
-const readOnly = computed(() => published.value || !editable.value);
+// One editor at a time: the form is inert while someone else holds the lock.
+const lock = useLock({
+  claim: (takeover) => client.lock(props.name, docId.value, { takeover }),
+  release: () => client.unlock(props.name, docId.value),
+  active: () => !isNew.value && !published.value && editable.value,
+  onRegain: load,
+});
+const readOnly = computed(() => published.value || !editable.value || !!lock.holder.value);
 const formId = `doc-${props.name}-${props.id}`;
 const error = ref("");
 
@@ -148,6 +157,12 @@ watch(tr.active, () => {
   load();
 });
 
+// A write sends the `updatedAt` it builds on, so a newer save of someone else answers 409.
+const saveOptions = () => ({
+  ...tr.write(),
+  updatedAt: doc.value?.updatedAt as string | undefined,
+});
+
 async function save(data: Data<Fields>) {
   if (isNew.value) {
     const created = await client.create(props.name, data, tr.write());
@@ -156,7 +171,7 @@ async function save(data: Data<Fields>) {
     emit("saved");
     await router.replace(`${CONTENT}/collections/${props.name}/${created.id}`);
   } else {
-    show(await client.update(props.name, docId.value, data, tr.write()));
+    show(await client.update(props.name, docId.value, data, saveOptions()));
     reload();
     emit("saved");
   }
@@ -175,7 +190,7 @@ async function saveDraft(data: Data<Fields>) {
       keepPane(docId.value);
       await router.replace(`${CONTENT}/collections/${props.name}/${docId.value}`);
     }
-  } else doc.value = await client.updateDraft(props.name, docId.value, data, tr.write());
+  } else doc.value = await client.updateDraft(props.name, docId.value, data, saveOptions());
 
   // The first save of a language creates its row.
   if (first) tr.refresh();
@@ -184,7 +199,7 @@ async function saveDraft(data: Data<Fields>) {
 }
 
 async function publish() {
-  show(await client.publish(props.name, docId.value, tr.write()));
+  show(await client.publish(props.name, docId.value, saveOptions()));
   tr.refresh();
   reload();
   emit("saved");
@@ -316,7 +331,13 @@ async function remove() {
       >
         <p class="text-muted-foreground text-xs">{{ text(collection.label) ?? name }}</p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight">{{ title() }}</h1>
-        <p v-if="readOnly" class="text-muted-foreground mt-2 text-sm">
+        <LockNotice
+          v-if="lock.holder.value"
+          :holder="lock.holder.value"
+          :lost="lock.lost.value"
+          @takeover="lock.takeOver"
+        />
+        <p v-else-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           {{ t(editable ? "documents.readOnly" : "documents.noEdit") }}
         </p>
         <p v-if="collection.description" class="text-muted-foreground mt-2 text-sm">
@@ -357,6 +378,7 @@ async function remove() {
         :localized="tr.localized.value"
         :defaults="tr.defaults.value"
         :missing="languages?.active === 'missing'"
+        :reload="load"
         @change="emit('change', $event)"
       >
         <Button

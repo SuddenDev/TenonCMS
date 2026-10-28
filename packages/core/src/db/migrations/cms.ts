@@ -121,6 +121,18 @@ const cmsMigrations: Record<string, Migration> = {
       await sql`ALTER TABLE cms_documents ADD COLUMN updated_by text`.execute(db);
     },
   },
+  // Who edits a document or global in the admin. `target` is `collection:<name>` or `global:<name>`.
+  "008_cms_locks": {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_locks (
+        target text NOT NULL,
+        id text NOT NULL,
+        user_id text NOT NULL,
+        locked_at integer NOT NULL,
+        PRIMARY KEY (target, id)
+      )`.execute(db);
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables, with its own migration tables. */

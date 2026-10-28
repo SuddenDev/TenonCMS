@@ -1,4 +1,4 @@
-import type { DeleteOptions } from "../../errors.ts";
+import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { EmailApi } from "../../email/types.ts";
 import type { MediaApi } from "../../schema/hooks/media.ts";
 
@@ -16,10 +16,9 @@ type Options = {
   alternates?: boolean;
 };
 /** Options of `publish` and `publishGlobal`. */
-type PublishOptions = { locale?: string };
+type PublishOptions = { locale?: string } & ConflictOptions;
 /** Options of `discard` and `discardGlobal`. */
-type DiscardOptions = PublishOptions &
-  DeleteOptions & {
+type DiscardOptions = { locale?: string } & DeleteOptions & {
     /** Drops the shared draft and the draft of every locale. Ignores `locale`. */
     all?: boolean;
   };
@@ -45,7 +44,7 @@ export type LocalApi = {
     collection: string,
     id: string,
     data: Record<string, unknown>,
-    options?: WriteOptions,
+    options?: WriteOptions & ConflictOptions,
   ): Promise<Row | undefined>;
   delete(collection: string, id: string, options?: DeleteOptions): Promise<void>;
   publish(collection: string, id: string, options?: PublishOptions): Promise<Row | undefined>;
@@ -65,7 +64,11 @@ export type LocalApi = {
    */
   alternatesAt(url: string, options?: { locale?: string }): Promise<Record<string, string> | null>;
   getGlobal(name: string, options?: Options): Promise<Row>;
-  setGlobal(name: string, data: Record<string, unknown>, options?: WriteOptions): Promise<Row>;
+  setGlobal(
+    name: string,
+    data: Record<string, unknown>,
+    options?: WriteOptions & ConflictOptions,
+  ): Promise<Row>;
   publishGlobal(name: string, options?: PublishOptions): Promise<Row>;
   discardGlobal(name: string, options?: DiscardOptions): Promise<Row>;
   copyGlobalLocale(name: string, locales: { from: string; to: string }): Promise<Row>;

@@ -39,6 +39,7 @@ Server code   ---------> scoped local API ---^
 | `schema/`                      | Field types, validation, hook contracts, type inference, traversal |
 | `access/`                      | Access rules and permissions                                       |
 | `auth/`, `users/`, `api-keys/` | Sign-in (better-auth), roles, invites, API keys                    |
+| `locks/`                       | Edit locks for the admin                                           |
 | `http/`                        | The Hono app and its route order                                   |
 | `client/`                      | The typed browser client                                           |
 | `db/`                          | Tables, migrations, SQL                                            |

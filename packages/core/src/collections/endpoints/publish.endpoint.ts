@@ -12,6 +12,7 @@ export function publishEndpoint(core: Core) {
     const { name } = collectionOf(collections, c.req.param("name"));
     const doc = await c.var.cms.publish(name, c.req.param("id"), {
       locale: c.req.query("locale"),
+      updatedAt: c.req.query("updatedAt"),
     });
     if (!doc) throw notFound();
 

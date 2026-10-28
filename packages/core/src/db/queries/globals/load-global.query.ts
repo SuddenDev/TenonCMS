@@ -13,6 +13,7 @@ import { type LocaleColumns } from "../../types.ts";
 import { sql } from "kysely";
 
 type GlobalRow = {
+  updated_at: number;
   published_at: number | null;
   has_draft: number;
   data: string;
@@ -20,7 +21,7 @@ type GlobalRow = {
 } & Partial<LocaleColumns>;
 
 /**
- * The data of a global with `publishedAt` and `hasDraft`, or `undefined` if the perspective does not see it.
+ * The data of a global with `updatedAt`, `publishedAt` and `hasDraft`, or `undefined` if the perspective does not see it.
  * A localized `loc` merges the locale rows into the data and adds `locale` and `locales`: the published locales, or
  * every locale with a row in the drafts perspective.
  */
@@ -28,7 +29,7 @@ export async function loadGlobal(db: Db, name: string, drafts = false, loc?: Loc
   if (!loc) {
     const row = await db
       .selectFrom("cms_globals")
-      .select(["published_at", sql<number>`draft IS NOT NULL`.as("has_draft")])
+      .select(["updated_at", "published_at", sql<number>`draft IS NOT NULL`.as("has_draft")])
       .select(sql<string>`${sql.raw(dataOf(drafts))}`.as("data"))
       .where("name", "=", name)
       .where(visible(drafts))
@@ -37,11 +38,11 @@ export async function loadGlobal(db: Db, name: string, drafts = false, loc?: Loc
   }
 
   const { rows } = await sql<GlobalRow>`
-    SELECT cms_globals.published_at AS published_at, cms_globals.draft IS NOT NULL AS has_draft,
+    SELECT cms_globals.updated_at AS updated_at, cms_globals.published_at AS published_at, cms_globals.draft IS NOT NULL AS has_draft,
       ${sql.raw(dataOf(drafts, "cms_globals."))} AS data,
       ${sql.raw(dataOf(drafts, "lr."))} AS r_data, ${sql.raw(dataOf(drafts, "ld."))} AS d_data,
       ${sql.raw(SHARED_DRAFT("cms_globals."))} AS shared_draft,
-      lr.published_at AS r_published_at, lr.draft IS NOT NULL AS r_has_draft,
+      lr.updated_at AS r_updated_at, lr.published_at AS r_published_at, lr.draft IS NOT NULL AS r_has_draft,
       ld.published_at AS d_published_at, ld.draft IS NOT NULL AS d_has_draft,
       (SELECT json_group_array(locale) FROM cms_global_locales
         WHERE name = cms_globals.name ${sql.raw(drafts ? "" : "AND published_at IS NOT NULL")}) AS locales

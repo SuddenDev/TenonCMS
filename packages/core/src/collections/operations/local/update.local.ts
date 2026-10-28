@@ -18,5 +18,6 @@ export const updateLocal =
       id,
       data,
       draft ? "draft" : "save",
+      options.updatedAt,
     );
   };

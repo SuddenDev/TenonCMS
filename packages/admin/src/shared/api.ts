@@ -5,8 +5,8 @@ import type { Schema } from "../../../core/src/schema";
 import type { Role } from "../../../core/src/users/roles";
 
 export { SLUG_PATTERN, slugify } from "../../../core/src/helpers/slugify";
-export { CmsError } from "../../../core/src/client";
-export type { Perspective, Session } from "../../../core/src/client";
+export { CmsError, LOCK_TTL } from "../../../core/src/client";
+export type { Lock, Perspective, Session } from "../../../core/src/client";
 export type { Data, Field, Fields, Layout, MediaRead } from "../../../core/src/schema";
 
 export const client = createClient<{ schema: Schema }>();

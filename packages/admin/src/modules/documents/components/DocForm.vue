@@ -23,6 +23,7 @@ import Icon from "@/shared/components/Icon.vue";
 // `defaults`: the default language's data. Empty localized fields show its values as placeholders.
 // `missing`: the active language has no version yet, so there is nothing to publish before the first edit.
 // `layout`: the tabs and fieldsets of the collection or global.
+// `reload`: loads the stored document again. It is offered when a save answers 409 because someone else saved first.
 const props = defineProps<{
   id?: string;
   fields: Fields;
@@ -38,6 +39,7 @@ const props = defineProps<{
   localized?: boolean;
   defaults?: Record<string, unknown>;
   missing?: boolean;
+  reload?: () => unknown;
 }>();
 // `change`: the form state as it would be saved, on every edit and once on load.
 const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
@@ -99,17 +101,28 @@ const canPublish = computed(
     (current.value.publishedAt === null && !props.missing),
 );
 
+// Someone else saved since this form loaded, so the save or publish answered 409 with `code: "CHANGED"`.
+const isConflict = (e: unknown) =>
+  e instanceof CmsError && e.status === 409 && e.body?.code === "CHANGED";
+const conflict = ref(false);
+const conflicted = computed(() => conflict.value || isConflict(autosave.error.value));
+
 // Runs `action` with the busy state. A 400 marks the fields by path.
 async function attempt(action: () => Promise<void>) {
   busy.value = true;
   error.value = "";
   errors.value = {};
   saved.value = false;
+  conflict.value = false;
 
   try {
     await action();
   } catch (e) {
     if (e instanceof DeletionCancelled) return;
+    if (isConflict(e)) {
+      conflict.value = true;
+      return;
+    }
 
     errors.value = (e instanceof CmsError && e.body?.errors) || {};
     const fieldErrors = Object.keys(errors.value).some((key) => key !== "");
@@ -118,6 +131,15 @@ async function attempt(action: () => Promise<void>) {
   } finally {
     busy.value = false;
   }
+}
+
+// Drops the unsaved edits and the error, then loads what is stored.
+async function reloadStored() {
+  autosave.pending.value = false;
+  autosave.error.value = null;
+  conflict.value = false;
+  error.value = "";
+  await props.reload!();
 }
 
 const submit = () =>
@@ -187,7 +209,13 @@ async function discard() {
     <footer
       class="bg-background border-border sticky bottom-0 z-10 mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-3"
     >
-      <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
+      <template v-if="conflicted">
+        <span class="text-destructive text-sm" role="alert">{{ t("documents.conflict") }}</span>
+        <Button v-if="reload" type="button" variant="outline" size="sm" @click="reloadStored">
+          {{ t("documents.reload") }}
+        </Button>
+      </template>
+      <span v-else-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
       <template v-else-if="drafts">
         <span v-if="autosave.error.value" class="text-destructive text-sm" role="alert">
           {{ (autosave.error.value as Error).message }}

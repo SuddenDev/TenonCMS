@@ -8,5 +8,5 @@ export const publishGlobalLocal =
   (core: Core, scope: Scope): LocalApi["publishGlobal"] =>
   async (name, options = {}) => {
     known(core, "global", name);
-    return (await publishGlobal(core, withLocale(core, scope, options), name))!;
+    return (await publishGlobal(core, withLocale(core, scope, options), name, options.updatedAt))!;
   };
