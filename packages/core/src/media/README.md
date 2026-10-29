@@ -59,13 +59,13 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `variants/remove-orphans.ts`                      | Deletes variants of files that no longer exist.                                                                     |
 | `endpoints/routes.ts`                             | Groups the routes: `files` before the caller lookup, `reads` and `writes` behind it.                                |
 | `endpoints/*.endpoint.ts`                         | One Hono sub-app per capability.                                                                                    |
-| `endpoints/serve-file.ts`                         | Range responses and the sandbox headers of every served file.                                                       |
+| `endpoints/serve-file.ts`                         | Range responses, the sandbox headers and the `Cache-Control` of every served file and variant.                      |
 | `endpoints/request-context.ts`                    | Body parsing and the user scope.                                                                                    |
 | `storage/types.ts`                                | Storage adapter contract.                                                                                           |
 | `storage/local/index.ts`                          | `local()`, `integral-cms/media/local`: file reads, writes, moves and listing.                                       |
 | `storage/local/disk.ts`                           | Safe paths under the directory and removal of empty folders.                                                        |
 | `storage/local/uploads.ts`                        | Uploads through one temp file per upload under `.tmp/`.                                                             |
-| `storage/s3/index.ts`                             | `s3()`, `integral-cms/media/s3`: object reads, writes, moves and listing.                                           |
+| `storage/s3/index.ts`                             | `s3()`, `integral-cms/media/s3`: object reads, writes, moves and listing. Without `publicUrl`, core serves files.   |
 | `storage/s3/client.ts`                            | Signed requests and URLs for one bucket, with fixed keys or renewed temporary credentials.                          |
 | `storage/s3/multipart.ts`                         | Multipart uploads to presigned URLs, and multipart copies above 5 GB.                                               |
 | `storage/s3/encoding.ts`                          | RFC 3986 key paths and XML text.                                                                                    |

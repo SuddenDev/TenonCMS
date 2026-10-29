@@ -73,7 +73,6 @@ With `@astrojs/vercel` as the adapter, the CMS runs in Vercel's Node functions. 
 ```ts
 // integral.config.ts
 import { attachDatabasePool } from "@vercel/functions";
-import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { s3 } from "integral-cms/media/s3";
 import { postgres } from "integral-cms/postgres";
 
@@ -84,21 +83,34 @@ export default defineCms({
   database,
   media: {
     storage: s3({
-      bucket: S3_BUCKET_NAME,
+      bucket: S3_BUCKET,
       region: AWS_REGION,
-      publicUrl: MEDIA_URL,
-      credentials: awsCredentialsProvider({ roleArn: AWS_ROLE_ARN }),
+      endpoint: AWS_ENDPOINT_URL_S3,
+      accessKeyId: AWS_ACCESS_KEY_ID,
+      secretAccessKey: AWS_SECRET_ACCESS_KEY,
     }),
   },
   // ...
 });
 ```
 
-- Database: Postgres, for example Neon from the Vercel Marketplace. Use its pooled connection string. `attachDatabasePool()` closes idle connections before Vercel suspends the function.
-- Media: the function's disk is read-only, so the default media on the local disk does not work. Without a `media` option there is no media library, and `media: true` throws. Use `s3()` (AWS S3 from the Vercel Marketplace with `credentials` as above, or any S3-compatible bucket with keys) or `r2()` with keys. See [media](media.md#s3-and-r2). The browser uploads straight to the bucket, so Vercel's 4.5 MB request limit does not apply. The bucket needs CORS and a public URL.
+- Database: Postgres, for example Neon. Use its pooled connection string. `attachDatabasePool()` closes idle connections before Vercel suspends the function.
+- Media: the function's disk is read-only, so the default media on the local disk does not work. Without a `media` option there is no media library, and `media: true` throws. Use `s3()` with any S3-compatible bucket, or `r2()` with keys. See [media](media.md#s3-and-r2). The browser uploads straight to the bucket, so Vercel's 4.5 MB request limit does not apply. The bucket needs CORS. Without `publicUrl` it stays private: the function serves files, and Vercel's CDN keeps them for an hour.
 - Rate limits: core keeps them in the database, so instances share them. `auth: { rateLimit: { storage: "memory" } }` turns that off.
 - Leave `site` unset if you use preview deployments. Passkeys only work on the host they were created on.
 - In a monorepo, the build command MUST build the CMS packages first.
+
+#### With Neon
+
+Neon has Postgres and S3-compatible object storage in one project.
+
+1. Create a Neon project in the region of your Vercel functions, for example `aws-eu-central-1` for `fra1`.
+2. Copy the pooled connection string (host with `-pooler`) as `DATABASE_URL`.
+3. Create a bucket in the project's object storage and keep its access private. Copy the S3 endpoint, access key, secret key and region as `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION`, and the bucket name as `S3_BUCKET`.
+4. CORS: a new Neon bucket allows `PUT` from every origin and exposes `ETag`, which uploads need. To limit it to your site, send `PutBucketCors` with the S3 API.
+5. In Vercel, set those variables and `CMS_SECRET` (`openssl rand -hex 32`). Deploy, open `/admin` and create the first admin.
+
+Neon stores lifecycle rules but does not run them, so unfinished multipart uploads are not cleaned up by the bucket. Each Neon branch has its own buckets.
 
 ## Nuxt
 

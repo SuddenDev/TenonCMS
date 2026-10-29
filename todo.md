@@ -17,8 +17,9 @@ Each new query is one more to port, and the test app should run on a real deploy
 - [x] Postgres and PGlite together (one dialect). PGlite also fits tests and local dev. The JSON SQL (`json_extract`, `json_each`, `holdsAt()`) needs a layer per dialect.
 - [x] Cloudflare Workers: D1 driver or Durable Objects, bindings per request, R2 (`r2()` binding or `s3()`), Cloudflare Images (`cloudflare({ binding })`).
 - [ ] Vercel: Node functions with Turso or Postgres.
-  - [x] `examples/vercel`: Astro, Postgres with `attachDatabasePool()`, AWS S3 from the Marketplace through `s3()` with OIDC `credentials`. Builds and passes the smoke tests locally. Migrations lock on Postgres, so cold starts do not race.
-  - [ ] A real deploy: Neon (pooled `DATABASE_URL`) and AWS S3 from the Marketplace, `CMS_SECRET`, `MEDIA_URL` as the bucket's public URL, bucket CORS (`PUT` from the site, expose `ETag`) and public reads. Then run the smoke tests against the deploy, uploads included.
+  - [x] `examples/vercel`: Astro, Postgres with `attachDatabasePool()`, a private Neon bucket through `s3()` with keys. Builds and passes the smoke tests locally. Migrations lock on Postgres, so cold starts do not race.
+  - [ ] A real deploy with Neon (guide: `docs/guide/frameworks.md#with-neon`), then the smoke tests against it, uploads included. Locally the example already runs against Neon.
+  - [ ] `vercel()` image provider: variant URLs to `/_vercel/image?url=…&w=…&q=…`, like `cloudflare()` without a binding. Only width and quality; widths MUST match `imagesConfig.sizes` of `@astrojs/vercel`; falls back to `ipx()` in local dev; public media only. Drops sharp from the function.
   - [x] Turso: remote URLs open `@libsql/client/web`, so the native binary is not loaded. Not deployed yet.
 - [x] Durable Object SQLite as the Cloudflare store, preferred over D1: D1 has no transactions that stay open across `await`, and writes rely on them (hooks, nested `cms` calls, `onDelete`).
   - [x] Prototype (a spike, removed after the move into core). Go. Results in [design decisions](docs/dev/design-decisions.md#durable-objects).

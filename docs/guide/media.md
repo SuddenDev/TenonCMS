@@ -99,24 +99,30 @@ await cms.media.delete(doc.id);
 
 ### S3 and R2
 
-`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket. `publicUrl` is where the bucket is public.
+`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl?, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket.
+
+- `publicUrl` is where the bucket is public. File URLs are then `<publicUrl>/<key>`.
+- Without `publicUrl`, the bucket stays private. Core serves files at `/api/cms/media/files/<key>`, reading them from the bucket.
 
 - Bucket CORS MUST allow `PUT` from the admin origin and expose the `ETag` header. Without `ETag` an upload fails with a message that names the CORS setting.
 - Add a lifecycle rule that aborts incomplete multipart uploads after one day.
 - R2: use `r2()` with keys, see [R2](#r2). With `s3()`: `region: 'auto'`, `endpoint: 'https://<account>.r2.cloudflarestorage.com'`.
+- Neon object storage: `endpoint` is the project's S3 endpoint, `region` its region. See [Vercel with Neon](frameworks.md#with-neon).
 - MinIO: `endpoint: 'http://localhost:9000'` (`docker run -p 9000:9000 minio/minio server /data`).
 - Temporary credentials: pass `credentials` instead of the two keys. It is a function that returns `{ accessKeyId, secretAccessKey, sessionToken?, expiration? }`, and core asks it again when the credentials expire within 5 minutes. An AWS S3 bucket from the Vercel Marketplace has no keys; it uses `credentials: awsCredentialsProvider({ roleArn: process.env.AWS_ROLE_ARN! })` from `@vercel/oidc-aws-credentials-provider`.
+
+Files and variants that core serves carry `Cache-Control: public, max-age=300, s-maxage=3600` when media has no `read` rule, so a CDN absorbs most reads. A file that is deleted, moved or replaced under the same name can show for up to an hour. With a `read` rule they carry `private, no-cache`.
 
 ### R2
 
 `r2()` from `integral-cms/media/r2` has two modes:
 
-|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                  | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, publicUrl, partSize? })` |
-| ------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Through       | A bucket binding (`env` from `cloudflare:workers`)          | R2's S3 API, same as `s3()` with `region: 'auto'`                                        |
-| Runs on       | Workers only                                                | Node and Workers                                                                         |
-| Keys and CORS | Not needed                                                  | Needed, see [S3 and R2](#s3-and-r2)                                                      |
-| `publicUrl`   | Optional. Core serves files at `/api/cms/media/files/<key>` | Required                                                                                 |
+|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                  | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, publicUrl?, partSize? })` |
+| ------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Through       | A bucket binding (`env` from `cloudflare:workers`)          | R2's S3 API, same as `s3()` with `region: 'auto'`                                         |
+| Runs on       | Workers only                                                | Node and Workers                                                                          |
+| Keys and CORS | Not needed                                                  | Needed, see [S3 and R2](#s3-and-r2)                                                       |
+| `publicUrl`   | Optional. Core serves files at `/api/cms/media/files/<key>` | Optional, as with `s3()`                                                                  |
 
 With the binding:
 

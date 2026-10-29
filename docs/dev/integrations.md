@@ -33,7 +33,7 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 
 - No adapter code. With `@astrojs/vercel`, the Astro integration takes its default Node branch: core stays external in the server build, and `@vercel/nft` traces it, `pg` and `sharp` into the function.
 - `postgres()` returns its `pool`, so the host can hand it to `attachDatabasePool()` from `@vercel/functions`. Core imports nothing from Vercel.
-- Media: `s3()`, with `credentials` from `@vercel/oidc-aws-credentials-provider` for an AWS S3 bucket from the Vercel Marketplace.
+- Media: `s3()` with keys and no `publicUrl`, on a private Neon bucket. The function serves files; their `Cache-Control` lets Vercel's CDN keep them for an hour. `credentials` covers AWS S3 from the Vercel Marketplace (OIDC).
 - `migrate()` locks on Postgres, so cold starts that run together on a fresh database do not race.
 - Turso: `libsqlDialect()` opens `@libsql/client/web` for remote URLs (`libsql:`, `http(s):`, `ws(s):`), because the Node entry loads the native `libsql` binary on import. Only file URLs need the binary. Not tried against a real Turso database yet.
 - Not covered yet: Nuxt and TanStack Start on Vercel (Nitro's `vercel` preset).

@@ -1,3 +1,4 @@
+import type { Core } from "../../cms/runtime/types.ts";
 import type { Storage } from "../storage/types.ts";
 
 /** Headers for every served file. User files MAY be HTML or SVG; they MUST NOT run scripts on the host's origin. */
@@ -5,6 +6,15 @@ export const SAFE = {
   "x-content-type-options": "nosniff",
   "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
 };
+
+/**
+ * `Cache-Control` of a served file or variant. Without a media `read` rule, anyone gets the same bytes, so a CDN MAY keep
+ * them. Not `immutable`: a key returns after a delete or move, so the cache MUST expire.
+ */
+export const mediaCacheControl = (core: Core) =>
+  core.schema.collections.media.access?.read === undefined
+    ? "public, max-age=300, s-maxage=3600"
+    : "private, no-cache";
 
 /** `bytes=a-b`, `bytes=a-` or `bytes=-n` of a file of `size` bytes. `null` for a range that does not fit. */
 function parseRange(header: string, size: number) {

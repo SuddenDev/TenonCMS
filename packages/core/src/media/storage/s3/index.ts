@@ -1,4 +1,5 @@
-import type { Storage } from "../types.ts";
+import { API_BASE } from "../../../client/index.ts";
+import { encodeKey, type Storage } from "../types.ts";
 import { createClient } from "./client.ts";
 import { encodePath, tag, unescapeXml } from "./encoding.ts";
 import { s3Multipart } from "./multipart.ts";
@@ -13,8 +14,11 @@ export type S3Options = {
    * for MinIO. Requests then use path-style URLs. Default: AWS, with virtual-hosted URLs.
    */
   endpoint?: string;
-  /** Public URL of the bucket, e.g. a custom domain or the R2 public URL. File URLs are `<publicUrl>/<key>`. */
-  publicUrl: string;
+  /**
+   * Public URL of the bucket, e.g. a custom domain or the R2 public URL. File URLs are `<publicUrl>/<key>`. Default: the bucket stays private and
+   * core serves files at `/api/cms/media/files/<key>`.
+   */
+  publicUrl?: string;
   /** Part size of uploads in bytes. At least 5 MB, as S3 requires. Default 16 MB. */
   partSize?: number;
   /** Custom `fetch`. Defaults to the global `fetch`. */
@@ -112,6 +116,9 @@ export function s3(options: S3Options): Storage {
       await client.send("DELETE", key, {}, [404]);
     },
 
-    url: (key) => `${publicUrl.replace(/\/$/, "")}/${encodePath(key)}`,
+    url: (key) =>
+      publicUrl
+        ? `${publicUrl.replace(/\/$/, "")}/${encodePath(key)}`
+        : `${API_BASE}/media/files/${encodeKey(key)}`,
   };
 }

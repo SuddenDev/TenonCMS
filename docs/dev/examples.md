@@ -10,7 +10,7 @@ Every example has its instance in `integral.config.ts` at the project root and i
 | `examples/tanstack-start` | No adapter package: `integralAdmin()`, a server route for the API and one for the admin, server functions in loaders, React admin renderer.                                                                                     |
 | `examples/standalone`     | Headless: no site. API and admin on Vite and Nitro. Has media with `ipx()` and an `array` field.                                                                                                                                |
 | `examples/cloudflare`     | Astro on Cloudflare: the CMS in a Durable Object, pages read through the client over it. Posts, authors, media in R2 with Cloudflare Images. Secret in `.dev.vars` (copy `.dev.vars.example`).                                  |
-| `examples/vercel`         | Astro on Vercel Node functions: Postgres through `postgres()` with `attachDatabasePool()`, media in AWS S3 from the Vercel Marketplace (`s3()` with OIDC `credentials`). Port 4323.                                             |
+| `examples/vercel`         | Astro on Vercel Node functions: Postgres through `postgres()` with `attachDatabasePool()`, media in a private Neon bucket through `s3()` with keys. Port 4323.                                                                  |
 
 ## Astro in more detail
 
@@ -30,11 +30,12 @@ Every example has its instance in `integral.config.ts` at the project root and i
 ## Vercel in more detail
 
 - Vercel project: root directory `examples/vercel`, build command `cd ../.. && pnpm build:packages && pnpm --filter example-vercel build`, because the example consumes core's `dist/`.
-- Add Neon (use the pooled connection string as `DATABASE_URL`) and AWS S3 from the Vercel Marketplace. S3 sets `AWS_REGION`, `AWS_ROLE_ARN` and `S3_BUCKET_NAME`. Set `MEDIA_URL` to the bucket's public URL and `CMS_SECRET` yourself. The bucket needs CORS (`PUT` from the site, expose `ETag`) and public reads.
-- `vercel env pull` writes the variables and a `VERCEL_OIDC_TOKEN` to `.env.local`, so local runs reach the bucket.
+- Set up Neon as in the [guide](../guide/frameworks.md#with-neon): the pooled `DATABASE_URL`, a private bucket and its S3 variables (`AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET`), and `CMS_SECRET`. The same variables in `.env` work locally.
+- Vercel allows the `AWS_*` key names and injects unusable ones when they are unset, so all of them MUST be set.
 - `site` stays unset: better-auth reads the base URL from the request, so preview URLs work. Passkeys bind to the host they were made on.
 - `astro build` writes `.vercel/output`. The function (2026-10-29): 39 MB, with `integral-cms`, `kysely`, `pg` and `sharp` traced by nft. No libsql.
-- Smoke test without Vercel: a temp Postgres as `DATABASE_URL` and dummy S3 variables. Credentials are only fetched on the first signed request, so everything except uploads works.
+- Smoke test without Vercel: a temp Postgres as `DATABASE_URL` and dummy S3 variables; everything except uploads works. With a real bucket, run `s3.live.test.ts` against it too (`S3_TEST_*` variables).
+- Neon checked on 2026-10-29: `s3.live.test.ts` passes, and an upload through presigned parts, the file and a variant served by core work.
 
 ## Conventions
 

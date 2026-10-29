@@ -11,7 +11,6 @@
   "dependencies": {
     "@astrojs/vercel": "^11.0.17",
     "@vercel/functions": "^3.10.4",
-    "@vercel/oidc-aws-credentials-provider": "^3.3.16",
     "astro": "^7.3.4",
     "integral-cms": "workspace:*",
     "pg": "^8.23.1"

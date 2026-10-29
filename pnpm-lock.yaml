@@ -194,9 +194,6 @@ importers:
       '@vercel/functions':
         specifier: ^3.10.4
         version: 3.10.4(@aws-sdk/credential-provider-web-identity@3.972.84)(ws@8.22.0)
-      '@vercel/oidc-aws-credentials-provider':
-        specifier: ^3.3.16
-        version: 3.3.16
       astro:
         specifier: ^7.3.4
         version: 7.4.3(@types/node@26.6.2)(@vercel/functions@3.10.4(@aws-sdk/credential-provider-web-identity@3.972.84)(ws@8.22.0))(aws4fetch@1.0.20)(db0@0.4.1)(esbuild@0.28.2)(ioredis@5.11.1)(jiti@2.7.0)(stylus@0.57.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
@@ -3757,10 +3754,6 @@ packages:
     resolution: {integrity: sha512-m1QFg+U+3yPOnP1xSYJ73UIRxLOXdts1JOhiOiyPYqEsALgrXFFINvgUaD6R6iNvaBFAjHllBCbkfx4FuOdpaA==}
     engines: {node: '>=20'}
     hasBin: true
-
-  '@vercel/oidc-aws-credentials-provider@3.3.16':
-    resolution: {integrity: sha512-/n6xGSWtXdtRLaByGf6lppkyOsiYCBKtfanxvnEllWt+/1zwHhdIzMJsxe3uCEahRRb/7XxxOD8dZF0YAmra0g==}
-    engines: {node: '>= 20'}
 
   '@vercel/oidc@4.0.4':
     resolution: {integrity: sha512-cWw+jlAXo7vFHU338hbmPdKOsU0SZflRr1+yfPkar8COC9VEm1qyBWxmfxpbuyhAytp0P2OIa5qUzeWGQ4PvkA==}
@@ -8597,6 +8590,7 @@ snapshots:
       '@smithy/types': 4.19.0
       bowser: 2.15.0
       tslib: 2.8.1
+    optional: true
 
   '@aws-sdk/credential-provider-web-identity@3.972.84':
     dependencies:
@@ -8606,6 +8600,7 @@ snapshots:
       '@smithy/core': 3.37.0
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@aws-sdk/nested-clients@3.997.52':
     dependencies:
@@ -8617,6 +8612,7 @@ snapshots:
       '@smithy/node-http-handler': 4.13.0
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@aws-sdk/signature-v4-multi-region@3.996.50':
     dependencies:
@@ -8624,18 +8620,22 @@ snapshots:
       '@smithy/signature-v4': 5.7.4
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@aws-sdk/types@3.975.0':
     dependencies:
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@aws-sdk/xml-builder@3.972.42':
     dependencies:
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
-  '@aws/lambda-invoke-store@0.3.0': {}
+  '@aws/lambda-invoke-store@0.3.0':
+    optional: true
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -11642,28 +11642,33 @@ snapshots:
     dependencies:
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@smithy/fetch-http-handler@5.8.0':
     dependencies:
       '@smithy/core': 3.37.0
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@smithy/node-http-handler@4.13.0':
     dependencies:
       '@smithy/core': 3.37.0
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@smithy/signature-v4@5.7.4':
     dependencies:
       '@smithy/core': 3.37.0
       '@smithy/types': 4.19.0
       tslib: 2.8.1
+    optional: true
 
   '@smithy/types@4.19.0':
     dependencies:
       tslib: 2.8.1
+    optional: true
 
   '@speed-highlight/core@1.2.24': {}
 
@@ -12676,11 +12681,6 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/oidc-aws-credentials-provider@3.3.16':
-    dependencies:
-      '@aws-sdk/credential-provider-web-identity': 3.972.84
-      '@vercel/oidc': 4.0.4
-
   '@vercel/oidc@4.0.4':
     dependencies:
       '@vercel/cli-config': 0.3.4
@@ -13462,7 +13462,8 @@ snapshots:
 
   boolean@3.2.0: {}
 
-  bowser@2.15.0: {}
+  bowser@2.15.0:
+    optional: true
 
   brace-expansion@1.1.21:
     dependencies:

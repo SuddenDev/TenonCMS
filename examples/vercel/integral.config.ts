@@ -1,12 +1,12 @@
 import { attachDatabasePool } from "@vercel/functions";
-import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import {
+  AWS_ACCESS_KEY_ID,
+  AWS_ENDPOINT_URL_S3,
   AWS_REGION,
-  AWS_ROLE_ARN,
+  AWS_SECRET_ACCESS_KEY,
   CMS_SECRET,
   DATABASE_URL,
-  MEDIA_URL,
-  S3_BUCKET_NAME,
+  S3_BUCKET,
 } from "astro:env/server";
 import { defineCms } from "integral-cms";
 import { ipx } from "integral-cms/media/ipx";
@@ -22,11 +22,13 @@ export default defineCms({
   secret: CMS_SECRET,
   // The filesystem is read-only, so the default media on the local disk does not work here.
   media: {
+    // Without `publicUrl`, the bucket stays private and core serves its files.
     storage: s3({
-      bucket: S3_BUCKET_NAME,
+      bucket: S3_BUCKET,
       region: AWS_REGION,
-      publicUrl: MEDIA_URL,
-      credentials: awsCredentialsProvider({ roleArn: AWS_ROLE_ARN }),
+      endpoint: AWS_ENDPOINT_URL_S3,
+      accessKeyId: AWS_ACCESS_KEY_ID,
+      secretAccessKey: AWS_SECRET_ACCESS_KEY,
     }),
     images: { provider: ipx({ prerender: true }) },
   },

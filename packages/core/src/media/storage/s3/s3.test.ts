@@ -49,6 +49,12 @@ describe("s3", () => {
     expect(calls[0].headers.get("authorization")).toContain("AWS4-HMAC-SHA256");
   });
 
+  it("links files to the bucket's public URL, or to core for a private bucket", () => {
+    expect(s3(options).url("a b/x.jpg")).toBe("https://media.example.com/a%20b/x.jpg");
+    const { publicUrl: _, ...unlisted } = options;
+    expect(s3(unlisted).url("a b/x.jpg")).toBe("/api/cms/media/files/a%20b/x.jpg");
+  });
+
   it("uses virtual-hosted URLs on AWS", async () => {
     const { calls, fetch } = fake();
     await s3({ ...options, region: "eu-central-1", endpoint: undefined, fetch }).delete("x.jpg");

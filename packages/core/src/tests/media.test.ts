@@ -494,6 +494,25 @@ describe("serving", () => {
     expect(res.headers.get("content-security-policy")).toContain("sandbox");
   });
 
+  // A CDN then absorbs the reads of a private bucket. Keys come back after a delete, so the cache MUST expire.
+  it("lets shared caches keep public files and variants for an hour", async () => {
+    const { provider } = spy();
+    const m = withMedia({ images: { provider, sizes: [100] } });
+    await m.cms.media.upload(png300, { filename: "x.png", mimeType: "image/png" });
+    for (const path of ["/media/files/x.png", "/media/img/w_100&f_webp&q_85/x.png"]) {
+      const res = await m.cms.fetch(new Request(`http://localhost/api/cms${path}`));
+      expect(res.headers.get("cache-control")).toBe("public, max-age=300, s-maxage=3600");
+    }
+  });
+
+  it("keeps files behind a read rule out of shared caches", async () => {
+    const m = withMedia({ access: { read: () => true } });
+    await m.cms.media.upload(text("x"), { filename: "x.txt", mimeType: "text/plain" });
+    const res = await m.cms.fetch(new Request("http://localhost/api/cms/media/files/x.txt"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-cache");
+  });
+
   it("renders a variant once and serves it from storage after", async () => {
     const { provider, renders } = spy();
     const m = withMedia({ images: { provider, sizes: [100, 200] } });

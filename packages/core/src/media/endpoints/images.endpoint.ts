@@ -8,12 +8,7 @@ import { hasVariants } from "../images/decorate.ts";
 import { parseImgPath } from "../images/parse-image-path.ts";
 import { variantKey } from "../variants/keys.ts";
 import { renderVariant } from "../variants/render-variants.ts";
-import { SAFE } from "./serve-file.ts";
-
-const variantResponse = (body: BodyInit, type: string, length: number) =>
-  new Response(body, {
-    headers: { ...SAFE, "content-type": type, "content-length": String(length) },
-  });
+import { mediaCacheControl, SAFE } from "./serve-file.ts";
 
 /**
  * Public `GET /img/<modifiers>/<key>`: a stored variant, or one rendered and stored on first request.
@@ -24,6 +19,16 @@ export function imagesEndpoints(core: Core) {
   const { storage, images, allowlist } = media;
   const api = new Hono<Env>();
   if (!images?.provider.render) return api;
+
+  const variantResponse = (body: BodyInit, type: string, length: number) =>
+    new Response(body, {
+      headers: {
+        ...SAFE,
+        "content-type": type,
+        "content-length": String(length),
+        "cache-control": mediaCacheControl(core),
+      },
+    });
 
   api.get("/img/:path{.+}", async (c) => {
     const parsed = parseImgPath(c.req.param("path"));
