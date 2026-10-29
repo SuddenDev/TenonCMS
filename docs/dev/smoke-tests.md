@@ -70,3 +70,14 @@ curl -s -o /dev/null -w '%{http_code}\n' -b $K $B/api/cms/invites
 ```
 
 Expect a link (201, or 502 with the link when `SMTP_URL` points at no running catcher), `{ user }` with the session cookie, then `403`: the editor cannot manage invites. In Chrome, the Bitwarden extension's `BIT-NOTIFICATION-BAR-ROOT` overlay can swallow clicks at the top right of the admin; check with `document.elementFromPoint()` before suspecting the UI.
+
+## Postgres
+
+PGlite runs the integration suite already. This checks `postgres()` and the `pg` pool against a real server, in a throwaway container.
+
+```sh
+docker run -d --rm --name integral-pg -e POSTGRES_PASSWORD=pw -p 55432:5432 postgres:17-alpine
+export DATABASE_URL=postgres://postgres:pw@localhost:55432/postgres
+```
+
+Point an example's `database` at `postgres(process.env.DATABASE_URL!)` (add `pg` to it), start it, and run the curl calls above. Expect the same codes. Then `docker stop integral-pg`; `--rm` deletes the data.

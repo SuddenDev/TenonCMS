@@ -13,13 +13,36 @@ const alias = (mediaDefault: string) => ({
   "integral-cms/admin": src("admin/config.ts"),
 });
 
-// `*.workerd.test.ts` runs in workerd, inside the Worker of `src/tests/workerd/`.
+// `*.workerd.test.ts` runs in workerd, inside the Worker of `src/tests/workerd/`. The `pglite` and `sqlite` projects
+// run the integration suite and the database tests again on PGlite and `node:sqlite`.
 export default defineConfig({
   test: {
     projects: [
       {
         resolve: { alias: alias("media/default.ts") },
         test: { name: "node", exclude: ["**/node_modules/**", "**/*.workerd.test.ts"] },
+      },
+      {
+        resolve: { alias: alias("media/default.ts") },
+        test: {
+          name: "pglite",
+          include: ["src/tests/*.test.ts", "src/db/{migrations,queries}/**/*.test.ts"],
+          exclude: ["**/*.workerd.test.ts"],
+          env: { CMS_TEST_DB: "pglite" },
+          // ponytail: each test boots its own PGlite, which takes seconds under load. Clone a migrated template
+          // per worker if the suite gets too slow.
+          testTimeout: 20_000,
+          hookTimeout: 30_000,
+        },
+      },
+      {
+        resolve: { alias: alias("media/default.ts") },
+        test: {
+          name: "sqlite",
+          include: ["src/tests/*.test.ts", "src/db/{migrations,queries}/**/*.test.ts"],
+          exclude: ["**/*.workerd.test.ts"],
+          env: { CMS_TEST_DB: "sqlite" },
+        },
       },
       {
         resolve: { alias: alias("media/workerd.ts") },

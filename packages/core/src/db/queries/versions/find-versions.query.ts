@@ -31,7 +31,7 @@ const toVersion = (r: VersionRow): Version => ({
 
 /** The versions of a document or global in one locale, newest first, with the name of their user. */
 export async function findVersions(db: Db, target: string, docId: string, locale: string | null) {
-  const { rows } = await select(db, target, docId, sql`v.locale IS ${locale}`);
+  const { rows } = await select(db, target, docId, sql`v.locale IS NOT DISTINCT FROM ${locale}`);
   return rows.map(toVersion);
 }
 

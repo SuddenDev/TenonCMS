@@ -9,6 +9,7 @@ import { inviteByToken } from "./invite-by-token.query.ts";
 import { findInvites } from "./find-invites.query.ts";
 import { renewInvite } from "./renew-invite.query.ts";
 import { deleteInvite } from "./delete-invite.query.ts";
+import { onPglite, testDatabase } from "../../../tests/setup.ts";
 
 let db: Db;
 const now = 1_000_000;
@@ -23,8 +24,8 @@ const invite = {
 };
 
 beforeEach(async () => {
-  db = createDb({ url: ":memory:" });
-  await migrate(db, { database: { db, type: "sqlite" } });
+  db = createDb(testDatabase());
+  await migrate(db, { database: { db, type: onPglite ? "postgres" : "sqlite" } });
   await insertInvite(db, invite);
 });
 

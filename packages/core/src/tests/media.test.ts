@@ -12,7 +12,7 @@ import { local } from "../media/storage/local/index.ts";
 import { modifierId } from "../media/images/modifiers.ts";
 import type { Modifiers } from "../schema/index.ts";
 import { png, png300 } from "./fixtures.ts";
-import { admin, base, fresh, setup, status, tmpDir, withMedia } from "./setup.ts";
+import { admin, base, setup, status, tmpDir, withMedia } from "./setup.ts";
 
 const bytes = (n: number) => Uint8Array.from({ length: n }, (_, i) => i % 251);
 const text = (s: string) => new TextEncoder().encode(s);

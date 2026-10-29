@@ -1,8 +1,18 @@
-import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, origin, published, setup, status, tmpDb, type Env } from "./setup.ts";
+import {
+  admin,
+  fresh,
+  origin,
+  published,
+  setup,
+  status,
+  type Env,
+  testDatabase,
+  testDb,
+  onPglite,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -19,7 +29,7 @@ describe("datetime", () => {
           events: { fields: { start: { type: "datetime", required: true, unique: true } } },
         },
         media: false,
-        database: { url: ":memory:" },
+        database: testDatabase(),
         secret: "x".repeat(32),
       }),
     );
@@ -48,7 +58,7 @@ describe("condition", () => {
           hooks,
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
 
@@ -106,7 +116,7 @@ describe("default", () => {
           hooks: { beforeValidate: [({ data }) => void seen.push(data.status)] },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
 
@@ -186,7 +196,7 @@ describe("validate", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
   beforeEach(() => {
@@ -254,7 +264,7 @@ describe("unique", () => {
         },
         other: { fields: { slug: { type: "text" } } },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
 
@@ -300,7 +310,7 @@ describe("unique", () => {
           fields: { title: { type: "text" }, slug: { type: "slug", from: "title", unique: true } },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     const { client } = setup(cms);
@@ -320,7 +330,7 @@ describe("unique", () => {
 });
 
 describe("private", () => {
-  const make = (url = ":memory:") =>
+  const make = (database = testDatabase()) =>
     defineCms({
       collections: {
         people: {
@@ -347,7 +357,7 @@ describe("private", () => {
       globals: {
         site: { fields: { name: { type: "text" }, key: { type: "text", private: true } } },
       },
-      database: { url },
+      database,
       secret: "x".repeat(32),
     });
   const person = { name: "A", email: "e", contact: { phone: "p" } };
@@ -399,20 +409,20 @@ describe("private", () => {
   });
 
   it("reduces a block item of an unknown block to id and blockType on public reads", async () => {
-    const url = tmpDb();
-    const cms = make(url);
+    const { database, exec } = testDb();
+    const cms = make(database);
     const { client } = setup(cms);
     const p = await cms.create("people", {
       name: "A",
       content: [{ id: "q", blockType: "quote", text: "t", source: "s" }],
     });
     // A block removed from the schema leaves its items in the stored data.
-    const db = createLibsql({ url });
-    await db.execute({
-      sql: "UPDATE cms_documents SET data = json_set(data, '$.content[0].blockType', 'gone') WHERE id = ?",
-      args: [p.id],
-    });
-    db.close();
+    await exec(
+      onPglite
+        ? `UPDATE cms_documents SET data = jsonb_set(data::jsonb, '{content,0,blockType}', '"gone"')::text WHERE id = ?`
+        : "UPDATE cms_documents SET data = json_set(data, '$.content[0].blockType', 'gone') WHERE id = ?",
+      [p.id],
+    );
     const item = { id: "q", blockType: "gone", text: "t", source: "s" };
     expect((await client.findById("people", p.id)).content).toEqual([
       { id: "q", blockType: "gone" },

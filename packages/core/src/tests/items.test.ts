@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
-import { admin, localized, setup } from "./setup.ts";
+import { admin, localized, setup, testDatabase } from "./setup.ts";
 
 let calls: unknown[];
 beforeEach(() => {
@@ -48,7 +48,7 @@ const make = () =>
         },
       },
     },
-    database: { url: ":memory:" },
+    database: testDatabase(),
     secret: "x".repeat(32),
     media: false,
   });
@@ -282,7 +282,7 @@ describe("blocks", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: false,
     });

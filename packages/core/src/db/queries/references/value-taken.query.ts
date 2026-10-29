@@ -26,7 +26,7 @@ export async function valueTaken(
     const { rows } = await sql`SELECT 1 FROM cms_documents
       ${localeJoins(false, l, DOCUMENT_LOCALES, "cms_documents.id")}
       WHERE cms_documents.collection = ${collection} AND ${visible(false, "", l)}
-      AND ${jsonAt(key, false, l)} = ${value}
+      AND ${jsonAt(db, key, false, l)} = ${value}
       ${exceptId ? sql`AND cms_documents.id != ${exceptId}` : sql``} LIMIT 1`.execute(db);
     return rows.length > 0;
   }
@@ -35,7 +35,7 @@ export async function valueTaken(
     .selectFrom("cms_documents")
     .select("id")
     .where("collection", "=", collection)
-    .where(sql<boolean>`${jsonAt(key)} = ${value}`);
+    .where(sql<boolean>`${jsonAt(db, key)} = ${value}`);
   if (exceptId) query = query.where("id", "!=", exceptId);
 
   return Boolean(await query.executeTakeFirst());

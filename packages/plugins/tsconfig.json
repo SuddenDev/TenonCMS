@@ -15,6 +15,7 @@
       "integral-cms/richtext": ["../core/src/richtext/index.ts"],
       "integral-cms/admin": ["../core/src/admin/config.ts"],
       "integral-cms/client": ["../core/src/client/index.ts"],
+      "integral-cms/libsql": ["../core/src/integrations/libsql/index.ts"],
       "integral-cms/presets": ["../core/src/presets/index.ts"],
       "integral-cms/media/default": ["../core/src/media/default.ts"],
       "integral-cms/admin/bar": ["../core/src/admin/bar.d.ts"],

@@ -1,4 +1,3 @@
-import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { modifierId } from "../media/images/modifiers.ts";
@@ -14,9 +13,10 @@ import {
   seed,
   setup,
   status,
-  tmpDb,
   tmpDir,
   type Env,
+  testDatabase,
+  testDb,
 } from "./setup.ts";
 
 let cms: Env["cms"];
@@ -53,12 +53,10 @@ describe("populate", () => {
   });
 
   it("resolves a missing target to null and drops it from many", async () => {
-    const url = tmpDb();
-    const cms = relational(url);
+    const { database, exec } = testDb();
+    const cms = relational(database);
     const { a, t2 } = await seed(cms);
-    const db = createLibsql({ url });
-    await db.execute({ sql: "DELETE FROM cms_documents WHERE id IN (?, ?)", args: [a.id, t2.id] });
-    db.close();
+    await exec("DELETE FROM cms_documents WHERE id IN (?, ?)", [a.id, t2.id]);
     const post = (await cms.find("posts"))[0];
     expect(post.author).toBeNull();
     expect(post.tags).toMatchObject([{ name: "one" }]);
@@ -82,7 +80,7 @@ describe("populate", () => {
   });
 
   it("uses the config depth", async () => {
-    const cms = relational(":memory:", { depth: 1 });
+    const cms = relational(testDatabase(), { depth: 1 });
     const { m } = await seed(cms);
     expect((await cms.find("posts"))[0].author).toMatchObject({ avatar: m.id });
   });
@@ -235,7 +233,7 @@ describe("select", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     await cms.create("posts", { title: "a", body: "b" });
@@ -477,7 +475,7 @@ describe("arrays", () => {
         },
       },
       media: { storage: local({ dir: tmpDir() }), images: { provider, sizes: [100, 200] } },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     const image = await cms.media.upload(png300, { filename: "hero.png", mimeType: "image/png" });
@@ -583,7 +581,7 @@ describe("blocks", () => {
         },
       },
       media: { storage: local({ dir: tmpDir() }) },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     const image = await cms.media.upload(png300, { filename: "hero.png", mimeType: "image/png" });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defineCms, definePlugin } from "../index.ts";
 import { mediaCollection } from "../media/config/collection.ts";
 import { seo, settings, strings } from "../presets/index.ts";
-import { published, setup, unpublished } from "./setup.ts";
+import { published, setup, unpublished, testDatabase } from "./setup.ts";
 
 describe("presets", () => {
   it("general has title, tagline, url and favicon", () => {
@@ -58,7 +58,7 @@ describe("presets", () => {
   it("checks the url pattern", async () => {
     const cms = defineCms({
       settings: { general: settings.general },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     await expect(cms.setGlobal("general", { title: "S", url: "a.b" })).rejects.toMatchObject({
@@ -68,7 +68,7 @@ describe("presets", () => {
     expect((await cms.getGlobal("general")).url).toBe("https://a.b");
   });
 });
-const opts = { database: { url: ":memory:" }, secret: "x".repeat(32) };
+const opts = { database: testDatabase(), secret: "x".repeat(32) };
 const gen = (fields = {}) => ({ fields: { name: { type: "text" }, ...fields } }) as const;
 
 describe("defineCms", () => {
@@ -136,7 +136,7 @@ describe("defineCms", () => {
 });
 
 describe("localized settings", () => {
-  const base = { database: { url: ":memory:" }, secret: "x".repeat(32), media: false } as const;
+  const base = { database: testDatabase(), secret: "x".repeat(32), media: false } as const;
   const localization = { locales: ["en", "de"], defaultLocale: "en" };
 
   it("localizes the default globals only with localization", () => {

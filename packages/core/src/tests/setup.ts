@@ -1,11 +1,42 @@
 import { mkdtempSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient as createLibsql } from "@libsql/client";
+import { PGlite } from "@electric-sql/pglite";
+import { PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from "kysely";
 import { expect } from "vitest";
 import { CmsError, createClient } from "../client/index.ts";
+import { pgliteDialect } from "../db/adapters/pglite.ts";
+import type { DatabaseOptions } from "../db/create-db.ts";
 import { defineCms, type MediaOptions, type PopulateOptions, type Schema } from "../index.ts";
+import { pglite } from "../integrations/pglite/index.ts";
 import { local } from "../media/storage/local/index.ts";
+import { libsql } from "../integrations/libsql/index.ts";
+import { sqlite } from "../integrations/sqlite/index.ts";
+
+/** Whether the suite runs on PGlite (the `pglite` project) instead of libsql. */
+export const onPglite = process.env.CMS_TEST_DB === "pglite";
+/** Whether the suite runs on `node:sqlite` (the `sqlite` project) instead of libsql. */
+const onNodeSqlite = process.env.CMS_TEST_DB === "sqlite";
+
+/**
+ * An in-memory database. Like libsql's `:memory:`, each connection opens its own empty one, so instances that share
+ * these options do not share data.
+ */
+export const testDatabase = (): DatabaseOptions =>
+  onPglite
+    ? {
+        dialect: {
+          createAdapter: () => new PostgresAdapter(),
+          createIntrospector: (db) => new PostgresIntrospector(db),
+          createQueryCompiler: () => new PostgresQueryCompiler(),
+          createDriver: () => pgliteDialect(new PGlite()).createDriver(),
+        },
+      }
+    : onNodeSqlite
+      ? sqlite(":memory:")
+      : libsql(":memory:");
 
 export const origin = "http://localhost";
 export const base = {
@@ -24,7 +55,7 @@ export const base = {
     },
   },
   globals: { site: { fields: { name: { type: "text" } } } },
-  database: { url: ":memory:" },
+  database: testDatabase(),
   secret: "x".repeat(32),
 } as const;
 export const define = (secret: string) => defineCms({ ...base, secret });
@@ -96,15 +127,61 @@ export const admin = { name: "Admin", email: "a@b.co", password: "password123" }
 
 export const tmpDb = () => `file:${mkdtempSync(join(tmpdir(), "integral-"))}/cms.db`;
 
-export async function tables(url: string) {
-  const db = createLibsql({ url });
-  try {
-    return (await db.execute(`SELECT name FROM sqlite_master WHERE type = 'table'`)).rows.map(
-      (r) => r.name,
-    );
-  } finally {
-    db.close();
+/**
+ * A database that instances share, with `exec()` for raw SQL on it: a SQLite file, or one PGlite. `?` marks a
+ * parameter.
+ */
+export function testDb() {
+  if (onPglite) {
+    const client = new PGlite();
+    const exec = async (statement: string, args: unknown[] = []) => {
+      let n = 0;
+      const text = statement.replace(/\?/g, () => `$${++n}`);
+      return (await client.query<any>(text, args, { parsers: { 20: Number } })).rows;
+    };
+    const tables = async () =>
+      (
+        await exec(
+          `SELECT table_name AS name FROM information_schema.tables WHERE table_schema = current_schema()`,
+        )
+      ).map((r) => r.name as string);
+    return { database: pglite(client), exec, tables };
   }
+
+  const url = tmpDb();
+  if (onNodeSqlite) {
+    const path = url.slice("file:".length);
+    const exec = async (statement: string, args: unknown[] = []) => {
+      const db = new DatabaseSync(path);
+      try {
+        const query = db.prepare(statement);
+        if (query.columns().length) return query.all(...(args as never[])) as any[];
+        query.run(...(args as never[]));
+        return [];
+      } finally {
+        db.close();
+      }
+    };
+    const tables = async () =>
+      (await exec(`SELECT name FROM sqlite_master WHERE type = 'table'`)).map(
+        (r) => r.name as string,
+      );
+    return { database: sqlite(path), exec, tables };
+  }
+
+  const exec = async (statement: string, args: unknown[] = []) => {
+    const db = createLibsql({ url });
+    try {
+      return (await db.execute({ sql: statement, args: args as never[] })).rows as any[];
+    } finally {
+      db.close();
+    }
+  };
+  const tables = async () =>
+    (await exec(`SELECT name FROM sqlite_master WHERE type = 'table'`)).map(
+      (r) => r.name as string,
+    );
+  return { database: libsql(url), exec, tables };
 }
 
 export async function status(promise: Promise<unknown>) {
@@ -115,7 +192,10 @@ export async function status(promise: Promise<unknown>) {
   return error instanceof CmsError ? error.status : error;
 }
 
-export const relational = (url = ":memory:", populate: PopulateOptions = {}) =>
+export const relational = (
+  database: DatabaseOptions = testDatabase(),
+  populate: PopulateOptions = {},
+) =>
   defineCms({
     collections: {
       assets: {
@@ -168,7 +248,7 @@ export const relational = (url = ":memory:", populate: PopulateOptions = {}) =>
       },
     },
     populate,
-    database: { url },
+    database,
     secret: "x".repeat(32),
   });
 
@@ -272,7 +352,7 @@ export function localized(
       },
     },
     localization: { locales: ["en", "de"], defaultLocale: "en" },
-    database: { url: ":memory:" },
+    database: testDatabase(),
     secret: "x".repeat(32),
     media: false,
     ...rest,
@@ -290,9 +370,8 @@ type Stored = { data: object; draft?: object | null; published?: boolean };
  * `posts` document with its locale rows, `global()` for the `site` global. Used by tests of reads.
  */
 export function seeded(extra: Parameters<typeof localized>[0] = {}) {
-  const url = tmpDb();
-  const s = localized({ ...extra, database: { url } });
-  const raw = createLibsql({ url });
+  const { database, exec } = testDb();
+  const s = localized({ ...extra, database });
   // Reading once connects and migrates, so the tables exist.
   const ready = s.cms.find("authors");
   let clock = 1_000;
@@ -307,36 +386,28 @@ export function seeded(extra: Parameters<typeof localized>[0] = {}) {
     collection = "posts",
   ) {
     await ready;
-    await raw.execute({
-      sql: `INSERT INTO cms_documents (id, collection, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        collection,
-        json(shared.data),
-        json(shared.draft),
-        time(),
-        time(),
-        at(shared.published),
-      ],
-    });
+    await exec(
+      `INSERT INTO cms_documents (id, collection, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, collection, json(shared.data), json(shared.draft), time(), time(), at(shared.published)],
+    );
     for (const [locale, r] of Object.entries(locales))
-      await raw.execute({
-        sql: `INSERT INTO cms_document_locales (document_id, locale, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [id, locale, json(r.data), json(r.draft), time(), time(), at(r.published)],
-      });
+      await exec(
+        `INSERT INTO cms_document_locales (document_id, locale, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, locale, json(r.data), json(r.draft), time(), time(), at(r.published)],
+      );
   }
 
   async function global(name: string, shared: Stored, locales: Record<string, Stored> = {}) {
     await ready;
-    await raw.execute({
-      sql: `INSERT INTO cms_globals (name, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [name, json(shared.data), json(shared.draft), time(), time(), at(shared.published)],
-    });
+    await exec(
+      `INSERT INTO cms_globals (name, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, json(shared.data), json(shared.draft), time(), time(), at(shared.published)],
+    );
     for (const [locale, r] of Object.entries(locales))
-      await raw.execute({
-        sql: `INSERT INTO cms_global_locales (name, locale, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [name, locale, json(r.data), json(r.draft), time(), time(), at(r.published)],
-      });
+      await exec(
+        `INSERT INTO cms_global_locales (name, locale, data, draft, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [name, locale, json(r.data), json(r.draft), time(), time(), at(r.published)],
+      );
   }
 
   return { ...s, doc, global };

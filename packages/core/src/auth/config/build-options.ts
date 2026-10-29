@@ -3,6 +3,7 @@ import { APIError, type BetterAuthOptions } from "better-auth";
 import { admin } from "better-auth/plugins/admin";
 import type { Kysely } from "kysely";
 import { API_BASE } from "../../client/index.ts";
+import { isPostgres } from "../../db/queries/document-sql.ts";
 import type { Database } from "../../db/types.ts";
 import type { AuthOptions } from "./options.ts";
 import type { EmailApi, EmailTemplates, EmailTemplateData } from "../../email/types.ts";
@@ -50,7 +51,7 @@ export function authOptions<A extends AuthOptions>(
     ...options,
     basePath: `${API_BASE}/auth`,
     secret,
-    database: { db, type: "sqlite" as const },
+    database: { db, type: isPostgres(db) ? ("postgres" as const) : ("sqlite" as const) },
     user: { ...user, additionalFields: { ...userFields, ...user?.additionalFields } },
     // The admin signs in with passkeys and manages users with `admin()`. API keys come from `apiKey()`. A host's
     // plugin with the same id replaces core's. Typed as the host's plugins: their endpoint types break the declaration build (TS7056).

@@ -1,6 +1,6 @@
 # tests
 
-Integration tests. Each file sets up a real `defineCms()` on in-memory libsql and talks to it through `createClient()`, the same way the browser does.
+Integration tests. Each file sets up a real `defineCms()` on in-memory libsql and talks to it through `createClient()`, the same way the browser does. The Vitest projects `pglite` and `sqlite` run them again on PGlite and `node:sqlite` (`CMS_TEST_DB=pglite` / `sqlite`): use `testDatabase()` for a fresh database and `testDb()` for one that instances share, with `exec()` for raw SQL. Raw SQL that differs per dialect branches on `onPglite`.
 
 - `setup.ts`: the shared schema, `fresh()` (instance, client, signed-in fetch), `relational()`, `seed()`, and `withMedia()` (an instance with `local()` in a temp dir and 1 KB parts).
 - `fixtures.ts`: tiny images for header and rendering tests.

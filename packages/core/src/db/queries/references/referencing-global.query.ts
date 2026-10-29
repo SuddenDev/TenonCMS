@@ -13,7 +13,7 @@ export async function referencingGlobal(
     .selectFrom("cms_globals")
     .select("data")
     .where("name", "=", name)
-    .where(holdsAt("data", path, many, id))
+    .where(holdsAt(db, "data", path, many, id))
     .executeTakeFirst();
   return row?.data;
 }

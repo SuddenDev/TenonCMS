@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createClient } from "integral-cms/client";
 import { defineCms } from "integral-cms";
 import { ExamplePlugin } from "./index.ts";
+import { libsql } from "integral-cms/libsql";
 
 const origin = "http://localhost";
 const admin = { name: "Admin", email: "a@b.co", password: "password123" };
@@ -9,7 +10,7 @@ const admin = { name: "Admin", email: "a@b.co", password: "password123" };
 function make() {
   const cms = defineCms({
     plugins: [ExamplePlugin()],
-    database: { url: ":memory:" },
+    database: libsql(":memory:"),
     secret: "x".repeat(32),
   });
   let cookie = "";

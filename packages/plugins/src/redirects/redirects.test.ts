@@ -3,6 +3,7 @@ import { createClient } from "integral-cms/client";
 import { defineCms, defineCollection } from "integral-cms";
 import { page } from "integral-cms/presets";
 import { RedirectsPlugin, resolveRedirect } from "./index.ts";
+import { libsql } from "integral-cms/libsql";
 
 const origin = "http://localhost";
 const admin = { name: "Admin", email: "a@b.co", password: "password123" };
@@ -19,7 +20,7 @@ function make(localizedPages = false, collections = ["pages"], locales?: string[
       posts: defineCollection({ fields: { title: { type: "text" }, path: { type: "text" } } }),
     },
     plugins: [RedirectsPlugin({ collections, locales })],
-    database: { url: ":memory:" },
+    database: libsql(":memory:"),
     secret: "x".repeat(32),
   });
   let cookie = "";

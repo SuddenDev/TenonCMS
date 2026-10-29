@@ -4,7 +4,8 @@ import type { Kysely } from "kysely";
 import type { BetterAuthOptions } from "better-auth";
 import { getMigrations } from "better-auth/db/migration";
 
-// ponytail: no locking between processes; Kysely's migration lock is a no-op on SQLite. Run one instance per database until D1/Postgres.
+// ponytail: no locking between processes on SQLite, where Kysely's migration lock is a no-op. Run one instance per
+// SQLite database. Postgres takes an advisory lock.
 /**
  * Runs the CMS migrations, then the better-auth migrations, plugin tables included.
  * @throws The first migration error.

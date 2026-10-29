@@ -1,28 +1,20 @@
-import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ValidationError } from "../errors.ts";
 import { defineCms } from "../index.ts";
 import { page } from "../presets/index.ts";
-import { admin, origin, relational, seed, setup, tmpDb } from "./setup.ts";
+import { admin, origin, relational, seed, setup, testDatabase, testDb } from "./setup.ts";
 
-let url: string;
+let db: ReturnType<typeof testDb>;
 let cms: ReturnType<typeof relational>;
 let ids: Awaited<ReturnType<typeof seed>>;
 beforeEach(async () => {
-  url = tmpDb();
-  cms = relational(url);
+  db = testDb();
+  cms = relational(db.database);
   ids = await seed(cms);
 });
 
 // The draft write API comes later, so these tests write drafts through SQL.
-async function sql(statement: string, args: unknown[]) {
-  const db = createLibsql({ url });
-  try {
-    await db.execute({ sql: statement, args: args as never[] });
-  } finally {
-    db.close();
-  }
-}
+const sql = (statement: string, args: unknown[]) => db.exec(statement, args);
 /** Sets a pending draft on a published document. */
 const draft = (id: string, data: object) =>
   sql(`UPDATE cms_documents SET draft = ? WHERE id = ?`, [JSON.stringify(data), id]);
@@ -125,7 +117,7 @@ describe("drafts perspective", () => {
 
   it("is passed to hooks", async () => {
     const seen: unknown[] = [];
-    const hooked = relational(url);
+    const hooked = relational(db.database);
     // Hooks on the instance's own schema object, which core reads.
     (hooked.schema.collections!.tags as { hooks?: object }).hooks = {
       afterRead: [
@@ -143,7 +135,7 @@ describe("drafts perspective", () => {
 
   it("is available to hooks through withDrafts()", async () => {
     const seen: unknown[] = [];
-    const hooked = relational(url);
+    const hooked = relational(db.database);
     (hooked.schema.collections!.tags as { hooks?: object }).hooks = {
       afterRead: [
         async ({ docs, cms }: any) => {
@@ -267,7 +259,7 @@ describe("withSession", () => {
 
   it("binds the session user", async () => {
     const users: unknown[] = [];
-    const hooked = relational(url);
+    const hooked = relational(db.database);
     (hooked.schema.collections!.tags as { hooks?: object }).hooks = {
       beforeRead: [
         ({ docs, user }: any) => {
@@ -287,7 +279,7 @@ describe("withSession", () => {
 describe("session user of HTTP reads", () => {
   it("is passed to read hooks, in both perspectives", async () => {
     const users: unknown[] = [];
-    const hooked = relational(url);
+    const hooked = relational(db.database);
     (hooked.schema.collections!.tags as { hooks?: object }).hooks = {
       beforeRead: [
         ({ docs, user }: any) => {
@@ -351,7 +343,7 @@ describe("draft writes", () => {
       },
       media: false,
       settings: false,
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
   let cms: ReturnType<typeof make>;

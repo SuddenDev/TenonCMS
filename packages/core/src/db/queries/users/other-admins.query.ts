@@ -5,6 +5,6 @@ import type { Db } from "../document-sql.ts";
 export async function otherAdmins(db: Db, userId: string) {
   const { rows } = await sql<{ n: number }>`
     SELECT COUNT(*) AS n FROM "user"
-    WHERE role = 'admin' AND (banned IS NULL OR banned = 0) AND id <> ${userId}`.execute(db);
+    WHERE role = 'admin' AND (banned IS NULL OR banned = false) AND id <> ${userId}`.execute(db);
   return Number(rows[0].n);
 }

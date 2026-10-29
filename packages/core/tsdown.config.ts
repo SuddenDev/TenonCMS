@@ -9,6 +9,11 @@ export default defineConfig({
     "src/client/index.ts",
     "src/integrations/astro/index.ts",
     "src/integrations/cloudflare/index.ts",
+    // Own entries, so libsql, `node:sqlite`, `pg` and PGlite load only for the database that uses them.
+    "src/integrations/libsql/index.ts",
+    "src/integrations/sqlite/index.ts",
+    "src/integrations/postgres/index.ts",
+    "src/integrations/pglite/index.ts",
     "src/integrations/nuxt/index.ts",
     "src/admin/config.ts",
     "src/admin/vue/vue.ts",

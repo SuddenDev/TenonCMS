@@ -1,8 +1,11 @@
 import { type Database } from "../types.ts";
+import { isPostgres } from "../queries/document-sql.ts";
+import { postgresMigrations } from "./postgres.ts";
 import { type Kysely, sql } from "kysely";
 import { type Migration, Migrator } from "kysely/migration";
 
-// Keys sort by name. Never edit a migration that has shipped; add a new one.
+// The SQLite migrations. Keys sort by name. Never edit a migration that has shipped; add a new one, here and in
+// `postgres.ts`.
 const cmsMigrations: Record<string, Migration> = {
   "001_cms_tables": {
     async up(db) {
@@ -154,11 +157,11 @@ const cmsMigrations: Record<string, Migration> = {
   },
 };
 
-/** The Kysely migrator for the CMS tables, with its own migration tables. */
+/** The Kysely migrator for the CMS tables of the database's dialect, with its own migration tables. */
 export const migrator = (db: Kysely<Database>) =>
   new Migrator({
     db,
-    provider: { getMigrations: async () => cmsMigrations },
+    provider: { getMigrations: async () => (isPostgres(db) ? postgresMigrations : cmsMigrations) },
     migrationTableName: "cms_kysely_migration",
     migrationLockTableName: "cms_kysely_migration_lock",
   });

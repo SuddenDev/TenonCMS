@@ -24,7 +24,7 @@ export async function referencingLocales(
   many: boolean | undefined,
   id: string,
 ) {
-  const holds = (column: "data" | "draft") => holdsAt(`l.${column}`, path, many, id);
+  const holds = (column: "data" | "draft") => holdsAt(db, `l.${column}`, path, many, id);
   const scope =
     locales.key === "document_id"
       ? sql`JOIN cms_documents d ON d.id = l.document_id WHERE d.collection = ${name}`

@@ -1,5 +1,6 @@
 import { CMS_SECRET, DATABASE_URL, SITE_URL, SMTP_URL, EMAIL_FROM } from "astro:env/server";
 import { defineCms, defineGlobal } from "integral-cms";
+import { libsql } from "integral-cms/libsql";
 import { smtp } from "integral-cms/email/smtp";
 import { ExamplePlugin } from "integral-cms/plugins/example";
 import { RedirectsPlugin } from "integral-cms/plugins/redirects";
@@ -38,7 +39,7 @@ export default defineCms({
     }),
   },
   plugins: [RedirectsPlugin({ locales: ["en", "de"] }), ExamplePlugin({ renderer: "html" })],
-  database: { url: DATABASE_URL },
+  database: libsql(DATABASE_URL),
   secret: CMS_SECRET,
   email: SMTP_URL
     ? {

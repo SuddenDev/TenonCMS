@@ -1,4 +1,4 @@
-import { type Db, type Loc, selectDocs, jsonAt, equals } from "../document-sql.ts";
+import { type Db, type Loc, selectDocs, jsonAt, equals, containsText } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 import { sql } from "kysely";
 
@@ -34,12 +34,10 @@ export async function findDocs(
   if (id !== undefined) query = query.where("cms_documents.id", "=", id);
 
   for (const [key, value] of [...Object.entries(where), ...Object.entries(access)])
-    if (value !== undefined) query = query.where(equals(key, value, drafts, loc));
+    if (value !== undefined) query = query.where(equals(db, key, value, drafts, loc));
 
   if (search)
-    query = query.where(
-      sql<boolean>`instr(lower(CAST(${jsonAt(search.key, drafts, loc)} AS TEXT)), lower(${search.query})) > 0`,
-    );
+    query = query.where(containsText(db, jsonAt(db, search.key, drafts, loc), search.query));
 
   // `rowid` orders documents created in the same millisecond.
   query = query

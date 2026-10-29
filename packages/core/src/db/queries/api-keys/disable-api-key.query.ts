@@ -6,6 +6,8 @@ import type { Db } from "../document-sql.ts";
  * @returns Whether a key has this id.
  */
 export async function disableApiKey(db: Db, id: string) {
-  const { numAffectedRows } = await sql`UPDATE apikey SET enabled = 0 WHERE id = ${id}`.execute(db);
+  const { numAffectedRows } = await sql`UPDATE apikey SET enabled = false WHERE id = ${id}`.execute(
+    db,
+  );
   return (numAffectedRows ?? 0n) > 0n;
 }

@@ -33,7 +33,7 @@ export async function recordVersion(db: Db, v: Recorded) {
       updated_at: number;
     }>`
       SELECT id, status, created_by, updated_at FROM cms_versions
-      WHERE target = ${v.target} AND doc_id = ${v.docId} AND locale IS ${v.locale}
+      WHERE target = ${v.target} AND doc_id = ${v.docId} AND locale IS NOT DISTINCT FROM ${v.locale}
       ORDER BY created_at DESC, rowid DESC LIMIT 1`.execute(db);
     const last = rows[0];
     if (
@@ -66,10 +66,12 @@ export async function recordVersion(db: Db, v: Recorded) {
     .execute();
 
   const max = v.max ?? MAX_VERSIONS;
-  if (Number.isFinite(max))
+  if (Number.isFinite(max)) {
+    const same = sql`target = ${v.target} AND doc_id = ${v.docId} AND locale IS NOT DISTINCT FROM ${v.locale}`;
     await sql`
-      DELETE FROM cms_versions WHERE id IN (
-        SELECT id FROM cms_versions
-        WHERE target = ${v.target} AND doc_id = ${v.docId} AND locale IS ${v.locale}
-        ORDER BY created_at DESC, rowid DESC LIMIT -1 OFFSET ${max})`.execute(db);
+      DELETE FROM cms_versions WHERE ${same} AND id NOT IN (
+        SELECT id FROM cms_versions WHERE ${same} ORDER BY created_at DESC, rowid DESC LIMIT ${max})`.execute(
+      db,
+    );
+  }
 }

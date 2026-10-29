@@ -11,6 +11,7 @@ import {
   status,
   tmpDir,
   type Env,
+  testDatabase,
 } from "./setup.ts";
 import { local } from "../media/storage/local/index.ts";
 
@@ -104,7 +105,7 @@ describe("relation schema", () => {
     ],
   ])("rejects %s", (_, config, message) => {
     expect(() =>
-      defineCms({ ...(config as object), database: { url: ":memory:" }, secret: "" } as never),
+      defineCms({ ...(config as object), database: testDatabase(), secret: "" } as never),
     ).toThrow(message);
   });
 
@@ -113,7 +114,7 @@ describe("relation schema", () => {
   });
 
   it("checks relation targets and join paths at the type level", () => {
-    const db = { database: { url: ":memory:" }, secret: "" };
+    const db = { database: testDatabase(), secret: "" };
     const authors = defineCollection({
       fields: {
         name: { type: "text" },
@@ -291,7 +292,7 @@ describe("references inside array items", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: { storage: local({ dir: tmpDir() }) },
     });
@@ -341,7 +342,7 @@ describe("references inside block items", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: { storage: local({ dir: tmpDir() }) },
     });

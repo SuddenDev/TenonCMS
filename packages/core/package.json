@@ -30,6 +30,22 @@
       "types": "./dist/integrations/cloudflare/index.d.mts",
       "default": "./dist/integrations/cloudflare/index.mjs"
     },
+    "./libsql": {
+      "types": "./dist/integrations/libsql/index.d.mts",
+      "default": "./dist/integrations/libsql/index.mjs"
+    },
+    "./postgres": {
+      "types": "./dist/integrations/postgres/index.d.mts",
+      "default": "./dist/integrations/postgres/index.mjs"
+    },
+    "./sqlite": {
+      "types": "./dist/integrations/sqlite/index.d.mts",
+      "default": "./dist/integrations/sqlite/index.mjs"
+    },
+    "./pglite": {
+      "types": "./dist/integrations/pglite/index.d.mts",
+      "default": "./dist/integrations/pglite/index.mjs"
+    },
     "./astro": {
       "types": "./dist/integrations/astro/index.d.mts",
       "default": "./dist/integrations/astro/index.mjs"
@@ -169,7 +185,6 @@
   "dependencies": {
     "@better-auth/api-key": "1.7.5",
     "@better-auth/passkey": "1.7.5",
-    "@libsql/client": "^0.18.0",
     "@tiptap/core": "^3.32.0",
     "@tiptap/extension-highlight": "^3.32.0",
     "@tiptap/extension-image": "^3.32.0",
@@ -196,10 +211,13 @@
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.9",
     "@cloudflare/workers-types": "^5.20261028.1",
+    "@electric-sql/pglite": "^0.5.13",
+    "@libsql/client": "^0.18.0",
     "@nuxt/kit": "^4.5.2",
     "@nuxt/nitro-server": "4.5.2",
     "@nuxt/schema": "^4.5.2",
     "@types/node": "^24.13.6",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "astro": "^7.3.4",
@@ -208,6 +226,7 @@
     "happy-dom": "^20.14.5",
     "idiomorph": "^0.8.0",
     "nuxt": "^4.5.2",
+    "pg": "^8.23.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tsdown": "^0.23.0",
@@ -217,17 +236,26 @@
     "vue": "^3.5.43"
   },
   "peerDependencies": {
+    "@electric-sql/pglite": ">=0.3",
+    "@libsql/client": ">=0.15",
     "@nuxt/kit": ">=3",
     "@nuxt/schema": ">=3",
     "astro": ">=5",
     "aws4fetch": ">=1.0.20",
     "h3": ">=1.15",
+    "pg": ">=8",
     "react": ">=18",
     "react-dom": ">=18",
     "vite": ">=8",
     "vue": ">=3.5"
   },
   "peerDependenciesMeta": {
+    "@electric-sql/pglite": {
+      "optional": true
+    },
+    "@libsql/client": {
+      "optional": true
+    },
     "@nuxt/kit": {
       "optional": true
     },
@@ -241,6 +269,9 @@
       "optional": true
     },
     "h3": {
+      "optional": true
+    },
+    "pg": {
       "optional": true
     },
     "react": {

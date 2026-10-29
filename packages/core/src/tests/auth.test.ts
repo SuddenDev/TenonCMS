@@ -1,22 +1,10 @@
 import { createAuthMiddleware } from "better-auth/api";
 import { admin as adminPlugin, anonymous, twoFactor } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
-import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineCms } from "../index.ts";
 import { clientRef } from "../admin/config.ts";
-import {
-  admin,
-  base,
-  fresh,
-  origin,
-  post,
-  setup,
-  status,
-  tables,
-  tmpDb,
-  type Env,
-} from "./setup.ts";
+import { admin, base, fresh, origin, post, setup, status, type Env, testDb } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -27,15 +15,15 @@ beforeEach(() => {
 
 describe("database", () => {
   it("creates CMS and auth tables on first access", async () => {
-    const url = tmpDb();
+    const { database, tables } = testDb();
     const cms = defineCms({
       collections: { posts: { fields: {} } },
-      database: { url },
+      database,
       secret: "x".repeat(32),
     });
     await cms.find("posts");
     await cms.auth();
-    expect(await tables(url)).toEqual(
+    expect(await tables()).toEqual(
       expect.arrayContaining([
         "cms_documents",
         "cms_globals",
@@ -99,16 +87,14 @@ describe("auth", () => {
   });
 
   it("sets a first password, but never replaces one", async () => {
-    const url = tmpDb();
-    const { client } = setup(defineCms({ ...base, database: { url } }));
+    const { database, exec } = testDb();
+    const { client } = setup(defineCms({ ...base, database }));
     const set = (newPassword: string) =>
       client.request("/account/password", { method: "POST", body: { newPassword } });
     expect(await status(set("password456"))).toBe(401);
     await client.signUp(admin);
     expect(await status(set("password456"))).toBe(400);
-    const db = createLibsql({ url });
-    await db.execute("DELETE FROM account WHERE providerId = 'credential'");
-    db.close();
+    await exec(`DELETE FROM account WHERE "providerId" = 'credential'`);
     await set("password456");
     await client.signOut();
     await client.signIn({ email: admin.email, password: "password456" });
@@ -116,11 +102,11 @@ describe("auth", () => {
   });
 
   it("creates plugin tables at runtime and types plugin endpoints", async () => {
-    const url = tmpDb();
-    const cms = defineCms({ ...base, database: { url }, auth: { plugins: [twoFactor()] } });
+    const { database, tables } = testDb();
+    const cms = defineCms({ ...base, database, auth: { plugins: [twoFactor()] } });
     const auth = await cms.auth();
     expect(typeof auth.api.enableTwoFactor).toBe("function");
-    expect(await tables(url)).toContain("twoFactor");
+    expect(await tables()).toContain("twoFactor");
     () => {
       // @ts-expect-error core reads the `user` table by name
       defineCms({ ...base, auth: { user: { modelName: "users" } } });

@@ -1,21 +1,13 @@
 import { type Database } from "./types.ts";
-import { libsqlDialect } from "./adapters/libsql.ts";
-import { createClient } from "@libsql/client";
 import { type Dialect, Kysely } from "kysely";
 
 /**
- * Where the CMS stores its data.
- * - `url`: a libsql database: a file (`file:cms.db`), `:memory:` or Turso (`libsql://…` with `authToken`).
- * - `dialect`: a SQLite Kysely dialect the host builds, for example over Durable Object storage. Its transactions
- *   MUST stay open across `await`, because hooks and nested writes run inside them.
+ * Where the CMS stores its data: a Kysely dialect. `libsql()`, `postgres()`, `pglite()` and `durableObject()` build
+ * one. A host's own dialect MUST keep transactions open across `await`, because hooks and nested writes run inside
+ * them. A dialect with Kysely's `PostgresAdapter` runs the Postgres queries; any other runs the SQLite ones.
  */
-export type DatabaseOptions = { url: string; authToken?: string } | { dialect: Dialect };
+export type DatabaseOptions = { dialect: Dialect };
 
 /** Opens Kysely on the configured database. Nothing connects until the first query. */
 export const createDb = (database: DatabaseOptions) =>
-  new Kysely<Database>({
-    dialect:
-      "dialect" in database
-        ? database.dialect
-        : libsqlDialect(createClient({ url: database.url, authToken: database.authToken })),
-  });
+  new Kysely<Database>({ dialect: database.dialect });

@@ -1,15 +1,24 @@
 import { sql } from "kysely";
 import { expect, it } from "vitest";
+import { onPglite, testDatabase } from "../../tests/setup.ts";
 import { createDb } from "../create-db.ts";
+import { libsql } from "../../integrations/libsql/index.ts";
 import { migrate } from "./migrate.ts";
 import { migrator } from "./cms.ts";
 
 it("runs CMS migrations once", async () => {
-  const db = createDb({ url: ":memory:" });
-  const auth = { database: { db, type: "sqlite" as const } };
+  const db = createDb(testDatabase());
+  const auth = { database: { db, type: onPglite ? ("postgres" as const) : ("sqlite" as const) } };
   await migrate(db, auth);
   await migrate(db, auth);
-  const { rows } = await sql<{ name: string }>`SELECT name FROM sqlite_master`.execute(db);
+  const { rows } = await (
+    onPglite
+      ? sql<{
+          name: string;
+        }>`SELECT tablename AS name FROM pg_tables WHERE schemaname = current_schema()
+        UNION SELECT indexname FROM pg_indexes WHERE schemaname = current_schema()`
+      : sql<{ name: string }>`SELECT name FROM sqlite_master`
+  ).execute(db);
   expect(rows.map((r) => r.name)).toEqual(
     expect.arrayContaining([
       "cms_documents",
@@ -29,8 +38,9 @@ it("runs CMS migrations once", async () => {
   );
 });
 
-it("backfills published_at with updated_at", async () => {
-  const db = createDb({ url: ":memory:" });
+// The SQLite migrations ran on databases before Postgres had any, so only they upgrade old rows.
+it.skipIf(onPglite)("backfills published_at with updated_at", async () => {
+  const db = createDb(libsql(":memory:"));
   const { error } = await migrator(db).migrateTo("003_cms_media_key");
   if (error) throw error;
   await sql`INSERT INTO cms_documents (id, collection, data, created_at, updated_at)
@@ -47,8 +57,8 @@ it("backfills published_at with updated_at", async () => {
   expect(globals.rows).toEqual([{ published_at: 4, draft: null }]);
 });
 
-it("adds the authors of a document, empty for existing rows", async () => {
-  const db = createDb({ url: ":memory:" });
+it.skipIf(onPglite)("adds the authors of a document, empty for existing rows", async () => {
+  const db = createDb(libsql(":memory:"));
   const { error } = await migrator(db).migrateTo("006_cms_invites");
   if (error) throw error;
   await sql`INSERT INTO cms_documents (id, collection, data, created_at, updated_at)

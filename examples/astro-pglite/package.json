@@ -1,0 +1,22 @@
+{
+  "name": "example-astro-pglite",
+  "version": "0.17.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4322",
+    "build": "astro build",
+    "preview": "node --env-file-if-exists=.env node_modules/astro/bin/astro.mjs preview --port 4322",
+    "start": "node --env-file-if-exists=.env ./dist/server/entry.mjs",
+    "typecheck": "astro sync && tsc --noEmit"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.6",
+    "@electric-sql/pglite": "^0.5.13",
+    "astro": "^7.3.4",
+    "integral-cms": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

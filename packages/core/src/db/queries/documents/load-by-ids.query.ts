@@ -13,7 +13,7 @@ export async function loadByIds(
   loc?: Loc,
 ) {
   if (!ids.length) return [];
-  return (await selectDocs(db, collection, drafts, loc).where(inIds(ids)).execute()).map((r) =>
+  return (await selectDocs(db, collection, drafts, loc).where(inIds(db, ids)).execute()).map((r) =>
     toDoc(r, loc),
   );
 }

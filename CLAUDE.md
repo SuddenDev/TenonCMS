@@ -7,7 +7,7 @@ Packages:
 - `packages/core` publishes as `integral-cms`
 - `packages/plugins` (private): the bundled plugins
 - `packages/admin` (private): the Vue admin
-- `examples/{astro,nuxt,tanstack-start,standalone,cloudflare}`
+- `examples/{astro,astro-pglite,nuxt,tanstack-start,standalone,cloudflare}`
 
 ## Where to look
 
@@ -35,7 +35,7 @@ Read the doc for an area before you change it. Update it in the same change.
 
 ## Commands
 
-- `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` / `dev:standalone`: build packages, then run the example (ports 4321 / 3000 / 3100 / 3200), the core watcher and the admin playground.
+- `pnpm dev:astro` / `dev:astro-pglite` / `dev:nuxt` / `dev:tanstack` / `dev:standalone`: build packages, then run the example (ports 4321 / 4322 / 3000 / 3100 / 3200), the core watcher and the admin playground.
   - Core changes reload in the example without a restart.
   - The playground has HMR on `localhost:5173/admin/` and proxies `/api/cms` to the example (`CMS_URL`).
   - The example's `/admin` uses the admin built at startup. `pnpm --filter @integral-cms/admin watch` rebuilds it on change (full reload).
@@ -48,14 +48,14 @@ Read the doc for an area before you change it. Update it in the same change.
 - `pnpm lint` (oxlint) / `pnpm fmt` (oxfmt): the husky pre-commit hook runs lint-staged (`oxlint --fix`, then `oxfmt`). `pnpm install` enables it via `prepare`.
   - oxfmt cannot format `.astro`, so those files use Prettier with `prettier-plugin-astro` (`.prettierrc.json`).
   - In `*.test.ts`, unused vars and expressions are allowed, because the type tests rely on them.
-- Migrations are code in `packages/core/src/db/migrations/cms.ts`. Add a new key; never edit one that has shipped.
+- Migrations are code in `packages/core/src/db/migrations/cms.ts` (SQLite) and `postgres.ts`. Add a new key to both; never edit one that has shipped.
 
 ## Testing
 
 - TDD, RED then GREEN: write a failing test first and run it to see it fail for the right reason. Then write the least code that makes it pass. A bug fix starts with a test that reproduces it.
 - Unit tests sit next to the code as `*.test.ts`, named after the file they test. They cover pure functions.
 - `packages/core/src/tests/*.test.ts` is the integration suite, one file per area (`access`, `drafts`, `media`, `richtext` and so on; list the folder). Add HTTP behavior there.
-  - Each test builds a real `defineCms()` on `:memory:` libsql and drives it through `createClient()`.
+  - Each test builds a real `defineCms()` on `:memory:` libsql and drives it through `createClient()`. The Vitest projects `pglite` and `sqlite` run the suite again on PGlite and `node:sqlite`. Use `testDatabase()` / `testDb()` from `setup.ts`, never a literal `libsql(":memory:")`.
   - `setup.ts` has the shared schema and helpers: `fresh()`, `relational()`, `seed()`, `localized()` / `seeded()`, `withMedia()`. `fixtures.ts` has tiny images.
 - `*.workerd.test.ts` runs in workerd (Vitest project `workerd`), inside the Worker of `src/tests/workerd/`. `tsc` skips these files, because the Workers types clash with the DOM and Node types.
 - Examples and adapters have no tests yet. Verify them with the [smoke tests](docs/dev/smoke-tests.md).

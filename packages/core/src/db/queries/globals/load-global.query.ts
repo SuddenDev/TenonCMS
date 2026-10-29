@@ -5,6 +5,8 @@ import {
   GLOBAL_LOCALES,
   SHARED_DRAFT,
   dataOf,
+  isPostgres,
+  jsonArrayOf,
   localeJoins,
   visible,
 } from "../document-sql.ts";
@@ -44,7 +46,7 @@ export async function loadGlobal(db: Db, name: string, drafts = false, loc?: Loc
       ${sql.raw(SHARED_DRAFT("cms_globals."))} AS shared_draft,
       lr.updated_at AS r_updated_at, lr.published_at AS r_published_at, lr.draft IS NOT NULL AS r_has_draft,
       ld.published_at AS d_published_at, ld.draft IS NOT NULL AS d_has_draft,
-      (SELECT json_group_array(locale) FROM cms_global_locales
+      (SELECT ${sql.raw(jsonArrayOf(isPostgres(db), "locale"))} FROM cms_global_locales
         WHERE name = cms_globals.name ${sql.raw(drafts ? "" : "AND published_at IS NOT NULL")}) AS locales
     FROM cms_globals ${localeJoins(drafts, loc, GLOBAL_LOCALES, "cms_globals.name")}
     WHERE cms_globals.name = ${name} AND ${visible(drafts, "", loc)}`.execute(db);

@@ -1,12 +1,13 @@
 import { consola } from "consola";
 import { sql } from "kysely";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { testDatabase } from "../../tests/setup.ts";
 import { createDb } from "../create-db.ts";
 import { migrator } from "./cms.ts";
 import { syncLocalized } from "./sync-localized.ts";
 
 async function tmpDb() {
-  const db = createDb({ url: ":memory:" });
+  const db = createDb(testDatabase());
   const { error } = await migrator(db).migrateToLatest();
   if (error) throw error;
   return db;

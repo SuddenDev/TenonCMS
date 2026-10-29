@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCms, LinkedContentError, ValidationError } from "../index.ts";
-import { base } from "./setup.ts";
+import { base, testDb } from "./setup.ts";
 
 const make = () =>
   defineCms({
@@ -284,8 +284,8 @@ it("retains media restrictions and rolls back broken markers when deletion fails
 it("validates plugin content and preserves it on unrelated writes after the plugin is removed", async () => {
   const { Node } = await import("@tiptap/core");
   const { clientRef } = await import("../admin/config.ts");
-  const { tmpDb } = await import("./setup.ts");
-  const database = { url: tmpDb() };
+  const { testDb } = await import("./setup.ts");
+  const { database } = testDb();
   const collections = {
     articles: { fields: { title: { type: "text" as const }, body: { type: "richtext" as const } } },
   };

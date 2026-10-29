@@ -64,11 +64,12 @@ Create the instance in `integral.config.ts` at the project root:
 
 ```ts
 import { defineCms } from "integral-cms";
+import { libsql } from "integral-cms/libsql";
 import { posts } from "./collections/posts";
 
 export default defineCms({
   collections: { posts },
-  database: { url: "file:/absolute/path/cms.db" }, // or libsql://…, plus authToken
+  database: libsql("file:/absolute/path/cms.db"), // or libsql://… (Turso) with { url, authToken }
   secret: process.env.CMS_SECRET!, // at least 32 characters
 });
 ```
@@ -167,7 +168,7 @@ Working:
 - Admin in English and German, with custom fields, pages and bar items
 - Users with roles, invites and access rules; better-auth options pass through
 - Plugins (`redirects`, and `example` to copy from), SMTP email
-- Astro, Nuxt and TanStack Start; SQLite via libsql (file or Turso)
+- Astro, Nuxt and TanStack Start; SQLite via libsql (file or Turso), Postgres, PGlite
 
 Roadmap, roughly in order:
 
@@ -177,7 +178,7 @@ Roadmap, roughly in order:
 4. ~~Rich text~~ Done, see [Rich text](docs/guide/richtext.md) (Tiptap JSON)
 5. ~~Invites and roles, access control~~ Done, see [Auth, users and access](docs/guide/auth-and-access.md)
 6. Cloudflare Workers: D1 driver, per-request bindings
-7. Postgres
+7. ~~Postgres~~ Done, see [Schema](docs/guide/schema.md) (also PGlite)
 8. SvelteKit adapter
 9. Publish to npm
 

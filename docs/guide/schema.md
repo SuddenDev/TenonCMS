@@ -38,17 +38,30 @@ The instance lives in `integral.config.ts` at the project root:
 
 ```ts
 import { defineCms } from "integral-cms";
+import { libsql } from "integral-cms/libsql";
 import { authors } from "./collections/authors";
 import { posts } from "./collections/posts";
 
 export default defineCms({
   collections: { posts, authors },
-  database: { url: "file:/absolute/path/cms.db" }, // or libsql://…, plus authToken
+  database: libsql("file:/absolute/path/cms.db"), // or libsql://… (Turso) with { url, authToken }
   secret: process.env.CMS_SECRET!, // at least 32 characters
 });
 ```
 
-`database` also takes `{ dialect }`, a SQLite Kysely dialect you build. Its transactions MUST stay open across `await`. On Cloudflare, use `database: durableObject()` from `integral-cms/cloudflare` and export `integralObject(cms)` from the Worker entry: the CMS then runs inside a Durable Object, and code outside it reads and writes through `createClient()` over the object's `fetch`.
+Each database has its own entry and driver, so you install only the one you use:
+
+| Database                         | `database`                                           | Install                |
+| -------------------------------- | ---------------------------------------------------- | ---------------------- |
+| SQLite file, `:memory:` or Turso | `libsql(url)` from `integral-cms/libsql`             | `@libsql/client`       |
+| SQLite file or `:memory:`        | `sqlite(path)` from `integral-cms/sqlite`            | nothing (Node 22.16+)  |
+| Postgres                         | `postgres(url)` from `integral-cms/postgres`         | `pg`                   |
+| PGlite                           | `pglite(new PGlite(dir))` from `integral-cms/pglite` | `@electric-sql/pglite` |
+| Cloudflare Durable Object        | `durableObject()` from `integral-cms/cloudflare`     | nothing                |
+
+`libsql()` and `postgres()` take a URL or their driver's options. For Postgres, install `pg` and use `database: postgres(process.env.DATABASE_URL!)` from `integral-cms/postgres`. It also takes the options of a `pg` pool. For PGlite, Postgres in WebAssembly for local dev and tests, install `@electric-sql/pglite` and use `database: pglite(new PGlite("./.data/cms"))` from `integral-cms/pglite`. `sqlite()` uses Node's built-in `node:sqlite`, so it needs no package. On an older Node, use `libsql()`. The CMS creates its tables in the connection's current schema.
+
+`database` also takes `{ dialect }`, a Kysely dialect you build: SQLite, or Postgres with Kysely's `PostgresAdapter`. Its transactions MUST stay open across `await`. On Cloudflare, use `database: durableObject()` from `integral-cms/cloudflare` and export `integralObject(cms)` from the Worker entry: the CMS then runs inside a Durable Object, and code outside it reads and writes through `createClient()` over the object's `fetch`.
 
 `defineGlobal()` works the same for globals: one document per name, such as site settings. Auth options are in [Auth, users and access](./auth-and-access.md).
 

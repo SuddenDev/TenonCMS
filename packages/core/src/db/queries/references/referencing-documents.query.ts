@@ -13,5 +13,5 @@ export const referencingDocs = (
     .selectFrom("cms_documents")
     .select(["id", "data"])
     .where("collection", "=", collection)
-    .where(holdsAt("data", path, many, id))
+    .where(holdsAt(db, "data", path, many, id))
     .execute();

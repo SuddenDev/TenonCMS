@@ -62,6 +62,8 @@ Each of these cost a debugging round. Check here when something behaves strangel
 
 ## Server, data and HTTP
 
+- PGlite has one connection, like `:memory:` libsql. The same rule applies.
+- On Postgres, raw SQL MUST quote better-auth's camelCase columns (`"updatedAt"`) and compare its booleans with `true` / `false`. `WHERE 1` and `IS ?` fail; use `TRUE` and `IS NOT DISTINCT FROM`.
 - `:memory:` libsql has one connection. Code inside a transaction MUST use the transaction handle, and hooks MUST call the `cms` they get, or the call blocks or fails with `TRANSACTION_ACTIVE`.
 - Query parsers MUST build nested objects without a prototype. On a plain `{}`, a `__proto__` segment returns `Object.prototype` and the next write pollutes every object in the process.
 - `JSON.stringify` turns functions in arrays into `null`. The schema endpoint strips `hooks` and `access`, but only from objects that look like a field, collection, global or block, so a field named `hooks` stays.

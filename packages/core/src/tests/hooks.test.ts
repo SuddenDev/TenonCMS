@@ -7,7 +7,17 @@ import {
   ValidationError,
 } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, origin, published, setup, status, unpublished, type Env } from "./setup.ts";
+import {
+  admin,
+  fresh,
+  origin,
+  published,
+  setup,
+  status,
+  unpublished,
+  type Env,
+  testDatabase,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -21,7 +31,7 @@ describe("hooks", () => {
     calls = [];
   });
   const log = (name: string) => () => void calls.push(name);
-  const db = { database: { url: ":memory:" }, secret: "x".repeat(32) };
+  const db = { database: testDatabase(), secret: "x".repeat(32) };
   const title = { title: { type: "text", required: true } } as const;
   const writeStages = [
     "beforeOperation",
@@ -482,7 +492,7 @@ describe("hooks", () => {
 });
 
 describe("transactions", () => {
-  const db = { database: { url: ":memory:" }, secret: "x".repeat(32) };
+  const db = { database: testDatabase(), secret: "x".repeat(32) };
   const logs = { fields: { message: { type: "text" } } } as const;
 
   it("roll back the write and nested writes", async () => {
@@ -573,7 +583,7 @@ describe("afterError", () => {
         },
       },
       globals: { site: { fields: {}, hooks: { beforeChange: [throwing] } } },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
 

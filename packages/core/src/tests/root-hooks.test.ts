@@ -7,7 +7,7 @@ import {
   ValidationError,
 } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, origin, setup, status, type Env } from "./setup.ts";
+import { fresh, type Env, testDatabase } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -43,7 +43,7 @@ describe("root hooks", () => {
       },
       collections: { posts: { fields: { title: { type: "text" } }, hooks: hooksOf("posts") } },
       globals: { site: { fields: { name: { type: "text" } } } },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
   beforeEach(() => void calls.splice(0));
@@ -132,7 +132,7 @@ describe("populated hooks", () => {
           hooks: { afterRead: [({ context }) => void (seen = context.seen), count] },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     const [a1, a2] = [

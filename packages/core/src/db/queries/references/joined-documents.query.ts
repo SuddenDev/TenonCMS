@@ -2,6 +2,8 @@ import {
   type Db,
   type Loc,
   DOCUMENT_LOCALES,
+  eachItem,
+  inIds,
   jsonAt,
   localeJoins,
   rawRowColumns,
@@ -24,8 +26,7 @@ export async function joinedDocs(
   drafts = false,
   loc?: Loc,
 ) {
-  const list = JSON.stringify(ids);
-  const value = jsonAt(on, drafts, loc, "d.");
+  const value = jsonAt(db, on, drafts, loc, "d.");
   const from = loc
     ? sql`cms_documents d ${localeJoins(drafts, loc, DOCUMENT_LOCALES, "d.id")}`
     : sql`cms_documents d`;
@@ -33,13 +34,13 @@ export async function joinedDocs(
   const query = many
     ? sql<
         Row & { ref: string }
-      >`SELECT ${rawRowColumns(drafts, "d.", loc)}, j.value AS ref FROM ${from}, json_each(${value}) j
-        WHERE ${where} AND j.value IN (SELECT value FROM json_each(${list}))
+      >`SELECT ${rawRowColumns(db, drafts, "d.", loc)}, j.value AS ref FROM ${from}, ${eachItem(db, value, "j")}
+        WHERE ${where} AND ${inIds(db, ids, sql`j.value`)}
         ORDER BY d.created_at DESC, d.rowid DESC`
     : sql<
         Row & { ref: string }
-      >`SELECT ${rawRowColumns(drafts, "d.", loc)}, ${value} AS ref FROM ${from}
-        WHERE ${where} AND ${value} IN (SELECT value FROM json_each(${list}))
+      >`SELECT ${rawRowColumns(db, drafts, "d.", loc)}, ${value} AS ref FROM ${from}
+        WHERE ${where} AND ${inIds(db, ids, value)}
         ORDER BY d.created_at DESC, d.rowid DESC`;
   return (await query.execute(db)).rows;
 }

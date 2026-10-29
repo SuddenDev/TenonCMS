@@ -8,6 +8,13 @@ Framework integrations:
 - `integral-cms/nuxt`
 - `integral-cms/vite`
 
+Databases. Each returns `{ dialect }` and imports its driver, an optional peer dependency:
+
+- `integral-cms/libsql`: `libsql(urlOrConfig)` over `@libsql/client` with `libsqlDialect()` (`src/db/adapters/`). The client opens on the first query.
+- `integral-cms/sqlite`: `sqlite(path)` over Node's built-in `node:sqlite` with `nodeSqliteDialect()` (`src/db/adapters/`). Nothing to install. The database opens on the first query.
+- `integral-cms/postgres`: `postgres(urlOrPoolConfig)` builds the `database` over a `pg` pool that reads `bigint` as a number.
+- `integral-cms/pglite`: `pglite(client)` builds the `database` over a PGlite instance with `pgliteDialect()` (`src/db/adapters/`).
+
 Runtime adapter:
 
 - `integral-cms/cloudflare`: runs the CMS inside a SQLite-backed Durable Object. `durableObject()` is the config's `database`. `integralObject(cms)` returns the object class. `createObjectClient(request, stub)` is the HTTP client for code outside the object. The Astro integration switches to it with `@astrojs/cloudflare`. Each object gets its own copy of the instance through `withDatabase()` (`src/cms/`), bound to its storage by `durableObjectDialect()` (`src/db/adapters/`). The config's own instance keeps its schema and `localization`, but every database call throws.
@@ -84,6 +91,10 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 | `astro/cloudflare/route.ts`                | With `@astrojs/cloudflare`: passes `/api/cms` to the CMS object.                                                                                         |
 | `astro/cloudflare/middleware.ts`           | With `@astrojs/cloudflare`: sets `Astro.locals.integral` to the client over the CMS object, and `locale` and `path`.                                     |
 | `cloudflare/index.ts`                      | `durableObject()` and `integralObject()`: the CMS inside a Durable Object.                                                                               |
+| `libsql/index.ts`                          | `libsql()`: the `database` on a SQLite file, `:memory:` or Turso.                                                                                        |
+| `sqlite/index.ts`                          | `sqlite()`: the `database` on `node:sqlite`, a SQLite file or `:memory:`.                                                                                |
+| `postgres/index.ts`                        | `postgres()`: the `database` on a Postgres server.                                                                                                       |
+| `pglite/index.ts`                          | `pglite()`: the `database` on PGlite.                                                                                                                    |
 | `cloudflare/object-client.ts`              | `createObjectClient()`: the client over the object's stub, with the request's origin and cookie.                                                         |
 | `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                                           |
 | `nuxt/runtime/composables.ts`              | `useIntegral()`: the client's read methods in `useAsyncData`, in the route's locale, with preview drafts merged in. `useLocale()` and `useAlternates()`. |

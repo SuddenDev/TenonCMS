@@ -1,11 +1,11 @@
-import { createClient } from "@libsql/client";
 import { describe, expect, it } from "vitest";
+import type { DatabaseOptions } from "../db/create-db.ts";
 import { defineCms } from "../index.ts";
 import { ValidationError } from "../index.ts";
 import type { LocalApi } from "../cms/api/local-api.ts";
 import type { HookArgs } from "../schema/hooks/index.ts";
 import { page } from "../presets/index.ts";
-import { admin, fresh, localized, seeded, tmpDb } from "./setup.ts";
+import { admin, fresh, localized, seeded, testDb } from "./setup.ts";
 
 const seen: Array<[string, string | undefined]> = [];
 const spy =
@@ -95,7 +95,7 @@ describe("locale scope", () => {
 });
 
 describe("localized fields moving between instances", () => {
-  const instance = (url: string, localized: boolean) =>
+  const instance = (database: DatabaseOptions, localized: boolean) =>
     defineCms({
       collections: {
         posts: {
@@ -107,33 +107,24 @@ describe("localized fields moving between instances", () => {
         },
       },
       ...(localized && { localization: { locales: ["en", "de"], defaultLocale: "en" } }),
-      database: { url },
+      database,
       secret: "x".repeat(32),
       media: false,
     });
-  const query = async (url: string, sql: string) => {
-    const db = createClient({ url });
-    try {
-      return (await db.execute(sql)).rows.map((r) => ({ ...r }));
-    } finally {
-      db.close();
-    }
-  };
-
   it("moves a field to the default locale's row when it becomes localized", async () => {
-    const url = tmpDb();
-    const before = instance(url, false);
+    const { database, exec: query } = testDb();
+    const before = instance(database, false);
     const post = await before.create("posts", { title: "Hi", body: "Text" });
-    expect(await query(url, "SELECT * FROM cms_schema_state WHERE name = 'posts'")).toEqual([
+    expect(await query("SELECT * FROM cms_schema_state WHERE name = 'posts'")).toEqual([
       { kind: "collection", name: "posts", localized: null },
     ]);
 
     // Opening the second instance runs the sync on its first DB access.
-    await instance(url, true).find("posts");
+    await instance(database, true).find("posts");
 
-    const docs = await query(url, `SELECT data FROM cms_documents WHERE id = '${post.id}'`);
+    const docs = await query(`SELECT data FROM cms_documents WHERE id = '${post.id}'`);
     expect(JSON.parse(docs[0].data as string)).toEqual({ body: "Text" });
-    const rows = await query(url, "SELECT document_id, locale, data FROM cms_document_locales");
+    const rows = await query("SELECT document_id, locale, data FROM cms_document_locales");
     expect(rows).toEqual([
       { document_id: post.id, locale: "en", data: JSON.stringify({ title: "Hi" }) },
     ]);
@@ -974,19 +965,12 @@ describe("writes", () => {
   });
 
   it("deletes the locale rows with the document", async () => {
-    const url = tmpDb();
-    const { cms } = localized({ database: { url } });
+    const { database, exec } = testDb();
+    const { cms } = localized({ database });
     const post = await cms.create("posts", { title: "Hello" });
     await cms.update("posts", post.id, { title: "Hallo" }, draftDe);
-    const count = async () => {
-      const db = createClient({ url });
-      try {
-        const { rows } = await db.execute("SELECT COUNT(*) AS n FROM cms_document_locales");
-        return Number(rows[0].n);
-      } finally {
-        db.close();
-      }
-    };
+    const count = async () =>
+      Number((await exec("SELECT COUNT(*) AS n FROM cms_document_locales"))[0].n);
     expect(await count()).toBe(2);
 
     await cms.delete("posts", post.id);

@@ -1,12 +1,12 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { defineCms } from "../index.ts";
-import { admin, origin, setup } from "./setup.ts";
+import { admin, origin, setup, testDatabase } from "./setup.ts";
 
 const make = (localization?: object) =>
   defineCms({
     collections: { posts: { localized: true, fields: { title: { type: "text" } } } },
     localization: localization as never,
-    database: { url: ":memory:" },
+    database: testDatabase(),
     secret: "x".repeat(32),
     media: false,
   });
@@ -35,7 +35,7 @@ describe("localization", () => {
 
   it("answers null without localization", async () => {
     const { fetch } = setup(
-      defineCms({ database: { url: ":memory:" }, secret: "x".repeat(32), media: false }),
+      defineCms({ database: testDatabase(), secret: "x".repeat(32), media: false }),
     );
     const res = await fetch(`${origin}/api/cms/localization`);
     expect([res.status, await res.json()]).toEqual([200, null]);
@@ -51,9 +51,7 @@ describe("localization", () => {
   });
 
   it("sends no localization in /schema without the option", async () => {
-    const s = setup(
-      defineCms({ database: { url: ":memory:" }, secret: "x".repeat(32), media: false }),
-    );
+    const s = setup(defineCms({ database: testDatabase(), secret: "x".repeat(32), media: false }));
     await s.client.signUp(admin);
     const body = await (await s.fetch(`${origin}/api/cms/schema`)).json();
     expect(body).not.toHaveProperty("localization");
@@ -63,7 +61,7 @@ describe("localization", () => {
   it("keeps the locales as a literal union", () => {
     const cms = defineCms({
       localization: { locales: ["en", "de"], defaultLocale: "en" },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: false,
     });
@@ -73,7 +71,7 @@ describe("localization", () => {
       defineCms({
         // @ts-expect-error "fr" is not in locales
         localization: { locales: ["en", "de"], defaultLocale: "fr" },
-        database: { url: ":memory:" },
+        database: testDatabase(),
         secret: "x".repeat(32),
       });
     expect(bad).toThrow();
@@ -83,7 +81,7 @@ describe("localization", () => {
 it("keeps locale read metadata out of field write-rule documents", async () => {
   const env = setup(
     defineCms({
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: false,
       settings: false,

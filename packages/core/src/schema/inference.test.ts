@@ -21,6 +21,7 @@ import { checkSchema } from "./validation/check-schema.ts";
 import { dataSchema } from "./validation/build-data-schema.ts";
 import { relationPaths } from "./traversal/relation-paths.ts";
 import { targetOf } from "./traversal/reference-fields.ts";
+import { libsql } from "../integrations/libsql/index.ts";
 
 it("infers datetime fields as strings", () => {
   const fields = {
@@ -102,7 +103,7 @@ describe("array types", () => {
   });
 
   it("checks relation targets inside items", () => {
-    const db = { database: { url: ":memory:" }, secret: "" };
+    const db = { database: libsql(":memory:"), secret: "" };
     const pages = defineCollection({ fields: {} });
     const valid = defineCollection({
       fields: {
@@ -173,7 +174,7 @@ describe("blocks types", () => {
   });
 
   it("checks relation targets inside blocks", () => {
-    const db = { database: { url: ":memory:" }, secret: "" };
+    const db = { database: libsql(":memory:"), secret: "" };
     const pages = defineCollection({ fields: {} });
     const blocks = (collection: string) => ({
       fields: {
@@ -389,7 +390,7 @@ describe("hook types", () => {
         afterRead: { count: ({ docs }) => docs.map((d) => ({ ...d, views: (d.views ?? 0) + 1 })) },
       },
     });
-    defineCms({ collections: { posts }, database: { url: ":memory:" }, secret: "" });
+    defineCms({ collections: { posts }, database: libsql(":memory:"), secret: "" });
     // A record keeps its keys, so a host can leave one hook out by name.
     const { count, ...rest } = posts.hooks.afterRead;
     defineCollection({ fields: posts.fields, hooks: { afterRead: rest } });
@@ -405,7 +406,7 @@ describe("hook types", () => {
       fields: { name: { type: "text" } },
       hooks: { afterRead: [({ docs }) => docs.map((d) => ({ ...d, name: d.name ?? "x" }))] },
     });
-    defineCms({ collections: {}, globals: { site }, database: { url: ":memory:" }, secret: "" });
+    defineCms({ collections: {}, globals: { site }, database: libsql(":memory:"), secret: "" });
     // Inline collections get untyped arguments.
     defineCms({
       collections: {
@@ -414,7 +415,7 @@ describe("hook types", () => {
           hooks: { beforeChange: [({ data }) => ({ ...data, t: data.anything })] },
         },
       },
-      database: { url: ":memory:" },
+      database: libsql(":memory:"),
       secret: "",
     });
   });
@@ -422,8 +423,8 @@ describe("hook types", () => {
 
 describe("media reads", () => {
   it("types the computed fields of find('media')", async () => {
-    const cms = defineCms({ database: { url: ":memory:" }, secret: "", media: false });
-    const typed = defineCms({ database: { url: ":memory:" }, secret: "", media: true });
+    const cms = defineCms({ database: libsql(":memory:"), secret: "", media: false });
+    const typed = defineCms({ database: libsql(":memory:"), secret: "", media: true });
     const read = async () => {
       const [doc] = await typed.find("media");
       const url: string = doc.url;
@@ -475,7 +476,7 @@ describe("nav option", () => {
 });
 
 describe("settings", () => {
-  const base = { database: { url: ":memory:" }, secret: "" };
+  const base = { database: libsql(":memory:"), secret: "" };
 
   it("types both defaults when omitted", async () => {
     const cms = defineCms(base);
@@ -614,7 +615,7 @@ function writeTypes() {
   });
 }
 
-const database = { url: ":memory:" };
+const database = libsql(":memory:");
 const cms = defineCms({
   collections: {
     assets: {
@@ -965,7 +966,7 @@ async function httpTypes() {
 }
 
 describe("admin.adminBar option", () => {
-  const base = { database: { url: ":memory:" }, secret: "" };
+  const base = { database: libsql(":memory:"), secret: "" };
 
   it("accepts a position, individual items and false", () => {
     defineCms({
@@ -994,7 +995,7 @@ describe("admin.adminBar option", () => {
 });
 
 describe("localization types", () => {
-  const base = { database: { url: ":memory:" }, secret: "" };
+  const base = { database: libsql(":memory:"), secret: "" };
   const cms = defineCms({
     ...base,
     collections: {

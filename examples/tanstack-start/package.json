@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "@tanstack/react-router": "^1.170.38",
     "@tanstack/react-start": "^1.168.57",
     "integral-cms": "workspace:*",

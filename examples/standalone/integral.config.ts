@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { defineCms } from "integral-cms";
+import { libsql } from "integral-cms/libsql";
 import { ExamplePlugin } from "integral-cms/plugins/example";
 import { ipx } from "integral-cms/media/ipx";
 import { local } from "integral-cms/media/local";
@@ -14,6 +15,6 @@ export default defineCms({
     images: { provider: ipx() },
   },
   plugins: [ExamplePlugin()],
-  database: { url: process.env.DATABASE_URL ?? "file:./cms.db" },
+  database: libsql(process.env.DATABASE_URL ?? "file:./cms.db"),
   secret: process.env.CMS_SECRET!,
 });

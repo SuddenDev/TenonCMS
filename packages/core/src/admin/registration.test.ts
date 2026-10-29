@@ -12,8 +12,9 @@ import type {
   PageRegistration,
   PluginAdminOptions,
 } from "./index.d.ts";
+import { libsql } from "../integrations/libsql/index.ts";
 
-const base = { database: { url: ":memory:" }, secret: "" };
+const base = { database: libsql(":memory:"), secret: "" };
 const ref = clientRef("./x");
 
 // These tests check types. `@ts-expect-error` fails the typecheck when a line is NOT an error.

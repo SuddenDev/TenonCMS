@@ -1,7 +1,6 @@
-import { createClient as createLibsql } from "@libsql/client";
 import { describe, expect, it } from "vitest";
 import { defineCms, type EmailAdapter, type EmailMessage } from "../index.ts";
-import { admin, base, origin, setup, tmpDb } from "./setup.ts";
+import { admin, base, origin, setup, testDb } from "./setup.ts";
 
 type Fetch = ReturnType<typeof setup>["fetch"];
 const url = `${origin}/admin/invite`;
@@ -17,10 +16,10 @@ const json = async (res: Response) => ({ status: res.status, body: (await res.js
 
 /** An instance on a file DB, so tests can read and change rows, with a signed-in admin. */
 async function env(email?: { adapter: EmailAdapter }) {
-  const database = tmpDb();
+  const { database, exec } = testDb();
   const cms = defineCms({
     ...base,
-    database: { url: database },
+    database,
     roles: { author: { label: "Author" } },
     ...(email && { email: { from: "cms@example.com", ...email } }),
   });
@@ -35,14 +34,7 @@ async function env(email?: { adapter: EmailAdapter }) {
         ...body,
       }),
     );
-  const sql = async (statement: string) => {
-    const db = createLibsql({ url: database });
-    try {
-      return (await db.execute(statement)).rows;
-    } finally {
-      db.close();
-    }
-  };
+  const sql = (statement: string) => exec(statement);
   return { cms, owner, invite, sql, guest: () => setup(cms) };
 }
 

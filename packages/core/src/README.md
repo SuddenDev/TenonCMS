@@ -17,7 +17,7 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `http/`         | Hono application assembly, parsing and errors.                    | [app.ts](http/app.ts)                       |
 | `access/`       | Access rules: decisions, field stripping, `/schema` permissions.  | [README](access/README.md)                  |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |
-| `db/`           | libsql connection, fixed migrations and named content queries.    | [README](db/README.md)                      |
+| `db/`           | Connection, fixed migrations and named content queries.           | [README](db/README.md)                      |
 | `richtext/`     | Rich-text config, runtime, reads/writes, integrity and endpoints. | [README](richtext/README.md)                |
 | `media/`        | Uploads, library actions, images, variants and storage.           | [README](media/README.md)                   |
 | `preview/`      | Preview URL resolution and browser draft/DOM runtime.             | [README](preview/README.md)                 |

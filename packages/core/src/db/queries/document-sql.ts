@@ -1,8 +1,17 @@
 import { type Database, type Row } from "../types.ts";
 import type { Each, Step } from "../../schema/traversal/relation-paths.ts";
-import { type Kysely, type RawBuilder, type SelectQueryBuilder, sql } from "kysely";
+import {
+  type Kysely,
+  PostgresAdapter,
+  type RawBuilder,
+  type SelectQueryBuilder,
+  sql,
+} from "kysely";
 
 export type Db = Kysely<Database>;
+
+/** Whether `db` (or a transaction of it) runs on Postgres or PGlite. Otherwise it runs on SQLite. */
+export const isPostgres = (db: Kysely<any>) => db.getExecutor().adapter instanceof PostgresAdapter;
 export type DocData = Record<string, any>;
 
 /**
@@ -40,7 +49,7 @@ export const dataOf = (drafts: boolean, t = "") =>
  * requested locale is published, or with `fallback` the default locale.
  */
 export const visible = (drafts: boolean, t = "", loc?: Loc) => {
-  if (drafts) return sql.raw<boolean>("1");
+  if (drafts) return sql.raw<boolean>("TRUE");
   if (!loc) return sql.raw<boolean>(`${t}published_at IS NOT NULL`);
   return sql.raw<boolean>(
     loc.fallback
@@ -80,17 +89,26 @@ const localeColumns = (drafts: boolean): Array<[string, string]> => [
   ["d_has_draft", "ld.draft IS NOT NULL"],
 ];
 
+/** A JSON array of `column` over the rows of a subquery, as raw SQL. Postgres gives `NULL` without rows. */
+export const jsonArrayOf = (pg: boolean, column: string) =>
+  pg ? `COALESCE(json_agg(${column})::text, '[]')` : `json_group_array(${column})`;
+
 // The locales of a document that have a row, as a JSON array. The published perspective counts published rows.
-const localesColumn = (drafts: boolean, t: string): [string, string] => [
+const localesColumn = (pg: boolean, drafts: boolean, t: string): [string, string] => [
   "locales",
-  `(SELECT json_group_array(locale) FROM cms_document_locales WHERE document_id = ${t}id${drafts ? "" : " AND published_at IS NOT NULL"})`,
+  `(SELECT ${jsonArrayOf(pg, "locale")} FROM cms_document_locales WHERE document_id = ${t}id${drafts ? "" : " AND published_at IS NOT NULL"})`,
 ];
 
 // Whether the shared row has a pending draft that differs from its published data.
 export const SHARED_DRAFT = (t: string) => `(${t}draft IS NOT NULL AND ${t}draft <> ${t}data)`;
 
 // The columns of a `Row` of table alias `t`, as `[alias, SQL]` pairs.
-const documentColumns = (drafts: boolean, t: string, loc?: Loc): Array<[string, string]> => [
+const documentColumns = (
+  pg: boolean,
+  drafts: boolean,
+  t: string,
+  loc?: Loc,
+): Array<[string, string]> => [
   ["id", `${t}id`],
   ["created_at", `${t}created_at`],
   ["updated_at", `${t}updated_at`],
@@ -102,7 +120,7 @@ const documentColumns = (drafts: boolean, t: string, loc?: Loc): Array<[string, 
   ...(loc
     ? [
         ...localeColumns(drafts),
-        localesColumn(drafts, t),
+        localesColumn(pg, drafts, t),
         ["shared_draft", SHARED_DRAFT(t)] as [string, string],
       ]
     : []),
@@ -122,16 +140,38 @@ export const rowColumns = (drafts: boolean) =>
   ] as const;
 
 /** The columns of a `Row` as raw SQL, for the table alias `t`. A localized `loc` adds the locale columns. */
-export const rawRowColumns = (drafts: boolean, t: string, loc?: Loc) =>
+export const rawRowColumns = (db: Db, drafts: boolean, t: string, loc?: Loc) =>
   sql.raw(
-    documentColumns(drafts, t, loc)
+    documentColumns(isPostgres(db), drafts, t, loc)
       .map(([alias, expr]) => `${expr} AS ${alias}`)
       .join(", "),
   );
 
-/** `id IN (...)`. The ids go in as one JSON parameter, so there is no variable limit. */
-export const inIds = (ids: string[]) =>
-  sql<boolean>`id IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`;
+/**
+ * `value IN (...)`, `id` by default. The ids go in as one parameter (a JSON array on SQLite, an array on Postgres), so
+ * there is no variable limit.
+ */
+export const inIds = (db: Db, ids: string[], value: RawBuilder<unknown> = sql.ref("id")) =>
+  isPostgres(db)
+    ? sql<boolean>`${value} = ANY(${ids})`
+    : sql<boolean>`${value} IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`;
+
+/**
+ * The value at the dot path `path` of the JSON in `json`. SQLite returns the SQL value of a scalar and JSON text of an
+ * object or array; Postgres returns text.
+ */
+const extract = (pg: boolean, json: RawBuilder<unknown>, path: string) =>
+  pg ? sql`(${json})::jsonb #>> ${path.split(".")}` : sql`json_extract(${json}, ${`$.${path}`})`;
+
+/** The items of the JSON array `json` as rows of `alias` with the column `value`, for a `FROM` clause. */
+export const eachItem = (db: Db, json: RawBuilder<unknown>, alias: string) =>
+  isPostgres(db)
+    ? sql`jsonb_array_elements_text(${arrayOrNull(sql`(${json})::jsonb`)}) ${sql.raw(alias)}`
+    : sql`json_each(${json}) ${sql.raw(alias)}`;
+
+// A jsonb value when it is an array, else `NULL`, so a scalar yields no items instead of an error.
+const arrayOrNull = (json: RawBuilder<unknown>) =>
+  sql`CASE jsonb_typeof(${json}) WHEN 'array' THEN ${json} END`;
 
 /**
  * The JSON value at a top-level key or a dot path of the data. With `loc`, a localized key reads the requested
@@ -139,18 +179,24 @@ export const inIds = (ids: string[]) =>
  * `t` is the alias of the document table, `cms_documents.` when joined with locale rows.
  */
 export const jsonAt = (
+  db: Db,
   path: string,
   drafts = false,
   loc?: Loc,
   t = loc ? "cms_documents." : "",
 ) => {
-  const at = `$.${path}`;
-  if (!loc?.keys.includes(path.split(".")[0]))
-    return sql`json_extract(${sql.raw(dataOf(drafts, t))}, ${at})`;
-  const requested = sql`json_extract(${sql.raw(dataOf(drafts, "lr."))}, ${at})`;
+  const pg = isPostgres(db);
+  if (!loc?.keys.includes(path.split(".")[0])) return extract(pg, sql.raw(dataOf(drafts, t)), path);
+  const requested = extract(pg, sql.raw(dataOf(drafts, "lr.")), path);
   if (!loc.fallback) return requested;
-  return sql`COALESCE(${requested}, json_extract(${sql.raw(dataOf(drafts, "ld."))}, ${at}))`;
+  return sql`COALESCE(${requested}, ${extract(pg, sql.raw(dataOf(drafts, "ld.")), path)})`;
 };
+
+/** Whether the text `value` contains `query`, ignoring case. */
+export const containsText = (db: Db, value: RawBuilder<unknown>, query: string) =>
+  isPostgres(db)
+    ? sql<boolean>`strpos(lower(CAST(${value} AS TEXT)), lower(${query})) > 0`
+    : sql<boolean>`instr(lower(CAST(${value} AS TEXT)), lower(${query})) > 0`;
 
 // The columns of the meta keys a filter MAY name.
 const AUTHOR_COLUMNS: Record<string, string> = {
@@ -161,41 +207,51 @@ const AUTHOR_COLUMNS: Record<string, string> = {
 /**
  * The equality filter `<key> = value` on a top-level key of the data, or on `createdBy` / `updatedBy`. `null` means
  * `IS NULL`. The key MUST be checked against the schema first; `drafts` and `loc` work as in {@link jsonAt}.
+ * Postgres compares text, so `value` arrives as text: `5` matches `5`, `true` matches `true`.
  * @returns The condition.
  */
-export function equals(key: string, value: unknown, drafts = false, loc?: Loc) {
+export function equals(db: Db, key: string, value: unknown, drafts = false, loc?: Loc) {
   const field = Object.hasOwn(AUTHOR_COLUMNS, key)
     ? sql.ref(AUTHOR_COLUMNS[key])
-    : jsonAt(key, drafts, loc);
+    : jsonAt(db, key, drafts, loc);
   return value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`;
 }
 
 /**
  * Whether the relation at `path` in the JSON column `source` holds `id`. Each {@link Each} step scans the items with
- * one nested `json_each`; a `many` relation is an array. JSON paths, block types and the id are parameters.
+ * one nested `json_each` (`jsonb_array_elements` on Postgres); a `many` relation is an array. JSON paths, block types
+ * and the id are parameters.
  */
 export function holdsAt(
+  db: Db,
   source: string,
   path: Step[],
   many: boolean | undefined,
   id: string,
   depth = 0,
 ): RawBuilder<boolean> {
+  const pg = isPostgres(db);
   const each = path.findIndex((s) => typeof s !== "string");
-  const at = `$.${(each < 0 ? path : path.slice(0, each)).join(".")}`;
+  const keys = (each < 0 ? path : path.slice(0, each)) as string[];
   const json = sql.ref(source);
-  if (each < 0)
-    return many
-      ? sql<boolean>`EXISTS (SELECT 1 FROM json_each(${json}, ${at}) j WHERE j.value = ${id})`
-      : sql<boolean>`json_extract(${json}, ${at}) = ${id}`;
+  if (each < 0) {
+    if (!many) return sql<boolean>`${extract(pg, json, keys.join("."))} = ${id}`;
+    const items = pg
+      ? sql`jsonb_array_elements_text(${arrayOrNull(sql`(${json})::jsonb #> ${keys}`)}) j`
+      : sql`json_each(${json}, ${`$.${keys.join(".")}`}) j`;
+    return sql<boolean>`EXISTS (SELECT 1 FROM ${items} WHERE j.value = ${id})`;
+  }
 
   const item = `i${depth}`;
+  const items = pg
+    ? sql`jsonb_array_elements(${arrayOrNull(sql`(${json})::jsonb #> ${keys}`)}) ${sql.raw(item)}`
+    : sql`json_each(${json}, ${`$.${keys.join(".")}`}) ${sql.raw(item)}`;
   const { blockType } = path[each] as Each;
   const block = blockType
-    ? sql`json_extract(${sql.ref(`${item}.value`)}, ${"$.blockType"}) = ${blockType} AND `
+    ? sql`${extract(pg, sql.ref(`${item}.value`), "blockType")} = ${blockType} AND `
     : sql``;
-  const rest = holdsAt(`${item}.value`, path.slice(each + 1), many, id, depth + 1);
-  return sql<boolean>`EXISTS (SELECT 1 FROM json_each(${json}, ${at}) ${sql.raw(item)} WHERE ${block}${rest})`;
+  const rest = holdsAt(db, `${item}.value`, path.slice(each + 1), many, id, depth + 1);
+  return sql<boolean>`EXISTS (SELECT 1 FROM ${items} WHERE ${block}${rest})`;
 }
 
 /**
@@ -224,7 +280,7 @@ export function selectDocs(
       j.on(localeOn(drafts, "ld", loc.defaultLocale, DOCUMENT_LOCALES, "cms_documents.id")),
     )
     .select(
-      documentColumns(drafts, "cms_documents.", loc).map(([alias, expr]) =>
+      documentColumns(isPostgres(db), drafts, "cms_documents.", loc).map(([alias, expr]) =>
         sql.raw(expr).as(alias),
       ),
     )

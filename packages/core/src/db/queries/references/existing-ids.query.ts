@@ -6,7 +6,7 @@ export async function existingIds(db: Db, collection: string, ids: string[]) {
     .selectFrom("cms_documents")
     .select("id")
     .where("collection", "=", collection)
-    .where(inIds(ids))
+    .where(inIds(db, ids))
     .execute();
   return rows.map((r) => r.id);
 }

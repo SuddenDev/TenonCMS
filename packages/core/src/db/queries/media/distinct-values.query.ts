@@ -14,9 +14,9 @@ export async function distinctValues(
 ) {
   let query = db
     .selectFrom("cms_documents")
-    .select(sql<unknown>`DISTINCT ${jsonAt(key)}`.as("value"))
+    .select(sql<unknown>`DISTINCT ${jsonAt(db, key)}`.as("value"))
     .where("collection", "=", collection);
-  for (const [field, value] of Object.entries(where)) query = query.where(equals(field, value));
+  for (const [field, value] of Object.entries(where)) query = query.where(equals(db, field, value));
 
   const rows = await query.execute();
   return rows.map((r) => r.value);

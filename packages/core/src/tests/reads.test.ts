@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { createClient as createLibsql } from "@libsql/client";
 import { libsqlDialect } from "../db/index.ts";
 import { withDatabase } from "../cms/create-cms.ts";
 import { durableObject } from "../integrations/cloudflare/index.ts";
-import { admin, base, define, fresh, origin, setup, status, type Env } from "./setup.ts";
+import {
+  admin,
+  base,
+  define,
+  fresh,
+  origin,
+  setup,
+  status,
+  type Env,
+  testDatabase,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -151,7 +160,7 @@ describe("errors", () => {
         posts: { description: "All posts", nav, fields: { title: { type: "text" } } },
       },
       globals: { footer: { description: "Footer", nav, fields: { text: { type: "text" } } } },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: false,
     });
@@ -250,7 +259,7 @@ describe("errors", () => {
 
   it("reject unknown options at the type level", () => {
     // @ts-expect-error `globalz` is not an option
-    defineCms({ collections: {}, globalz: {}, database: { url: ":memory:" }, secret: "" });
+    defineCms({ collections: {}, globalz: {}, database: testDatabase(), secret: "" });
   });
 });
 
@@ -258,14 +267,14 @@ describe("database", () => {
   it("runs on a host-given Kysely dialect", async () => {
     const cms = defineCms({
       ...base,
-      database: { dialect: libsqlDialect(createLibsql({ url: ":memory:" })) },
+      database: { dialect: libsqlDialect({ url: ":memory:" }) },
     });
     await cms.create("posts", { title: "A" });
     expect((await cms.find("posts")).map((p) => p.title)).toEqual(["A"]);
   });
 
   it("gives each copy of an instance its own database", async () => {
-    const memory = () => ({ dialect: libsqlDialect(createLibsql({ url: ":memory:" })) });
+    const memory = () => ({ dialect: libsqlDialect({ url: ":memory:" }) });
     const cms = defineCms({ ...base, database: durableObject() });
     const a = withDatabase(cms, memory());
     const b = withDatabase(cms, memory());
@@ -276,7 +285,7 @@ describe("database", () => {
   });
 
   it("connects again after a failed connect", async () => {
-    const dialect = libsqlDialect(createLibsql({ url: ":memory:" }));
+    const dialect = libsqlDialect({ url: ":memory:" });
     let failures = 1;
     const createDriver = dialect.createDriver.bind(dialect);
     dialect.createDriver = () => {

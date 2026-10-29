@@ -1,7 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms, ValidationError } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, base, fresh, origin, published, status, unpublished, type Env } from "./setup.ts";
+import {
+  admin,
+  base,
+  fresh,
+  origin,
+  published,
+  status,
+  unpublished,
+  type Env,
+  testDatabase,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -115,7 +125,7 @@ describe("slug from", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
 

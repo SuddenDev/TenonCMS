@@ -10,6 +10,7 @@ export default defineConfig({
       { find: /^integral-cms\/richtext$/, replacement: core("richtext/index.ts") },
       { find: /^integral-cms$/, replacement: core("index.ts") },
       { find: /^integral-cms\/client$/, replacement: core("client/index.ts") },
+      { find: /^integral-cms\/libsql$/, replacement: core("integrations/libsql/index.ts") },
       { find: /^integral-cms\/presets$/, replacement: core("presets/index.ts") },
       { find: /^integral-cms\/admin$/, replacement: core("admin/config.ts") },
       { find: /^integral-cms\/admin\/bar$/, replacement: core("admin/bar.d.ts") },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { page } from "../presets/index.ts";
-import { admin, setup, status } from "./setup.ts";
+import { admin, setup, status, testDatabase } from "./setup.ts";
 
 const options = {
   collections: {
@@ -30,7 +30,7 @@ const options = {
     plainGlobal: { visualEditing: false, fields: { title: { type: "text" } } },
   },
   media: false,
-  database: { url: ":memory:" },
+  database: testDatabase(),
   secret: "x".repeat(32),
 } as const;
 

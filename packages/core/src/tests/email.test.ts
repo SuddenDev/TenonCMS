@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { defineCms, definePlugin, ValidationError } from "../index.ts";
 import { admin, base, origin, setup } from "./setup.ts";
+import { libsql } from "../integrations/libsql/index.ts";
 
 const from = "Site <hello@example.com>";
 const message = { to: "reader@example.com", subject: "Hello", text: "Welcome" };
@@ -10,7 +11,7 @@ describe("email", () => {
     const send = vi.fn(async () => {});
     const cms = defineCms({
       ...base,
-      database: { url: "file:/unavailable/email-test.db" },
+      database: libsql("file:/unavailable/email-test.db"),
       email: { from, adapter: { send } },
     });
     expect(send).not.toHaveBeenCalled();

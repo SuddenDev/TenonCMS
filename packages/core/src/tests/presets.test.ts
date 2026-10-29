@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { CmsError } from "../client/index.ts";
 import { defineCms } from "../index.ts";
 import { nestedPaths, page, seo, strings } from "../presets/index.ts";
-import { admin, fresh, origin, setup, status, tmpDb, type Env } from "./setup.ts";
+import { admin, fresh, origin, setup, status, type Env, testDatabase, testDb } from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -31,7 +31,7 @@ describe("page preset", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
   let cms: ReturnType<typeof make>;
@@ -166,7 +166,7 @@ describe("page preset", () => {
     const { uniquePath, ...beforeChange } = page.hooks.beforeChange;
     const cms = defineCms({
       collections: { pages: { fields: page.fields, hooks: { beforeChange } } },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     await cms.create("pages", { title: "About", slug: "about" });
@@ -205,7 +205,7 @@ describe("nestedPaths", () => {
           hooks: nestedPaths({ slug: "handle", parent: "parentCategory", path: "url" }),
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     const shoes = await cms.create("categories", { name: "Shoes", handle: "" });
@@ -246,7 +246,7 @@ describe("nestedPaths", () => {
           hooks: page.hooks,
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     const about = await cms.create("pages", { title: "About", slug: "about" });
@@ -268,7 +268,7 @@ describe("strings preset", () => {
     defineCms({
       globals: { strings: ui },
       localization: { locales: ["en", "de"], defaultLocale: "en" },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: false,
       settings: false,
@@ -312,12 +312,12 @@ describe("strings preset", () => {
   });
 
   it("stores no code default, so a changed default reaches a saved locale", async () => {
-    const url = tmpDb();
+    const { database } = testDb();
     const at = (subscribe: string) =>
       defineCms({
         globals: { strings: strings({ readMore: "Read more", subscribe }) },
         localization: { locales: ["en", "de"], defaultLocale: "en" },
-        database: { url },
+        database,
         secret: "x".repeat(32),
         media: false,
         settings: false,

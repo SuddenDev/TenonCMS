@@ -1,9 +1,19 @@
-import { createClient as createLibsql } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CmsError } from "../client/index.ts";
 import { ConflictError, defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
-import { admin, fresh, relational, seed, setup, status, tmpDb, type Env } from "./setup.ts";
+import {
+  admin,
+  fresh,
+  relational,
+  seed,
+  setup,
+  status,
+  type Env,
+  testDatabase,
+  testDb,
+  onPglite,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -43,7 +53,7 @@ describe("onDelete", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "",
     });
     const a = await cms.create("a", {});
@@ -105,7 +115,7 @@ describe("onDelete restrict", () => {
       globals: {
         g: { fields: { pin: { type: "relation", collection: "posts", onDelete: "restrict" } } },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "",
     });
     const p = await cms.create("posts", {});
@@ -183,7 +193,7 @@ describe("onDelete hooks", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
   const seed = async (cms: ReturnType<typeof make>) => {
@@ -230,7 +240,7 @@ describe("onDelete hooks", () => {
           },
         },
       },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
     });
     const x = await other.create("pages", {});
@@ -280,7 +290,7 @@ describe("onDelete inside array items", () => {
         owned: { fields: { links: link("cascade") } },
       },
       globals: { nav: { fields: { links: link("set-null") } } },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "x".repeat(32),
       media: false,
     });
@@ -338,7 +348,7 @@ describe("onDelete inside array items", () => {
         menus: { localized: true, fields: { links: link("set-null") } },
       },
       localization: { locales: ["en", "de"], defaultLocale: "en" },
-      database: { url: ":memory:" },
+      database: testDatabase(),
       secret: "",
       media: false,
     });
@@ -362,7 +372,7 @@ describe("onDelete inside array items", () => {
 
 describe("onDelete inside block items", () => {
   const ids0 = { populate: false } as const;
-  const make = (url = ":memory:") =>
+  const make = (database = testDatabase()) =>
     defineCms({
       collections: {
         pages: { fields: { title: { type: "text" } } },
@@ -392,7 +402,7 @@ describe("onDelete inside block items", () => {
           },
         },
       },
-      database: { url },
+      database,
       secret: "x".repeat(32),
       media: false,
     });
@@ -430,8 +440,8 @@ describe("onDelete inside block items", () => {
   });
 
   it("leaves a relation of another block under the same key alone", async () => {
-    const url = tmpDb();
-    const cms = make(url);
+    const { database, exec } = testDb();
+    const cms = make(database);
     const [p, post] = [await cms.create("pages", {}), await cms.create("posts", {})];
     const doc = await cms.create("landing", {
       content: [
@@ -440,12 +450,12 @@ describe("onDelete inside block items", () => {
       ],
     });
     // The `post` block's relation holds the page's id, so only the block filter tells them apart.
-    const db = createLibsql({ url });
-    await db.execute({
-      sql: "UPDATE cms_documents SET data = json_set(data, '$.content[1].ref', ?) WHERE id = ?",
-      args: [p.id, doc.id],
-    });
-    db.close();
+    await exec(
+      onPglite
+        ? "UPDATE cms_documents SET data = jsonb_set(data::jsonb, '{content,1,ref}', to_jsonb(?::text))::text WHERE id = ?"
+        : "UPDATE cms_documents SET data = json_set(data, '$.content[1].ref', ?) WHERE id = ?",
+      [p.id, doc.id],
+    );
     await cms.delete("pages", p.id);
     expect((await cms.findById("landing", doc.id, ids0))?.content).toMatchObject([
       { blockType: "link", ref: null },

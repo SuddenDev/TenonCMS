@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defineCms } from "../../index.ts";
 import { type Collection, type Fields } from "../index.ts";
 import { checkSchema } from "./check-schema.ts";
+import { libsql } from "../../integrations/libsql/index.ts";
 
 const normalized = (l: { locales: string[]; defaultLocale: string }) => ({
   ...l,
@@ -21,7 +22,7 @@ describe("defineCms checks", () => {
         collections,
         globals,
         localization: localization as never,
-        database: { url: ":memory:" },
+        database: libsql(":memory:"),
         secret: "x".repeat(32),
       });
   const g = { type: "group", fields: { t: { type: "text" } } } as const;
