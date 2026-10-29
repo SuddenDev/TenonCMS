@@ -11,7 +11,7 @@
   "dependencies": {
     "@astrojs/vercel": "^11.0.17",
     "@vercel/functions": "^3.10.4",
-    "astro": "^7.3.4",
+    "astro": "^7.4.2",
     "integral-cms": "workspace:*",
     "pg": "^8.23.1"
   },

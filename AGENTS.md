@@ -101,7 +101,7 @@ The short version. Reasons and the rest: [code-rules.md](code-rules.md).
 - Kebab-case file names with a role suffix: `create.endpoint.ts`, `create.operation.ts`, `create.local.ts`, `find-documents.query.ts`.
 - Keep entry barrels declarative, except framework-owned conventions.
 - Keep module READMEs and the four navigation examples in `packages/core/src/README.md` current.
-- Versions: Astro 7, Nuxt 4.5 (nitropack 2, h3 v1), TanStack Start 1.168 (nitro 3 beta, React 19), Vite 8, TypeScript 6, better-auth 1.7, kysely 0.29, Hono 4, zod 4.
+- Versions: Astro 7, Nuxt 4.6 (nitropack 2, h3 v1), TanStack Start 1.169 (nitro 3 beta, React 19), Vite 8, TypeScript 6, better-auth 1.7, kysely 0.29, Hono 4, zod 4.
 - Never mention Claude in commits.
 
 ## Next up

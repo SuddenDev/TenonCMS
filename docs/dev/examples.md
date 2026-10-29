@@ -30,6 +30,7 @@ Every example has its instance in `integral.config.ts` at the project root and i
 ## Vercel in more detail
 
 - Vercel project: root directory `examples/vercel`, build command `cd ../.. && pnpm build:packages && pnpm --filter example-vercel build`, because the example consumes core's `dist/`.
+  - Set `ENABLE_EXPERIMENTAL_COREPACK=1`, or Vercel ignores `packageManager` and installs with its own pnpm.
 - Set up Neon as in the [guide](../guide/frameworks.md#with-neon): the pooled `DATABASE_URL`, a private bucket and its S3 variables (`AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET`), and `CMS_SECRET`. The same variables in `.env` work locally.
 - Vercel allows the `AWS_*` key names and injects unusable ones when they are unset, so all of them MUST be set.
 - `site` stays unset: better-auth reads the base URL from the request, so preview URLs work. Passkeys bind to the host they were made on.

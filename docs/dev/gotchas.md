@@ -40,6 +40,16 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - The d.ts build needs explicit types on the Nuxt module (`NuxtModule<Options>`), and `@nuxt/schema` must be a peer or its types get inlined. Nitro hook types come from `import type {} from '@nuxt/nitro-server/augments'`.
 - Kysely 0.29 exports `Migrator` from `kysely/migration`, not from `kysely`.
 
+**Dependencies**
+
+- `vue-tsc` is pinned to `3.3.11`. From 3.3.12, an imported binding inside an arrow function in a template fails with `Property 'value' does not exist` ([vuejs/language-tools#6305](https://github.com/vuejs/language-tools/issues/6305)). Unpin it in `packages/admin`, `packages/plugins` and `examples/nuxt` once that is fixed.
+- taze skips exact pins. Move these by hand with their partner:
+  - `@nuxt/nitro-server` in core MUST match `nuxt`. Since Nuxt 4.6 it supplies the Nitro types; a mismatch fails with `Property 'externals' does not exist on type 'NitroConfigFallback'`.
+  - `@better-auth/api-key` and `@better-auth/passkey` MUST match `better-auth`, or pnpm reports unmet peers for `better-call` and `@better-fetch/fetch`.
+- pnpm 12 refuses packages published less than a day ago (`minimumReleaseAge`). Right after an update, install can fail with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`. Wait a day, or run `pnpm clean --lockfile && pnpm install` to resolve older versions.
+- pnpm 12 runs dependency build scripts only for packages listed in `allowBuilds` in `pnpm-workspace.yaml`.
+- pnpm 10 cannot switch itself to pnpm 12 through `packageManager` (`ENOEXEC`). Install pnpm 12 globally.
+
 **Shell**
 
 - zsh: quote paths like `[slug].vue`, or the glob silently matches nothing.

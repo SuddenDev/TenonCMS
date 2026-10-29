@@ -19,7 +19,7 @@ integral-cms takes the other route, like Pruvious (Nuxt) and Payload 3 (Next.js)
 
 ## Quickstart
 
-Requires Node 22.14+ and pnpm.
+Requires Node 22.14+ and pnpm 12.
 
 ```sh
 pnpm install

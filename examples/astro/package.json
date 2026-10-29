@@ -11,10 +11,10 @@
     "typecheck": "astro sync && tsc --noEmit"
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.6",
-    "@better-auth/passkey": "1.7.5",
+    "@astrojs/node": "^11.1.9",
+    "@better-auth/passkey": "1.7.14",
     "@libsql/client": "^0.18.0",
-    "astro": "^7.3.4",
+    "astro": "^7.4.2",
     "integral-cms": "workspace:*"
   },
   "devDependencies": {

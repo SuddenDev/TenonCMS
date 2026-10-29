@@ -11,9 +11,9 @@
     "typecheck": "astro sync && tsc --noEmit"
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.6",
+    "@astrojs/node": "^11.1.9",
     "@electric-sql/pglite": "^0.5.13",
-    "astro": "^7.3.4",
+    "astro": "^7.4.2",
     "integral-cms": "workspace:*"
   },
   "devDependencies": {
