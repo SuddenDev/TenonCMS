@@ -31,8 +31,17 @@ describe("database", () => {
         "session",
         "account",
         "verification",
+        "rateLimit",
       ]),
     );
+  });
+
+  // Serverless instances do not share memory.
+  it("keeps rate limits in memory only when the host asks", async () => {
+    const { database, tables } = testDb();
+    const cms = defineCms({ ...base, database, auth: { rateLimit: { storage: "memory" } } });
+    await cms.auth();
+    expect(await tables()).not.toContain("rateLimit");
   });
 });
 
@@ -44,25 +53,22 @@ describe("auth", () => {
   });
 
   it("reports first-admin setup until a user exists", async () => {
-    expect(await client.request("/auth-status")).toEqual({ setup: true, signUp: true });
+    const closed = { setup: false, signUp: false, passkeys: false };
+    expect(await client.request("/auth-status")).toEqual({ ...closed, setup: true, signUp: true });
     await client.signUp(admin);
     await client.signOut();
-    expect(await client.request("/auth-status")).toEqual({ setup: false, signUp: false });
+    expect(await client.request("/auth-status")).toEqual(closed);
   });
 
-  it("offers passkeys for the site's host name", async () => {
-    const { client } = setup(defineCms({ ...base, site: "https://example.com" }));
-    const options = await client.request<{ rpId: string }>(
-      "/auth/passkey/generate-authenticate-options",
-    );
-    expect(options.rpId).toBe("example.com");
+  it("has no passkeys without the host's plugin", async () => {
+    expect(await status(client.request("/auth/passkey/generate-authenticate-options"))).toBe(404);
   });
 
-  it("keeps the host's own passkey plugin", async () => {
+  it("offers passkeys with the host's plugin, named after the admin", async () => {
     const { client } = setup(
       defineCms({
         ...base,
-        site: "https://example.com",
+        admin: { name: "Acme" },
         auth: { plugins: [passkey({ rpID: "cms.test" })] },
       }),
     );
@@ -70,6 +76,12 @@ describe("auth", () => {
       "/auth/passkey/generate-authenticate-options",
     );
     expect(options.rpId).toBe("cms.test");
+    expect(await client.request("/auth-status")).toMatchObject({ passkeys: true });
+    await client.signUp(admin);
+    const registration = await client.request<{ rp: { name: string } }>(
+      "/auth/passkey/generate-register-options",
+    );
+    expect(registration.rp.name).toBe("Acme");
   });
 
   it("stores the admin preferences on the user", async () => {

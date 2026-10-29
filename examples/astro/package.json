@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
+    "@better-auth/passkey": "1.7.5",
     "@libsql/client": "^0.18.0",
     "astro": "^7.3.4",
     "integral-cms": "workspace:*"

@@ -35,7 +35,8 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 - `postgres()` returns its `pool`, so the host can hand it to `attachDatabasePool()` from `@vercel/functions`. Core imports nothing from Vercel.
 - Media: `s3()`, with `credentials` from `@vercel/oidc-aws-credentials-provider` for an AWS S3 bucket from the Vercel Marketplace.
 - `migrate()` locks on Postgres, so cold starts that run together on a fresh database do not race.
-- Not covered yet: Nuxt and TanStack Start on Vercel (Nitro's `vercel` preset), and Turso. `@libsql/client`'s Node entry imports the native `libsql` binary even for remote URLs.
+- Turso: `libsqlDialect()` opens `@libsql/client/web` for remote URLs (`libsql:`, `http(s):`, `ws(s):`), because the Node entry loads the native `libsql` binary on import. Only file URLs need the binary. Not tried against a real Turso database yet.
+- Not covered yet: Nuxt and TanStack Start on Vercel (Nitro's `vercel` preset).
 
 ## Cloudflare (Durable Objects)
 

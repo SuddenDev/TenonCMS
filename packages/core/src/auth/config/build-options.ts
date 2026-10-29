@@ -1,4 +1,3 @@
-import { passkey } from "@better-auth/passkey";
 import { APIError, type BetterAuthOptions } from "better-auth";
 import { admin } from "better-auth/plugins/admin";
 import type { Kysely } from "kysely";
@@ -16,13 +15,11 @@ import { lastAdmin } from "./last-admin.ts";
 import { passwordLength } from "./password-length.ts";
 import { userFields } from "./user-fields.ts";
 
-/** The WebAuthn relying party of the admin's passkeys. */
-export type RelyingParty = { rpID?: string; rpName: string };
-
 /** What core adds to the host's better-auth options. */
 export type CoreAuth = {
   email?: { api: EmailApi; templates?: Partial<EmailTemplates> };
-  relyingParty?: RelyingParty;
+  /** better-auth's `appName` when the host sets none. Passkeys show it as the relying party's name. */
+  appName?: string;
   /** Defaults to the built-in roles. */
   roles?: Role[];
 };
@@ -36,9 +33,9 @@ export function authOptions<A extends AuthOptions>(
   db: Kysely<Database>,
   secret: string,
   host: A,
-  { email, relyingParty = { rpName: "integral-cms" }, roles = BUILT_IN_ROLES }: CoreAuth = {},
+  { email, appName = "integral-cms", roles = BUILT_IN_ROLES }: CoreAuth = {},
 ) {
-  const { emailAndPassword, emailVerification, plugins = [], user, ...options } = host;
+  const { emailAndPassword, emailVerification, plugins = [], rateLimit, user, ...options } = host;
   const has = (id: string) => plugins.some((p) => p.id === id);
   const create = host.databaseHooks?.user?.create;
   const send =
@@ -48,16 +45,18 @@ export function authOptions<A extends AuthOptions>(
       await email.api.send({ ...content, to: data.user.email });
     });
   return {
+    appName,
     ...options,
+    // Serverless instances do not share memory, so better-auth's default storage does not limit them.
+    rateLimit: { storage: "database" as const, ...rateLimit },
     basePath: `${API_BASE}/auth`,
     secret,
     database: { db, type: isPostgres(db) ? ("postgres" as const) : ("sqlite" as const) },
     user: { ...user, additionalFields: { ...userFields, ...user?.additionalFields } },
-    // The admin signs in with passkeys and manages users with `admin()`. API keys come from `apiKey()`. A host's
-    // plugin with the same id replaces core's. Typed as the host's plugins: their endpoint types break the declaration build (TS7056).
+    // The admin manages users with `admin()`. API keys come from `apiKey()`. A host's plugin with the same id replaces
+    // core's. Typed as the host's plugins: their endpoint types break the declaration build (TS7056).
     plugins: [
       ...plugins,
-      ...(has("passkey") ? [] : [passkey(relyingParty)]),
       ...(has("admin")
         ? []
         : [admin({ ...userAccess(roles), adminRoles: ["admin"], defaultRole: "editor" })]),

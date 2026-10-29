@@ -1,4 +1,4 @@
-import { type Client, type Config, createClient, type Transaction } from "@libsql/client";
+import type { Client, Config, Transaction } from "@libsql/client";
 import {
   type DatabaseConnection,
   type Dialect,
@@ -14,19 +14,27 @@ type Connection = DatabaseConnection & { tx?: Transaction };
  * A Kysely dialect over our own `@libsql/client`, in the shape of `@libsql/kysely-libsql`.
  * That package pulls a second client and native binary. Transactions are interactive `write` transactions.
  * Each driver opens its own client, so each Kysely instance on `:memory:` gets its own database.
+ * A remote URL opens the web client: the Node entry loads the native binary on import, which serverless builds may lack.
  */
 export function libsqlDialect(config: Config): Dialect {
   return {
     createAdapter: () => new SqliteAdapter(),
     createIntrospector: (db) => new SqliteIntrospector(db),
     createQueryCompiler: () => new SqliteQueryCompiler(),
-    createDriver: () => driver(createClient(config)),
+    createDriver: () => driver(config),
   };
 }
 
-function driver(client: Client): Driver {
+function driver(config: Config): Driver {
+  let client: Client;
   return {
-    async init() {},
+    async init() {
+      const remote = /^(libsql|https?|wss?):/.test(config.url);
+      const { createClient } = remote
+        ? await import("@libsql/client/web")
+        : await import("@libsql/client");
+      client = createClient(config);
+    },
     async acquireConnection() {
       const connection: Connection = {
         async executeQuery(query) {

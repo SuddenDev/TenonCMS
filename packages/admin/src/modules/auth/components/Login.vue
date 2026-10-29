@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
-import { inject, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, inject, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { client } from "@/shared/api";
@@ -23,7 +23,7 @@ const status = useAuthStatus();
 const form = ref({ email: "", password: "" });
 const error = ref("");
 const busy = ref(false);
-const passkeys = passkeysSupported();
+const passkeys = computed(() => !!status.value?.passkeys && passkeysSupported());
 
 useHead({ title: () => t("auth.signIn") });
 
@@ -50,15 +50,19 @@ const submit = () => run(() => client.signIn(form.value));
 
 // One passkey request at a time: each one replaces the server's challenge cookie.
 let autofill: { abort: AbortController; done: Promise<void> } | undefined;
-onMounted(async () => {
-  if (!passkeys || !(await PublicKeyCredential.isConditionalMediationAvailable?.())) return;
+let unmounted = false;
+watch(passkeys, async (on) => {
+  if (!on || !(await PublicKeyCredential.isConditionalMediationAvailable?.()) || unmounted) return;
   const abort = new AbortController();
   const done = signInWithPasskey({ conditional: true, signal: abort.signal }).then(load, (e) => {
     if (!cancelled(e)) error.value = (e as Error).message;
   });
   autofill = { abort, done };
 });
-onUnmounted(() => autofill?.abort.abort());
+onUnmounted(() => {
+  unmounted = true;
+  autofill?.abort.abort();
+});
 
 async function withPasskey() {
   autofill?.abort.abort();

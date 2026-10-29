@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, ref, watch } from "vue";
+import { computed, inject, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
 import { sessionKey } from "@/shared/options";
@@ -28,6 +28,7 @@ import {
 } from "@/shared/components/ui/field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { updateUser } from "../account";
+import { useAuthStatus } from "../composables/useAuthStatus";
 import { passkeysSupported } from "../passkey";
 import PasskeyList from "./PasskeyList.vue";
 import PasswordForm from "./PasswordForm.vue";
@@ -37,7 +38,8 @@ const { user } = inject(sessionKey)!;
 const { t } = useI18n();
 const { locale, locales } = useAdminLocale();
 const { preferred } = useTimeZone();
-const passkeys = passkeysSupported();
+const status = useAuthStatus();
+const passkeys = computed(() => !!status.value?.passkeys && passkeysSupported());
 const form = ref({ name: "", language: locale.value, timezone: null as string | null });
 const error = ref("");
 const busy = ref(false);

@@ -45,6 +45,7 @@ export default defineCms({
 - `media` is a reserved collection, plugin and route name.
 - `nuxt preview` runs the server from inside `.output/`, so a relative `./.uploads` lands in the build output. Pass an absolute `dir` there, as the Nuxt example does.
 - On Cloudflare Workers (the `workerd` export condition), `integral-cms/media/local`, `integral-cms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `r2()` (or `s3()`) and `cloudflare()`.
+- In a read-only working directory, as in serverless functions on Vercel, AWS Lambda or Netlify, the default cannot keep uploads. There too, no `media` option means no media library, and `media: true` throws. Use `s3()` or `r2()` with keys.
 
 ## Image and file fields
 

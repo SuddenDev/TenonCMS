@@ -7,8 +7,8 @@ Three things live here: how people sign in, how users and roles work, and how yo
 The admin signs in at `/login`.
 
 - While no user exists, every admin URL leads to `/signup`, which creates the first admin. After that, sign-up is closed: `/signup` redirects to `/login`, and the sign-in shows no sign-up link. New users join through [invites](#users-and-roles).
-- `GET /api/cms/auth-status` answers `{ setup, signUp }` for custom forms.
-- The admin supports email and password, passkeys, and password reset. Plugins that need other screens (2FA, magic link) work on the server but not in the admin yet.
+- `GET /api/cms/auth-status` answers `{ setup, signUp, passkeys }` for custom forms.
+- The admin supports email and password, [passkeys](#passkeys), and password reset. Plugins that need other screens (2FA, magic link) work on the server but not in the admin yet.
 
 ### Account settings
 
@@ -16,13 +16,21 @@ The admin signs in at `/login`.
 
 - edit their name, admin language and time zone. Dates in forms and the publication status follow the time zone. Empty follows the device.
 - change the password (other sessions are signed out), or set a first one if they have none (`POST /api/cms/account/password`).
-- add or remove passkeys.
+- add or remove passkeys, when they are on.
 
 Language and time zone are stored on the user as better-auth fields `language` and `timezone`, validated on write. A host's own field of the same name replaces core's.
 
 ### Passkeys
 
-Core registers better-auth's `passkey()` plugin with the host name of `site` as the relying party ID (`localhost` without `site`) and the admin `name` as its display name. Add your own `passkey()` to `auth.plugins` to configure it. It replaces core's. Adding a passkey needs a recent sign-in.
+Passkeys are off by default, because their WebAuthn libraries add about 600 KiB to the server bundle. Install `@better-auth/passkey` and add its plugin:
+
+```ts
+import { passkey } from "@better-auth/passkey";
+
+export default defineCms({ auth: { plugins: [passkey()] } /* ... */ });
+```
+
+The admin then shows passkey sign-in and the passkey list in the account settings. The relying party ID is the host name of the request; pass `passkey({ rpID })` when the admin runs on a subdomain of the site. Its display name is better-auth's `appName`, which defaults to the admin `name`. Adding a passkey needs a recent sign-in.
 
 ### Password reset
 

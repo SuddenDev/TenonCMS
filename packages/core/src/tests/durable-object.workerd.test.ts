@@ -26,14 +26,7 @@ describe("migrations", () => {
     await inCms(stub, (cms) => cms.create("authors", { name: "Ada" }));
     await inCms(stub, async (_, state) => {
       expect(names(state, "table")).toEqual(
-        expect.arrayContaining([
-          "cms_documents",
-          "cms_versions",
-          "user",
-          "session",
-          "apikey",
-          "passkey",
-        ]),
+        expect.arrayContaining(["cms_documents", "cms_versions", "user", "session", "apikey"]),
       );
       expect(names(state, "index")).toContain("cms_media_key_idx");
     });

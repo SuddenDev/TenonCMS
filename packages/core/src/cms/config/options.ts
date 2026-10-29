@@ -139,8 +139,9 @@ export type CmsOptions<
   hooks?: RootHooks;
   /**
    * The media library: uploads, the `media` collection, and `image` and `file` fields.
-   * - omitted or `true`: files in `./uploads`, WebP variants at quality 85 rendered at upload (`local()` and `ipx()`).
-   *   On Cloudflare Workers, omitted means no media library and `true` throws.
+   * - omitted or `true`: files in `./.uploads`, WebP variants at quality 85 rendered at upload (`local()` and `ipx()`).
+   *   On Cloudflare Workers and in a read-only working directory (serverless functions), omitted means no media library
+   *   and `true` throws.
    * - `false`: no media library. Core adds no routes, and `image` and `file` fields throw at startup.
    * - an object: your own storage, limits, images and hooks.
    */

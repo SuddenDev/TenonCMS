@@ -1,15 +1,15 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { client, CmsError } from "@/shared/api";
 import { i18n } from "@/shared/i18n";
 import { cleanup, fill, render, submit } from "./render";
 
 const user = { id: "admin", name: "Admin", email: "admin@example.com" };
-let status = { setup: false, signUp: false };
+let status = { setup: false, signUp: false, passkeys: false };
 
 beforeEach(() => {
   i18n.global.locale.value = "en";
-  status = { setup: false, signUp: false };
+  status = { setup: false, signUp: false, passkeys: false };
   vi.spyOn(client, "getSession").mockResolvedValue(null);
   vi.spyOn(client, "getSchema").mockRejectedValue(new CmsError(401, {}));
   vi.spyOn(client.preview, "enter").mockResolvedValue();
@@ -43,7 +43,7 @@ it("sends a signed-in admin away from the sign-in", async () => {
 });
 
 it("shows the first-admin setup when no user exists", async () => {
-  status = { setup: true, signUp: true };
+  status = { setup: true, signUp: true, passkeys: false };
   const { router, root } = await render("/login");
   await vi.waitFor(() => expect(router.currentRoute.value.path).toBe("/signup"));
   await vi.waitFor(() => expect(root.textContent).toContain("Create the first admin"));
@@ -70,7 +70,7 @@ it("hides sign-up while it is closed", async () => {
 });
 
 it("links to sign-up while it is open", async () => {
-  status = { setup: false, signUp: true };
+  status = { setup: false, signUp: true, passkeys: false };
   const { root } = await render("/login");
   await vi.waitFor(() => expect(root.querySelector('a[href="/cms/signup"]')).not.toBeNull());
 });
@@ -85,11 +85,35 @@ it("toggles the password's visibility", async () => {
 });
 
 it("shows the met criteria of a new password", async () => {
-  status = { setup: true, signUp: true };
+  status = { setup: true, signUp: true, passkeys: false };
   const { root } = await render("/signup");
   await vi.waitFor(() => expect(root.querySelector('input[type="password"]')).not.toBeNull());
   expect(root.textContent).not.toContain("At least 8 characters");
   await fill(root, 'input[type="password"]', "abcdefgh");
   const met = [...root.querySelectorAll('li[data-met="true"]')].map((li) => li.textContent?.trim());
   expect(met).toEqual(["At least 8 characters", "A lowercase letter"]);
+});
+
+describe("passkey sign-in", () => {
+  beforeEach(() => {
+    vi.stubGlobal("PublicKeyCredential", { parseRequestOptionsFromJSON() {} });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  const button = (root: Element) =>
+    [...root.querySelectorAll("button")].find((b) => b.textContent?.includes("passkey"));
+
+  it("is hidden when the server has no passkeys", async () => {
+    const { root } = await render("/login");
+    await vi.waitFor(() => expect(client.request).toHaveBeenCalledWith("/auth-status"));
+    await vi.waitFor(() => expect(root.querySelector('input[type="email"]')).not.toBeNull());
+    expect(button(root)).toBeUndefined();
+  });
+
+  it("is offered when the server has passkeys", async () => {
+    status = { ...status, passkeys: true };
+    const { root } = await render("/login");
+    await vi.waitFor(() => expect(button(root)).toBeDefined());
+  });
 });

@@ -17,22 +17,21 @@ Each new query is one more to port, and the test app should run on a real deploy
 - [x] Postgres and PGlite together (one dialect). PGlite also fits tests and local dev. The JSON SQL (`json_extract`, `json_each`, `holdsAt()`) needs a layer per dialect.
 - [x] Cloudflare Workers: D1 driver or Durable Objects, bindings per request, R2 (`r2()` binding or `s3()`), Cloudflare Images (`cloudflare({ binding })`).
 - [ ] Vercel: Node functions with Turso or Postgres.
-  - [x] `examples/vercel`: Astro, Postgres with `attachDatabasePool()`, AWS S3 from the Marketplace through `s3()` with OIDC `credentials`, rate limits in the database. Builds and passes the smoke tests locally. Migrations lock on Postgres, so cold starts do not race.
-  - [ ] A real deploy, including bucket CORS and the public URL.
-  - [ ] Turso: `@libsql/client` loads the native binary even for remote URLs.
-- [ ] Durable Object SQLite as the Cloudflare store, preferred over D1: D1 has no transactions that stay open across `await`, and writes rely on them (hooks, nested `cms` calls, `onDelete`).
+  - [x] `examples/vercel`: Astro, Postgres with `attachDatabasePool()`, AWS S3 from the Marketplace through `s3()` with OIDC `credentials`. Builds and passes the smoke tests locally. Migrations lock on Postgres, so cold starts do not race.
+  - [ ] A real deploy: Neon (pooled `DATABASE_URL`) and AWS S3 from the Marketplace, `CMS_SECRET`, `MEDIA_URL` as the bucket's public URL, bucket CORS (`PUT` from the site, expose `ETag`) and public reads. Then run the smoke tests against the deploy, uploads included.
+  - [x] Turso: remote URLs open `@libsql/client/web`, so the native binary is not loaded. Not deployed yet.
+- [x] Durable Object SQLite as the Cloudflare store, preferred over D1: D1 has no transactions that stay open across `await`, and writes rely on them (hooks, nested `cms` calls, `onDelete`).
   - [x] Prototype (a spike, removed after the move into core). Go. Results in [design decisions](docs/dev/design-decisions.md#durable-objects).
   - [x] Move `durableObjectDialect()` into core (`integral-cms/cloudflare`), with the spike's tests. Adds `durableObject()` and `integralObject()`.
   - [x] Host code reads and writes through `createClient({ fetch: (req) => env.CMS.getByName("cms").fetch(req) })`: typed from the schema, errors arrive as `CmsError`, privileged writes use an API key. No RPC proxy until something needs the local API's trust inside the object (RPC drops error classes: `ConflictError` arrives as a plain `Error`).
-  - [ ] An example or starter on Cloudflare (Worker + object, `createClient()` over the object's `fetch`, minified), then a real deploy. `examples/cloudflare` runs locally with R2 and Cloudflare Images through bindings; the deploy is open.
+  - [x] An example on Cloudflare (Worker + object, `createClient()` over the object's `fetch`, minified) and a real deploy: `examples/cloudflare` with R2 and Cloudflare Images through bindings.
   - Cost: one object fits the included duration even when active 24/7. Keep it short-lived: no long `await`s in hooks. `r2()` proxies uploads and file reads through the object; move them to presigned URLs (`s3()`) and the Worker or a public bucket if that costs too much. Cache public reads, because the object sits in one region.
   - The same object can later hold WebSockets for presence and multiplayer (Hibernation API).
 - [ ] [celld](https://celld.dev/): a self-hosted Workers and Durable Objects runtime with the data in your own bucket. Skipped while it is in beta (v0.6.2 on 2026-10-28). Its docs list `sql.exec()`, `transaction()` and `blockConcurrencyWhile()`. `celld deploy` stops on unknown `wrangler.jsonc` keys such as `minify`.
-- [ ] Media defaults per target: `local('./.uploads')` does not work serverless.
-- [ ] Rate limits: better-auth keeps them in memory by default, which serverless instances do not share. A host can set `auth: { rateLimit: { storage: "database" } }` (the Vercel example does). Maybe make it the default.
-- [ ] Bundle size (the spike: 934 KiB gzipped, 664 KiB minified; `examples/cloudflare`: 2.0 MB minified, 575 KB gzipped). Every wake of an object parses it again.
-  - [ ] Passkeys opt-in: `@better-auth/passkey` and its WebAuthn and certificate libraries are 626 KiB raw, always bundled (`auth/config/build-options.ts`).
-  - [ ] Maybe: check and render rich text on the server without tiptap and ProseMirror (962 KiB raw). Only if size becomes a problem, because the checks MUST match the editor's schema.
+- [x] Media defaults per target: in a read-only working directory (serverless), no `media` option means no media library and `media: true` throws, as on Workers.
+- [x] Rate limits: `storage: "database"` is the default, so serverless instances share them.
+- [x] Bundle size (the spike: 934 KiB gzipped, 664 KiB minified; `examples/cloudflare`: 1,623 KiB minified, 470 KiB gzipped, down from 2.0 MB and 575 KB). Every wake of an object parses it again.
+  - [x] Passkeys opt-in: the host adds `passkey()` from `@better-auth/passkey` (an optional peer), and the admin shows passkeys only then.
 
 ## 3. Driven by the test app
 

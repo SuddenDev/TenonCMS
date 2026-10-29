@@ -30,8 +30,6 @@ export default defineCms({
     }),
     images: { provider: ipx({ prerender: true }) },
   },
-  // Instances do not share memory, so rate limits live in the database.
-  auth: { rateLimit: { storage: "database" } },
   collections: {
     authors: { fields: { name: { type: "text", required: true } } },
     posts: {

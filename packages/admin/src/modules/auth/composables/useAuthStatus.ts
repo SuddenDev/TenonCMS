@@ -1,18 +1,18 @@
 import { onMounted, ref } from "vue";
 import { client } from "@/shared/api";
 
-export type AuthStatus = { setup: boolean; signUp: boolean };
+export type AuthStatus = { setup: boolean; signUp: boolean; passkeys: boolean };
 
 /**
- * Whether the first admin is missing and whether a visitor MAY sign up. Asked on every mount, because the first
- * sign-up ends the setup. A failed request counts as closed.
+ * Whether the first admin is missing, whether a visitor MAY sign up, and whether the server offers passkeys. Asked on
+ * every mount, because the first sign-up ends the setup. A failed request counts as closed.
  */
 export function useAuthStatus() {
   const status = ref<AuthStatus>();
   onMounted(async () => {
     status.value = await client
       .request<AuthStatus>("/auth-status")
-      .catch(() => ({ setup: false, signUp: false }));
+      .catch(() => ({ setup: false, signUp: false, passkeys: false }));
   });
   return status;
 }

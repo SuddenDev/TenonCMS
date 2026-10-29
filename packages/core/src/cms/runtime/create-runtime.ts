@@ -18,7 +18,7 @@ type Session = {
  * @param host The host's better-auth options
  * @param localized The localized keys of every `collection:<name>` / `global:<name>` (`null` when not localized) and the
  * default locale. After the migrations, the stored state is synced to them.
- * @param coreAuth Email delivery, the passkeys' relying party and the roles.
+ * @param coreAuth Email delivery, the default app name and the roles.
  * @returns `db()` connects and migrates on its first call. `auth()` creates better-auth on its first call.
  * `getSession()` reads the session of a request's headers. `getApiKey()` verifies an API key.
  */

@@ -184,7 +184,6 @@
   },
   "dependencies": {
     "@better-auth/api-key": "1.7.5",
-    "@better-auth/passkey": "1.7.5",
     "@tiptap/core": "^3.32.0",
     "@tiptap/extension-highlight": "^3.32.0",
     "@tiptap/extension-image": "^3.32.0",
@@ -210,6 +209,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@better-auth/passkey": "1.7.5",
     "@cloudflare/vitest-plugin": "^1.4.9",
     "@cloudflare/workers-types": "^5.20261028.1",
     "@electric-sql/pglite": "^0.5.13",
@@ -236,6 +236,7 @@
     "vue": "^3.5.43"
   },
   "peerDependencies": {
+    "@better-auth/passkey": ">=1.7",
     "@electric-sql/pglite": ">=0.3",
     "@libsql/client": ">=0.15",
     "@nuxt/kit": ">=3",
@@ -249,6 +250,9 @@
     "vue": ">=3.5"
   },
   "peerDependenciesMeta": {
+    "@better-auth/passkey": {
+      "optional": true
+    },
     "@electric-sql/pglite": {
       "optional": true
     },

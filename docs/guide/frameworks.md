@@ -90,14 +90,13 @@ export default defineCms({
       credentials: awsCredentialsProvider({ roleArn: AWS_ROLE_ARN }),
     }),
   },
-  auth: { rateLimit: { storage: "database" } },
   // ...
 });
 ```
 
 - Database: Postgres, for example Neon from the Vercel Marketplace. Use its pooled connection string. `attachDatabasePool()` closes idle connections before Vercel suspends the function.
-- Media: the function's disk is read-only, so the default media on the local disk does not work. Use `s3()` (AWS S3 from the Vercel Marketplace with `credentials` as above, or any S3-compatible bucket with keys) or `r2()` with keys. See [media](media.md#s3-and-r2). The browser uploads straight to the bucket, so Vercel's 4.5 MB request limit does not apply. The bucket needs CORS and a public URL.
-- Rate limits: better-auth keeps them in memory by default, and instances do not share memory. `rateLimit: { storage: "database" }` keeps them in a table.
+- Media: the function's disk is read-only, so the default media on the local disk does not work. Without a `media` option there is no media library, and `media: true` throws. Use `s3()` (AWS S3 from the Vercel Marketplace with `credentials` as above, or any S3-compatible bucket with keys) or `r2()` with keys. See [media](media.md#s3-and-r2). The browser uploads straight to the bucket, so Vercel's 4.5 MB request limit does not apply. The bucket needs CORS and a public URL.
+- Rate limits: core keeps them in the database, so instances share them. `auth: { rateLimit: { storage: "memory" } }` turns that off.
 - Leave `site` unset if you use preview deployments. Passkeys only work on the host they were created on.
 - In a monorepo, the build command MUST build the CMS packages first.
 
