@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { edit, excludedSelector, pickBound } from "./bind-elements.ts";
+import { edit, excludedSelector, patch, pickBound } from "./bind-elements.ts";
+import { setDraft } from "./store.ts";
 
 describe("edit", () => {
   it("joins collection, id and path", () => {
@@ -39,5 +40,28 @@ describe("excluded entries", () => {
     expect(pickBound(document.querySelector("b")!, null)).toBe(
       document.querySelector("b")!.parentElement,
     );
+  });
+});
+
+describe("patch", () => {
+  const bound = (binding: string, text: string) => {
+    const el = document.createElement("p");
+    el.setAttribute("data-cms", binding);
+    el.textContent = text;
+    return el;
+  };
+
+  it("writes a field of a populated relation", () => {
+    setDraft("posts", "1", { author: { id: "a1", name: "Ann" } });
+    const el = bound("posts:1:author.name", "Old");
+    patch(el);
+    expect(el.textContent).toBe("Ann");
+  });
+
+  it("leaves text bound to a populated relation as it is", () => {
+    setDraft("posts", "1", { author: { id: "a1", name: "Ann" } });
+    const el = bound("posts:1:author", "By Ann");
+    patch(el);
+    expect(el.textContent).toBe("By Ann");
   });
 });

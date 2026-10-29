@@ -13,7 +13,11 @@ if (!post) return new Response("Not found", { status: 404 });
   <body>
     <a href="/">All posts</a>
     <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
-    {post.author && <p data-cms={edit("posts", post.id, "author")}>By {post.author.name}</p>}
+    {post.author && (
+      <p>
+        By <span data-cms={edit("posts", post.id, "author.name")}>{post.author.name}</span>
+      </p>
+    )}
     {post.hero && (
       <img
         data-cms={edit("posts", post.id, "hero")}

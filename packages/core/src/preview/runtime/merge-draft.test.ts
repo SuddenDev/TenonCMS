@@ -31,6 +31,63 @@ describe("merge", () => {
     expect(merged.tags).toEqual(["t2"]);
   });
 
+  describe("with populated relations in the draft", () => {
+    const ann = { id: "a1", name: "Ann" };
+    const bob = { id: "a2", name: "Bob" };
+
+    it("keeps the page's value when the document did not change", () => {
+      const merged = merge("posts", { ...doc, author: ann }, { "posts:1": { author: { ...ann } } });
+      expect(merged.author).toEqual(ann);
+    });
+
+    it("takes the document of a changed relation", () => {
+      const merged = merge("posts", { ...doc, author: ann }, { "posts:1": { author: bob } });
+      expect(merged.author).toEqual(bob);
+    });
+
+    it("takes the document when the page holds none", () => {
+      expect(
+        merge("posts", { ...doc, author: null }, { "posts:1": { author: bob } }).author,
+      ).toEqual(bob);
+    });
+
+    it("matches a many relation by id in draft order", () => {
+      const tags = [
+        { id: "t1", name: "one" },
+        { id: "t2", name: "two" },
+      ];
+      const merged = merge(
+        "posts",
+        { ...doc, tags },
+        {
+          "posts:1": {
+            tags: [
+              { id: "t2", name: "two" },
+              { id: "t3", name: "three" },
+            ],
+          },
+        },
+      );
+      expect(merged.tags).toEqual([
+        { id: "t2", name: "two" },
+        { id: "t3", name: "three" },
+      ]);
+    });
+
+    it("answers with ids where the page holds ids", () => {
+      const unpopulated = { ...doc, author: "a1", tags: ["t1"] };
+      const same = merge("posts", unpopulated, {
+        "posts:1": { author: ann, tags: [{ id: "t1" }] },
+      });
+      expect(same).toEqual(unpopulated);
+      const changed = merge("posts", unpopulated, {
+        "posts:1": { author: bob, tags: [{ id: "t2" }, { id: "t1" }] },
+      });
+      expect(changed.author).toBe("a2");
+      expect(changed.tags).toEqual(["t2", "t1"]);
+    });
+  });
+
   describe("with items", () => {
     const a = { id: "i1", blockType: "hero", title: "A", image: { id: "m1", url: "/a.png" } };
     const b = { id: "i2", blockType: "text", body: "B", tags: [{ id: "t1" }, { id: "t2" }] };

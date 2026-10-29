@@ -35,6 +35,7 @@ import { edit, preview } from "tenoncms/preview";
 preview();
 // <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
 // <img data-cms={edit("posts", post.id, "hero")} data-cms-attr="src,srcset,alt" src={post.hero.src} />
+// <p>By <span data-cms={edit("posts", post.id, "author.name")}>{post.author.name}</span></p>
 // Globals pass `null` as the id: edit("general", null, "title")
 ```
 
@@ -54,7 +55,7 @@ defineCollection({ visualEditing: false, fields: { body: { type: "textarea" } } 
 
 ## 3. Re-render from the unsaved state (optional)
 
-Marked elements update on their own. To make lists and conditions follow too, Vue and React pages can use `useDraft()`. It merges the unsaved state into the document and starts the runtime. Items of an `array` or `blocks` field match by `id`, and a relation whose ids did not change keeps its populated value.
+Marked elements update on their own. To make lists and conditions follow too, Vue and React pages can use `useDraft()`. It merges the unsaved state into the document and starts the runtime. Items of an `array` or `blocks` field match by `id`, and a relation whose ids did not change keeps its populated value. Image, file and relation fields arrive as documents, so a path can reach into one (`author.name`). A bound element of a relation field without a path into it keeps its text.
 
 ```ts
 import { useDraft } from "tenoncms/preview/vue"; // or tenoncms/preview/react

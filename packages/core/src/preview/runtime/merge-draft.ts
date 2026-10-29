@@ -4,7 +4,7 @@ import { draftKey } from "./store.ts";
 
 const idOf = (v: unknown) => (isObject(v) ? v.id : v);
 
-// A draft holds ids where the page holds populated documents. The browser cannot populate, so equal ids keep the page's value.
+// A draft MAY hold ids where the page holds populated documents. The browser cannot populate, so equal ids keep the page's value.
 function sameIds(draft: unknown, current: unknown) {
   const ids = Array.isArray(draft) ? draft : [draft];
   const now = (Array.isArray(current) ? current : [current]).map(idOf);
@@ -14,6 +14,11 @@ function sameIds(draft: unknown, current: unknown) {
     ids.every((id, i) => id === now[i])
   );
 }
+
+const isId = (v: unknown) => typeof v === "string";
+const toId = (v: unknown) => (isObject(v) && isId(v.id) ? v.id : v);
+// The page holds ids (`populate: false`) where the admin sends documents.
+const holdsIds = (v: unknown) => isId(v) || (Array.isArray(v) && v.length > 0 && v.every(isId));
 
 const isItems = (v: unknown): v is Record<string, unknown>[] =>
   Array.isArray(v) && v.every((item) => isObject(item) && typeof item.id === "string");
@@ -26,6 +31,7 @@ function mergeKeys(draft: Record<string, unknown>, current: Record<string, unkno
 
 // The ids check MUST come first: a populated relation is an object with `id` too.
 function mergeValue(draft: unknown, current: unknown): unknown {
+  if (holdsIds(current)) draft = Array.isArray(draft) ? draft.map(toId) : toId(draft);
   if (sameIds(draft, current)) return current;
   if (isItems(draft) && isItems(current)) {
     const byId = new Map(current.map((item) => [item.id, item]));

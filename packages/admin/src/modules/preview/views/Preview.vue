@@ -5,13 +5,13 @@ import { computed, provide, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { client, schema, type Fields } from "@/shared/api";
-import { itemFields } from "../../../../../core/src/schema/traversal/item-fields";
 import { focusKey } from "@/modules/documents/fields";
 import { useRefs } from "@/modules/documents/composables/useRefs";
 import DocPane from "@/modules/documents/components/DocPane.vue";
 import GlobalEdit from "@/modules/documents/views/GlobalEdit.vue";
 import { Icon, useLocale } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
+import { resolveDraft } from "@/modules/preview/draft-documents";
 import PageDocuments from "@/modules/preview/components/PageDocuments.vue";
 import PreviewPane from "@/modules/preview/components/PreviewPane.vue";
 import type { PageDocument } from "@/modules/preview/page-rows";
@@ -45,6 +45,7 @@ const active = computed(() => localeOf(name.value, !id.value));
 // The document and language the form edits. A request started for another one is dropped.
 const scope = computed(() => `${key.value}:${active.value ?? ""}`);
 const saved = (collection: string, id: string, global = false) => {
+  documents = new Map();
   const l = localeOf(collection, global);
   send({ type: "saved", collection, id, ...(l && { locale: l }) });
 };
@@ -140,41 +141,22 @@ function navigate(value: string) {
   frame.value++;
 }
 
-// Image and file fields go out as their media documents, `many` ones as arrays.
-const media = new Map<string, Promise<unknown>>();
-const mediaDoc = (mediaId: string) => {
-  if (!media.has(mediaId))
-    media.set(
-      mediaId,
-      client.findById("media", mediaId).catch(() => null),
-    );
-  return media.get(mediaId)!;
+// Image, file and relation fields go out as their documents, read like a page reads them, in the target's language.
+// Saves clear the cache, because a document MAY have changed.
+let documents = new Map<string, Promise<unknown>>();
+const loadDocument = (collection: string, id: string) => {
+  const l = localeOf(collection);
+  const key = `${collection}:${id}:${l ?? ""}`;
+  if (!documents.has(key)) documents.set(key, client.findById(collection, id, { locale: l }));
+  return documents.get(key)!;
 };
-async function withMedia(fields: Fields, data: Record<string, any>) {
-  const out: Record<string, unknown> = { ...data };
-  for (const [k, f] of Object.entries(fields)) {
-    const v = data[k];
-    if (!v) continue;
-    if (f.type === "group") out[k] = await withMedia(f.fields, v);
-    else if (f.type === "array" || f.type === "blocks")
-      out[k] = await Promise.all(
-        v.map((item: Record<string, any>) => {
-          const inner = itemFields(f, item);
-          return inner ? withMedia(inner, item) : item;
-        }),
-      );
-    else if (f.type === "image" || f.type === "file")
-      out[k] = await (Array.isArray(v) ? Promise.all(v.map(mediaDoc)) : mediaDoc(v));
-  }
-  return out;
-}
 
 let sent = 0;
 const broadcast = useDebounceFn(async () => {
   if (!name.value || !draft.value) return;
   const n = ++sent;
   const at = scope.value;
-  const data = await withMedia(fields.value, draft.value);
+  const data = await resolveDraft(fields.value, draft.value, loadDocument);
   if (n !== sent || at !== scope.value) return;
   // The form state holds Vue proxies, which `postMessage` cannot clone.
   send({

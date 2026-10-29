@@ -161,5 +161,8 @@ only get the patches. `idiomorph` is bundled into the entry.
 the page's value at any depth: the browser cannot populate, so it keeps what the page has. Lists of objects with a
 string `id` (array and block items) match by `id` in draft order, so a reordered item keeps its populated relations;
 objects merge per draft key.
+The admin sends image, file and relation fields as documents (`resolveDraft()` in the admin). Bound text can read
+through them (`author.name`), while text bound to the relation itself is left alone. A page that holds ids
+(`populate: false`) gets ids back from `merge()`.
 
 The bar supports the eight compass positions except center-center and defaults to bottom-center, with 16 px clearance and safe-area insets. Its toolbar keeps roving keyboard focus and places every menu/portal inside the same shadow root. The Edit button opens `<admin>/presentation?url=<current page>`. Normal site pages have no live preview channel or embedded editor. Preview tabs retain field selection and live updates. Dismiss hides the bar; session expiry removes it and its listeners. Published forms remain read-only; perspective changes still reload.
