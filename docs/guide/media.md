@@ -9,9 +9,9 @@ Without a `media` option, or with `media: true`, files go to `./.uploads` and im
 For your own storage, limits or images, pass an object:
 
 ```ts
-import { defineCms } from "integral-cms";
-import { local } from "integral-cms/media/local";
-import { ipx } from "integral-cms/media/ipx";
+import { defineCms } from "tenoncms";
+import { local } from "tenoncms/media/local";
+import { ipx } from "tenoncms/media/ipx";
 
 export default defineCms({
   // ...
@@ -44,7 +44,7 @@ export default defineCms({
 - With `media: false`, core adds no routes, and `image` and `file` fields throw at startup.
 - `media` is a reserved collection, plugin and route name.
 - `nuxt preview` runs the server from inside `.output/`, so a relative `./.uploads` lands in the build output. Pass an absolute `dir` there, as the Nuxt example does.
-- On Cloudflare Workers (the `workerd` export condition), `integral-cms/media/local`, `integral-cms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `r2()` (or `s3()`) and `cloudflare()`.
+- On Cloudflare Workers (the `workerd` export condition), `tenoncms/media/local`, `tenoncms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `r2()` (or `s3()`) and `cloudflare()`.
 - In a read-only working directory, as in serverless functions on Vercel, AWS Lambda or Netlify, the default cannot keep uploads. There too, no `media` option means no media library, and `media: true` throws. Use `s3()` or `r2()` with keys.
 
 ## Image and file fields
@@ -68,7 +68,7 @@ download: { type: 'file', folder: 'downloads' },
 
 ## The media API
 
-Media documents live in the `media` collection. Read them with `find('media')` or `GET /api/cms/collections/media`. Write them only through the media API. Collection and root hooks do not run for `media`.
+Media documents live in the `media` collection. Read them with `find('media')` or `GET /_tenon/collections/media`. Write them only through the media API. Collection and root hooks do not run for `media`.
 
 ```ts
 const doc = await cms.media.upload(bytes, {
@@ -92,7 +92,7 @@ await cms.media.delete(doc.id);
 
 ### Local disk
 
-`local({ dir, partSize = 16 MB, baseUrl? })` keeps files in `dir`, one folder per media folder. Core serves them at `/api/cms/media/files/<key>` (with `Range` support). Set `baseUrl` when your web server serves `dir` itself.
+`local({ dir, partSize = 16 MB, baseUrl? })` keeps files in `dir`, one folder per media folder. Core serves them at `/_tenon/media/files/<key>` (with `Range` support). Set `baseUrl` when your web server serves `dir` itself.
 
 - It needs a persistent disk: Node, Bun or Deno on a server. It does not suit Workers or ephemeral serverless filesystems.
 - Parts go through your server. **Every part is one request of up to `partSize`**, so a reverse proxy's body limit (nginx `client_max_body_size`) MUST be larger than `partSize`.
@@ -102,7 +102,7 @@ await cms.media.delete(doc.id);
 `s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl?, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket.
 
 - `publicUrl` is where the bucket is public. File URLs are then `<publicUrl>/<key>`.
-- Without `publicUrl`, the bucket stays private. Core serves files at `/api/cms/media/files/<key>`, reading them from the bucket.
+- Without `publicUrl`, the bucket stays private. Core serves files at `/_tenon/media/files/<key>`, reading them from the bucket.
 
 - Bucket CORS MUST allow `PUT` from the admin origin and expose the `ETag` header. Without `ETag` an upload fails with a message that names the CORS setting.
 - Add a lifecycle rule that aborts incomplete multipart uploads after one day.
@@ -115,19 +115,19 @@ Files and variants that core serves carry `Cache-Control: public, max-age=300, s
 
 ### R2
 
-`r2()` from `integral-cms/media/r2` has two modes:
+`r2()` from `tenoncms/media/r2` has two modes:
 
-|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                  | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, publicUrl?, partSize? })` |
-| ------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Through       | A bucket binding (`env` from `cloudflare:workers`)          | R2's S3 API, same as `s3()` with `region: 'auto'`                                         |
-| Runs on       | Workers only                                                | Node and Workers                                                                          |
-| Keys and CORS | Not needed                                                  | Needed, see [S3 and R2](#s3-and-r2)                                                       |
-| `publicUrl`   | Optional. Core serves files at `/api/cms/media/files/<key>` | Optional, as with `s3()`                                                                  |
+|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                 | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, publicUrl?, partSize? })` |
+| ------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Through       | A bucket binding (`env` from `cloudflare:workers`)         | R2's S3 API, same as `s3()` with `region: 'auto'`                                         |
+| Runs on       | Workers only                                               | Node and Workers                                                                          |
+| Keys and CORS | Not needed                                                 | Needed, see [S3 and R2](#s3-and-r2)                                                       |
+| `publicUrl`   | Optional. Core serves files at `/_tenon/media/files/<key>` | Optional, as with `s3()`                                                                  |
 
 With the binding:
 
 - `wrangler dev` simulates the bucket.
-- Parts go through the Worker and, with `integralObject()`, through the CMS object. Each part is held in memory, and `partSize` is at least 5 MB, as R2 requires.
+- Parts go through the Worker and, with `tenonObject()`, through the CMS object. Each part is held in memory, and `partSize` is at least 5 MB, as R2 requires.
 - A move reads and writes the file, because bindings cannot copy.
 
 With keys, set `region: 'eu'` for a bucket created with that data location. Requests then go to `<account>.eu.r2.cloudflarestorage.com`.
@@ -136,9 +136,9 @@ Unfinished uploads are aborted after 24 hours. An upload can have up to 10 000 p
 
 ## Image providers
 
-- **`ipx({ prerender? })`** from `integral-cms/media/ipx` (`ipx` and sharp come with integral-cms): core renders variants on first request at `/api/cms/media/img/<modifiers>/<key>` and stores them under `.variants/<key>/`. Only modifier sets your config can produce are served. `prerender: true` renders them all right after upload.
-- **`cloudflare({ binding?, prerender? })`** from `integral-cms/media/cloudflare`:
-  - With `binding: env.IMAGES` (the Images binding), core renders variants through Cloudflare Images like `ipx()` does: at `/api/cms/media/img/<modifiers>/<key>`, stored under `.variants/<key>/`. `wrangler dev` renders them locally.
+- **`ipx({ prerender? })`** from `tenoncms/media/ipx` (`ipx` and sharp come with tenoncms): core renders variants on first request at `/_tenon/media/img/<modifiers>/<key>` and stores them under `.variants/<key>/`. Only modifier sets your config can produce are served. `prerender: true` renders them all right after upload.
+- **`cloudflare({ binding?, prerender? })`** from `tenoncms/media/cloudflare`:
+  - With `binding: env.IMAGES` (the Images binding), core renders variants through Cloudflare Images like `ipx()` does: at `/_tenon/media/img/<modifiers>/<key>`, stored under `.variants/<key>/`. `wrangler dev` renders them locally.
   - Without it: URLs for Cloudflare's image transformations (`/cdn-cgi/image/...`) on your zone. Core renders nothing.
 - **Your own**: an object with `getImage(src, modifiers)` that returns `{ url }`, for imgproxy, Bunny or Vercel. Add `render(key, modifiers, storage)` if core should serve the variants.
 
@@ -146,7 +146,7 @@ SVG and images above `images.maxSize` get the original as `src` and an empty `sr
 
 ### After changing image options
 
-Run `cms.media.regenerate()`, or "Regenerate variants" on the admin's Media page. It deletes stored variants the options no longer produce and, with `prerender`, renders missing ones. `force: true` re-renders all of them, for example after a sharp upgrade. `POST /api/cms/media/:id/regenerate` does one file.
+Run `cms.media.regenerate()`, or "Regenerate variants" on the admin's Media page. It deletes stored variants the options no longer produce and, with `prerender`, renders missing ones. `force: true` re-renders all of them, for example after a sharp upgrade. `POST /_tenon/media/:id/regenerate` does one file.
 
 It exists only for providers with `render`. With `cloudflare()` without a binding nothing is stored, and new URLs take effect on their own.
 

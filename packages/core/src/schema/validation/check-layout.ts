@@ -28,5 +28,5 @@ export function checkLayout(fields: Fields, layout: Layout, where: string) {
 }
 
 function fail(message: string): never {
-  throw new Error(`integral-cms: ${message}`);
+  throw new Error(`tenoncms: ${message}`);
 }

@@ -10,7 +10,7 @@ import { otherAdmins } from "../../db/queries/users/other-admins.query.ts";
  */
 export const lastAdmin = (db: Kysely<Database>) =>
   ({
-    id: "integral-last-admin",
+    id: "tenon-last-admin",
     hooks: {
       before: [
         {

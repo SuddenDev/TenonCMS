@@ -1,7 +1,7 @@
-import { integralAdmin } from "integral-cms/vite";
+import { tenonAdmin } from "tenoncms/vite";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [nitro(), integralAdmin()],
+  plugins: [nitro(), tenonAdmin()],
 });

@@ -37,14 +37,14 @@ export default defineConfig({
   // Core imports its default media through the package exports, so Workers builds get `workerd.ts` instead.
   // The admin bar is built by the admin package; the host's bundler splits it into its own chunk.
   external: [
-    "integral-cms",
-    "integral-cms/media/default",
-    "integral-cms/admin/bar",
-    "integral-cms/admin",
-    "#integral/client-registry",
+    "tenoncms",
+    "tenoncms/media/default",
+    "tenoncms/admin/bar",
+    "tenoncms/admin",
+    "#tenon/client-registry",
   ],
   dts: true,
-  // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#integral/config`.
+  // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#tenon/config`.
   copy: [
     { from: "src/integrations/astro/Richtext.astro", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/route.ts", to: "dist/integrations/astro" },

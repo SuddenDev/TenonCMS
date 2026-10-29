@@ -15,7 +15,7 @@ export function defaultMedia(explicit: boolean): MediaOptions | undefined {
   if (!isWritable(process.cwd())) {
     if (!explicit) return undefined;
     throw new Error(
-      "integral-cms: `media: true` stores files in ./.uploads, but the working directory is read-only. Use s3() from integral-cms/media/s3.",
+      "tenoncms: `media: true` stores files in ./.uploads, but the working directory is read-only. Use s3() from tenoncms/media/s3.",
     );
   }
   return {

@@ -1,6 +1,6 @@
 # presets
 
-`integral-cms/presets`: plain field objects and named hooks that a host spreads into its own collections. Each file is meant to be read as documentation of what you get.
+`tenoncms/presets`: plain field objects and named hooks that a host spreads into its own collections. Each file is meant to be read as documentation of what you get.
 
 | File              | What it gives you                                                                                                                                                                   |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

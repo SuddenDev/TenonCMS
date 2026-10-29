@@ -131,7 +131,7 @@ export async function syncLocalized(
     if (r.kind === META.kind) prevDefault = JSON.parse(r.localized!) as string;
     else prev.set(`${r.kind}:${r.name}`, r.localized === null ? null : JSON.parse(r.localized));
   }
-  const log = consola.withTag("integral");
+  const log = consola.withTag("tenon");
   const messages: string[] = [];
 
   await db.transaction().execute(async (trx) => {

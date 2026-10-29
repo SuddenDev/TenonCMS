@@ -31,7 +31,7 @@ type ImageHandle = {
 export type CloudflareOptions = {
   /**
    * The Images binding, e.g. `env.IMAGES` with `env` from `cloudflare:workers`. Core then renders variants through it,
-   * serves them at `/api/cms/media/img/<modifiers>/<key>` and stores them under `.variants/`. Without it, variant URLs
+   * serves them at `/_tenon/media/img/<modifiers>/<key>` and stores them under `.variants/`. Without it, variant URLs
    * point to `/cdn-cgi/image/` on the site's zone.
    */
   binding?: ImagesBinding;
@@ -62,7 +62,7 @@ export function cloudflare({ binding, prerender = false }: CloudflareOptions = {
     }),
     async render(key, modifiers, storage) {
       const file = await storage.get(key);
-      if (!file) throw new Error(`integral-cms: no media file at ${key}`);
+      if (!file) throw new Error(`tenoncms: no media file at ${key}`);
       const transform = Object.fromEntries(
         TRANSFORM.filter((k) => modifiers[k] !== undefined).map((k) => [
           k,

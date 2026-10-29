@@ -19,8 +19,8 @@ A plugin is a plain object. It can bring collections, globals, hooks, media hook
 
 They are built like a third-party plugin would be, on purpose.
 
-- They import `integral-cms` by package name and so can only use public exports. A declaration build error there means a public type is missing.
-- The build keeps bare imports external, except Vue, React and `integral-cms/admin/vue|react`, which are bundled. Tests and typechecks use core's source through aliases, so they need no build.
+- They import `tenoncms` by package name and so can only use public exports. A declaration build error there means a public type is missing.
+- The build keeps bare imports external, except Vue, React and `tenoncms/admin/vue|react`, which are bundled. Tests and typechecks use core's source through aliases, so they need no build.
 - Their admin half ships **compiled**, because the host may not compile `.vue` or JSX. Vue and React are bundled into the plugin's own chunks.
 - Plugin CSS applies to the whole admin page. Scope every selector (a page class, scoped styles, or a prefixed Tailwind). Do not rely on the admin's Tailwind utilities; only `.input` and `.btn` are shared.
 - Browser strings live in the plugin's own message files, with English as the fallback. Schema labels are inline `{ en, de }`.

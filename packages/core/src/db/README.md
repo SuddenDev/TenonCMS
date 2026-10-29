@@ -63,7 +63,7 @@ A localized collection or global keeps shared fields in `cms_documents` / `cms_g
 
 ## Postgres
 
-`isPostgres(db)` (`document-sql.ts`) is true when the Kysely adapter is `PostgresAdapter`: `postgres()` and `pglite()` from `integral-cms/postgres` and `integral-cms/pglite`. It holds for a transaction too. better-auth gets `type: "postgres"` from it.
+`isPostgres(db)` (`document-sql.ts`) is true when the Kysely adapter is `PostgresAdapter`: `postgres()` and `pglite()` from `tenoncms/postgres` and `tenoncms/pglite`. It holds for a transaction too. better-auth gets `type: "postgres"` from it.
 
 - JSON stays `text`. A path read casts: `(data)::jsonb #>> '{a,b}'` returns text, so `equals()` compares text and parameters arrive as text (`5`, `true`).
 - The helpers that differ take `db` first: `jsonAt()`, `equals()`, `holdsAt()` (`jsonb_array_elements`), `inIds()` (`= ANY(array)`), `eachItem()`, `containsText()` (`strpos`), `jsonArrayOf()` (`json_agg`), and `mediaKeyQuery()`, whose literal MUST match the Postgres index `(data::jsonb ->> 'key')`.

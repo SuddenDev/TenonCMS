@@ -9,9 +9,9 @@ Run these against an example after a change in an adapter, media, localization, 
 ```sh
 B=localhost:3000; J=/tmp/jar
 curl -s -c $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d '{"name":"Admin","email":"a@b.co","password":"password123"}' $B/api/cms/auth/sign-up/email
+  -d '{"name":"Admin","email":"a@b.co","password":"password123"}' $B/_tenon/auth/sign-up/email
 curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d '{"title":"Hello","slug":"hello"}' $B/api/cms/collections/posts
+  -d '{"title":"Hello","slug":"hello"}' $B/_tenon/collections/posts
 curl -s $B/
 ```
 
@@ -21,13 +21,13 @@ API keys: create a read-only and a writing key for `posts` as the admin, then ca
 
 ```sh
 R=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d '{"name":"Read","permissions":{"collection:posts":["read"]}}' $B/api/cms/api-keys | node -pe 'JSON.parse(require("fs").readFileSync(0)).key')
+  -d '{"name":"Read","permissions":{"collection:posts":["read"]}}' $B/_tenon/api-keys | node -pe 'JSON.parse(require("fs").readFileSync(0)).key')
 W=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d '{"name":"Write","permissions":{"collection:posts":["read","create"]}}' $B/api/cms/api-keys | node -pe 'JSON.parse(require("fs").readFileSync(0)).key')
-curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $R" $B/api/cms/collections/posts
-curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $R" -H 'content-type: application/json' -d '{"title":"No","slug":"no"}' $B/api/cms/collections/posts
-curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $W" -H 'content-type: application/json' -d '{"title":"Key","slug":"key"}' $B/api/cms/collections/posts
-curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: nope" $B/api/cms/collections/posts
+  -d '{"name":"Write","permissions":{"collection:posts":["read","create"]}}' $B/_tenon/api-keys | node -pe 'JSON.parse(require("fs").readFileSync(0)).key')
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $R" $B/_tenon/collections/posts
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $R" -H 'content-type: application/json' -d '{"title":"No","slug":"no"}' $B/_tenon/collections/posts
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: $W" -H 'content-type: application/json' -d '{"title":"Key","slug":"key"}' $B/_tenon/collections/posts
+curl -s -o /dev/null -w '%{http_code}\n' -H "x-api-key: nope" $B/_tenon/collections/posts
 ```
 
 Expect 200, 403, 201 and 401.
@@ -37,11 +37,11 @@ Media, on the standalone example (`B=127.0.0.1:3200` or a production build on an
 ```sh
 S=$(stat -f%z hero.png)  # Linux: stat -c%s
 ID=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d "{\"filename\":\"hero.png\",\"mimeType\":\"image/png\",\"size\":$S}" $B/api/cms/media/uploads | node -pe 'JSON.parse(require("fs").readFileSync(0)).id')
-curl -s -b $J -X PUT -H "origin: http://$B" --data-binary @hero.png $B/api/cms/media/uploads/$ID/parts/1
-curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" -d '{"parts":[]}' $B/api/cms/media/uploads/$ID/complete
-curl -s -o /dev/null -w '%{http_code} %{content_type}\n' $B/api/cms/media/files/hero.png
-curl -s -o /dev/null -w '%{http_code} %{content_type}\n' "$B/api/cms/media/img/f_webp&q_80/hero.png"
+  -d "{\"filename\":\"hero.png\",\"mimeType\":\"image/png\",\"size\":$S}" $B/_tenon/media/uploads | node -pe 'JSON.parse(require("fs").readFileSync(0)).id')
+curl -s -b $J -X PUT -H "origin: http://$B" --data-binary @hero.png $B/_tenon/media/uploads/$ID/parts/1
+curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" -d '{"parts":[]}' $B/_tenon/media/uploads/$ID/complete
+curl -s -o /dev/null -w '%{http_code} %{content_type}\n' $B/_tenon/media/files/hero.png
+curl -s -o /dev/null -w '%{http_code} %{content_type}\n' "$B/_tenon/media/img/f_webp&q_80/hero.png"
 ```
 
 Expect 201, `{"etag":"1"}`, the media document with `width` / `height`, `200 image/png` and `200 image/webp`.
@@ -50,9 +50,9 @@ Localization, on the Astro example (`B=localhost:4321`, `localization` on): crea
 
 ```sh
 curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d '{"title":"Hallo","slug":"hallo"}' "$B/api/cms/collections/posts?locale=de"
-curl -s "$B/api/cms/collections/posts?locale=de&alternates=true"
-curl -s "$B/api/cms/collections/posts?locale=en&fallback=false"
+  -d '{"title":"Hallo","slug":"hallo"}' "$B/_tenon/collections/posts?locale=de"
+curl -s "$B/_tenon/collections/posts?locale=de&alternates=true"
+curl -s "$B/_tenon/collections/posts?locale=en&fallback=false"
 ```
 
 Expect 201 and the post with `"locale":"de"`, then `[]` (no English version, no fallback). Fetch `/de/posts/hallo` for the page.
@@ -62,11 +62,11 @@ Invites, on the Astro example with a temp `DATABASE_URL` and `SITE_URL` matching
 ```sh
 K=/tmp/jar2
 LINK=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d "{\"email\":\"e@b.co\",\"role\":\"editor\",\"url\":\"http://$B/admin/invite\"}" $B/api/cms/invites \
+  -d "{\"email\":\"e@b.co\",\"role\":\"editor\",\"url\":\"http://$B/admin/invite\"}" $B/_tenon/invites \
   | node -pe 'JSON.parse(require("fs").readFileSync(0)).link')
 curl -s -c $K -H 'content-type: application/json' -H "origin: http://$B" \
-  -d "{\"token\":\"${LINK#*token=}\",\"name\":\"Ed\",\"password\":\"password123\"}" $B/api/cms/invites/accept
-curl -s -o /dev/null -w '%{http_code}\n' -b $K $B/api/cms/invites
+  -d "{\"token\":\"${LINK#*token=}\",\"name\":\"Ed\",\"password\":\"password123\"}" $B/_tenon/invites/accept
+curl -s -o /dev/null -w '%{http_code}\n' -b $K $B/_tenon/invites
 ```
 
 Expect a link (201, or 502 with the link when `SMTP_URL` points at no running catcher), `{ user }` with the session cookie, then `403`: the editor cannot manage invites. In Chrome, the Bitwarden extension's `BIT-NOTIFICATION-BAR-ROOT` overlay can swallow clicks at the top right of the admin; check with `document.elementFromPoint()` before suspecting the UI.
@@ -76,8 +76,8 @@ Expect a link (201, or 502 with the link when `SMTP_URL` points at no running ca
 PGlite runs the integration suite already. This checks `postgres()` and the `pg` pool against a real server, in a throwaway container.
 
 ```sh
-docker run -d --rm --name integral-pg -e POSTGRES_PASSWORD=pw -p 55432:5432 postgres:17-alpine
+docker run -d --rm --name tenon-pg -e POSTGRES_PASSWORD=pw -p 55432:5432 postgres:17-alpine
 export DATABASE_URL=postgres://postgres:pw@localhost:55432/postgres
 ```
 
-Point an example's `database` at `postgres(process.env.DATABASE_URL!)` (add `pg` to it), start it, and run the curl calls above. Expect the same codes. Then `docker stop integral-pg`; `--rm` deletes the data.
+Point an example's `database` at `postgres(process.env.DATABASE_URL!)` (add `pg` to it), start it, and run the curl calls above. Expect the same codes. Then `docker stop tenon-pg`; `--rm` deletes the data.

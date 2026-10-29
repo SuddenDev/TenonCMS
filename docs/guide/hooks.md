@@ -3,7 +3,7 @@
 Hooks run your code at fixed points of every read, write and delete. Use them to change data, check it across documents, add computed values or react to changes. The names follow Payload's.
 
 ```ts
-import { defineCollection, ValidationError } from "integral-cms";
+import { defineCollection, ValidationError } from "tenoncms";
 
 export const posts = defineCollection({
   fields: {
@@ -82,7 +82,7 @@ delete: beforeOperation → beforeDelete → delete + onDelete effects → after
 
 ## Errors
 
-- `throw new ValidationError({ slug: 'Already used' })` (from `integral-cms`). Keys are field paths. HTTP returns 400 with `{ message, errors: { [path]: message } }`, and the admin shows each message next to its field. The local API validates every write the same way.
+- `throw new ValidationError({ slug: 'Already used' })` (from `tenoncms`). Keys are field paths. HTTP returns 400 with `{ message, errors: { [path]: message } }`, and the admin shows each message next to its field. The local API validates every write the same way.
 - Any other error rolls back the operation and runs the collection's `afterError`, then the root one: `defineCms({ hooks: { afterError: [...] } })`. HTTP returns 500 without the message. Global operations run only the root `afterError`, with `global` set.
 - Every HTTP error body has `message`, like better-auth's. The client's `CmsError` uses it as its message and keeps the body in `body`.
 - `ValidationError` (400) and `ConflictError` (409) are expected and run no `afterError`. An error inside `afterError` is logged and does not replace the original.

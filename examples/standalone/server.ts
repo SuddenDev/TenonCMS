@@ -1,7 +1,7 @@
-import html from "#integral/admin-html";
-import cms from "./integral.config";
+import html from "#tenon/admin-html";
+import cms from "./tenon.config";
 
-// Headless: the API under /api/cms, the admin under /admin, nothing else.
+// Headless: the API under /_tenon, the admin under /admin, nothing else.
 export default {
   fetch(request: Request) {
     const { pathname } = new URL(request.url);

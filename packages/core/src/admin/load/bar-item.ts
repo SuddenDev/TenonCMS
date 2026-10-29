@@ -5,7 +5,7 @@ import { keepsChildren, resolveBarItem, type ResolvedBarItem } from "./resolve-b
 import { toJson } from "./to-json.ts";
 
 /** Returned by {@link loadBarItem} when the loader of an item threw or returned something invalid. */
-export const FAILED = Symbol("integral.barItemFailed");
+export const FAILED = Symbol("tenon.barItemFailed");
 
 type Loaders = Map<string, Loader<BarItemLoadContext>>;
 type Applied = { resolved: ResolvedBarItem | null; loaded: Json | undefined };
@@ -49,7 +49,7 @@ async function applyLoader(
 ): Promise<Applied | typeof FAILED> {
   const fail = (e: unknown): typeof FAILED => {
     consola
-      .withTag("integral")
+      .withTag("tenon")
       .error(`admin bar item "${item.id}" in ${loader.source}: load failed`, e);
     return FAILED;
   };

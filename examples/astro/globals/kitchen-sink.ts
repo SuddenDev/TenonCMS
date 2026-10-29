@@ -1,4 +1,4 @@
-import { defineGlobal } from "integral-cms";
+import { defineGlobal } from "tenoncms";
 
 // Every field type and layout option once. A global MUST NOT hold a join or a `unique` field:
 // `authors.posts` is the join of this example.

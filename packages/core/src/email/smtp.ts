@@ -8,8 +8,7 @@ export function smtp(options: SMTPPoolOptions): EmailAdapter {
     async send(message) {
       transport ??= createTransport({ requireTLS: true, ...options });
       const result = await transport.sendMail(message);
-      if (result.rejected.length)
-        throw new Error("integral-cms: SMTP rejected one or more recipients");
+      if (result.rejected.length) throw new Error("tenoncms: SMTP rejected one or more recipients");
     },
   };
 }

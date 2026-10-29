@@ -62,7 +62,7 @@ export async function transaction<R>(
       try {
         await compensate(outside());
       } catch (failure) {
-        consola.withTag("integral").error(failure);
+        consola.withTag("tenon").error(failure);
       }
     }
     throw error;

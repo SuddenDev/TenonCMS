@@ -43,7 +43,7 @@ defineCms({
 await cms.find("posts", { locale: "de" });
 await cms.findOne("posts", { where: { slug: "hallo" }, locale: "de", fallback: false });
 await cms.getGlobal("general", { locale: "de" });
-// HTTP: GET /api/cms/collections/posts?locale=de&fallback=false
+// HTTP: GET /_tenon/collections/posts?locale=de&fallback=false
 ```
 
 - `locale` defaults to `defaultLocale`. `fallback` defaults to the config. An unknown locale throws a `ValidationError` (400).
@@ -99,17 +99,17 @@ References that point to a document are found in locale rows too, so `onDelete` 
 
 `permalink` is the template of a document's public URL, with the same forms as `preview`. Your routes MUST serve it. With `routing`, keep templates free of the locale: the CMS adds the prefix (`/posts/{slug}` becomes `/de/posts/hallo`). With `routing: false`, a template MAY use `{locale}`.
 
-Pure helpers, from `integral-cms` and `integral-cms/client`:
+Pure helpers, from `tenoncms` and `tenoncms/client`:
 
 ```ts
-import { localeFromPath, localizePath, switchTarget } from "integral-cms/client";
+import { localeFromPath, localizePath, switchTarget } from "tenoncms/client";
 
 localeFromPath("/de/about", localization); // { locale: "de", path: "/about" }
 localizePath("/about", "de", localization); // "/de/about"
 switchTarget(localization, "/about", "de", page.alternates);
 ```
 
-`switchTarget()` uses the document's alternate in the target locale, or that locale's homepage when the translation is missing. `localization` is `cms.localization` on the server. In the browser, `await client.localization()` fetches the public `GET /api/cms/localization` once per client (`null` without `localization`), so the browser never imports `integral.config.ts`.
+`switchTarget()` uses the document's alternate in the target locale, or that locale's homepage when the translation is missing. `localization` is `cms.localization` on the server. In the browser, `await client.localization()` fetches the public `GET /_tenon/localization` once per client (`null` without `localization`), so the browser never imports `tenon.config.ts`.
 
 `seoMeta()` turns `alternates` into `hreflang` tags. `alternates` is a list of `{ hreflang, href }`, absolute against the site `url`, and `canonical` is the URL of the page's own locale.
 
@@ -131,7 +131,7 @@ const { canonical, alternates } = seoMeta(page, { general, seo });
 ### Per framework
 
 - **Astro**: the middleware sets `Astro.locals.locale` and `Astro.locals.path` (the path without the prefix) from the URL. Read with `{ where: { path: Astro.locals.path }, locale: Astro.locals.locale, alternates: true }` and pass the document's `alternates` to the header and the language switch. The catch-all route serves prefixed URLs as they are. Other routes MUST exist for the prefixed URLs too, for example under `src/pages/[...locale]/`. The integration adds no route folder.
-- **Nuxt**: `useLocale()` returns `locales`, `defaultLocale`, `locale`, `path`, `localePath(path, locale?)`, `switchLocalePath(locale)` and `switchLocale(locale)`. `useAlternates(() => page.value?.alternates)` registers the page's translations. `switchLocalePath()` returns a translation's URL, or the locale's homepage when it is missing. `switchLocale()` navigates there. Render the header inside the page after its document loads, so server-rendered language links have the alternates. `useIntegral()` reads in the route's locale unless the options set one.
+- **Nuxt**: `useLocale()` returns `locales`, `defaultLocale`, `locale`, `path`, `localePath(path, locale?)`, `switchLocalePath(locale)` and `switchLocale(locale)`. `useAlternates(() => page.value?.alternates)` registers the page's translations. `switchLocalePath()` returns a translation's URL, or the locale's homepage when it is missing. `switchLocale()` navigates there. Render the header inside the page after its document loads, so server-rendered language links have the alternates. `useTenon()` reads in the route's locale unless the options set one.
 - **TanStack Start and others**: `client.localization()` plus the helpers above.
 
 ## In the admin
@@ -149,7 +149,7 @@ When `localization` is set, the top bar has a language menu next to the perspect
 Short texts a site hardcodes, like a "Read more" button, go into a `strings` global. Each key becomes a text field that editors translate on the Settings page:
 
 ```ts
-import { strings } from "integral-cms/presets";
+import { strings } from "tenoncms/presets";
 
 defineCms({
   globals: {

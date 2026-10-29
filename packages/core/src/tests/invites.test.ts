@@ -7,7 +7,7 @@ const url = `${origin}/admin/invite`;
 const ed = { name: "Ed", password: "password123" };
 
 const call = (fetch: Fetch, method: string, path: string, body?: unknown) =>
-  fetch(`${origin}/api/cms${path}`, {
+  fetch(`${origin}/_tenon${path}`, {
     method,
     headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -60,9 +60,7 @@ describe("invites", () => {
     const accepted = await call(g.fetch, "POST", "/invites/accept", { token, ...ed });
     expect(accepted.status).toBe(200);
     const cookies = accepted.headers.getSetCookie().map((c) => c.split("=")[0]);
-    expect(cookies).toEqual(
-      expect.arrayContaining(["better-auth.session_token", "integral-session"]),
-    );
+    expect(cookies).toEqual(expect.arrayContaining(["better-auth.session_token", "tenon-session"]));
     expect(await g.client.getSession()).toMatchObject({
       user: { email: "e@b.co", name: "Ed", role: "author", emailVerified: true },
     });
@@ -221,7 +219,7 @@ describe("invites", () => {
   it("accepts only JSON", async () => {
     const { invite, guest } = await env();
     const token = tokenOf((await invite()).body.link);
-    const res = await guest().fetch(`${origin}/api/cms/invites/accept`, {
+    const res = await guest().fetch(`${origin}/_tenon/invites/accept`, {
       method: "POST",
       headers: { "content-type": "text/plain" },
       body: JSON.stringify({ token, ...ed }),
@@ -236,9 +234,9 @@ describe("invites", () => {
     expect(status).toBe(201);
     expect(body.sent).toBe(true);
     expect(sent).toHaveLength(1);
-    expect(sent[0]).toMatchObject({ to: "e@b.co", subject: "You are invited to integral-cms" });
+    expect(sent[0]).toMatchObject({ to: "e@b.co", subject: "You are invited to tenoncms" });
     expect(sent[0].text).toContain(body.link);
-    expect(sent[0].text).toContain("Admin invited you to integral-cms as Editor.");
+    expect(sent[0].text).toContain("Admin invited you to tenoncms as Editor.");
   });
 
   it("answers 502 with the link when sending fails, and keeps the invite", async () => {

@@ -11,9 +11,9 @@
 import { Route as rootRouteImport } from "./routes/__root";
 import { Route as IndexRouteImport } from "./routes/index";
 import { Route as SplatRouteImport } from "./routes/$";
+import { Route as TenonSplatRouteImport } from "./routes/[_]tenon.$";
 import { Route as AdminSplatRouteImport } from "./routes/admin.$";
 import { Route as PostsSlugRouteImport } from "./routes/posts/$slug";
-import { Route as ApiCmsSplatRouteImport } from "./routes/api/cms/$";
 
 const IndexRoute = IndexRouteImport.update({
   id: "/",
@@ -23,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const SplatRoute = SplatRouteImport.update({
   id: "/$",
   path: "/$",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const TenonSplatRoute = TenonSplatRouteImport.update({
+  id: "/_tenon/$",
+  path: "/_tenon/$",
   getParentRoute: () => rootRouteImport,
 } as any);
 const AdminSplatRoute = AdminSplatRouteImport.update({
@@ -35,48 +40,43 @@ const PostsSlugRoute = PostsSlugRouteImport.update({
   path: "/posts/$slug",
   getParentRoute: () => rootRouteImport,
 } as any);
-const ApiCmsSplatRoute = ApiCmsSplatRouteImport.update({
-  id: "/api/cms/$",
-  path: "/api/cms/$",
-  getParentRoute: () => rootRouteImport,
-} as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "/$": typeof SplatRoute;
+  "/_tenon/$": typeof TenonSplatRoute;
   "/admin/$": typeof AdminSplatRoute;
   "/posts/$slug": typeof PostsSlugRoute;
-  "/api/cms/$": typeof ApiCmsSplatRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/$": typeof SplatRoute;
+  "/_tenon/$": typeof TenonSplatRoute;
   "/admin/$": typeof AdminSplatRoute;
   "/posts/$slug": typeof PostsSlugRoute;
-  "/api/cms/$": typeof ApiCmsSplatRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/": typeof IndexRoute;
   "/$": typeof SplatRoute;
+  "/_tenon/$": typeof TenonSplatRoute;
   "/admin/$": typeof AdminSplatRoute;
   "/posts/$slug": typeof PostsSlugRoute;
-  "/api/cms/$": typeof ApiCmsSplatRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/$" | "/admin/$" | "/posts/$slug" | "/api/cms/$";
+  fullPaths: "/" | "/$" | "/_tenon/$" | "/admin/$" | "/posts/$slug";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/$" | "/admin/$" | "/posts/$slug" | "/api/cms/$";
-  id: "__root__" | "/" | "/$" | "/admin/$" | "/posts/$slug" | "/api/cms/$";
+  to: "/" | "/$" | "/_tenon/$" | "/admin/$" | "/posts/$slug";
+  id: "__root__" | "/" | "/$" | "/_tenon/$" | "/admin/$" | "/posts/$slug";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   SplatRoute: typeof SplatRoute;
+  TenonSplatRoute: typeof TenonSplatRoute;
   AdminSplatRoute: typeof AdminSplatRoute;
   PostsSlugRoute: typeof PostsSlugRoute;
-  ApiCmsSplatRoute: typeof ApiCmsSplatRoute;
 }
 
 declare module "@tanstack/react-router" {
@@ -95,6 +95,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SplatRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/_tenon/$": {
+      id: "/_tenon/$";
+      path: "/_tenon/$";
+      fullPath: "/_tenon/$";
+      preLoaderRoute: typeof TenonSplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/admin/$": {
       id: "/admin/$";
       path: "/admin/$";
@@ -109,22 +116,15 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof PostsSlugRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/api/cms/$": {
-      id: "/api/cms/$";
-      path: "/api/cms/$";
-      fullPath: "/api/cms/$";
-      preLoaderRoute: typeof ApiCmsSplatRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  TenonSplatRoute: TenonSplatRoute,
   AdminSplatRoute: AdminSplatRoute,
   PostsSlugRoute: PostsSlugRoute,
-  ApiCmsSplatRoute: ApiCmsSplatRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

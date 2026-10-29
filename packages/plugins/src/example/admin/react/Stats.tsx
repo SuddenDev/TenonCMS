@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { PageContext } from "integral-cms/admin";
-import { API_BASE } from "integral-cms/client";
+import type { PageContext } from "tenoncms/admin";
+import { API_BASE } from "tenoncms/client";
 import type { Stats as StatsData } from "../../types.ts";
 import { stars } from "../utils/stars.ts";
 import { texts } from "../utils/texts.ts";
@@ -13,8 +13,8 @@ const getRandomQuote = async (t: ReturnType<typeof texts>) => {
 };
 
 /** The stats page from its `load` data, with a rating chart and some links. */
-export function Stats({ data, integral }: PageContext<StatsData>) {
-  const t = texts(integral.locale);
+export function Stats({ data, tenon }: PageContext<StatsData>) {
+  const t = texts(tenon.locale);
   const max = Math.max(1, ...data.ratings);
   // The rating whose bar was clicked; clicking it again clears the filter.
   const [rating, setRating] = useState<number>();
@@ -22,7 +22,7 @@ export function Stats({ data, integral }: PageContext<StatsData>) {
   return (
     <div className="ex:mx-auto ex:my-5 ex:max-w-200">
       <p className="ex:mb-4 ex:flex ex:justify-end ex:gap-2">
-        <button className="btn" type="button" onClick={() => integral.reload()}>
+        <button className="btn" type="button" onClick={() => tenon.reload()}>
           {t("refresh")}
         </button>
         <button className="btn" type="button" onClick={() => getRandomQuote(t)}>
@@ -72,7 +72,7 @@ export function Stats({ data, integral }: PageContext<StatsData>) {
           >
             <a
               className="ex:min-w-0 ex:flex-1 ex:truncate ex:underline"
-              href={`${integral.base}/example/quotes/${quote.id}`}
+              href={`${tenon.base}/example/quotes/${quote.id}`}
             >
               {quote.text}
             </a>

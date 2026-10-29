@@ -6,7 +6,7 @@ Add optional server-side email delivery to `defineCms()`. SMTP is the first adap
 
 ## Public API
 
-`email: { adapter, from, templates? }` configures delivery. `integral-cms/email/smtp` exports `smtp(options)`, backed by Nodemailer. Core exports provider-neutral email types. SMTP code is isolated from the root and browser entries.
+`email: { adapter, from, templates? }` configures delivery. `tenoncms/email/smtp` exports `smtp(options)`, backed by Nodemailer. Core exports provider-neutral email types. SMTP code is isolated from the root and browser entries.
 
 `cms.email.send({ to, subject, text?, html?, replyTo? })` sends immediately and awaits the adapter. It is available on instances, session/draft instances and the local API supplied to hooks and plugin routes. Without email configuration it rejects with a configuration error. Messages require a recipient, subject and at least one body. Adapter messages include the configured sender. Adapter errors propagate; delivery has no automatic retries or transaction rollback semantics.
 

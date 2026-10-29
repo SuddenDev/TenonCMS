@@ -34,7 +34,7 @@ async function boot(adminOptions: object, extra: object = {}) {
   const s = setup(cms);
   await s.client.signUp(admin);
   const post = (body: unknown, fetch = s.fetch) =>
-    fetch(`${origin}/api/cms/admin/load`, {
+    fetch(`${origin}/_tenon/admin/load`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: typeof body === "string" ? body : JSON.stringify(body),
@@ -68,7 +68,7 @@ describe("admin loaders: setup", () => {
     const load = vi.fn(() => ({}));
     const { cms } = await boot({ pages: { stats: { mount, load } } });
     const { fetch } = setup(cms);
-    const res = await fetch(`${origin}/api/cms/admin/load`, {
+    const res = await fetch(`${origin}/_tenon/admin/load`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(page()),
@@ -405,7 +405,7 @@ describe("loader results and errors", () => {
       }
       const logged = write.mock.calls.map((c) => String(c[0])).join("");
       expect(logged).toContain("admin page");
-      expect(logged).toContain("integral.config.ts");
+      expect(logged).toContain("tenon.config.ts");
     } finally {
       write.mockRestore();
     }
@@ -476,7 +476,7 @@ describe("perspective and user", () => {
 
   it("reads drafts with a session and the preview cookie", async () => {
     const { post, fetch } = await titled();
-    await fetch(`${origin}/api/cms/preview`, {
+    await fetch(`${origin}/_tenon/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ perspective: "drafts" }),
@@ -490,7 +490,7 @@ describe("perspective and user", () => {
     const draft = await cms.create("posts", { title: "Only draft" }, { draft: true });
     const body = field({ owner: { collection: "posts", id: draft.id } });
     expect((await post(body)).status).toBe(404);
-    await fetch(`${origin}/api/cms/preview`, {
+    await fetch(`${origin}/_tenon/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ perspective: "drafts" }),

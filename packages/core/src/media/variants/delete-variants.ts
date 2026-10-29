@@ -2,7 +2,7 @@ import { consola } from "consola";
 import type { Storage } from "../storage/types.ts";
 import { variantKey, variantsOf } from "./keys.ts";
 
-const log = consola.withTag("integral");
+const log = consola.withTag("tenon");
 
 /** Deletes a file and its variants. A failed delete is logged. */
 export async function deleteWithVariants(storage: Storage, key: string) {

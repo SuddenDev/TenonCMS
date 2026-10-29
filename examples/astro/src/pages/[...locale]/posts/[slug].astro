@@ -1,13 +1,13 @@
 ---
-import { seoMeta, ValidationError } from "integral-cms";
-import { edit } from "integral-cms/preview";
+import { seoMeta, ValidationError } from "tenoncms";
+import { edit } from "tenoncms/preview";
 import Header from "../../../components/Header.astro";
 
 export const prerender = false;
 
 // `[...locale]` is empty for the default locale (`/posts/x`) and the locale code otherwise (`/de/posts/x`).
 // `locals.path` drops a valid prefix only, so `/xx/posts/x` keeps it and is a 404.
-const { integral: cms, locale, path } = Astro.locals;
+const { tenon: cms, locale, path } = Astro.locals;
 const slug = Astro.params.slug!;
 const post =
   path === `/posts/${slug}`

@@ -17,7 +17,7 @@ type Crawl = {
 /**
  * Discovers literal `clientRef()` calls through the static ESM imports of the server configuration, without
  * evaluating it.
- * @param root Project root. Specifiers resolve from its `integral.config.ts`.
+ * @param root Project root. Specifiers resolve from its `tenon.config.ts`.
  * @param entries Files to start from, usually the configuration.
  * @param onVisit Called with every source file that was read, e.g. to watch it.
  * @returns The references by their `clientRef()` specifier, e.g. `./src/admin/color.ts#mountColor`.
@@ -82,9 +82,8 @@ function parse(crawl: Crawl, file: string) {
 async function resolveFiles(refs: Record<string, ClientRef>, root: string, resolver: Resolver) {
   for (const specifier of Object.keys(refs)) {
     const [id, exported = "default"] = specifier.split("#");
-    const file = await resolver(id, resolve(root, "integral.config.ts"));
-    if (!file)
-      throw new Error(`integral-cms: cannot resolve clientRef("${specifier}") from ${root}`);
+    const file = await resolver(id, resolve(root, "tenon.config.ts"));
+    if (!file) throw new Error(`tenoncms: cannot resolve clientRef("${specifier}") from ${root}`);
     refs[specifier] = { ...refs[specifier], file, export: exported };
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "integral-cms-example",
+  "name": "tenoncms-example",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-10-20",
   "compatibility_flags": ["nodejs_compat"],
@@ -21,7 +21,7 @@
   "r2_buckets": [
     {
       "binding": "MEDIA",
-      "bucket_name": "integral-cms-example-media",
+      "bucket_name": "tenoncms-example-media",
     },
   ],
   "images": {

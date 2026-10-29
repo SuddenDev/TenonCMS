@@ -1,7 +1,7 @@
 import { handle } from "@astrojs/cloudflare/handler";
-import { integralObject } from "integral-cms/cloudflare";
-import cms from "../integral.config";
+import { tenonObject } from "tenoncms/cloudflare";
+import cms from "../tenon.config";
 
-export const CmsObject = integralObject(cms);
+export const CmsObject = tenonObject(cms);
 
 export default { fetch: handle } satisfies ExportedHandler<Env>;

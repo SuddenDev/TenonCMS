@@ -8,7 +8,7 @@ export type ImageProvider = {
     src: { key: string; url: string; width: number; height: number },
     modifiers: Modifiers,
   ): { url: string };
-  /** For providers core serves at `/api/cms/media/img`. Reads the original from `storage` and returns the rendered bytes. */
+  /** For providers core serves at `/_tenon/media/img`. Reads the original from `storage` and returns the rendered bytes. */
   render?(
     key: string,
     modifiers: Modifiers,

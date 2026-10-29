@@ -11,6 +11,6 @@ const SPECIFIER = /^[^#]+(?:#[\w$]+)?$/;
  */
 export function clientRef<T = any>(specifier: string): ClientRef<T> {
   if (!specifier || !SPECIFIER.test(specifier))
-    throw new Error("integral-cms: clientRef MUST name a module and an optional export");
+    throw new Error("tenoncms: clientRef MUST name a module and an optional export");
   return { clientRef: specifier };
 }

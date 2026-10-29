@@ -18,23 +18,23 @@ export type Options = AdapterOptions & {
 };
 
 /**
- * Astro integration for integral-cms. Injects `/api/cms`, the admin page and the preview runtime, and sets
- * `Astro.locals.integral` to the CMS instance of the request's user.
- * With the `@astrojs/cloudflare` adapter, the CMS runs in a Durable Object bound as `CMS`: `/api/cms` goes to it, and
- * `Astro.locals.integral` is the HTTP client over it.
+ * Astro integration for tenoncms. Injects `/_tenon`, the admin page and the preview runtime, and sets
+ * `Astro.locals.tenon` to the CMS instance of the request's user.
+ * With the `@astrojs/cloudflare` adapter, the CMS runs in a Durable Object bound as `CMS`: `/_tenon` goes to it, and
+ * `Astro.locals.tenon` is the HTTP client over it.
  * @example
  * // astro.config.mjs
- * integrations: [integralCms({ admin: '/cms' })]
+ * integrations: [tenonCms({ admin: '/cms' })]
  */
-export default function integralCms({
-  entry = "./integral.config.ts",
+export default function tenonCms({
+  entry = "./tenon.config.ts",
   admin = true,
   preview = true,
 }: Options = {}): AstroIntegration {
   let entryPath: string;
   let cloudflare = false;
   return {
-    name: "integral-cms",
+    name: "tenoncms",
     hooks: {
       "astro:config:setup"({
         command,
@@ -65,10 +65,7 @@ export default function integralCms({
 
         if (preview) {
           const options = `{ morph: true, admin: ${JSON.stringify(path ?? false)} }`;
-          injectScript(
-            "page",
-            `import { preview } from 'integral-cms/preview'; preview(${options});`,
-          );
+          injectScript("page", `import { preview } from 'tenoncms/preview'; preview(${options});`);
         }
 
         addMiddleware({
@@ -79,12 +76,12 @@ export default function integralCms({
         updateConfig({
           vite: {
             plugins: [clientReferences(entry)],
-            resolve: { alias: { "#integral/config": entryPath } },
+            resolve: { alias: { "#tenon/config": entryPath } },
             define: faviconDefine(fileURLToPath(config.publicDir)),
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.
             // Dev does not bundle. Keeping core internal there lets Vite reload it when `dist/` changes.
             // Workers have no native bindings and MUST bundle core.
-            ssr: command === "dev" || cloudflare ? {} : { external: ["integral-cms"] },
+            ssr: command === "dev" || cloudflare ? {} : { external: ["tenoncms"] },
           },
         });
       },
@@ -104,21 +101,21 @@ export default function integralCms({
   };
 }
 
-// Types `Astro.locals.integral`, `locale`, `path` and the client's `Register`.
+// Types `Astro.locals.tenon`, `locale`, `path` and the client's `Register`.
 // `export {}` makes it a module, so `declare module` augments the client instead of replacing it.
 function appTypes(module: string, cloudflare: boolean) {
   const cms = `typeof import(${module}).default`;
-  const integral = cloudflare ? `import('integral-cms/client').Client<${cms}>` : cms;
+  const tenon = cloudflare ? `import('tenoncms/client').Client<${cms}>` : cms;
   return `declare global {
   namespace App {
     interface Locals {
-      integral: ${integral}
-      locale: import('integral-cms/client').Locale<typeof import(${module}).default> | undefined
+      tenon: ${tenon}
+      locale: import('tenoncms/client').Locale<typeof import(${module}).default> | undefined
       path: string
     }
   }
 }
-declare module 'integral-cms/client' {
+declare module 'tenoncms/client' {
   interface Register {
     cms: typeof import(${module}).default
   }
@@ -127,10 +124,10 @@ export {}
 `;
 }
 
-// Types the `#integral/config` alias.
+// Types the `#tenon/config` alias.
 // No `export {}`: the declaration MUST stay ambient to declare the alias.
 function configTypes(module: string) {
-  return `declare module '#integral/config' {
+  return `declare module '#tenon/config' {
   const cms: typeof import(${module}).default
   export default cms
 }

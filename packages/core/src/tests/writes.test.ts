@@ -30,7 +30,7 @@ describe("writes", () => {
   it("reject cross-origin form posts", async () => {
     await client.signUp(admin);
     const res = await cms.fetch(
-      new Request(`${origin}/api/cms/collections/posts`, {
+      new Request(`${origin}/_tenon/collections/posts`, {
         method: "POST",
         headers: {
           origin: "http://evil.test",

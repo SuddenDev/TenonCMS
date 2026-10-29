@@ -19,21 +19,21 @@ it("reads identifier and literal names", () => {
   expect(nameOf(undefined)).toBeUndefined();
 });
 
-it("reads import bindings and the names that integral-cms/admin was imported under", () => {
+it("reads import bindings and the names that tenoncms/admin was imported under", () => {
   const info = describe(`
-    import { clientRef as ref, other } from 'integral-cms/admin';
-    import * as admin from 'integral-cms/admin';
+    import { clientRef as ref, other } from 'tenoncms/admin';
+    import * as admin from 'tenoncms/admin';
     import plugin, * as all from './plugin.ts';
     import { clientRef } from './not-admin.ts';
   `);
   expect([...info.clientRefNames]).toEqual(["ref"]);
   expect([...info.adminNamespaces]).toEqual(["admin"]);
-  expect(info.bindings.get("ref")).toEqual({ source: "integral-cms/admin", exported: "clientRef" });
+  expect(info.bindings.get("ref")).toEqual({ source: "tenoncms/admin", exported: "clientRef" });
   expect(info.bindings.get("plugin")).toEqual({ source: "./plugin.ts", exported: "default" });
   expect(info.bindings.get("all")).toEqual({ source: "./plugin.ts", exported: "*" });
   expect(info.sources).toEqual([
-    "integral-cms/admin",
-    "integral-cms/admin",
+    "tenoncms/admin",
+    "tenoncms/admin",
     "./plugin.ts",
     "./not-admin.ts",
   ]);

@@ -170,7 +170,7 @@ describe("auth", () => {
     const cms = defineCms({ ...base, auth: { plugins: [adminPlugin({ defaultRole: "admin" })] } });
     const { client, fetch } = setup(cms);
     await client.signUp(admin);
-    const res = await fetch(`${origin}/api/cms/auth/admin/create-user`, {
+    const res = await fetch(`${origin}/_tenon/auth/admin/create-user`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email: "c@d.co", password: "password123", name: "C" }),
@@ -187,7 +187,7 @@ describe("auth", () => {
     const cms = defineCms({ ...base, auth: { plugins: [anonymous()] } });
     await setup(cms).client.signUp(admin);
     const res = await cms.fetch(
-      new Request(`${origin}/api/cms/auth/sign-in/anonymous`, {
+      new Request(`${origin}/_tenon/auth/sign-in/anonymous`, {
         method: "POST",
         headers: { origin },
       }),
@@ -224,7 +224,7 @@ describe("sessions", () => {
     const { client, fetch } = setup(cms);
     await client.signUp(admin);
     const lookups = vi.spyOn((await cms.auth()).api, "getSession");
-    const at = (path: string) => fetch(`${origin}/api/cms${path}`);
+    const at = (path: string) => fetch(`${origin}/_tenon${path}`);
     const load = { kind: "page", key: "stats", params: {}, query: {} };
 
     for (const send of [

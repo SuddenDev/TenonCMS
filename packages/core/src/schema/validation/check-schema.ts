@@ -76,7 +76,7 @@ export function checkSchema(
 }
 
 function fail(message: string): never {
-  throw new Error(`integral-cms: ${message}`);
+  throw new Error(`tenoncms: ${message}`);
 }
 
 // Collections first, then globals.

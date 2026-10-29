@@ -28,7 +28,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 
 - Auth is better-auth. The host's `auth` options pass through. Core owns the database, base path and secret.
 - The first user becomes `admin`. After that, only an admin session can create users. Sign-up is open only during setup.
-- A readable `integral-session` cookie mirrors the session cookie. It grants nothing; it only lets the site decide whether to ask for the admin bar.
+- A readable `tenon-session` cookie mirrors the session cookie. It grants nothing; it only lets the site decide whether to ask for the admin bar.
 - Passkeys are off unless the host adds `passkey()` from `@better-auth/passkey`. Rate limits live in the database unless the host sets `rateLimit.storage`. Users have `language` and `timezone` fields.
 - `admin` and `editor` are built-in roles. Hosts add roles with `roles`. A missing role counts as `editor`.
 - The last active admin cannot be demoted.

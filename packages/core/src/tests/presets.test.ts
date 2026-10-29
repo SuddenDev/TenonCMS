@@ -186,7 +186,7 @@ describe("page preset", () => {
 
   it("reads a page by path over HTTP", async () => {
     const { team } = await tree();
-    const res = await fetch(`${origin}/api/cms/collections/pages?path=/about/team`);
+    const res = await fetch(`${origin}/_tenon/collections/pages?path=/about/team`);
     expect((await res.json()).map((p: { id: string }) => p.id)).toEqual([team.id]);
   });
 });

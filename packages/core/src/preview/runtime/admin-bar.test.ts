@@ -15,9 +15,9 @@ const mountAdminBar = vi.fn((_el: ShadowRoot, ctx: AdminBarContext) => {
   shown = ctx;
   return handle;
 });
-vi.mock("integral-cms/admin/bar", () => ({ mountAdminBar }));
+vi.mock("tenoncms/admin/bar", () => ({ mountAdminBar }));
 const refs = vi.hoisted(() => ({ registry: {} as Record<string, () => Promise<unknown>> }));
-vi.mock("#integral/client-registry", () => ({ default: refs.registry }));
+vi.mock("#tenon/client-registry", () => ({ default: refs.registry }));
 
 type Answer = { status?: number; body?: unknown };
 type Bar = (query: URLSearchParams) => Answer | Promise<Answer>;
@@ -43,7 +43,7 @@ function serve() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string, init?: RequestInit) => {
-      if (input.startsWith("/api/cms/admin-bar")) {
+      if (input.startsWith("/_tenon/admin-bar")) {
         const query = new URL(input, location.origin).searchParams;
         barCalls.push(query);
         return respond(await bar(query));
@@ -64,14 +64,14 @@ const start = async (mode: "site" | "preview-tab" = "site", exit?: () => void) =
 const shownItem = (id: string) => shown.items.find((i) => i.id === id)!;
 const tick = (ms = 5) => new Promise((r) => setTimeout(r, ms));
 const hint = () => {
-  document.cookie = "integral-session=1; path=/";
+  document.cookie = "tenon-session=1; path=/";
 };
 
 beforeEach(() => {
   vi.resetModules();
   for (const key of Object.keys(refs.registry)) delete refs.registry[key];
-  document.cookie = "integral-session=; max-age=0; path=/";
-  document.cookie = "integral-preview=; max-age=0; path=/";
+  document.cookie = "tenon-session=; max-age=0; path=/";
+  document.cookie = "tenon-preview=; max-age=0; path=/";
   document.body.innerHTML = "";
   history.replaceState(null, "", "/posts/1?x=2#top");
   barCalls = [];
@@ -97,7 +97,7 @@ describe("loading", () => {
     await start();
     await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
     expect(fetch).toHaveBeenCalledWith(
-      "/api/cms/admin-bar?url=%2Fposts%2F1%3Fx%3D2&mode=site&locale=en",
+      "/_tenon/admin-bar?url=%2Fposts%2F1%3Fx%3D2&mode=site&locale=en",
       { credentials: "same-origin" },
     );
     expect(shown.items).toEqual([
@@ -122,7 +122,7 @@ describe("loading", () => {
     await vi.waitFor(() => expect(onSessionEnd).toHaveBeenCalled());
     expect(code).not.toHaveBeenCalled();
     expect(mountAdminBar).not.toHaveBeenCalled();
-    expect(document.cookie).not.toContain("integral-session");
+    expect(document.cookie).not.toContain("tenon-session");
   });
 
   it("serves a native item with children as it is", async () => {
@@ -225,7 +225,7 @@ describe("click items", () => {
       perspective: "published",
       edit: false,
       data: { n: 1 },
-      integral: { reload: expect.any(Function), locale: "en" },
+      tenon: { reload: expect.any(Function), locale: "en" },
     });
   });
 
@@ -284,7 +284,7 @@ describe("mount items", () => {
     expect(mount.mock.calls[0]![1]).toMatchObject({
       mode: "site",
       data: { rows: [1] },
-      integral: { reload: expect.any(Function), locale: "en" },
+      tenon: { reload: expect.any(Function), locale: "en" },
     });
 
     result.update({ ...shown, perspective: "drafts" });
@@ -318,7 +318,7 @@ describe("mount items", () => {
       update(c: AdminBarContext): void;
     };
     await vi.waitFor(() => expect(mount).toHaveBeenCalled());
-    await mount.mock.calls[0]![1].integral.reload();
+    await mount.mock.calls[0]![1].tenon.reload();
     result.update(shown);
     expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ data: { rows: [1, 2] } }));
     rows = [];
@@ -371,7 +371,7 @@ describe("reloading one item", () => {
   const open = async () => {
     const running = await start();
     await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
-    click.mockImplementation((ctx) => (reload = ctx.integral.reload));
+    click.mockImplementation((ctx) => (reload = ctx.tenon.reload));
     shownItem("a").onClick!();
     await vi.waitFor(() => expect(click).toHaveBeenCalled());
     return running;
@@ -390,7 +390,7 @@ describe("reloading one item", () => {
     await open();
     await reload();
     expect(loadCalls).toEqual([{ kind: "bar-item", id: "a", url: "/posts/1?x=2", locale: "en" }]);
-    expect(fetch).toHaveBeenLastCalledWith("/api/cms/admin/load", {
+    expect(fetch).toHaveBeenLastCalledWith("/_tenon/admin/load", {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
@@ -422,7 +422,7 @@ describe("reloading one item", () => {
     load = ({ id }) => ({ body: { item: stub(id, { onClick: ref("./c#click"), data: "new" }) } });
     await start();
     await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
-    click.mockImplementation((ctx) => (reload = ctx.integral.reload));
+    click.mockImplementation((ctx) => (reload = ctx.tenon.reload));
     shownItem("menu").children![0]!.onClick!();
     await vi.waitFor(() => expect(click).toHaveBeenCalled());
     await reload();
@@ -561,7 +561,7 @@ describe("refreshing", () => {
     window.dispatchEvent(new Event("focus"));
     await vi.waitFor(() => expect(document.querySelector("[data-cms-bar]")).toBeNull());
     expect(onSessionEnd).toHaveBeenCalledOnce();
-    expect(document.cookie).not.toContain("integral-session");
+    expect(document.cookie).not.toContain("tenon-session");
     history.pushState(null, "", "/after");
     window.dispatchEvent(new PopStateEvent("popstate"));
     await tick(10);

@@ -1,4 +1,4 @@
-import type { RichtextBrowserExtension } from "integral-cms/richtext";
+import type { RichtextBrowserExtension } from "tenoncms/richtext";
 import { Notice } from "../notice.ts";
 
 /** Browser implementation of the example plugin's rich text feature. */

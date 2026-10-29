@@ -6,7 +6,7 @@ How the parts fit together. This page names modules, not files, because file nam
 
 | Package            | What it is                                                              |
 | ------------------ | ----------------------------------------------------------------------- |
-| `packages/core`    | Published as `integral-cms`. Schema, local API, HTTP app, adapters.     |
+| `packages/core`    | Published as `tenoncms`. Schema, local API, HTTP app, adapters.         |
 | `packages/admin`   | The Vue admin. Private. Built as a library into core's `dist/admin`.    |
 | `packages/plugins` | The bundled plugins (`redirects`, `example`). Private. Built into core. |
 | `examples/*`       | One app per supported setup. See [examples](examples.md).               |

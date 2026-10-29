@@ -9,11 +9,11 @@ import { adminPath } from "../admin/path.ts";
 import type { AdminOption } from "../admin/types.ts";
 
 const adminEntry = fileURLToPath(new URL("../../admin/entry.ts", import.meta.url));
-const ADMIN_HTML = "#integral/admin-html";
-const ADMIN_HTML_VIRTUAL = "\0integral-admin-html";
+const ADMIN_HTML = "#tenon/admin-html";
+const ADMIN_HTML_VIRTUAL = "\0tenon-admin-html";
 
-/** Options of `integralAdmin()`. */
-export type IntegralAdminOptions = {
+/** Options of `tenonAdmin()`. */
+export type TenonAdminOptions = {
   /** Server configuration to scan for browser references. */
   entry?: string;
   /** Path of the admin, e.g. `/cms`. Defaults to `/admin`. The host's server route MUST match it. */
@@ -22,35 +22,35 @@ export type IntegralAdminOptions = {
 
 /**
  * Vite plugin that adds the admin to Vite frameworks without an adapter, e.g. TanStack Start.
- * It builds the admin as a second client entry, exposes its page as `#integral/admin-html` and keeps core
+ * It builds the admin as a second client entry, exposes its page as `#tenon/admin-html` and keeps core
  * external in SSR builds. Serve the page from a server route for `/admin` and `/admin/*`, e.g.
  * `src/routes/cms.$.ts` for `/cms`.
  * @example
  * // vite.config.ts
- * plugins: [tanstackStart(), integralAdmin()]
+ * plugins: [tanstackStart(), tenonAdmin()]
  *
  * // src/routes/admin.$.ts
- * import html from '#integral/admin-html'
+ * import html from '#tenon/admin-html'
  * GET: () => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } })
  */
-export function integralAdmin({
+export function tenonAdmin({
   path: option = true,
-  entry: configEntry = "./integral.config.ts",
-}: IntegralAdminOptions = {}): Plugin[] {
+  entry: configEntry = "./tenon.config.ts",
+}: TenonAdminOptions = {}): Plugin[] {
   const path = adminPath(option)!;
   let server: ViteDevServer | undefined;
   let html = "";
   return [
     clientReferences(configEntry),
     {
-      name: "integral-cms:admin",
+      name: "tenoncms:admin",
 
       config: (config, { command }) => {
         const root = resolve(config.root ?? process.cwd());
         return {
           define: faviconDefine(resolve(root, config.publicDir || "public")),
           // Bundling core breaks libsql's native binding. Dev does not bundle, so Vite reloads core when `dist/` changes.
-          ssr: command === "build" ? { external: ["integral-cms"] } : {},
+          ssr: command === "build" ? { external: ["tenoncms"] } : {},
         };
       },
 

@@ -8,12 +8,12 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "paths": {
-      "integral-cms": ["./src/index.ts"],
-      "integral-cms/richtext": ["./src/richtext/index.ts"],
-      "integral-cms/cloudflare": ["./src/integrations/cloudflare/index.ts"],
-      "integral-cms/admin": ["./src/admin/config.ts"],
-      "integral-cms/media/default": ["./src/media/default.ts"],
-      "integral-cms/admin/bar": ["./src/admin/bar.d.ts"]
+      "tenoncms": ["./src/index.ts"],
+      "tenoncms/richtext": ["./src/richtext/index.ts"],
+      "tenoncms/cloudflare": ["./src/integrations/cloudflare/index.ts"],
+      "tenoncms/admin": ["./src/admin/config.ts"],
+      "tenoncms/media/default": ["./src/media/default.ts"],
+      "tenoncms/admin/bar": ["./src/admin/bar.d.ts"]
     }
   },
   "include": ["src", "env.d.ts"],

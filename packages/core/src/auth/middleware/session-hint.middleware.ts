@@ -5,7 +5,7 @@ import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
 
 /** A cookie page code can read: `1` while the browser holds a session cookie. It grants nothing. */
-export const SESSION_HINT = "integral-session";
+export const SESSION_HINT = "tenon-session";
 
 /**
  * Mirrors better-auth's session cookie in each auth response: a set session cookie sets the hint, a cleared one

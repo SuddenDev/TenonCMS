@@ -72,7 +72,7 @@ describe("cms.media.upload", () => {
       key: "a/b/data.bin",
       mimeType: "application/octet-stream",
       size: 3000,
-      url: "/api/cms/media/files/a/b/data.bin",
+      url: "/_tenon/media/files/a/b/data.bin",
     });
     expect(new Uint8Array(readFileSync(join(dir, "a/b/data.bin")))).toEqual(data);
     expect(await cms.findById("media", doc.id)).toMatchObject({ key: "a/b/data.bin" });
@@ -233,7 +233,7 @@ describe("upload routes", () => {
     expect(doc).toMatchObject({
       key: "up/a b.bin",
       size: 3000,
-      url: "/api/cms/media/files/up/a%20b.bin",
+      url: "/_tenon/media/files/up/a%20b.bin",
     });
     expect(progress).toHaveLength(3);
     expect(progress).toEqual([...progress].sort((a, b) => a - b));
@@ -247,14 +247,14 @@ describe("upload routes", () => {
     await m.client.signUp(admin);
     const { id, parts } = await (await start(m.fetchWithSession)).json();
     expect(parts.map((p: { n: number; url: string }) => p.url)).toEqual(
-      [1, 2, 3].map((n) => `/api/cms/media/uploads/${id}/parts/${n}`),
+      [1, 2, 3].map((n) => `/_tenon/media/uploads/${id}/parts/${n}`),
     );
     const auth = await m.cms.auth();
     await auth.api.signUpEmail({ body: { name: "B", email: "b@b.co", password: "password123" } });
     const other = setup(m.cms);
     await other.client.signIn({ email: "b@b.co", password: "password123" });
     const otherFetch = (path: string, init?: RequestInit) =>
-      other.fetch(`http://localhost/api/cms${path}`, init);
+      other.fetch(`http://localhost/_tenon${path}`, init);
     expect((await put(otherFetch, id, 1, bytes(1024))).status).toBe(404);
     expect((await put(m.fetchWithSession, id, 1, bytes(1024))).status).toBe(200);
   });
@@ -339,7 +339,7 @@ describe("upload routes", () => {
   it("has no media routes with media: false", async () => {
     const { client, fetch } = setup(defineCms({ ...base, media: false }));
     await client.signUp(admin);
-    const at = (path: string, init?: RequestInit) => fetch(`http://localhost/api/cms${path}`, init);
+    const at = (path: string, init?: RequestInit) => fetch(`http://localhost/_tenon${path}`, init);
     expect((await at("/media/uploads", json({}))).status).toBe(404);
     expect((await at("/media/folders")).status).toBe(404);
   });
@@ -404,7 +404,7 @@ describe("image and file fields", () => {
     const read = await cms.findById("posts", post.id);
     expect(read?.hero).toMatchObject({
       id: image.id,
-      url: "/api/cms/media/files/hero.png",
+      url: "/_tenon/media/files/hero.png",
       width: 300,
       height: 200,
       src: "/img/f_webp&q_85&w_200/hero.png",
@@ -414,7 +414,7 @@ describe("image and file fields", () => {
       src: "/img/f_webp&q_50&w_150/hero.png",
       srcset: "/img/f_webp&q_50&w_150/hero.png 150w",
     });
-    expect(read?.attachment).toMatchObject({ url: "/api/cms/media/files/a.pdf" });
+    expect(read?.attachment).toMatchObject({ url: "/_tenon/media/files/a.pdf" });
     expect(read?.attachment).not.toHaveProperty("src");
   });
 
@@ -430,7 +430,7 @@ describe("image and file fields", () => {
       await client.findById("posts", post.id, { populate: { hero: true }, select: { hero: true } }),
     ).toEqual({
       id: post.id,
-      hero: expect.objectContaining({ url: "/api/cms/media/files/hero.png" }),
+      hero: expect.objectContaining({ url: "/_tenon/media/files/hero.png" }),
     });
   });
 
@@ -441,7 +441,7 @@ describe("image and file fields", () => {
       srcset: expect.stringContaining("100w"),
       url: expect.any(String),
     });
-    expect(pdf).toMatchObject({ url: "/api/cms/media/files/a.pdf" });
+    expect(pdf).toMatchObject({ url: "/_tenon/media/files/a.pdf" });
     expect((await client.find("media"))[1]).toMatchObject({
       srcset: expect.stringContaining("100w"),
     });
@@ -489,7 +489,7 @@ describe("serving", () => {
       filename: "x.html",
       mimeType: "text/html",
     });
-    const res = await m.cms.fetch(new Request("http://localhost/api/cms/media/files/x.html"));
+    const res = await m.cms.fetch(new Request("http://localhost/_tenon/media/files/x.html"));
     expect(res.status).toBe(200);
     expect(res.headers.get("content-security-policy")).toContain("sandbox");
   });
@@ -500,7 +500,7 @@ describe("serving", () => {
     const m = withMedia({ images: { provider, sizes: [100] } });
     await m.cms.media.upload(png300, { filename: "x.png", mimeType: "image/png" });
     for (const path of ["/media/files/x.png", "/media/img/w_100&f_webp&q_85/x.png"]) {
-      const res = await m.cms.fetch(new Request(`http://localhost/api/cms${path}`));
+      const res = await m.cms.fetch(new Request(`http://localhost/_tenon${path}`));
       expect(res.headers.get("cache-control")).toBe("public, max-age=300, s-maxage=3600");
     }
   });
@@ -508,7 +508,7 @@ describe("serving", () => {
   it("keeps files behind a read rule out of shared caches", async () => {
     const m = withMedia({ access: { read: () => true } });
     await m.cms.media.upload(text("x"), { filename: "x.txt", mimeType: "text/plain" });
-    const res = await m.cms.fetch(new Request("http://localhost/api/cms/media/files/x.txt"));
+    const res = await m.cms.fetch(new Request("http://localhost/_tenon/media/files/x.txt"));
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
   });
@@ -636,7 +636,7 @@ describe("moves and deletes", () => {
     const doc = await upload(m.cms, "a.png", "x");
     await m.fetchWithSession("/media/img/f_webp&q_85&w_100/x/a.png");
     const moved = await m.cms.media.update(doc.id, { folder: "y/z", filename: "b.png" });
-    expect(moved).toMatchObject({ key: "y/z/b.png", url: "/api/cms/media/files/y/z/b.png" });
+    expect(moved).toMatchObject({ key: "y/z/b.png", url: "/_tenon/media/files/y/z/b.png" });
     expect(files(m.dir).sort()).toEqual([".variants/y/z/b.png/f_webp&q_85&w_100", "y/z/b.png"]);
     expect(calls).toEqual(["before:x/a.png>y/z/b.png", "after:x/a.png>y/z/b.png:y/z/b.png"]);
   });
@@ -772,7 +772,7 @@ describe("default media", () => {
     const { defaultMedia } = await import("../media/default.ts");
     const { createMediaCore } = await import("../media/runtime/create-media-core.ts");
     const media = createMediaCore(defaultMedia(false)!, { collections: {}, globals: {} });
-    expect(media.storage.url("a.png")).toBe("/api/cms/media/files/a.png");
+    expect(media.storage.url("a.png")).toBe("/_tenon/media/files/a.png");
     const key = `test-${crypto.randomUUID()}.txt`;
     await media.storage.put(key, text("x"), "text/plain");
     expect(existsSync(join(process.cwd(), ".uploads", key))).toBe(true);

@@ -11,16 +11,16 @@
     "jsx": "react-jsx",
     "types": ["vite/client"],
     "paths": {
-      "integral-cms": ["../core/src/index.ts"],
-      "integral-cms/richtext": ["../core/src/richtext/index.ts"],
-      "integral-cms/admin": ["../core/src/admin/config.ts"],
-      "integral-cms/client": ["../core/src/client/index.ts"],
-      "integral-cms/libsql": ["../core/src/integrations/libsql/index.ts"],
-      "integral-cms/presets": ["../core/src/presets/index.ts"],
-      "integral-cms/media/default": ["../core/src/media/default.ts"],
-      "integral-cms/admin/bar": ["../core/src/admin/bar.d.ts"],
-      "integral-cms/admin/vue": ["../core/src/admin/vue/vue.ts"],
-      "integral-cms/admin/react": ["../core/src/admin/react/react.ts"]
+      "tenoncms": ["../core/src/index.ts"],
+      "tenoncms/richtext": ["../core/src/richtext/index.ts"],
+      "tenoncms/admin": ["../core/src/admin/config.ts"],
+      "tenoncms/client": ["../core/src/client/index.ts"],
+      "tenoncms/libsql": ["../core/src/integrations/libsql/index.ts"],
+      "tenoncms/presets": ["../core/src/presets/index.ts"],
+      "tenoncms/media/default": ["../core/src/media/default.ts"],
+      "tenoncms/admin/bar": ["../core/src/admin/bar.d.ts"],
+      "tenoncms/admin/vue": ["../core/src/admin/vue/vue.ts"],
+      "tenoncms/admin/react": ["../core/src/admin/react/react.ts"]
     }
   },
   "include": ["src", "*.config.ts"]

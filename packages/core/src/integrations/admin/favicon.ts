@@ -9,5 +9,5 @@ export function findFavicon(publicDir: string) {
 
 /** Vite `define` that hands the detected favicon to the admin's `entry.ts`. */
 export function faviconDefine(publicDir: string) {
-  return { __INTEGRAL_FAVICON__: JSON.stringify(findFavicon(publicDir)) };
+  return { __TENON_FAVICON__: JSON.stringify(findFavicon(publicDir)) };
 }

@@ -1,13 +1,13 @@
 # Pages and SEO
 
-`integral-cms/presets` gives you pages with nested URLs and SEO fields. They are plain field objects and named hook records. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
+`tenoncms/presets` gives you pages with nested URLs and SEO fields. They are plain field objects and named hook records. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
 
 ## The page preset
 
 ```ts
 // collections/pages.ts
-import { defineCollection } from "integral-cms";
-import { page, seo } from "integral-cms/presets";
+import { defineCollection } from "tenoncms";
+import { page, seo } from "tenoncms/presets";
 
 export const pages = defineCollection({
   label: "Pages",
@@ -84,13 +84,13 @@ const doc = await cms.findOne("pages", {
   where: { path: "/about/team" },
   populate: { seo: { image: true } },
 });
-// HTTP: GET /api/cms/collections/pages?path=/about/team
+// HTTP: GET /_tenon/collections/pages?path=/about/team
 ```
 
 Each example has a catch-all route that does this. Static routes win over it, so a CMS page at `/` never shows.
 
-- Astro: `src/pages/[...path].astro` with `Astro.locals.integral.findOne` and `select`
-- Nuxt: `app/pages/[...path].vue` with `useIntegral().findOne` and `useSeoMeta`
+- Astro: `src/pages/[...path].astro` with `Astro.locals.tenon.findOne` and `select`
+- Nuxt: `app/pages/[...path].vue` with `useTenon().findOne` and `useSeoMeta`
 - TanStack Start: `src/routes/$.tsx` with a server function and `head`
 
 ## SEO tags
@@ -98,7 +98,7 @@ Each example has a catch-all route that does this. Static routes win over it, so
 Build `<head>` with `seoMeta()`:
 
 ```ts
-import { seoMeta } from "integral-cms";
+import { seoMeta } from "tenoncms";
 
 const [general, seo] = await Promise.all([cms.getGlobal("general"), cms.getGlobal("seo")]);
 const doc = await cms.findOne("pages", {
@@ -123,7 +123,7 @@ The second argument is optional. It takes the [settings](#settings) globals `gen
 | `image`        | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.    |
 | `verification` | `{ name, content }` meta tags for the filled `google` and `bing` codes.                                                             |
 
-`seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `integral-cms`. In browser code, import them from `integral-cms/client`, which pulls no server code.
+`seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `tenoncms`. In browser code, import them from `tenoncms/client`, which pulls no server code.
 
 ## Breadcrumbs
 
@@ -131,9 +131,9 @@ The second argument is optional. It takes the [settings](#settings) globals `gen
 
 ```astro
 ---
-import { breadcrumbs } from "integral-cms";
+import { breadcrumbs } from "tenoncms";
 
-const page = await Astro.locals.integral.findOne("pages", {
+const page = await Astro.locals.tenon.findOne("pages", {
   where: { path },
   populate: { parent: { parent: true } },
   select: {
@@ -178,7 +178,7 @@ They appear on the admin's Settings page, not as menu entries, and read like any
 The `settings` option drops or replaces them:
 
 ```ts
-import { settings } from "integral-cms/presets";
+import { settings } from "tenoncms/presets";
 
 defineCms({
   settings: {

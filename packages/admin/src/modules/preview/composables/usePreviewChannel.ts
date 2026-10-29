@@ -57,7 +57,7 @@ export function usePreviewChannel(receive: (message: PageMessage) => void) {
   const onMessage = (e: MessageEvent<PageMessage>) => {
     if (e.origin !== origin() || !e.source || !isPreviewMessage(e.data)) return;
     const frame = document.querySelector<HTMLIFrameElement>(
-      'iframe[name="integral-preview"]',
+      'iframe[name="tenon-preview"]',
     )?.contentWindow;
     if (e.source !== frame && !tabs.has(e.source as Window)) return;
     if (e.data?.type === "ready") pages.add(e.source as Window);

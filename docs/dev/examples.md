@@ -1,13 +1,13 @@
 # Examples
 
-Every example has its instance in `integral.config.ts` at the project root and its collections in `collections/`. Each registers `ExamplePlugin()`: Astro and standalone use the plain DOM renderer, Nuxt Vue and TanStack Start React. All use the pages preset, and the site examples have a catch-all route that reads a page by `path` and renders `seoMeta()`.
+Every example has its instance in `tenon.config.ts` at the project root and its collections in `collections/`. Each registers `ExamplePlugin()`: Astro and standalone use the plain DOM renderer, Nuxt Vue and TanStack Start React. All use the pages preset, and the site examples have a catch-all route that reads a page by `path` and renders `seoMeta()`.
 
 | Example                   | What it shows                                                                                                                                                                                                                   |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `examples/astro`          | The fullest one. Server-rendered pages through `Astro.locals`, localization (`en`, `de`), a kitchen-sink global with every field type, access rules, a custom role, `RedirectsPlugin()`, media, blocks, live preview, passkeys. |
 | `examples/astro-pglite`   | Astro on Node with PGlite: Postgres in WebAssembly, stored in `./.data/cms` (`DATABASE_DIR`). Posts, authors and media, like the Cloudflare example. Port 4322.                                                                 |
-| `examples/nuxt`           | `useIntegral()` composables, localization with the same setup as Astro, runtime config for secrets, Vue admin renderer.                                                                                                         |
-| `examples/tanstack-start` | No adapter package: `integralAdmin()`, a server route for the API and one for the admin, server functions in loaders, React admin renderer.                                                                                     |
+| `examples/nuxt`           | `useTenon()` composables, localization with the same setup as Astro, runtime config for secrets, Vue admin renderer.                                                                                                            |
+| `examples/tanstack-start` | No adapter package: `tenonAdmin()`, a server route for the API and one for the admin, server functions in loaders, React admin renderer.                                                                                        |
 | `examples/standalone`     | Headless: no site. API and admin on Vite and Nitro. Has media with `ipx()` and an `array` field.                                                                                                                                |
 | `examples/cloudflare`     | Astro on Cloudflare: the CMS in a Durable Object, pages read through the client over it. Posts, authors, media in R2 with Cloudflare Images. Secret in `.dev.vars` (copy `.dev.vars.example`).                                  |
 | `examples/vercel`         | Astro on Vercel Node functions: Postgres through `postgres()` with `attachDatabasePool()`, media in a private Neon bucket through `s3()` with keys. Port 4323.                                                                  |
@@ -34,7 +34,7 @@ Every example has its instance in `integral.config.ts` at the project root and i
 - Set up Neon as in the [guide](../guide/frameworks.md#with-neon): the pooled `DATABASE_URL`, a private bucket and its S3 variables (`AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET`), and `CMS_SECRET`. The same variables in `.env` work locally.
 - Vercel allows the `AWS_*` key names and injects unusable ones when they are unset, so all of them MUST be set.
 - `site` stays unset: better-auth reads the base URL from the request, so preview URLs work. Passkeys bind to the host they were made on.
-- `astro build` writes `.vercel/output`. The function (2026-10-29): 39 MB, with `integral-cms`, `kysely`, `pg` and `sharp` traced by nft. No libsql.
+- `astro build` writes `.vercel/output`. The function (2026-10-29): 39 MB, with `tenoncms`, `kysely`, `pg` and `sharp` traced by nft. No libsql.
 - Smoke test without Vercel: a temp Postgres as `DATABASE_URL` and dummy S3 variables; everything except uploads works. With a real bucket, run `s3.live.test.ts` against it too (`S3_TEST_*` variables).
 - Neon checked on 2026-10-29: `s3.live.test.ts` passes, and an upload through presigned parts, the file and a variant served by core work.
 

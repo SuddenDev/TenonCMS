@@ -4,7 +4,7 @@ This module defines collections and handles document operations. Local API metho
 
 ## Follow a create
 
-`POST /api/cms/collections/posts` flows through:
+`POST /_tenon/collections/posts` flows through:
 
 `endpoints/create.endpoint.ts` → `operations/local/create.local.ts` → `operations/create.operation.ts` → `content/writes/write-document.ts`
 

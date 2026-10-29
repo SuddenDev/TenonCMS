@@ -42,7 +42,7 @@ The components render Tiptap JSON as an unstyled `<div>`, on the server and in t
 
 ```astro
 ---
-import Richtext from "integral-cms/richtext/astro";
+import Richtext from "tenoncms/richtext/astro";
 ---
 
 <Richtext content={post.body} class="prose" />
@@ -50,7 +50,7 @@ import Richtext from "integral-cms/richtext/astro";
 
 ```vue
 <script setup lang="ts">
-import { Richtext } from "integral-cms/richtext/vue";
+import { Richtext } from "tenoncms/richtext/vue";
 </script>
 
 <template>
@@ -59,14 +59,14 @@ import { Richtext } from "integral-cms/richtext/vue";
 ```
 
 ```tsx
-import { Richtext } from "integral-cms/richtext/react";
+import { Richtext } from "tenoncms/richtext/react";
 
 <Richtext content={post.body} className="prose" />;
 ```
 
 - `content` can be `null` or `undefined`. Pass populated content to get current link and image URLs; the components fetch nothing.
 - `extensions` adds renderers for custom features, keyed by feature name.
-- `renderRichtext(content, extensions?)` from `integral-cms/richtext` returns the same HTML for any other template. It escapes text, checks URLs, and rejects unsupported content instead of dropping it.
+- `renderRichtext(content, extensions?)` from `tenoncms/richtext` returns the same HTML for any other template. It escapes text, checks URLs, and rejects unsupported content instead of dropping it.
 
 ## Add features from a plugin
 

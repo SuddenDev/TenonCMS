@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { CMS_SECRET, DATABASE_DIR } from "astro:env/server";
-import { defineCms } from "integral-cms";
-import { pglite } from "integral-cms/pglite";
+import { defineCms } from "tenoncms";
+import { pglite } from "tenoncms/pglite";
 
 export default defineCms({
   database: pglite(new PGlite(DATABASE_DIR)),

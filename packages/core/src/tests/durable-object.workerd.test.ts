@@ -147,7 +147,7 @@ describe("over HTTP through the Worker", () => {
     });
     const token = new URL((invite as any).link).searchParams.get("token");
     jar.clear();
-    const accepted = await fetch("http://localhost/api/cms/invites/accept", {
+    const accepted = await fetch("http://localhost/_tenon/invites/accept", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token, name: "Ed", password: "password123" }),

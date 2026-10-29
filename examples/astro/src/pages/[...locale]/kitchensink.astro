@@ -1,12 +1,12 @@
 ---
-import { edit } from "integral-cms/preview";
-import Richtext from "integral-cms/richtext/astro";
+import { edit } from "tenoncms/preview";
+import Richtext from "tenoncms/richtext/astro";
 import Header from "../../components/Header.astro";
 
 export const prerender = false;
 
 // `/kitchensink` and `/de/kitchensink`. `locals.path` keeps an unknown prefix, so `/xx/kitchensink` is a 404.
-const { integral: cms, locale, path } = Astro.locals;
+const { tenon: cms, locale, path } = Astro.locals;
 if (path !== "/kitchensink") return new Response("Not found", { status: 404 });
 const sink = await cms.getGlobal("kitchenSink", { locale });
 const at = (field: string) => edit("kitchenSink", null, field);

@@ -9,7 +9,7 @@ afterEach(() => {
 });
 
 const readOnlyCwd = () => {
-  const dir = mkdtempSync(join(tmpdir(), "integral-readonly-"));
+  const dir = mkdtempSync(join(tmpdir(), "tenon-readonly-"));
   chmodSync(dir, 0o555);
   vi.spyOn(process, "cwd").mockReturnValue(dir);
 };

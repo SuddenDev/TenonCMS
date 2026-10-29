@@ -7,15 +7,15 @@ const core = (path: string) => fileURLToPath(new URL(`../core/src/${path}`, impo
 export default defineConfig({
   resolve: {
     alias: [
-      { find: /^integral-cms\/richtext$/, replacement: core("richtext/index.ts") },
-      { find: /^integral-cms$/, replacement: core("index.ts") },
-      { find: /^integral-cms\/client$/, replacement: core("client/index.ts") },
-      { find: /^integral-cms\/libsql$/, replacement: core("integrations/libsql/index.ts") },
-      { find: /^integral-cms\/presets$/, replacement: core("presets/index.ts") },
-      { find: /^integral-cms\/admin$/, replacement: core("admin/config.ts") },
-      { find: /^integral-cms\/admin\/bar$/, replacement: core("admin/bar.d.ts") },
-      { find: /^integral-cms\/media\/default$/, replacement: core("media/default.ts") },
-      { find: "#integral/client-registry", replacement: core("admin/test-registry.ts") },
+      { find: /^tenoncms\/richtext$/, replacement: core("richtext/index.ts") },
+      { find: /^tenoncms$/, replacement: core("index.ts") },
+      { find: /^tenoncms\/client$/, replacement: core("client/index.ts") },
+      { find: /^tenoncms\/libsql$/, replacement: core("integrations/libsql/index.ts") },
+      { find: /^tenoncms\/presets$/, replacement: core("presets/index.ts") },
+      { find: /^tenoncms\/admin$/, replacement: core("admin/config.ts") },
+      { find: /^tenoncms\/admin\/bar$/, replacement: core("admin/bar.d.ts") },
+      { find: /^tenoncms\/media\/default$/, replacement: core("media/default.ts") },
+      { find: "#tenon/client-registry", replacement: core("admin/test-registry.ts") },
     ],
   },
 });

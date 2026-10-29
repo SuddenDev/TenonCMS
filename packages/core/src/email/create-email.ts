@@ -28,7 +28,7 @@ const messageSchema = z
 export function createEmail(options?: EmailOptions): EmailApi {
   return {
     async send(message) {
-      if (!options) throw new Error("integral-cms: configure `email` before sending mail");
+      if (!options) throw new Error("tenoncms: configure `email` before sending mail");
       const parsed = messageSchema.parse({ ...message, from: options.from });
       await options.adapter.send(parsed);
     },

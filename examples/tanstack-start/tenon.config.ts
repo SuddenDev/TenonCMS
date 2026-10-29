@@ -1,6 +1,6 @@
-import { defineCms } from "integral-cms";
-import { libsql } from "integral-cms/libsql";
-import { ExamplePlugin } from "integral-cms/plugins/example";
+import { defineCms } from "tenoncms";
+import { libsql } from "tenoncms/libsql";
+import { ExamplePlugin } from "tenoncms/plugins/example";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
 

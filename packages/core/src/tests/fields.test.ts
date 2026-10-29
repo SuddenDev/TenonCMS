@@ -433,7 +433,7 @@ describe("private", () => {
 
   it("cannot be filtered without a session", async () => {
     const { client, fetch } = setup(make());
-    const get = (query: string) => fetch(`${origin}/api/cms/collections/people?${query}`);
+    const get = (query: string) => fetch(`${origin}/_tenon/collections/people?${query}`);
     expect((await get("email=e")).status).toBe(400);
     await client.signUp(admin);
     expect((await get("email=e")).status).toBe(200);
@@ -445,7 +445,7 @@ describe("private", () => {
     const p = await cms.create("people", person);
     const get = async () =>
       (
-        await fetch(`${origin}/api/cms/collections/people/${p.id}?select=name,email,contact.phone`)
+        await fetch(`${origin}/_tenon/collections/people/${p.id}?select=name,email,contact.phone`)
       ).json();
     expect(await get()).toEqual({ id: p.id, name: "A" });
     await client.signUp(admin);

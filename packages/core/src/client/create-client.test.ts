@@ -26,8 +26,8 @@ it("requests and completes a password reset through the auth endpoints", async (
   await expect(client.requestPasswordReset(request)).resolves.toBeUndefined();
   await expect(client.resetPassword(reset)).resolves.toBeUndefined();
   expect(calls()).toEqual([
-    ["POST", "http://x/api/cms/auth/request-password-reset", request],
-    ["POST", "http://x/api/cms/auth/reset-password", reset],
+    ["POST", "http://x/_tenon/auth/request-password-reset", request],
+    ["POST", "http://x/_tenon/auth/reset-password", reset],
   ]);
 });
 
@@ -38,16 +38,16 @@ describe("locale on reads", () => {
     await client.findById("posts", "p 1", { locale: "de" });
     await client.getGlobal("footer", { locale: "de", fallback: true });
     expect(calls().map(([, url]) => url)).toEqual([
-      "http://x/api/cms/collections/posts?limit=2&locale=de&fallback=false&alternates=true",
-      "http://x/api/cms/collections/posts/p%201?locale=de",
-      "http://x/api/cms/globals/footer?locale=de&fallback=true",
+      "http://x/_tenon/collections/posts?limit=2&locale=de&fallback=false&alternates=true",
+      "http://x/_tenon/collections/posts/p%201?locale=de",
+      "http://x/_tenon/globals/footer?locale=de&fallback=true",
     ]);
   });
 
   it("sends nothing without the options", async () => {
     const { client, calls } = recorder([]);
     await client.find("posts");
-    expect(calls()[0][1]).toBe("http://x/api/cms/collections/posts");
+    expect(calls()[0][1]).toBe("http://x/_tenon/collections/posts");
   });
 });
 
@@ -58,9 +58,9 @@ describe("locale on preview URLs", () => {
     await client.previewGlobalUrl("footer", {}, { locale: "de" });
     await client.previewUrl("posts", {});
     expect(calls().map(([, url]) => url)).toEqual([
-      "http://x/api/cms/collections/posts/preview-url?locale=de",
-      "http://x/api/cms/globals/footer/preview-url?locale=de",
-      "http://x/api/cms/collections/posts/preview-url",
+      "http://x/_tenon/collections/posts/preview-url?locale=de",
+      "http://x/_tenon/globals/footer/preview-url?locale=de",
+      "http://x/_tenon/collections/posts/preview-url",
     ]);
   });
 });
@@ -79,7 +79,7 @@ describe("locale on writes", () => {
     await client.publishGlobal("footer", { locale: "de" });
     await client.discardGlobal("footer", { locale: "de" });
     expect(
-      calls().map(([method, url]) => `${method} ${url.replace("http://x/api/cms", "")}`),
+      calls().map(([method, url]) => `${method} ${url.replace("http://x/_tenon", "")}`),
     ).toEqual([
       "POST /collections/posts?locale=de",
       "PUT /collections/posts/1?locale=de",
@@ -99,8 +99,8 @@ describe("locale on writes", () => {
     await client.publish("posts", "1");
     await client.setGlobal("footer", {});
     expect(calls().map(([, url]) => url)).toEqual([
-      "http://x/api/cms/collections/posts/1/publish",
-      "http://x/api/cms/globals/footer",
+      "http://x/_tenon/collections/posts/1/publish",
+      "http://x/_tenon/globals/footer",
     ]);
   });
 
@@ -109,8 +109,8 @@ describe("locale on writes", () => {
     await client.discard("posts", "1", { all: true });
     await client.discardGlobal("footer", { all: true });
     expect(calls().map(([, url]) => url)).toEqual([
-      "http://x/api/cms/collections/posts/1/draft?all=true",
-      "http://x/api/cms/globals/footer/draft?all=true",
+      "http://x/_tenon/collections/posts/1/draft?all=true",
+      "http://x/_tenon/globals/footer/draft?all=true",
     ]);
   });
 });
@@ -121,8 +121,8 @@ describe("copy and remove a locale", () => {
     await client.copyLocale("posts", "1", { from: "en", to: "de" });
     await client.removeLocale("posts", "1", "de");
     expect(calls()).toEqual([
-      ["POST", "http://x/api/cms/collections/posts/1/locales/de/copy", { from: "en" }],
-      ["DELETE", "http://x/api/cms/collections/posts/1/locales/de", undefined],
+      ["POST", "http://x/_tenon/collections/posts/1/locales/de/copy", { from: "en" }],
+      ["DELETE", "http://x/_tenon/collections/posts/1/locales/de", undefined],
     ]);
   });
 
@@ -131,8 +131,8 @@ describe("copy and remove a locale", () => {
     await client.copyGlobalLocale("footer", { from: "en", to: "de" });
     await client.removeGlobalLocale("footer", "de");
     expect(calls()).toEqual([
-      ["POST", "http://x/api/cms/globals/footer/locales/de/copy", { from: "en" }],
-      ["DELETE", "http://x/api/cms/globals/footer/locales/de", undefined],
+      ["POST", "http://x/_tenon/globals/footer/locales/de/copy", { from: "en" }],
+      ["DELETE", "http://x/_tenon/globals/footer/locales/de", undefined],
     ]);
   });
 });
@@ -147,7 +147,7 @@ describe("localization()", () => {
     expect(a).toEqual(config);
     expect(b).toBe(a);
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch.mock.calls[0][0]).toBe("http://x/api/cms/localization");
+    expect(fetch.mock.calls[0][0]).toBe("http://x/_tenon/localization");
   });
 
   it("keeps a client's result to itself", async () => {

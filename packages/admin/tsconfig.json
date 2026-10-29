@@ -10,9 +10,9 @@
     "jsx": "preserve",
     "types": ["vite/client"],
     "paths": {
-      "integral-cms/richtext": ["../core/src/richtext/index.ts"],
+      "tenoncms/richtext": ["../core/src/richtext/index.ts"],
       "@/*": ["./src/*"],
-      "integral-cms": ["../core/src/index.ts"]
+      "tenoncms": ["../core/src/index.ts"]
     }
   },
   "include": ["src"]

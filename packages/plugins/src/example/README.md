@@ -3,7 +3,7 @@
 A plugin to read and copy, not a feature. It uses every plugin option once, around a `quotes` collection:
 
 ```ts
-import { example } from "integral-cms/plugins/example";
+import { example } from "tenoncms/plugins/example";
 
 defineCms({ plugins: [example()] });
 ```
@@ -29,4 +29,4 @@ Each folder styles the stats and quote pages differently. `admin/html` has a pla
 
 ## Rich text
 
-`quotes.notes` is a Tiptap JSON field. `notice.ts` is its shared `exampleNotice` schema; `admin/richtext.ts` exports the browser extension and translated toolbar control. The plugin registers them with `admin.richtext.extensions` and a literal `clientRef("integral-cms/plugins/example/admin/richtext#notice")`. Use that feature name in a field’s `allowed` list.
+`quotes.notes` is a Tiptap JSON field. `notice.ts` is its shared `exampleNotice` schema; `admin/richtext.ts` exports the browser extension and translated toolbar control. The plugin registers them with `admin.richtext.extensions` and a literal `clientRef("tenoncms/plugins/example/admin/richtext#notice")`. Use that feature name in a field’s `allowed` list.

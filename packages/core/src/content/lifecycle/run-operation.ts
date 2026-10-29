@@ -65,7 +65,7 @@ async function afterError(
     try {
       await fn(args);
     } catch (e) {
-      consola.withTag("integral").error(e);
+      consola.withTag("tenon").error(e);
     }
   }
 }

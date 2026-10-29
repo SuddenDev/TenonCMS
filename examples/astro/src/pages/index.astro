@@ -3,7 +3,7 @@ import Header from "../components/Header.astro";
 
 export const prerender = false;
 
-const { integral: cms } = Astro.locals;
+const { tenon: cms } = Astro.locals;
 const general = await cms.getGlobal("general");
 const posts = await cms.find("posts");
 ---

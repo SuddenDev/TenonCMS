@@ -116,7 +116,7 @@ export function richtextExtensions(
 
   for (const extension of flattenExtensions(extensions)) {
     if (names.has(extension.name))
-      throw new Error(`integral-cms: duplicate Tiptap extension "${extension.name}"`);
+      throw new Error(`tenoncms: duplicate Tiptap extension "${extension.name}"`);
 
     names.add(extension.name);
   }

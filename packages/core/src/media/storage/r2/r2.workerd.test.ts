@@ -64,7 +64,7 @@ describe("r2", () => {
   });
 
   it("serves files through core unless a public URL is set", () => {
-    expect(storage.url("a b/x.png")).toBe("/api/cms/media/files/a%20b/x.png");
+    expect(storage.url("a b/x.png")).toBe("/_tenon/media/files/a%20b/x.png");
     expect(r2(env.MEDIA, { publicUrl: "https://media.test/" }).url("x.png")).toBe(
       "https://media.test/x.png",
     );

@@ -17,7 +17,7 @@ describe("createObjectClient", () => {
     const { sent, stub } = recording();
     const page = new Request("https://site.test/blog", { headers: { cookie: "session=1" } });
     await createObjectClient(page, stub).find("posts" as never);
-    expect(sent[0]!.url).toBe("https://site.test/api/cms/collections/posts");
+    expect(sent[0]!.url).toBe("https://site.test/_tenon/collections/posts");
     expect(sent[0]!.headers.get("cookie")).toBe("session=1");
   });
 

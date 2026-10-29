@@ -1,4 +1,4 @@
-# integral-cms
+# Tenon
 
 A CMS that lives **inside** your Vite-based app. One repo, one deployment, one database file.
 
@@ -8,7 +8,7 @@ A CMS that lives **inside** your Vite-based app. One repo, one deployment, one d
 
 Headless CMSs are framework-agnostic because they talk REST or GraphQL. The price: a second service with its own deployment, Docker setup and a Postgres or MySQL server.
 
-integral-cms takes the other route, like Pruvious (Nuxt) and Payload 3 (Next.js), but for any framework built on Vite:
+tenoncms takes the other route, like Pruvious (Nuxt) and Payload 3 (Next.js), but for any framework built on Vite:
 
 - **Part of your app.** The admin UI and API are routes in your app. No second service.
 - **Schema in code.** Collections and globals are TypeScript. Types flow into your pages.
@@ -47,7 +47,7 @@ Define a collection:
 
 ```ts
 // collections/posts.ts
-import { defineCollection } from "integral-cms";
+import { defineCollection } from "tenoncms";
 
 export const posts = defineCollection({
   titleField: "title",
@@ -60,11 +60,11 @@ export const posts = defineCollection({
 });
 ```
 
-Create the instance in `integral.config.ts` at the project root:
+Create the instance in `tenon.config.ts` at the project root:
 
 ```ts
-import { defineCms } from "integral-cms";
-import { libsql } from "integral-cms/libsql";
+import { defineCms } from "tenoncms";
+import { libsql } from "tenoncms/libsql";
 import { posts } from "./collections/posts";
 
 export default defineCms({
@@ -135,7 +135,7 @@ Then wire your framework: [Framework setup](docs/guide/frameworks.md).
 ## Project layout
 
 ```
-packages/core            integral-cms: schema, Hono app, local API, client, auth, presets, adapters
+packages/core            tenoncms: schema, Hono app, local API, client, auth, presets, adapters
 packages/plugins         bundled plugins (private)
 packages/admin           Vue 3 + Tailwind admin, built into core's dist/admin (private)
 examples/astro           Astro 7 on @astrojs/node
@@ -151,7 +151,7 @@ Commands, rules and architecture notes are in [CLAUDE.md](CLAUDE.md) and `docs/d
 | Command                                                           | What it does                                                                 |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` / `dev:standalone` | Build packages, start the example and the admin playground on `:5173/admin/` |
-| `pnpm --filter @integral-cms/admin watch`                         | Rebuild the admin into the example on change                                 |
+| `pnpm --filter @tenoncms/admin watch`                             | Rebuild the admin into the example on change                                 |
 | `pnpm build`                                                      | Build packages and all examples                                              |
 | `pnpm test`                                                       | Run the unit and integration tests                                           |
 | `pnpm typecheck`                                                  | Build packages, then type-check everything                                   |

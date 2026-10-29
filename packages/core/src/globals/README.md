@@ -4,7 +4,7 @@ Globals are named singleton documents for site-wide data. This module defines th
 
 ## Follow a read
 
-`GET /api/cms/globals/general` flows through:
+`GET /_tenon/globals/general` flows through:
 
 `endpoints/get.endpoint.ts` → `operations/local/get.local.ts` → `operations/get.operation.ts` → `content/reads/read-global.ts`
 

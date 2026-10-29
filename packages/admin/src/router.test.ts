@@ -6,7 +6,7 @@ import { i18n } from "@/shared/i18n";
 import { RouterView } from "vue-router";
 import { client, CmsError } from "@/shared/api";
 import PageTitle from "@/shared/components/navigation/PageTitle.vue";
-import { integralKey, pageDataKey, registryKey, sessionKey } from "@/shared/options";
+import { tenonKey, pageDataKey, registryKey, sessionKey } from "@/shared/options";
 import { addAdminPages, createAdminRouter } from "./router";
 
 let app: App | undefined;
@@ -57,7 +57,7 @@ it("shows the page title as text by default, without breadcrumbs", async () => {
   app = createApp({ render: () => h(PageTitle, { value: true }) })
     .use(router)
     .use(i18n)
-    .provide(integralKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} });
+    .provide(tenonKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} });
   app.mount(root);
   await nextTick();
   expect(root.textContent).toBe("Stats");
@@ -104,7 +104,7 @@ async function loaded(options: { load?: true } = { load: true }) {
     .use(createHead())
     .use(i18n)
     .provide(registryKey, { stats: async () => mount, header: async () => header })
-    .provide(integralKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} })
+    .provide(tenonKey, { base: "/admin", navigate: vi.fn(), reload: async () => {} })
     .provide(pageDataKey, shallowRef())
     .provide(sessionKey, { expire } as never);
   app.mount(root);
@@ -178,11 +178,11 @@ it("does not mount when the page is left before the data arrives", async () => {
   expect(calls).toHaveLength(1);
 });
 
-it("reloads the page through integral.reload", async () => {
+it("reloads the page through tenon.reload", async () => {
   const { calls, mount, handle } = await loaded();
   calls[0].resolve({ n: 1 });
   await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce());
-  const done = mount.mock.calls[0][1].integral.reload();
+  const done = mount.mock.calls[0][1].tenon.reload();
   expect(calls).toHaveLength(2);
   calls[1].resolve({ n: 9 });
   await done;

@@ -1,6 +1,6 @@
 import type { Fields } from "../schema/index.ts";
 
-/** SEO fields in one optional group. Read them with `seoMeta()` from `integral-cms` or `integral-cms/client`. */
+/** SEO fields in one optional group. Read them with `seoMeta()` from `tenoncms` or `tenoncms/client`. */
 export const seo = {
   fields: {
     seo: {

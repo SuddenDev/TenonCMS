@@ -23,7 +23,7 @@ async function visit(file: string, resolver: Resolver, seen: Set<string>) {
   if (STYLE.test(file)) {
     if (!INLINE_STYLE.test(file))
       throw new Error(
-        `integral-cms: eager CSS in site admin graph: ${file}. Use clientRef() for styled fields/pages, or ?inline for CSS mounted inside the bar's shadow root.`,
+        `tenoncms: eager CSS in site admin graph: ${file}. Use clientRef() for styled fields/pages, or ?inline for CSS mounted inside the bar's shadow root.`,
       );
     return;
   }
@@ -31,7 +31,7 @@ async function visit(file: string, resolver: Resolver, seen: Set<string>) {
   const vue = file.endsWith(".vue");
   if (vue && /<style(?:\s|>)/.test(await readFile(file, "utf8")))
     throw new Error(
-      `integral-cms: styled Vue component in site admin graph: ${file}. Load it through clientRef().`,
+      `tenoncms: styled Vue component in site admin graph: ${file}. Load it through clientRef().`,
     );
   if (!isScript(file) && !vue) return;
 

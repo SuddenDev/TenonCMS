@@ -601,7 +601,7 @@ describe("afterError", () => {
     ]);
     const { client, fetch } = setup(cms);
     await client.signUp(admin);
-    const res = await fetch(`${origin}/api/cms/collections/posts`, {
+    const res = await fetch(`${origin}/_tenon/collections/posts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{}",

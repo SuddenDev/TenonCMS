@@ -48,7 +48,7 @@ export function useSession() {
     updateUser({ language }).catch(console.error);
   });
 
-  // The config can change while the admin is open, e.g. when editing integral.config.ts in dev.
+  // The config can change while the admin is open, e.g. when editing tenon.config.ts in dev.
   // Unchanged responses are skipped, so a refresh does not re-render open forms.
   function refreshSchema() {
     if (!user.value || document.hidden) return;

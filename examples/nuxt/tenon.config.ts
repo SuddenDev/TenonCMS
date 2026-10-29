@@ -1,8 +1,8 @@
-import { defineCms } from "integral-cms";
-import { libsql } from "integral-cms/libsql";
-import { ExamplePlugin } from "integral-cms/plugins/example";
-import { ipx } from "integral-cms/media/ipx";
-import { local } from "integral-cms/media/local";
+import { defineCms } from "tenoncms";
+import { libsql } from "tenoncms/libsql";
+import { ExamplePlugin } from "tenoncms/plugins/example";
+import { ipx } from "tenoncms/media/ipx";
+import { local } from "tenoncms/media/local";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
 import { authors } from "./collections/authors";

@@ -15,7 +15,7 @@
     "@better-auth/passkey": "1.7.14",
     "@libsql/client": "^0.18.0",
     "astro": "^7.4.2",
-    "integral-cms": "workspace:*"
+    "tenoncms": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

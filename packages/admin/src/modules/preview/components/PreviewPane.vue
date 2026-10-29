@@ -40,7 +40,7 @@ function reset() {
 
 function openTab() {
   const href = props.href || props.url;
-  if (href) registerPreviewTab(window.open(href, `integral-preview-${props.target}`));
+  if (href) registerPreviewTab(window.open(href, `tenon-preview-${props.target}`));
 }
 </script>
 
@@ -112,7 +112,7 @@ function openTab() {
       <iframe
         :key="frame"
         :src="url"
-        name="integral-preview"
+        name="tenon-preview"
         :title="t('common.preview')"
         class="group-data-[mobile=true]:border-border block h-full w-full bg-white group-data-[mobile=true]:w-[390px] group-data-[mobile=true]:rounded-lg group-data-[mobile=true]:border"
       />

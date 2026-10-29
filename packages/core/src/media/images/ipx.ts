@@ -18,7 +18,7 @@ function ipxOf(storage: Storage) {
   if (!instance) {
     instance = createIPX({
       storage: {
-        name: "integral",
+        name: "tenon",
         getMeta: () => ({}),
         async getData(id) {
           const file = await storage.get(id.replace(/^\//, ""));
@@ -32,7 +32,7 @@ function ipxOf(storage: Storage) {
 }
 
 /**
- * Image variants rendered by IPX (sharp) and served by core at `/api/cms/media/img/<modifiers>/<key>`, stored under
+ * Image variants rendered by IPX (sharp) and served by core at `/_tenon/media/img/<modifiers>/<key>`, stored under
  * `.variants/` after the first request. Needs `ipx` installed and a runtime where sharp works (Node, Bun).
  */
 export function ipx({ prerender = false }: IpxOptions = {}): ImageProvider {

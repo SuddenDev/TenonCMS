@@ -81,7 +81,7 @@ const label = computed(() => itemLabel(props.item, props.ctx.mode, text));
     <Button
       as="a"
       :href="item.href"
-      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'integral-cms') : label"
+      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'tenoncms') : label"
       variant="ghost"
       size="xs"
     >
@@ -98,7 +98,7 @@ const label = computed(() => itemLabel(props.item, props.ctx.mode, text));
             ? 'max-w-24 whitespace-normal sm:max-w-none'
             : ['max-w-28 truncate', isBuiltIn(item, 'dashboard') && 'max-sm:hidden']
         "
-        >{{ isBuiltIn(item, "dashboard") ? (ctx.name ?? "integral-cms") : label }}</span
+        >{{ isBuiltIn(item, "dashboard") ? (ctx.name ?? "tenoncms") : label }}</span
       >
     </Button>
   </ToolbarLink>
@@ -107,7 +107,7 @@ const label = computed(() => itemLabel(props.item, props.ctx.mode, text));
     <Button
       variant="ghost"
       size="xs"
-      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'integral-cms') : label"
+      :aria-label="isBuiltIn(item, 'dashboard') ? (ctx.name ?? 'tenoncms') : label"
       @click="item.onClick?.()"
     >
       <Themed
@@ -118,7 +118,7 @@ const label = computed(() => itemLabel(props.item, props.ctx.mode, text));
       <Box v-else-if="isBuiltIn(item, 'dashboard')" />
       <Icon v-else-if="item.icon" :name="item.icon" />
       <span class="max-w-28 truncate" :class="isBuiltIn(item, 'dashboard') && 'max-sm:hidden'">{{
-        isBuiltIn(item, "dashboard") ? (ctx.name ?? "integral-cms") : label
+        isBuiltIn(item, "dashboard") ? (ctx.name ?? "tenoncms") : label
       }}</span>
     </Button>
   </ToolbarButton>

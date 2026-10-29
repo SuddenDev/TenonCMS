@@ -51,12 +51,12 @@ describe("reads", () => {
     expect(
       (await client.find("posts", { where: { featured: null, views: null } })).map((p) => p.title),
     ).toEqual(["D"]);
-    const res = await cms.fetch(new Request(`${origin}/api/cms/collections/posts?views=null`));
+    const res = await cms.fetch(new Request(`${origin}/_tenon/collections/posts?views=null`));
     expect((await res.json()).map((p: { title: string }) => p.title)).toEqual(["D"]);
   });
 
   it("ignore empty query values", async () => {
-    const res = await cms.fetch(new Request(`${origin}/api/cms/collections/posts?views=&title=`));
+    const res = await cms.fetch(new Request(`${origin}/_tenon/collections/posts?views=&title=`));
     expect(await res.json()).toHaveLength(3);
   });
 
@@ -73,7 +73,7 @@ describe("reads", () => {
     "reject %s",
     async (query) => {
       expect(
-        (await cms.fetch(new Request(`${origin}/api/cms/collections/posts${query}`))).status,
+        (await cms.fetch(new Request(`${origin}/_tenon/collections/posts${query}`))).status,
       ).toBe(400);
     },
   );
@@ -127,7 +127,7 @@ describe("local API", () => {
 describe("errors", () => {
   const post = (path: string, body: string) =>
     cms.fetch(
-      new Request(`${origin}/api/cms${path}`, {
+      new Request(`${origin}/_tenon${path}`, {
         method: "POST",
         headers: { origin, "content-type": "application/json" },
         body,
@@ -135,11 +135,11 @@ describe("errors", () => {
     );
 
   it("answer every error with a message", async () => {
-    const res = await cms.fetch(new Request(`${origin}/api/cms/schema`));
+    const res = await cms.fetch(new Request(`${origin}/_tenon/schema`));
     expect([res.status, await res.json()]).toEqual([401, { message: "Unauthorized" }]);
-    const filter = await cms.fetch(new Request(`${origin}/api/cms/collections/posts?nope=1`));
+    const filter = await cms.fetch(new Request(`${origin}/_tenon/collections/posts?nope=1`));
     expect([filter.status, await filter.json()]).toEqual([400, { message: "Invalid filter" }]);
-    const missing = await cms.fetch(new Request(`${origin}/api/cms/collections/nope`));
+    const missing = await cms.fetch(new Request(`${origin}/_tenon/collections/nope`));
     expect([missing.status, await missing.json()]).toEqual([404, { message: "Not Found" }]);
     await client.signUp(admin);
     const malformed = await fetchWithSession("/collections/posts", {
@@ -166,7 +166,7 @@ describe("errors", () => {
     });
     const s = setup(inst);
     await s.client.signUp(admin);
-    const res = await s.fetch(`${origin}/api/cms/schema`);
+    const res = await s.fetch(`${origin}/_tenon/schema`);
     const body = await res.json();
     expect(body.collections.posts).toMatchObject({ description: "All posts", nav });
     expect(body.globals.footer).toMatchObject({ description: "Footer", nav });
@@ -191,7 +191,7 @@ describe("errors", () => {
   it("reject a forged session cookie", async () => {
     await client.signUp(admin);
     const res = await cms.fetch(
-      new Request(`${origin}/api/cms/schema`, {
+      new Request(`${origin}/_tenon/schema`, {
         headers: { origin, cookie: "better-auth.session_token=forged.value" },
       }),
     );
@@ -234,27 +234,27 @@ describe("errors", () => {
     "reject a filter value of the wrong type: %s",
     async (query) => {
       expect(
-        (await cms.fetch(new Request(`${origin}/api/cms/collections/posts${query}`))).status,
+        (await cms.fetch(new Request(`${origin}/_tenon/collections/posts${query}`))).status,
       ).toBe(400);
     },
   );
 
   it("keep reads working with a short secret, but fail auth", async () => {
     const bad = define("short");
-    expect((await bad.fetch(new Request(`${origin}/api/cms/collections/posts`))).status).toBe(200);
+    expect((await bad.fetch(new Request(`${origin}/_tenon/collections/posts`))).status).toBe(200);
     const cookie = { headers: { cookie: "better-auth.session_token=x" } };
     expect(
-      (await bad.fetch(new Request(`${origin}/api/cms/collections/posts`, cookie))).status,
+      (await bad.fetch(new Request(`${origin}/_tenon/collections/posts`, cookie))).status,
     ).toBe(200);
     await expect(bad.auth()).rejects.toThrow(/at least 32 characters/);
-    const signIn = new Request(`${origin}/api/cms/auth/sign-in/email`, {
+    const signIn = new Request(`${origin}/_tenon/auth/sign-in/email`, {
       method: "POST",
       headers: { "content-type": "application/json", origin },
       body: JSON.stringify(admin),
     });
     expect((await bad.fetch(signIn)).status).toBe(500);
     // Without a session, no lookup runs.
-    expect((await bad.fetch(new Request(`${origin}/api/cms/schema`))).status).toBe(401);
+    expect((await bad.fetch(new Request(`${origin}/_tenon/schema`))).status).toBe(401);
   });
 
   it("reject unknown options at the type level", () => {

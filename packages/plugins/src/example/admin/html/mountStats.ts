@@ -1,5 +1,5 @@
-import type { Mount, PageContext } from "integral-cms/admin";
-import { API_BASE } from "integral-cms/client";
+import type { Mount, PageContext } from "tenoncms/admin";
+import { API_BASE } from "tenoncms/client";
 import { stars } from "../utils/stars.ts";
 import type { Stats } from "../../types.ts";
 import { esc } from "../utils/esc.ts";
@@ -12,8 +12,8 @@ export const mountStats: Mount<PageContext<Stats>> = (el, ctx) => {
   // The rating whose bar was clicked; clicking it again clears the filter.
   let rating: number | undefined;
   const render = (page: PageContext<Stats>) => {
-    const { data, integral } = page;
-    const t = texts(integral.locale);
+    const { data, tenon } = page;
+    const t = texts(tenon.locale);
     const max = Math.max(1, ...data.ratings);
     const rows = data.ratings
       .map(
@@ -32,7 +32,7 @@ export const mountStats: Mount<PageContext<Stats>> = (el, ctx) => {
       .map(
         (q) => `
           <li>
-            <a href="${integral.base}/example/quotes/${esc(q.id)}">${esc(q.text)}</a>
+            <a href="${tenon.base}/example/quotes/${esc(q.id)}">${esc(q.text)}</a>
             <span class="meta">${esc(q.author)}</span>
             <span class="stars">${stars(q.rating)}</span>
           </li>`,
@@ -63,7 +63,7 @@ export const mountStats: Mount<PageContext<Stats>> = (el, ctx) => {
         el.querySelector<HTMLElement>(`[data-rating="${n}"]`)!.focus();
       };
     }
-    el.querySelector<HTMLElement>("[data-action=reload]")!.onclick = () => integral.reload();
+    el.querySelector<HTMLElement>("[data-action=reload]")!.onclick = () => tenon.reload();
     el.querySelector<HTMLElement>("[data-action=random]")!.onclick = async () => {
       const response = await fetch(`${API_BASE}/example/random`, { method: "GET" });
       alert(response.ok ? `${t("randomResult")}\n\n ${await response.text()}` : t("randomFailed"));

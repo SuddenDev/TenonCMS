@@ -49,7 +49,7 @@ export function createMediaCore(options: MediaOptions, schema: Required<Schema>)
 
 /** The media core, or an error for an instance without `media`. */
 export function mediaOf(core: Core): MediaCore {
-  if (!core.media) throw new Error("integral-cms: the `media` option is not set");
+  if (!core.media) throw new Error("tenoncms: the `media` option is not set");
   return core.media;
 }
 
@@ -75,5 +75,5 @@ function imageFields(schema: Required<Schema>): { path: string; image?: ImageOpt
 }
 
 function fail(message: string): never {
-  throw new Error(`integral-cms: ${message}`);
+  throw new Error(`tenoncms: ${message}`);
 }

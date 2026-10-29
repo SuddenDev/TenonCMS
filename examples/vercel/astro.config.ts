@@ -1,13 +1,13 @@
 import vercel from "@astrojs/vercel";
 import { defineConfig, envField } from "astro/config";
-import integralCms from "integral-cms/astro";
+import tenonCms from "tenoncms/astro";
 
 const secret = () => envField.string({ context: "server", access: "secret" });
 
 export default defineConfig({
   output: "server",
   adapter: vercel(),
-  integrations: [integralCms()],
+  integrations: [tenonCms()],
   env: {
     schema: {
       CMS_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),

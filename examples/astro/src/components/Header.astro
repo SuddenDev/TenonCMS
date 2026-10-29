@@ -1,6 +1,6 @@
 ---
-import { localizePath } from "integral-cms";
-import cms from "../../integral.config";
+import { localizePath } from "tenoncms";
+import cms from "../../tenon.config";
 import LocaleSwitch from "./LocaleSwitch.astro";
 
 interface Props {
@@ -8,10 +8,10 @@ interface Props {
 }
 
 const { alternates } = Astro.props;
-const { integral, locale } = Astro.locals;
-const pages = (
-  await integral.find("pages", { locale, select: { title: true, path: true } })
-).filter((page) => page.path);
+const { tenon, locale } = Astro.locals;
+const pages = (await tenon.find("pages", { locale, select: { title: true, path: true } })).filter(
+  (page) => page.path,
+);
 const l = cms.localization!;
 ---
 

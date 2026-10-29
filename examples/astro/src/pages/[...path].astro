@@ -1,13 +1,13 @@
 ---
-import { seoMeta } from "integral-cms";
-import { edit } from "integral-cms/preview";
+import { seoMeta } from "tenoncms";
+import { edit } from "tenoncms/preview";
 import Header from "../components/Header.astro";
 
 export const prerender = false;
 
 // Static routes like `/` and `/about` win over this one, so CMS pages at those paths never show.
 // `locals.path` is the URL path without the locale prefix.
-const { integral: cms, locale, path } = Astro.locals;
+const { tenon: cms, locale, path } = Astro.locals;
 const page = await cms.findOne("pages", {
   where: { path },
   locale,

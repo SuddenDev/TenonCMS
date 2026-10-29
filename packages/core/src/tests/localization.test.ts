@@ -15,7 +15,7 @@ const l = { locales: ["en", "de"], defaultLocale: "en" };
 describe("localization", () => {
   it("answers /localization without a session, normalized", async () => {
     const { fetch } = setup(make(l));
-    const res = await fetch(`${origin}/api/cms/localization`);
+    const res = await fetch(`${origin}/_tenon/localization`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       locales: ["en", "de"],
@@ -27,7 +27,7 @@ describe("localization", () => {
 
   it("keeps the host's fallback and routing", async () => {
     const { fetch } = setup(make({ ...l, fallback: false, routing: false }));
-    expect(await (await fetch(`${origin}/api/cms/localization`)).json()).toMatchObject({
+    expect(await (await fetch(`${origin}/_tenon/localization`)).json()).toMatchObject({
       fallback: false,
       routing: false,
     });
@@ -37,14 +37,14 @@ describe("localization", () => {
     const { fetch } = setup(
       defineCms({ database: testDatabase(), secret: "x".repeat(32), media: false }),
     );
-    const res = await fetch(`${origin}/api/cms/localization`);
+    const res = await fetch(`${origin}/_tenon/localization`);
     expect([res.status, await res.json()]).toEqual([200, null]);
   });
 
   it("sends locales and the default in /schema, and localized per entry", async () => {
     const s = setup(make(l));
     await s.client.signUp(admin);
-    const body = await (await s.fetch(`${origin}/api/cms/schema`)).json();
+    const body = await (await s.fetch(`${origin}/_tenon/schema`)).json();
     expect(body.localization).toEqual({ locales: ["en", "de"], defaultLocale: "en" });
     expect(body.collections.posts.localized).toBe(true);
     expect(body.globals.general.localized).toBe(true);
@@ -53,7 +53,7 @@ describe("localization", () => {
   it("sends no localization in /schema without the option", async () => {
     const s = setup(defineCms({ database: testDatabase(), secret: "x".repeat(32), media: false }));
     await s.client.signUp(admin);
-    const body = await (await s.fetch(`${origin}/api/cms/schema`)).json();
+    const body = await (await s.fetch(`${origin}/_tenon/schema`)).json();
     expect(body).not.toHaveProperty("localization");
     expect(body.globals.general.localized).toBeUndefined();
   });

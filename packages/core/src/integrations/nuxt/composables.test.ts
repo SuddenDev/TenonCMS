@@ -47,7 +47,7 @@ vi.mock("#app", () => ({
     );
   },
 }));
-vi.mock("integral-cms/client", () => ({
+vi.mock("tenoncms/client", () => ({
   localeFromPath,
   localizePath,
   switchTarget,
@@ -60,13 +60,13 @@ vi.mock("integral-cms/client", () => ({
     getGlobal: mocks.getGlobal,
   }),
 }));
-vi.mock("integral-cms/preview", () => ({
+vi.mock("tenoncms/preview", () => ({
   getDrafts: () => [],
   merge: (_collection: string, doc: unknown) => doc,
   subscribe: () => () => {},
 }));
 
-import { useAlternates, useIntegral, useLocale } from "./runtime/composables.ts";
+import { useAlternates, useTenon, useLocale } from "./runtime/composables.ts";
 
 function setup<T>(fn: () => T): T {
   const scope = effectScope();
@@ -91,7 +91,7 @@ afterEach(() => {
 it("updates a reused page's document and alternates in the route's locale", async () => {
   const slug = computed(() => route.path.split("/").at(-1)!);
   const result = await setup(() =>
-    useIntegral().findOne("posts", () => ({
+    useTenon().findOne("posts", () => ({
       where: { slug: slug.value },
       alternates: true,
     })),
@@ -106,7 +106,7 @@ it("updates a reused page's document and alternates in the route's locale", asyn
 
 it("updates ordinary reads on locale navigation and preserves an explicit locale", async () => {
   const results = setup(() => {
-    const cms = useIntegral();
+    const cms = useTenon();
     return [cms.find("pages"), cms.getGlobal("general"), cms.find("pages", { locale: "en" })];
   });
   const [pages, general, fixed] = await Promise.all(results);
@@ -121,7 +121,7 @@ it("updates ordinary reads on locale navigation and preserves an explicit locale
 
 it("updates a document read when its id changes", async () => {
   const id = ref("one");
-  const result = await setup(() => useIntegral().findById("posts", id));
+  const result = await setup(() => useTenon().findById("posts", id));
   expect(mocks.findById).toHaveBeenLastCalledWith("posts", "one", { locale: "en" });
   expect(result.data.value).toMatchObject({ id: "one" });
   id.value = "two";

@@ -1,5 +1,5 @@
-import type { AdminBarItemContext, Mount } from "integral-cms/admin";
-import { renderVue } from "integral-cms/admin/vue";
+import type { AdminBarItemContext, Mount } from "tenoncms/admin";
+import { renderVue } from "tenoncms/admin/vue";
 import Count from "./Count.vue";
 
 // Its own entry, because the bar's module graph MUST NOT contain CSS and the page entry has some.

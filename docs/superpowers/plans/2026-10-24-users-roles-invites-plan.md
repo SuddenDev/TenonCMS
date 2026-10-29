@@ -136,7 +136,7 @@ The 502 needs a status the HTTP layer maps: either a small `DeliveryError` in `e
 ### 5.2 Endpoints
 
 - `users/endpoints/invites.endpoint.ts`: protected `GET /invites`, `POST /invites`, `POST /invites/:id/resend`, `DELETE /invites/:id`. One `requireAdmin` middleware answers 403 unless `c.var.user.role === "admin"`. Bodies are validated with zod, as in `auth/endpoints/password.endpoint.ts`.
-- `users/endpoints/accept.endpoint.ts`: public `POST /invites/check` and `POST /invites/accept`. Accept sets the returned cookies on the response; the session-hint middleware runs only on `/auth/*`, so set `integral-session=1` here with the helper from `session-hint.middleware.ts` (export it if needed).
+- `users/endpoints/accept.endpoint.ts`: public `POST /invites/check` and `POST /invites/accept`. Accept sets the returned cookies on the response; the session-hint middleware runs only on `/auth/*`, so set `tenon-session=1` here with the helper from `session-hint.middleware.ts` (export it if needed).
 - `http/app.ts`: public routes on `reads`, protected ones on `writes`, before `mountRoutes`.
 - `cms/config/merge-plugins.ts`: add `invites` to the reserved names. Also update `plugins/README.md` and the CLAUDE.md list.
 
@@ -194,15 +194,15 @@ As built: curl smoke on the Astro example (temp DB, port 4399) and one invite ac
 ```sh
 B=localhost:4321; J=/tmp/jar; K=/tmp/jar2
 curl -s -c $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d '{"name":"Admin","email":"a@b.co","password":"password123"}' $B/api/cms/auth/sign-up/email
+  -d '{"name":"Admin","email":"a@b.co","password":"password123"}' $B/_tenon/auth/sign-up/email
 LINK=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d "{\"email\":\"e@b.co\",\"role\":\"editor\",\"url\":\"http://$B/admin/invite\"}" $B/api/cms/invites \
+  -d "{\"email\":\"e@b.co\",\"role\":\"editor\",\"url\":\"http://$B/admin/invite\"}" $B/_tenon/invites \
   | node -pe 'JSON.parse(require("fs").readFileSync(0)).link')
 T=${LINK#*token=}
 curl -s -c $K -H 'content-type: application/json' -H "origin: http://$B" \
-  -d "{\"token\":\"$T\",\"name\":\"Ed\",\"password\":\"password123\"}" $B/api/cms/invites/accept
-curl -s -o /dev/null -w '%{http_code}\n' -b $K $B/api/cms/schema
-curl -s -o /dev/null -w '%{http_code}\n' -b $K -H "origin: http://$B" $B/api/cms/invites
+  -d "{\"token\":\"$T\",\"name\":\"Ed\",\"password\":\"password123\"}" $B/_tenon/invites/accept
+curl -s -o /dev/null -w '%{http_code}\n' -b $K $B/_tenon/schema
+curl -s -o /dev/null -w '%{http_code}\n' -b $K -H "origin: http://$B" $B/_tenon/invites
 ```
 
 Expect the sign-up user, a link, the new user, then `200` and `403`. Then accept in the browser once: invite from the Users screen, open the link in a private window, set a password, land in the admin.

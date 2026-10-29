@@ -6,15 +6,15 @@ import { builtIns } from "./admin-bar-items.ts";
 
 const handle = { update: vi.fn<(ctx: AdminBarContext) => void>(), unmount: vi.fn() };
 const mountAdminBar = vi.fn((_el: ShadowRoot, _ctx: AdminBarContext) => handle);
-vi.mock("integral-cms/admin/bar", () => ({ mountAdminBar }));
+vi.mock("tenoncms/admin/bar", () => ({ mountAdminBar }));
 
 describe("preview", () => {
   let stop: Unsubscribe = () => {};
   const cookie = (value: string) => {
-    document.cookie = `integral-preview=${value}; path=/`;
+    document.cookie = `tenon-preview=${value}; path=/`;
   };
   const hint = () => {
-    document.cookie = "integral-session=1; path=/";
+    document.cookie = "tenon-session=1; path=/";
   };
   const serve = (status: number, body: unknown) =>
     vi.stubGlobal(
@@ -41,8 +41,8 @@ describe("preview", () => {
 
   beforeEach(() => {
     window.name = "";
-    document.cookie = "integral-preview=; max-age=0; path=/";
-    document.cookie = "integral-session=; max-age=0; path=/";
+    document.cookie = "tenon-preview=; max-age=0; path=/";
+    document.cookie = "tenon-session=; max-age=0; path=/";
     document.body.innerHTML = "";
     serve(200, { position: "bottom-center", items: builtIns("site") });
     vi.spyOn(location, "reload").mockImplementation(() => {});
@@ -58,7 +58,7 @@ describe("preview", () => {
   });
 
   it("talks only to the admin's origin in the window that opened it, after its first message", async () => {
-    window.name = "integral-preview-posts:1";
+    window.name = "tenon-preview-posts:1";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `<h1 data-cms="posts:1:title">Old</h1>`;
@@ -93,7 +93,7 @@ describe("preview", () => {
   });
 
   it("stores the locale of a draft with its data", async () => {
-    window.name = "integral-preview-posts:9";
+    window.name = "tenon-preview-posts:9";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     stop = preview({ admin: "https://admin.test/admin" });
@@ -111,7 +111,7 @@ describe("preview", () => {
   });
 
   it("patches only drafts in the language of the page", async () => {
-    window.name = "integral-preview-posts:9";
+    window.name = "tenon-preview-posts:9";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.documentElement.lang = "de";
@@ -140,7 +140,7 @@ describe("preview", () => {
   });
 
   it("reports the documents on the page in page order, and again when they change", async () => {
-    window.name = "integral-preview";
+    window.name = "tenon-preview";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `
@@ -171,7 +171,7 @@ describe("preview", () => {
   });
 
   it("highlights the elements of a document the admin points at", async () => {
-    window.name = "integral-preview";
+    window.name = "tenon-preview";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `<h1 data-cms="posts:1:title">A</h1><p data-cms="posts:12:title">B</p>`;
@@ -189,7 +189,7 @@ describe("preview", () => {
   });
 
   it("leaves the elements of excluded entries alone in edit mode", async () => {
-    window.name = "integral-preview";
+    window.name = "tenon-preview";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `<article data-cms="posts:1:body"><p data-cms="comments:9:body">Nice</p></article><footer data-cms="footer::copyright">C</footer>`;
@@ -212,7 +212,7 @@ describe("preview", () => {
   });
 
   it("shows no admin bar in the admin's iframe", () => {
-    window.name = "integral-preview";
+    window.name = "tenon-preview";
     hint();
     stop = preview();
     expect(fetch).not.toHaveBeenCalled();
@@ -239,7 +239,7 @@ describe("preview", () => {
   });
 
   it("leaves preview when a preview tab returns to the visual editor", () => {
-    window.name = "integral-preview-posts:back";
+    window.name = "tenon-preview-posts:back";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     history.replaceState(null, "", "/cms/presentation?url=%2Fposts%2Fcurrent");
@@ -257,7 +257,7 @@ describe("preview", () => {
     stop = preview({ admin: "/cms" });
     const ctx = await mounted();
     expect(fetch).toHaveBeenCalledWith(
-      `/api/cms/admin-bar?url=${encodeURIComponent("/posts/current?lang=de&view=draft")}&mode=site&locale=en`,
+      `/_tenon/admin-bar?url=${encodeURIComponent("/posts/current?lang=de&view=draft")}&mode=site&locale=en`,
       { credentials: "same-origin" },
     );
     expect(document.documentElement.lastElementChild!.hasAttribute("data-cms-bar")).toBe(true);
@@ -331,14 +331,14 @@ describe("preview", () => {
     serve(401, {});
     window.dispatchEvent(new Event("focus"));
     await vi.waitFor(() => expect(document.querySelector("[data-cms-bar]")).toBeNull());
-    expect(document.cookie).not.toContain("integral-session");
+    expect(document.cookie).not.toContain("tenon-session");
   });
 
   it("mounts nothing and clears the hint on 401", async () => {
     hint();
     serve(401, {});
     stop = preview();
-    await vi.waitFor(() => expect(document.cookie).not.toContain("integral-session"));
+    await vi.waitFor(() => expect(document.cookie).not.toContain("tenon-session"));
     await new Promise((r) => setTimeout(r));
     expect(mountAdminBar).not.toHaveBeenCalled();
   });
@@ -350,7 +350,7 @@ describe("preview", () => {
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r));
     expect(mountAdminBar).not.toHaveBeenCalled();
-    expect(document.cookie).toContain("integral-session=1");
+    expect(document.cookie).toContain("tenon-session=1");
   });
 
   it("unmounts the bar and removes its host on stop", async () => {
@@ -372,7 +372,7 @@ describe("preview", () => {
   });
 
   it("shows only preview controls, then restores the normal bar when dismissed", async () => {
-    window.name = "integral-preview-1";
+    window.name = "tenon-preview-1";
     history.replaceState(null, "", "/posts/current?lang=de#title");
     serveModes();
     stop = preview();
@@ -408,7 +408,7 @@ describe("preview", () => {
   });
 
   it("disconnects live updates, highlights and edit clicks after leaving preview", async () => {
-    window.name = "integral-preview-posts:exit";
+    window.name = "tenon-preview-posts:exit";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `<h1 data-cms="posts:exit:title">Original</h1>`;
@@ -442,7 +442,7 @@ describe("preview", () => {
   });
 
   it("keeps the edit switch and the admin's mode message in sync", async () => {
-    window.name = "integral-preview-1";
+    window.name = "tenon-preview-1";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     stop = preview();
@@ -458,7 +458,7 @@ describe("preview", () => {
   });
 
   it("does not apply a pending saved-page refresh after leaving preview", async () => {
-    window.name = "integral-preview-posts:pending";
+    window.name = "tenon-preview-posts:pending";
     const opener = { postMessage: vi.fn() };
     vi.stubGlobal("opener", opener);
     document.body.innerHTML = `<h1>Keep this page</h1>`;
@@ -497,7 +497,7 @@ describe("preview", () => {
     vi.stubGlobal("fetch", post);
     ctx.setPerspective("published");
     await vi.waitFor(() => expect(location.reload).toHaveBeenCalled());
-    expect(post).toHaveBeenCalledWith("/api/cms/preview", {
+    expect(post).toHaveBeenCalledWith("/_tenon/preview", {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },

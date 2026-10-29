@@ -30,7 +30,7 @@ export function createSiteSettings(
     const chosen = option?.[name as keyof SettingsOptions];
     if (chosen === false) continue;
     if (Object.hasOwn(schema.globals, name))
-      throw new Error(`integral-cms: duplicate global "${name}"`);
+      throw new Error(`tenoncms: duplicate global "${name}"`);
     schema.globals[name] =
       chosen ?? (localized ? { ...globals[name]!, localized } : globals[name]!);
   }

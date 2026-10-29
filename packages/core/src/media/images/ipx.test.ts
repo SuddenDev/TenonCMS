@@ -14,7 +14,7 @@ describe("ipx", () => {
   it("builds /img URLs with sorted modifiers", () => {
     const src = { key: "a b/x.png", url: "", width: 4, height: 4 };
     expect(ipx().getImage(src, { width: 2, format: "webp", quality: 80 }).url).toBe(
-      "/api/cms/media/img/f_webp&q_80&w_2/a%20b/x.png",
+      "/_tenon/media/img/f_webp&q_80&w_2/a%20b/x.png",
     );
   });
 

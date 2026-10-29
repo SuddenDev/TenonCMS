@@ -1,8 +1,8 @@
 import { createElement } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import type { FieldContext, Mount, PageContext, PageHeader } from "integral-cms/admin";
-import { renderReact } from "integral-cms/admin/react";
+import type { FieldContext, Mount, PageContext, PageHeader } from "tenoncms/admin";
+import { renderReact } from "tenoncms/admin/react";
 import type { Stats as StatsData } from "../../types.ts";
 import { Quote } from "./Quote.tsx";
 import { RatingField } from "./RatingField.tsx";

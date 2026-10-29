@@ -3,7 +3,7 @@ export type AdminOption = boolean | `/${string}`;
 
 /** Options of the Astro and Nuxt adapters. */
 export type AdapterOptions = {
-  /** File that exports the `cms` instance, relative to the project root. Defaults to `./integral.config.ts`. */
+  /** File that exports the `cms` instance, relative to the project root. Defaults to `./tenon.config.ts`. */
   entry?: string;
   /** Path of the admin, e.g. `/cms`. Defaults to `/admin`. `false` leaves only the API (headless). */
   admin?: AdminOption;

@@ -25,7 +25,7 @@ import type {
 import { mergePlugins } from "./config/merge-plugins.ts";
 import { createSiteSettings } from "./config/site-settings.ts";
 import { checkSchema } from "../schema/validation/check-schema.ts";
-import { defaultMedia } from "integral-cms/media/default";
+import { defaultMedia } from "tenoncms/media/default";
 import { mediaCollection } from "../media/config/collection.ts";
 import { localizedKeys } from "../schema/traversal/localized-fields.ts";
 import { createRuntime } from "./runtime/create-runtime.ts";
@@ -39,12 +39,12 @@ import { checkAccess } from "../access/check-access.ts";
 
 /**
  * Creates a CMS instance.
- * Export it as the default export of `integral.config.ts` to bootstrap the CMS:
+ * Export it as the default export of `tenon.config.ts` to bootstrap the CMS:
  * The returned object is the local API for server code. Nothing connects until the first call.
  *
  * @example
  *   ```ts
- * import { defineCms } from "integral-cms";
+ * import { defineCms } from "tenoncms";
  *
  * export default defineCms({
  *   // your CMS configuration here
@@ -85,7 +85,7 @@ export function defineCms<
   /* ── Options ───────────────────────────────────────────────────────────────────────── */
 
   if (site !== undefined && !/^https?:$/.test(URL.parse(site)?.protocol ?? ""))
-    throw new Error("integral-cms: `site` MUST be an http(s) URL");
+    throw new Error("tenoncms: `site` MUST be an http(s) URL");
 
   const roles = normalizeRoles(roleOptions);
   const populateOption = {
@@ -130,7 +130,7 @@ export function defineCms<
 
   const count = (o: object) => Object.keys(o).length;
   consola
-    .withTag("integral")
+    .withTag("tenon")
     .info(
       `Initialized with ${count(schema.collections)} collection(s), ${count(schema.globals)} global(s)`,
     );
@@ -232,7 +232,7 @@ export function defineCms<
         return createInstance(bound, await caller(core, request), false) as S;
       },
 
-      /** Handles `/api/cms` requests. Mount it in any framework that speaks Request/Response. */
+      /** Handles `/_tenon` requests. Mount it in any framework that speaks Request/Response. */
       fetch(request: Request): Promise<Response> {
         return app.fetch(request) as Promise<Response>;
       },
@@ -270,7 +270,6 @@ const copies = new WeakMap<object, (database: DatabaseOptions) => object>();
  */
 export function withDatabase<C extends object>(cms: C, database: DatabaseOptions): C {
   const copy = copies.get(cms);
-  if (!copy)
-    throw new Error("integral-cms: `withDatabase()` takes the instance from `defineCms()`");
+  if (!copy) throw new Error("tenoncms: `withDatabase()` takes the instance from `defineCms()`");
   return copy(database) as C;
 }

@@ -3,7 +3,7 @@ import type { InjectionKey, Ref, ShallowRef } from "vue";
 import type { Session } from "./api";
 import type {
   AdminDescriptor,
-  IntegralContext,
+  TenonContext,
   PageDescriptor,
 } from "../../../core/src/admin/index.d.ts";
 import type { ExtensionData } from "./composables/useExtensionData";
@@ -19,7 +19,7 @@ export const optionsKey = Symbol() as InjectionKey<Branding>;
 /** The load of the custom page on screen, set by its route view. The page header reads the same data. */
 export const pageDataKey = Symbol() as InjectionKey<ShallowRef<ExtensionData<any> | undefined>>;
 // `locale` is added where a context is built, so it follows the admin language.
-export const integralKey = Symbol() as InjectionKey<Omit<IntegralContext, "locale">>;
+export const tenonKey = Symbol() as InjectionKey<Omit<TenonContext, "locale">>;
 export const sessionKey = Symbol() as InjectionKey<{
   user: Ref<Session["user"] | null>;
   /** Reads the session again, e.g. after a sign-in. */

@@ -4,7 +4,7 @@ import { databaseForScope } from "../../../cms/runtime/transaction.ts";
 import { mediaOf } from "../../runtime/create-media-core.ts";
 import { type Row, deleteUpload } from "./upload-row.ts";
 
-const log = consola.withTag("integral");
+const log = consola.withTag("tenon");
 
 /** Step 4: drops an unfinished upload in storage and deletes its row. */
 export async function abort(core: Core, scope: Scope, row: Row) {

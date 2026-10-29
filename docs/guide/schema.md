@@ -6,7 +6,7 @@ You describe your content in TypeScript. Each collection is a list of fields. Ty
 
 ```ts
 // collections/posts.ts
-import { defineCollection } from "integral-cms";
+import { defineCollection } from "tenoncms";
 
 export const posts = defineCollection({
   label: "Posts",
@@ -34,11 +34,11 @@ export const authors = defineCollection({
 });
 ```
 
-The instance lives in `integral.config.ts` at the project root:
+The instance lives in `tenon.config.ts` at the project root:
 
 ```ts
-import { defineCms } from "integral-cms";
-import { libsql } from "integral-cms/libsql";
+import { defineCms } from "tenoncms";
+import { libsql } from "tenoncms/libsql";
 import { authors } from "./collections/authors";
 import { posts } from "./collections/posts";
 
@@ -51,17 +51,17 @@ export default defineCms({
 
 Each database has its own entry and driver, so you install only the one you use:
 
-| Database                         | `database`                                           | Install                |
-| -------------------------------- | ---------------------------------------------------- | ---------------------- |
-| SQLite file, `:memory:` or Turso | `libsql(url)` from `integral-cms/libsql`             | `@libsql/client`       |
-| SQLite file or `:memory:`        | `sqlite(path)` from `integral-cms/sqlite`            | nothing (Node 22.16+)  |
-| Postgres                         | `postgres(url)` from `integral-cms/postgres`         | `pg`                   |
-| PGlite                           | `pglite(new PGlite(dir))` from `integral-cms/pglite` | `@electric-sql/pglite` |
-| Cloudflare Durable Object        | `durableObject()` from `integral-cms/cloudflare`     | nothing                |
+| Database                         | `database`                                       | Install                |
+| -------------------------------- | ------------------------------------------------ | ---------------------- |
+| SQLite file, `:memory:` or Turso | `libsql(url)` from `tenoncms/libsql`             | `@libsql/client`       |
+| SQLite file or `:memory:`        | `sqlite(path)` from `tenoncms/sqlite`            | nothing (Node 22.16+)  |
+| Postgres                         | `postgres(url)` from `tenoncms/postgres`         | `pg`                   |
+| PGlite                           | `pglite(new PGlite(dir))` from `tenoncms/pglite` | `@electric-sql/pglite` |
+| Cloudflare Durable Object        | `durableObject()` from `tenoncms/cloudflare`     | nothing                |
 
-`libsql()` and `postgres()` take a URL or their driver's options. For Postgres, install `pg` and use `database: postgres(process.env.DATABASE_URL!)` from `integral-cms/postgres`. It also takes the options of a `pg` pool. For PGlite, Postgres in WebAssembly for local dev and tests, install `@electric-sql/pglite` and use `database: pglite(new PGlite("./.data/cms"))` from `integral-cms/pglite`. `sqlite()` uses Node's built-in `node:sqlite`, so it needs no package. On an older Node, use `libsql()`. The CMS creates its tables in the connection's current schema.
+`libsql()` and `postgres()` take a URL or their driver's options. For Postgres, install `pg` and use `database: postgres(process.env.DATABASE_URL!)` from `tenoncms/postgres`. It also takes the options of a `pg` pool. For PGlite, Postgres in WebAssembly for local dev and tests, install `@electric-sql/pglite` and use `database: pglite(new PGlite("./.data/cms"))` from `tenoncms/pglite`. `sqlite()` uses Node's built-in `node:sqlite`, so it needs no package. On an older Node, use `libsql()`. The CMS creates its tables in the connection's current schema.
 
-`database` also takes `{ dialect }`, a Kysely dialect you build: SQLite, or Postgres with Kysely's `PostgresAdapter`. Its transactions MUST stay open across `await`. On Cloudflare, use `database: durableObject()` from `integral-cms/cloudflare` and export `integralObject(cms)` from the Worker entry: the CMS then runs inside a Durable Object, and code outside it reads and writes through `createClient()` over the object's `fetch`.
+`database` also takes `{ dialect }`, a Kysely dialect you build: SQLite, or Postgres with Kysely's `PostgresAdapter`. Its transactions MUST stay open across `await`. On Cloudflare, use `database: durableObject()` from `tenoncms/cloudflare` and export `tenonObject(cms)` from the Worker entry: the CMS then runs inside a Durable Object, and code outside it reads and writes through `createClient()` over the object's `fetch`.
 
 `defineGlobal()` works the same for globals: one document per name, such as site settings. Auth options are in [Auth, users and access](./auth-and-access.md).
 

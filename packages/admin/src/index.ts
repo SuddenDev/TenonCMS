@@ -4,9 +4,9 @@ import { client } from "./shared/api";
 import { configureKey, pageDataKey, registryKey, type Branding } from "./shared/options";
 import { createHead } from "@unhead/vue/client";
 import { createApp } from "vue";
-import type { AdminDescriptor, IntegralContext } from "../../core/src/admin/index.d.ts";
+import type { AdminDescriptor, TenonContext } from "../../core/src/admin/index.d.ts";
 import App from "./App.vue";
-import { integralKey, optionsKey } from "@/shared/options";
+import { tenonKey, optionsKey } from "@/shared/options";
 import { i18n } from "./shared/i18n";
 import { addAdminPages, createAdminRouter } from "./router";
 import css from "./style.css?inline";
@@ -45,7 +45,7 @@ export function mountAdmin(
     brand(admin);
     await addAdminPages(router, admin.pages);
   };
-  const integral: Omit<IntegralContext, "locale"> = {
+  const tenon: Omit<TenonContext, "locale"> = {
     base,
     navigate: (path: string) => void router.push(path),
     reload: async () => {},
@@ -58,7 +58,7 @@ export function mountAdmin(
     .provide(registryKey, registry)
     .provide(optionsKey, options)
     .provide(pageDataKey, shallowRef())
-    .provide(integralKey, integral);
+    .provide(tenonKey, tenon);
   app.mount(el);
   return () => app.unmount();
 }

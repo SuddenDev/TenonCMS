@@ -5,7 +5,7 @@ import type { ClientRef, Mount, MountHandle } from "../../../../core/src/admin/i
 import { lazyMount, loadClientRef } from "../../../../core/src/admin/browser/lazy-mount.ts";
 import { Button } from "@/shared/components/ui/button";
 import type { ExtensionData } from "@/shared/composables/useExtensionData";
-import { integralKey, registryKey } from "@/shared/options";
+import { tenonKey, registryKey } from "@/shared/options";
 
 // `loader`: the server data of the registration. The first mount waits for the browser code and the data.
 // The context gets `data` and a `reload` of this extension only. Without a loader, `data` is undefined.
@@ -18,7 +18,7 @@ const props = defineProps<{
 const { t, locale } = useI18n();
 const el = useTemplateRef("el");
 const registry = inject(registryKey, {});
-const integral = inject(integralKey)!;
+const tenon = inject(tenonKey)!;
 let handle: MountHandle<unknown> | undefined;
 // The mount function ran, or the browser code failed to load.
 const started = ref(false);
@@ -26,8 +26,8 @@ const started = ref(false);
 const context = () => ({
   ...props.ctx,
   data: props.loader?.result.value?.data,
-  integral: {
-    ...integral,
+  tenon: {
+    ...tenon,
     locale: locale.value,
     reload: async () => {
       await props.loader?.reload();
@@ -82,14 +82,14 @@ function onClick(e: MouseEvent) {
   const a = (e.target as Element).closest("a[href]");
   if (!a || a.hasAttribute("download") || (a.getAttribute("target") ?? "_self") !== "_self") return;
   const url = new URL(a.getAttribute("href")!, location.href);
-  const { base } = integral;
+  const { base } = tenon;
   if (
     url.origin !== location.origin ||
     (url.pathname !== base && !url.pathname.startsWith(`${base}/`))
   )
     return;
   e.preventDefault();
-  integral.navigate((url.pathname.slice(base.length) || "/") + url.search + url.hash);
+  tenon.navigate((url.pathname.slice(base.length) || "/") + url.search + url.hash);
 }
 </script>
 

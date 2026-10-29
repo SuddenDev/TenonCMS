@@ -3,7 +3,7 @@
 It assembles the schema, prepares database and authentication access, and binds the local API used by server code, HTTP endpoints and hooks.
 Start with [create-cms.ts](create-cms.ts): `defineCms()` connects these pieces. The actual document operations live in [collections](../collections/README.md) and [globals](../globals/README.md), with shared reads, writes and hooks in [content](../content/README.md).
 
-Application code imports `defineCms`, `Cms` and `Api` from `integral-cms`. See the [project README](../../../../README.md) for application setup and the [core overview](../README.md) for the surrounding modules.
+Application code imports `defineCms`, `Cms` and `Api` from `tenoncms`. See the [project README](../../../../README.md) for application setup and the [core overview](../README.md) for the surrounding modules.
 
 ## What happens when `defineCms()` runs
 
@@ -78,6 +78,6 @@ const draft = await cms.withDrafts().findById("posts", post.id);
 
 Here `published` is `undefined` until the document is published, while `draft` contains the pending document. The collection must support drafts.
 
-`await cms.withSession(request)` returns a caller-specific instance. [auth/get-caller.ts](../auth/get-caller.ts) resolves the session user and selects drafts only when a valid session accompanies the `integral-preview=drafts` cookie. Missing or failed session lookup falls back to `user: null` and published reads. Requests without cookies skip session lookup.
+`await cms.withSession(request)` returns a caller-specific instance. [auth/get-caller.ts](../auth/get-caller.ts) resolves the session user and selects drafts only when a valid session accompanies the `tenon-preview=drafts` cookie. Missing or failed session lookup falls back to `user: null` and published reads. Requests without cookies skip session lookup.
 
 Local APIs are trusted server entry points. `withSession()` supplies caller information to hooks and selects the read perspective; HTTP session checks and public field filtering live in [http](../http/README.md).

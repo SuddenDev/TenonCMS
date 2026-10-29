@@ -16,9 +16,9 @@ const raw = {
 };
 
 // Bundled into the admin chunks, so hosts install neither Vue nor React.
-const bundled = /^(vue|react|react-dom|scheduler)(\/|$)|^@vue\/|^integral-cms\/admin\/(vue|react)$/;
+const bundled = /^(vue|react|react-dom|scheduler)(\/|$)|^@vue\/|^tenoncms\/admin\/(vue|react)$/;
 
-// The plugins ship inside `integral-cms` as `integral-cms/plugins/<name>`, so core MUST build first.
+// The plugins ship inside `tenoncms` as `tenoncms/plugins/<name>`, so core MUST build first.
 export default defineConfig({
   plugins: [raw, Vue({ isProduction: true })],
   entry: [
@@ -34,7 +34,7 @@ export default defineConfig({
     "src/example/admin/react/bar.ts",
   ],
   outDir: "../core/dist/plugins",
-  // Core and its dependencies, which resolve from inside `integral-cms`.
+  // Core and its dependencies, which resolve from inside `tenoncms`.
   external: (id: string, importer?: string) =>
     !!importer && !id.startsWith(".") && !isAbsolute(id) && !bundled.test(id),
   platform: "neutral",
@@ -53,7 +53,7 @@ export default defineConfig({
     __VUE_PROD_DEVTOOLS__: "false",
     __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: "false",
   },
-  // Without the source paths, so the declarations import `integral-cms` instead of inlining it.
+  // Without the source paths, so the declarations import `tenoncms` instead of inlining it.
   tsconfig: "tsconfig.build.json",
   dts: { vue: true },
 });

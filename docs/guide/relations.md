@@ -18,7 +18,7 @@ posts: { type: 'join', collection: 'posts', on: 'author' }             // one-to
 
 - Ids live in the document JSON: a string, or a list of strings with `many`.
 - A write checks that every id exists in the target collection and that a document does not point at itself (400). A `many` list keeps its order and rejects duplicates. A required `many` relation needs at least one id.
-- Typos in `collection` and `join.on` show as type errors in `integral.config.ts`, naming the path and the allowed values.
+- Typos in `collection` and `join.on` show as type errors in `tenon.config.ts`, naming the path and the allowed values.
 - `defineCms` throws at startup for: an unknown target, a `join` whose `on` is not a relation to its own collection, `required` with `onDelete: 'set-null'`, a `join` in a global or group, `cascade` in a global, and `populate.depth` above `populate.maxDepth`.
 - Filters accept single top-level relations (`where: { author: id }`). They do not accept `many` relations, relations in groups, or joins.
 - `create` and `update` return ids.
@@ -52,7 +52,7 @@ Over HTTP: `?populate=false`, `?populate=author.avatar,tags`, `?depth=3`. The cl
 Every relation that points to it applies its `onDelete` rule. This all happens in one transaction, with the hooks of the referencing documents:
 
 - `set-null` (the default): a single relation becomes `null`. A `many` list drops the id.
-- `restrict` (the default for `required` relations): the delete throws `ConflictError` (exported from `integral-cms`) and changes nothing. HTTP returns 409 with `{ message, references }`, where each reference is `{ collection, id }` or `{ global }`.
+- `restrict` (the default for `required` relations): the delete throws `ConflictError` (exported from `tenoncms`) and changes nothing. HTTP returns 409 with `{ message, references }`, where each reference is `{ collection, id }` or `{ global }`.
 - `cascade`: the referencing documents are deleted too, recursively, with their own rules.
 
 Known limits:

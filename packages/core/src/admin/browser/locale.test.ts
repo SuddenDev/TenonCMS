@@ -23,7 +23,7 @@ describe("pickAdminLocale", () => {
 
 describe("currentAdminLocale", () => {
   it("reads the stored choice of the admin on this origin", () => {
-    localStorage.setItem("integral-admin-locale", "de");
+    localStorage.setItem("tenon-admin-locale", "de");
     expect(currentAdminLocale()).toBe("de");
     localStorage.clear();
     expect(currentAdminLocale()).toBe("en");

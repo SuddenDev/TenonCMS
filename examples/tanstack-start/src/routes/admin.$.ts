@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import html from "#integral/admin-html";
+import html from "#tenon/admin-html";
 
 // The admin is a page of its own. The app's shell, CSS and JS never load on /admin.
 export const Route = createFileRoute("/admin/$")({

@@ -8,11 +8,11 @@ export async function loadClientRef<T>(ref: ClientRef<T>, registry: ClientRegist
   const load = Object.hasOwn(registry, ref.clientRef) && registry[ref.clientRef];
   if (!load)
     throw new Error(
-      `integral-cms: clientRef("${ref.clientRef}") was not discovered. Use a literal clientRef() call in the static configuration import graph.`,
+      `tenoncms: clientRef("${ref.clientRef}") was not discovered. Use a literal clientRef() call in the static configuration import graph.`,
     );
   const value = await load();
   if (value === undefined)
-    throw new Error(`integral-cms: missing export in clientRef("${ref.clientRef}")`);
+    throw new Error(`tenoncms: missing export in clientRef("${ref.clientRef}")`);
   return value as T;
 }
 
@@ -31,7 +31,7 @@ export function lazyMount<Ctx>(load: () => Promise<unknown>, gate?: Promise<unkn
       .then((mount) => {
         if (disposed) return;
         if (typeof mount !== "function")
-          throw new Error("integral-cms: clientRef MUST export a mount function");
+          throw new Error("tenoncms: clientRef MUST export a mount function");
         const result = mount(el, current);
         handle = typeof result === "function" ? { unmount: result } : result;
       })

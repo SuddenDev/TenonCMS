@@ -1,6 +1,6 @@
 # http
 
-The `/api/cms` API on Hono. It mounts the feature endpoints in a fixed middleware order and offers the helpers they share: body parsing, read options, query filters, caller lookup and error mapping. It does not validate content or run hooks; handlers call the scoped local API, and the operations do that.
+The `/_tenon` API on Hono. It mounts the feature endpoints in a fixed middleware order and offers the helpers they share: body parsing, read options, query filters, caller lookup and error mapping. It does not validate content or run hooks; handlers call the scoped local API, and the operations do that.
 
 Endpoints live in their feature folders: `../collections/endpoints/`, `../globals/endpoints/`, `../media/endpoints/`, `/schema` in `../schema/endpoints/read.endpoint.ts` and the preview cookie in `../preview/endpoints/`. Sessions live in `../auth/`; plugin mounting and middleware collection live in `../plugins/http/`.
 

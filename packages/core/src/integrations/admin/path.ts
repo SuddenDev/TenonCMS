@@ -13,7 +13,7 @@ export function adminPath(admin: AdminOption = true) {
   // The path lands in routes and HTML. The API owns `API_BASE`, and `/` would hide the host's pages.
   if (!/^\/[\w-]+(\/[\w-]+)*$/.test(path) || path === API_BASE || path.startsWith(`${API_BASE}/`)) {
     throw new Error(
-      `integral-cms: invalid admin path "${admin}". Use letters, digits, "-" and "_", e.g. "/cms".`,
+      `tenoncms: invalid admin path "${admin}". Use letters, digits, "-" and "_", e.g. "/cms".`,
     );
   }
   return path;

@@ -2,7 +2,7 @@ import { consola } from "consola";
 import type { Storage } from "../storage/types.ts";
 import { variantKey, variantsOf } from "./keys.ts";
 
-const log = consola.withTag("integral");
+const log = consola.withTag("tenon");
 
 /** Moves a file and its variants. A variant that fails to move is logged; it renders again on request. */
 export async function moveWithVariants(storage: Storage, from: string, to: string) {

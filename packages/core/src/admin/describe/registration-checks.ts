@@ -35,7 +35,7 @@ export function isObject(value: unknown): value is Record<string, any> {
  * @throws If `value` is anything else.
  */
 export function requireRef(value: unknown, path: string, source: string) {
-  if (!isRef(value)) throw new Error(`integral-cms: ${path} in ${source} MUST use clientRef()`);
+  if (!isRef(value)) throw new Error(`tenoncms: ${path} in ${source} MUST use clientRef()`);
   return value;
 }
 
@@ -46,7 +46,7 @@ export function requireRef(value: unknown, path: string, source: string) {
  */
 export function optionalLoad(value: unknown, path: string, source: string) {
   if (value !== undefined && typeof value !== "function")
-    throw new Error(`integral-cms: ${path}.load in ${source} MUST be a function`);
+    throw new Error(`tenoncms: ${path}.load in ${source} MUST be a function`);
   return value as AnyLoad | undefined;
 }
 
@@ -60,7 +60,7 @@ export function copyConfig<T>(value: T, where: string): T {
     JSON.stringify(value, (_key, v) => {
       if (typeof v === "function")
         throw new Error(
-          `integral-cms: ${where} MUST be JSON. Only load may be a function; use clientRef() for browser code`,
+          `tenoncms: ${where} MUST be JSON. Only load may be a function; use clientRef() for browser code`,
         );
       return v;
     }),

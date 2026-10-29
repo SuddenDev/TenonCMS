@@ -129,7 +129,7 @@ describe("defineCms", () => {
 
   it("reads a global over HTTP without a session", async () => {
     const { fetch } = setup(defineCms(opts));
-    const res = await fetch("http://localhost/api/cms/globals/general");
+    const res = await fetch("http://localhost/_tenon/globals/general");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(unpublished);
   });

@@ -4,7 +4,7 @@ import { cloudflare } from "./cloudflare.ts";
 
 const src = {
   key: "a b/x.jpg",
-  url: "/api/cms/media/files/a%20b/x.jpg",
+  url: "/_tenon/media/files/a%20b/x.jpg",
   width: 2000,
   height: 1000,
 };
@@ -13,10 +13,10 @@ describe("cloudflare", () => {
   it("builds /cdn-cgi/image URLs with a stable option order", () => {
     const { getImage } = cloudflare();
     expect(getImage(src, { quality: 80, format: "webp", width: 640 }).url).toBe(
-      "/cdn-cgi/image/width=640,format=webp,quality=80/api/cms/media/files/a%20b/x.jpg",
+      "/cdn-cgi/image/width=640,format=webp,quality=80/_tenon/media/files/a%20b/x.jpg",
     );
     expect(getImage(src, { fit: "fill", height: 10, width: 20 }).url).toBe(
-      "/cdn-cgi/image/width=20,height=10,fit=scale-down/api/cms/media/files/a%20b/x.jpg",
+      "/cdn-cgi/image/width=20,height=10,fit=scale-down/_tenon/media/files/a%20b/x.jpg",
     );
   });
 
@@ -60,7 +60,7 @@ describe("cloudflare with the Images binding", () => {
 
   it("serves variants from core", () => {
     expect(cloudflare({ binding }).getImage(src, { width: 640, format: "webp" }).url).toBe(
-      "/api/cms/media/img/f_webp&w_640/a%20b/x.jpg",
+      "/_tenon/media/img/f_webp&w_640/a%20b/x.jpg",
     );
   });
 

@@ -42,7 +42,7 @@ export type R2Options = {
   partSize?: number;
   /**
    * Public URL of the bucket, e.g. its custom domain. File URLs are `<publicUrl>/<key>`. Default: core serves files at
-   * `/api/cms/media/files/<key>`.
+   * `/_tenon/media/files/<key>`.
    */
   publicUrl?: string;
 };
@@ -63,7 +63,7 @@ export type R2ApiOptions = {
   secretAccessKey: string;
   /**
    * Public URL of the bucket, e.g. its custom domain. File URLs are `<publicUrl>/<key>`. Default: the bucket stays private and
-   * core serves files at `/api/cms/media/files/<key>`.
+   * core serves files at `/_tenon/media/files/<key>`.
    */
   publicUrl?: string;
   /** Part size of uploads in bytes. At least 5 MB, as R2 requires. Default 16 MB. */
@@ -162,8 +162,7 @@ async function readAtMost(body: ReadableStream<Uint8Array>, maxBytes: number) {
   let length = 0;
   for await (const chunk of body) {
     length += chunk.length;
-    if (length > maxBytes)
-      throw new Error(`integral-cms: a part MUST NOT exceed ${maxBytes} bytes`);
+    if (length > maxBytes) throw new Error(`tenoncms: a part MUST NOT exceed ${maxBytes} bytes`);
     chunks.push(chunk);
   }
   return new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer());

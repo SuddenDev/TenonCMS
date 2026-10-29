@@ -15,7 +15,7 @@ export function lengthProblem(password: string, { emailAndPassword }: BetterAuth
 /** Applies the sign-up length rules to `/admin/create-user`. */
 export const passwordLength = () =>
   ({
-    id: "integral-password-length",
+    id: "tenon-password-length",
     hooks: {
       before: [
         {

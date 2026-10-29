@@ -17,12 +17,12 @@ await cms.withDrafts().find("posts"); // drafts
 Server-rendered pages get the visitor's perspective with `withSession()`. It returns the instance bound to the session user. It uses the drafts perspective only when the request carries the preview cookie set to `drafts` and a valid session:
 
 ```ts
-const integral = await cms.withSession(request);
-const posts = await integral.find("posts");
+const tenon = await cms.withSession(request);
+const posts = await tenon.find("posts");
 ```
 
-- Astro: the middleware does this, so `Astro.locals.integral` is already bound to the request.
-- Nuxt: `useIntegral()` reads over HTTP with the request's cookies, so the HTTP rules below apply.
+- Astro: the middleware does this, so `Astro.locals.tenon` is already bound to the request.
+- Nuxt: `useTenon()` reads over HTTP with the request's cookies, so the HTTP rules below apply.
 - TanStack Start: call it in server functions with `getRequest()` from `@tanstack/react-start/server`.
 
 ## Saving, publishing and discarding
@@ -69,11 +69,11 @@ The admin lets one person edit a document or global at a time, like Payload and 
 - A takeover moves the lock at once. The first editor learns it on the next renewal, and their form turns read-only.
 - Locks only guide the admin. The API does not enforce them; the `updatedAt` check protects writes.
 
-| Action              | Request                                                                         |
-| ------------------- | ------------------------------------------------------------------------------- |
-| Claim or renew      | `POST /api/cms/collections/:name/:id/lock`, `{ "takeover": true }` to take over |
-| Free                | `DELETE /api/cms/collections/:name/:id/lock`                                    |
-| Global: claim, free | `POST`, `DELETE` on `/api/cms/globals/:name/lock`                               |
+| Action              | Request                                                                        |
+| ------------------- | ------------------------------------------------------------------------------ |
+| Claim or renew      | `POST /_tenon/collections/:name/:id/lock`, `{ "takeover": true }` to take over |
+| Free                | `DELETE /_tenon/collections/:name/:id/lock`                                    |
+| Global: claim, free | `POST`, `DELETE` on `/_tenon/globals/:name/lock`                               |
 
 A claim answers `{ mine, user: { id, name } }`: whether you hold the lock, and who does. It needs a session and the right to update; API keys cannot lock. The client has `lock`, `unlock`, `lockGlobal` and `unlockGlobal`.
 
@@ -88,12 +88,12 @@ Every document and global keeps its past versions, per language. In the admin, o
 - Each document keeps its newest 100 versions per language; recording one more deletes the oldest. Set `maxVersions` on the collection or global to change it, or `Infinity` to keep every version. Deleting a document deletes its versions.
 - The history needs a session and the right to update. A version leaves out the fields you MAY NOT read.
 
-| Action           | Request                                                         |
-| ---------------- | --------------------------------------------------------------- |
-| List             | `GET /api/cms/collections/:name/:id/versions?locale=de`         |
-| Read one         | `GET /api/cms/collections/:name/:id/versions/:version`          |
-| Restore          | `POST /api/cms/collections/:name/:id/versions/:version/restore` |
-| Global: the same | on `/api/cms/globals/:name/versions`                            |
+| Action           | Request                                                        |
+| ---------------- | -------------------------------------------------------------- |
+| List             | `GET /_tenon/collections/:name/:id/versions?locale=de`         |
+| Read one         | `GET /_tenon/collections/:name/:id/versions/:version`          |
+| Restore          | `POST /_tenon/collections/:name/:id/versions/:version/restore` |
+| Global: the same | on `/_tenon/globals/:name/versions`                            |
 
 A list entry is `{ id, status, locale, user, createdAt, updatedAt }`; reading one adds `data`. The client has `versions`, `version`, `restoreVersion`, `globalVersions`, `globalVersion` and `restoreGlobalVersion`.
 
@@ -101,21 +101,21 @@ A list entry is `{ id, status, locale, user, createdAt, updatedAt }`; reading on
 
 With a session:
 
-| Action                         | Request                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------ |
-| Create a draft                 | `POST /api/cms/collections/:name/draft`                                  |
-| Save a draft                   | `PUT /api/cms/collections/:name/:id/draft`                               |
-| Publish                        | `POST /api/cms/collections/:name/:id/publish`                            |
-| Discard (204 when deleted)     | `DELETE /api/cms/collections/:name/:id/draft`                            |
-| Global: save, publish, discard | `PUT`, `POST`, `DELETE` on `/api/cms/globals/:name/draft` and `/publish` |
+| Action                         | Request                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| Create a draft                 | `POST /_tenon/collections/:name/draft`                                  |
+| Save a draft                   | `PUT /_tenon/collections/:name/:id/draft`                               |
+| Publish                        | `POST /_tenon/collections/:name/:id/publish`                            |
+| Discard (204 when deleted)     | `DELETE /_tenon/collections/:name/:id/draft`                            |
+| Global: save, publish, discard | `PUT`, `POST`, `DELETE` on `/_tenon/globals/:name/draft` and `/publish` |
 
 The client has `createDraft`, `updateDraft`, `publish`, `discard`, `setGlobalDraft`, `publishGlobal` and `discardGlobal`.
 
 ## The preview cookie
 
-The cookie `integral-preview` holds the perspective: `drafts` or `published`.
+The cookie `tenon-preview` holds the perspective: `drafts` or `published`.
 
-- `POST /api/cms/preview` sets it. The body is optional: `{ "perspective": "published" }` (default `drafts`). `DELETE /api/cms/preview` clears it. Both need a session.
+- `POST /_tenon/preview` sets it. The body is optional: `{ "perspective": "published" }` (default `drafts`). `DELETE /_tenon/preview` clears it. Both need a session.
 - It is not `HttpOnly`, so the preview runtime can read it.
 - In the browser, call `client.preview.enter(perspective?)` and `client.preview.exit()`.
-- HTTP reads show drafts only with `integral-preview=drafts` **and** a session, so the cookie alone shows nothing.
+- HTTP reads show drafts only with `tenon-preview=drafts` **and** a session, so the cookie alone shows nothing.

@@ -280,14 +280,14 @@ Run the admin playground (`pnpm dev:astro`) against the localized Astro example 
 - Header "…" menu: "Copy from…", "Copy to…", "Remove translation", "Discard all changes" with `alert-dialog` confirms (wording in spec section 5). "Discard all changes" shows only when the shared draft or another locale's draft is pending; the pure status helper also returns that.
 - `CollectionList.vue`: read with `locale`; "Not translated" marker.
 - `modules/preview/`: `previewUrl()` with `locale`; messages carry `locale`.
-- `pnpm --filter @integral-cms/admin test` and a manual pass in a foreground tab: switch languages with a pending edit, copy both ways with the confirm, remove, publish per locale.
+- `pnpm --filter @tenoncms/admin test` and a manual pass in a foreground tab: switch languages with a pending edit, copy both ways with the confirm, remove, publish per locale.
 
 ---
 
 ## Phase 14: Adapters
 
 - `integrations/astro/middleware.ts`: with `routing`, `locals.locale` and `locals.path` from `localeFromPath()`; types in the injected `App.Locals`.
-- `integrations/nuxt/runtime/composables.ts`: `useLocale()` (`locales`, `defaultLocale`, `locale`, `path`, `localePath()`, `switchLocale()`), `useAlternates()`; `useIntegral()` reads default to `locale.value`. `useLocale()` loads the config with `useAsyncData("integral:localization", () => client.localization())`, so SSR fetches it in-process and the browser takes it from the payload; `switchLocale()` is `navigateTo(switchTarget(…))`.
+- `integrations/nuxt/runtime/composables.ts`: `useLocale()` (`locales`, `defaultLocale`, `locale`, `path`, `localePath()`, `switchLocale()`), `useAlternates()`; `useTenon()` reads default to `locale.value`. `useLocale()` loads the config with `useAsyncData("tenon:localization", () => client.localization())`, so SSR fetches it in-process and the browser takes it from the payload; `switchLocale()` is `navigateTo(switchTarget(…))`.
 - Register the new auto-imports in `integrations/nuxt/index.ts`.
 - `nuxt typecheck` in `examples/nuxt`.
 
@@ -303,7 +303,7 @@ Run the admin playground (`pnpm dev:astro`) against the localized Astro example 
 
 ## Phase 16: Astro example and docs
 
-- `examples/astro/integral.config.ts`: `localization: { locales: ["en", "de"], defaultLocale: "en" }`; `pages` and `posts` localized; `posts.hero` `localized: false`.
+- `examples/astro/tenon.config.ts`: `localization: { locales: ["en", "de"], defaultLocale: "en" }`; `pages` and `posts` localized; `posts.hero` `localized: false`.
 - `[...path].astro` and `posts/[slug].astro`: read with `locals.locale` / `locals.path`, `alternates: true`; `<html lang>`; a language switch from `alternates`; `hreflang` from `seoMeta()`. The prerendered post page builds paths per locale in `getStaticPaths()`.
 - README "Localization" section; module READMEs (`content/`, `db/`, `preview/`, `helpers/`, `cms/`); CLAUDE.md (architecture lines for the new leaves, the Astro example, `permalink`).
 

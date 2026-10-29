@@ -7,8 +7,8 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["vite/client", "node", "integral-cms/register"],
-    "paths": { "#integral/config": ["./integral.config.ts"] }
+    "types": ["vite/client", "node", "tenoncms/register"],
+    "paths": { "#tenon/config": ["./tenon.config.ts"] }
   },
-  "include": ["src", "collections", "integral.config.ts", "admin.ts", "vite.config.ts"]
+  "include": ["src", "collections", "tenon.config.ts", "admin.ts", "vite.config.ts"]
 }

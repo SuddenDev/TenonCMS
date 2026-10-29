@@ -1,5 +1,5 @@
-import { clientRef } from "integral-cms/admin";
-import { defineCollection, definePlugin, type LocalApi, ValidationError } from "integral-cms";
+import { clientRef } from "tenoncms/admin";
+import { defineCollection, definePlugin, type LocalApi, ValidationError } from "tenoncms";
 
 export type RedirectsOptions = {
   /** Collections whose documents get a redirect from their old path when it changes. Default `['pages']`. */
@@ -17,7 +17,7 @@ export type Redirect = { to: string; status: 301 | 302 };
  * Redirects from old paths to new ones, edited in the admin and created on their own when a page moves.
  *
  * Adds the `redirects` collection (`from`, `to`, `permanent`), a hook that keeps redirects in step with
- * path changes, `GET /api/cms/redirects/lookup?path=` for everyone and `POST /api/cms/redirects/import`
+ * path changes, `GET /_tenon/redirects/lookup?path=` for everyone and `POST /_tenon/redirects/import`
  * for admins. Resolve them in your own middleware with {@link resolveRedirect}.
  * @example
  * defineCms({ plugins: [RedirectsPlugin()] })
@@ -34,7 +34,7 @@ export function RedirectsPlugin({
         "redirects-tools": {
           title: { en: "Redirect Tools", de: "Weiterleitungs-Tools" },
           nav: { icon: "arrow-right-left", order: 11 },
-          mount: clientRef("integral-cms/plugins/redirects/admin#mountTools"),
+          mount: clientRef("tenoncms/plugins/redirects/admin#mountTools"),
         },
       },
     },

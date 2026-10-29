@@ -16,6 +16,6 @@ export const ADMIN_BAR_POSITIONS: readonly AdminBarPosition[] = [
 export function checkAdminBarPosition(position: unknown) {
   if (position !== undefined && !ADMIN_BAR_POSITIONS.includes(position as AdminBarPosition))
     throw new Error(
-      "integral-cms: admin.adminBar.position MUST be one of " + ADMIN_BAR_POSITIONS.join(", "),
+      "tenoncms: admin.adminBar.position MUST be one of " + ADMIN_BAR_POSITIONS.join(", "),
     );
 }

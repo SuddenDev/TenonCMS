@@ -2,12 +2,12 @@
 
 Optional server-side delivery, shared by host code, hooks and plugin routes.
 
-| File              | Responsibility                                                            |
-| ----------------- | ------------------------------------------------------------------------- |
-| `types.ts`        | Provider-neutral adapter, message, template, options and API contracts.   |
-| `create-email.ts` | Instance-owned sender, message validation and adapter dispatch.           |
-| `templates.ts`    | Default password-reset, verification and invite text/HTML templates.      |
-| `smtp.ts`         | Lazy Nodemailer SMTP transport; separate `integral-cms/email/smtp` entry. |
+| File              | Responsibility                                                          |
+| ----------------- | ----------------------------------------------------------------------- |
+| `types.ts`        | Provider-neutral adapter, message, template, options and API contracts. |
+| `create-email.ts` | Instance-owned sender, message validation and adapter dispatch.         |
+| `templates.ts`    | Default password-reset, verification and invite text/HTML templates.    |
+| `smtp.ts`         | Lazy Nodemailer SMTP transport; separate `tenoncms/email/smtp` entry.   |
 
 `defineCms({ email: { adapter, from, templates? } })` binds one `EmailApi`. Instances, `withDrafts()`, `withSession()` and scoped local APIs all share it. Without configuration, `email.send()` rejects without connecting to a provider or database.
 

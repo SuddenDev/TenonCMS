@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const cms = useIntegral();
+const cms = useTenon();
 const { data: general } = await cms.getGlobal("general");
 const { data: posts } = await cms.find("posts");
 

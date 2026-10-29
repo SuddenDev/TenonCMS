@@ -28,20 +28,20 @@ framework re-render and reports the bound documents. With `morph`, a `saved` mes
 
 `preview()` on a site page flows through:
 
-`runtime/preview.ts` → `runtime/admin-bar.ts` → `GET /api/cms/admin-bar` (`endpoints/admin-bar.endpoint.ts` →
-`config/admin-bar.ts`) → `import("integral-cms/admin/bar")` → `mountAdminBar()`
+`runtime/preview.ts` → `runtime/admin-bar.ts` → `GET /_tenon/admin-bar` (`endpoints/admin-bar.endpoint.ts` →
+`config/admin-bar.ts`) → `import("tenoncms/admin/bar")` → `mountAdminBar()`
 
 `preview()` starts the bar when `admin` is not `false`, the page is not under the admin's path, and the
-`integral-session` hint cookie is set (`hasSessionHint()`). `startAdminBar()` asks the endpoint for the page's items
+`tenon-session` hint cookie is set (`hasSessionHint()`). `startAdminBar()` asks the endpoint for the page's items
 (`loadAdminBar()`, with the page `url` and the `mode`). The endpoint composes the built-in stubs (`builtIns()`) with the
 registered items from `admin.adminBar.items`, drops hidden ones, runs the loaders of the others and answers
 `{ position, items, branding }`. The endpoint sorts the items, and `fillItems()` turns the built-in stubs into links for the page. A `clientRef()` on an item (`onClick`, `mount`) resolves through the
-`#integral/client-registry` module, imported on the first item that needs it and only after the session check. The bar
+`#tenon/client-registry` module, imported on the first item that needs it and only after the session check. The bar
 chunk loads only then, so visitors download nothing extra. It mounts into an open shadow root on a
 `<div data-cms-bar>` on `<html>`. The bar renders the context and calls its actions; the runtime owns all state and
 calls `update()` when the bound documents, the edit mode or an item's data change.
 
-The framework-specific `useDraft()` helpers live in [`integrations/vue/preview.ts`](../integrations/vue/preview.ts) and [`integrations/react/preview.ts`](../integrations/react/preview.ts). Their public imports remain `integral-cms/preview/vue` and `integral-cms/preview/react`.
+The framework-specific `useDraft()` helpers live in [`integrations/vue/preview.ts`](../integrations/vue/preview.ts) and [`integrations/react/preview.ts`](../integrations/react/preview.ts). Their public imports remain `tenoncms/preview/vue` and `tenoncms/preview/react`.
 
 ## Files
 
@@ -67,7 +67,7 @@ The framework-specific `useDraft()` helpers live in [`integrations/vue/preview.t
 
 `index.ts` and the Vue/React helpers in `integrations/` run in the browser and in server bundles. They MUST NOT import zod or core
 runtime code. `runtime/` imports only types from `admin/index.d.ts` and loads the bar with a dynamic
-`import("integral-cms/admin/bar")`, which the host's bundler splits into its own chunk. Files in `templates/` MUST import
+`import("tenoncms/admin/bar")`, which the host's bundler splits into its own chunk. Files in `templates/` MUST import
 only from each other.
 
 ## Messages
@@ -101,11 +101,11 @@ else from the value itself. Objects and arrays without `data-cms-attr` are left 
 
 `preview()` picks its mode from `window.name`, which survives navigation:
 
-| `window.name`        | Mode                                                                                                   |
-| -------------------- | ------------------------------------------------------------------------------------------------------ |
-| `integral-preview`   | The admin's iframe. Live preview, no bar.                                                              |
-| `integral-preview-…` | A preview the admin opened in a tab. Live preview and the bar in `preview-tab` mode.                   |
-| anything else        | The bar in `site` mode, with the hint cookie, a session and `admin` not `false`. Never on admin pages. |
+| `window.name`     | Mode                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------ |
+| `tenon-preview`   | The admin's iframe. Live preview, no bar.                                                              |
+| `tenon-preview-…` | A preview the admin opened in a tab. Live preview and the bar in `preview-tab` mode.                   |
+| anything else     | The bar in `site` mode, with the hint cookie, a session and `admin` not `false`. Never on admin pages. |
 
 Built-in items (`builtIns()`), one flat row sorted by `order`:
 
@@ -133,11 +133,11 @@ The server cannot see the page, so the client fills `dashboard` and `edit` into 
 normal pill renders the whole sorted list inline, so custom items can sit between built-ins.
 
 The runtime reloads item data when the page URL changes and on the existing focus/session check, drops stale
-responses, and does not reload on mutations or edit-mode toggles. `ctx.integral.reload()` reloads one item through
+responses, and does not reload on mutations or edit-mode toggles. `ctx.tenon.reload()` reloads one item through
 `POST /admin/load` with `kind: "bar-item"` (`loadAdminBarItem()`).
 
 The session cookie is `HttpOnly`, so the page cannot see it. The auth middleware
-[`session-hint.middleware.ts`](../auth/middleware/session-hint.middleware.ts) mirrors it in `integral-session=1`, which
+[`session-hint.middleware.ts`](../auth/middleware/session-hint.middleware.ts) mirrors it in `tenon-session=1`, which
 page code can read. The hint grants nothing: the endpoint checks the real session, and a 401 clears the hint. Any
 other error or a failed chunk import shows no bar and keeps the hint.
 

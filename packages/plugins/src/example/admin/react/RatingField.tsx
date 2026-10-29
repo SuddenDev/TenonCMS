@@ -1,9 +1,9 @@
-import type { FieldContext } from "integral-cms/admin";
+import type { FieldContext } from "tenoncms/admin";
 import { texts } from "../utils/texts.ts";
 
 /** 5 stars. A click sets the rating, a click on the current star clears it. */
-export function RatingField({ value, onChange, field, integral }: FieldContext) {
-  const t = texts(integral.locale);
+export function RatingField({ value, onChange, field, tenon }: FieldContext) {
+  const t = texts(tenon.locale);
   return (
     <span>
       {[1, 2, 3, 4, 5].map((n) => (

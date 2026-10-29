@@ -29,8 +29,8 @@ export function describeBarItem(
   const where = `admin bar item "${id}" in ${source}`;
 
   if (!isObject(value))
-    throw new Error(`integral-cms: ${where} MUST be an object${child ? "" : " or false"}`);
-  if (!isText(value.label)) throw new Error(`integral-cms: ${where} MUST have a label`);
+    throw new Error(`tenoncms: ${where} MUST be an object${child ? "" : " or false"}`);
+  if (!isText(value.label)) throw new Error(`tenoncms: ${where} MUST have a label`);
 
   const { label, icon, order, href, onClick, mount, children } = value;
   checkCombination(value, id, where, source);
@@ -44,7 +44,7 @@ export function describeBarItem(
   if (fn) descriptor.load = true;
 
   if (children !== undefined) {
-    if (child) throw new Error(`integral-cms: ${where}: children cannot have children`);
+    if (child) throw new Error(`tenoncms: ${where}: children cannot have children`);
     const described = describeChildren(children, source, where);
     descriptor.children = described.map((d) => d.descriptor);
     for (const d of described) loaders.push(...d.loaders);
@@ -58,15 +58,13 @@ function checkCombination(value: Record<string, any>, id: string, where: string,
   if (onClick !== undefined) requireRef(onClick, `admin bar item "${id}" onClick`, source);
   if (mount !== undefined) requireRef(mount, `admin bar item "${id}" mount`, source);
   if (mount && (href !== undefined || onClick !== undefined || children !== undefined))
-    throw new Error(
-      `integral-cms: ${where}: mount cannot be combined with href, onClick or children`,
-    );
+    throw new Error(`tenoncms: ${where}: mount cannot be combined with href, onClick or children`);
   if (onClick && (href !== undefined || children !== undefined))
-    throw new Error(`integral-cms: ${where}: onClick cannot be combined with href or children`);
+    throw new Error(`tenoncms: ${where}: onClick cannot be combined with href or children`);
 }
 
 function describeChildren(children: unknown, source: string, where: string) {
   if (!isObject(children))
-    throw new Error(`integral-cms: ${where}: children MUST be an object of items by id`);
+    throw new Error(`tenoncms: ${where}: children MUST be an object of items by id`);
   return Object.entries(children).map(([id, entry]) => describeBarItem(id, entry, source, true));
 }

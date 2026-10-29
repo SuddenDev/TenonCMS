@@ -105,7 +105,7 @@ function followDeclaration(scan: Scan, node: AstNode) {
   scan.following.delete(node.name);
 }
 
-// `clientRef(...)` or `ns.clientRef(...)`, with the names that `integral-cms/admin` was imported under.
+// `clientRef(...)` or `ns.clientRef(...)`, with the names that `tenoncms/admin` was imported under.
 function isClientRefCall(info: ModuleInfo, node: AstNode) {
   if (node.type !== "CallExpression") return false;
   const { callee } = node;
@@ -122,7 +122,7 @@ function record(scan: Scan, call: AstNode, site: boolean) {
   const [arg] = call.arguments;
   if (call.arguments.length !== 1 || arg?.type !== "Literal" || typeof arg.value !== "string")
     throw new Error(
-      `integral-cms: clientRef() in ${scan.file} MUST use one literal string, e.g. clientRef("./src/admin/color.ts#mountColor"). The adapter reads the call from source and cannot evaluate computed values`,
+      `tenoncms: clientRef() in ${scan.file} MUST use one literal string, e.g. clientRef("./src/admin/color.ts#mountColor"). The adapter reads the call from source and cannot evaluate computed values`,
     );
   scan.refs.set(arg.value, site || scan.refs.get(arg.value) === true);
 }

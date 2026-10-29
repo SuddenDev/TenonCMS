@@ -70,7 +70,7 @@ describe("durable object dialect", () => {
       const failed = db.transaction().execute(async (trx) => {
         await trx.insertInto("t").values({ v: "a" }).execute();
         await wait(20);
-        await env.CMS.getByName("other").fetch("http://x/api/cms/schema");
+        await env.CMS.getByName("other").fetch("http://x/_tenon/schema");
         await trx.insertInto("t").values({ v: "b" }).execute();
         await wait(20);
         throw new Error("boom");

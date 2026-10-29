@@ -15,7 +15,7 @@ afterEach(() => {
 
 it("trusts only the preview iframe and registered tabs, with validated message shapes", () => {
   const frame = document.createElement("iframe");
-  frame.name = "integral-preview";
+  frame.name = "tenon-preview";
   document.body.append(frame);
   const receive = vi.fn();
   const root = document.createElement("div");

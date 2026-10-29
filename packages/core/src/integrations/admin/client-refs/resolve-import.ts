@@ -2,7 +2,7 @@ import type { Resolver } from "./types.ts";
 
 /** Imports that hold no `clientRef()` calls of the host: Node built-ins and the package's own entries. */
 const LEAVES =
-  /^(node:|integral-cms\/(admin(?:\/|$)|client$|richtext$|preview(?:\/|$)|media\/)|integral-cms$)/;
+  /^(node:|tenoncms\/(admin(?:\/|$)|client$|richtext$|preview(?:\/|$)|media\/)|tenoncms$)/;
 
 /**
  * Resolves an import to the file the scan MAY follow.

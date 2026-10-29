@@ -1,7 +1,7 @@
 import { createApp, h, reactive, Suspense, type Component } from "vue";
 import type { Mount } from "../index";
 
-export type { FieldContext, IntegralContext, Mount, PageContext } from "../index";
+export type { FieldContext, TenonContext, Mount, PageContext } from "../index";
 
 /**
  * Turns a Vue component into a {@link Mount}.

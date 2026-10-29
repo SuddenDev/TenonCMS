@@ -33,7 +33,7 @@ export function authOptions<A extends AuthOptions>(
   db: Kysely<Database>,
   secret: string,
   host: A,
-  { email, appName = "integral-cms", roles = BUILT_IN_ROLES }: CoreAuth = {},
+  { email, appName = "tenoncms", roles = BUILT_IN_ROLES }: CoreAuth = {},
 ) {
   const { emailAndPassword, emailVerification, plugins = [], rateLimit, user, ...options } = host;
   const has = (id: string) => plugins.some((p) => p.id === id);

@@ -4,20 +4,20 @@ import { checkSiteStyles } from "./check-site-styles.ts";
 import { collectClientRefs } from "./collect-client-refs.ts";
 import type { ClientRef, Resolver } from "./types.ts";
 
-const REGISTRY = "#integral/client-registry";
-const VIRTUAL = "\0integral-client-registry";
+const REGISTRY = "#tenon/client-registry";
+const VIRTUAL = "\0tenon-client-registry";
 
 /**
- * Vite plugin that serves `#integral/client-registry` to every framework adapter. The module maps each
+ * Vite plugin that serves `#tenon/client-registry` to every framework adapter. The module maps each
  * `clientRef()` specifier of the configuration to a lazy import of its export.
  * @param entry Server configuration, relative to the project root.
  * @param projectRoot Project root. Defaults to Vite's root.
  */
-export function clientReferences(entry = "./integral.config.ts", projectRoot?: string): Plugin {
+export function clientReferences(entry = "./tenon.config.ts", projectRoot?: string): Plugin {
   let root = "";
   let config = "";
   return {
-    name: "integral-cms:client-references",
+    name: "tenoncms:client-references",
     configResolved(options) {
       root = projectRoot ?? options.root;
       config = resolve(root, entry);
@@ -49,6 +49,6 @@ function registryModule(refs: Record<string, ClientRef>) {
 
 // Throws on load when the file does not export the name, so a typo in `clientRef()` shows up in the console.
 function loader(key: string, ref: ClientRef) {
-  const missing = `integral-cms: missing export "${ref.export}" in clientRef("${key}")`;
+  const missing = `tenoncms: missing export "${ref.export}" in clientRef("${key}")`;
   return `${JSON.stringify(key)}: () => import(${JSON.stringify(ref.file)}).then(m => { const value = m[${JSON.stringify(ref.export)}]; if (value === undefined) throw new Error(${JSON.stringify(missing)}); return value; })`;
 }

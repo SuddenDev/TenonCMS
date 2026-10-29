@@ -129,7 +129,7 @@ export function checkRichtextAllowed(
       !(RICHTEXT_FEATURES as readonly string[]).includes(name) &&
       !Object.hasOwn(registrations, name)
     )
-      throw new Error(`integral-cms: unknown rich text feature "${name}"`);
+      throw new Error(`tenoncms: unknown rich text feature "${name}"`);
 
   richtextSchema(allowed, registrations);
 }

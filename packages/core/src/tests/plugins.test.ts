@@ -69,12 +69,12 @@ describe("plugins", () => {
     const cms = defineCms({ ...base, plugins: [stats] });
     await cms.create("posts", { title: "a" });
     const { client, fetch } = setup(cms);
-    const get = (path: string) => fetch(`${origin}/api/cms/stats${path}`);
+    const get = (path: string) => fetch(`${origin}/_tenon/stats${path}`);
     expect(await (await get("/count")).json()).toEqual({ count: 1 });
     expect((await get("/me")).status).toBe(401);
     await client.signUp(admin);
     expect(await (await get("/me")).json()).toEqual({ email: admin.email, posts: 1 });
-    const res = await fetch(`${origin}/api/cms/stats/fail`, { method: "POST" });
+    const res = await fetch(`${origin}/_tenon/stats/fail`, { method: "POST" });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ errors: { title: "Nope" } });
     expect((await get("/nope")).status).toBe(404);
@@ -116,21 +116,21 @@ describe("plugins", () => {
       },
     });
     const { client, fetch } = setup(defineCms({ ...base, plugins: [guard] }));
-    const get = (init?: RequestInit) => fetch(`${origin}/api/cms/collections/posts`, init);
+    const get = (init?: RequestInit) => fetch(`${origin}/_tenon/collections/posts`, init);
 
     const res = await get();
     expect(res.headers.get("x-guard")).toBe("1");
     expect((await get({ headers: { "x-block": "1" } })).status).toBe(429);
-    expect(seen).toEqual(["public GET /api/cms/collections/posts"]);
+    expect(seen).toEqual(["public GET /_tenon/collections/posts"]);
 
     // Unauthorized writes stop at the session check, before `middleware`.
     expect(await status(client.create("posts", { title: "a" }))).toBe(401);
     await client.signUp(admin);
     await client.create("posts", { title: "a" });
     expect(seen.slice(1)).toEqual([
-      "public POST /api/cms/collections/posts",
-      "public POST /api/cms/auth/sign-up/email",
-      "public POST /api/cms/collections/posts",
+      "public POST /_tenon/collections/posts",
+      "public POST /_tenon/auth/sign-up/email",
+      "public POST /_tenon/collections/posts",
       `session ${admin.email}`,
     ]);
   });

@@ -1,5 +1,5 @@
-import { defineCollection } from "integral-cms";
-import { page, seo } from "integral-cms/presets";
+import { defineCollection } from "tenoncms";
+import { page, seo } from "tenoncms/presets";
 
 export const pages = defineCollection({
   label: "Pages",

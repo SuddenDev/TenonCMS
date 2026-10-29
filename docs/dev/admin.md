@@ -11,7 +11,7 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 ## Extension contract
 
 - Everything crosses the boundary as `mount(el, ctx)`, which returns a cleanup function or `{ update(ctx), unmount() }`. No framework components cross it, so the admin bundles its own Vue and hosts install nothing.
-- Data flows in by `ctx`, out by callbacks. Helpers live under `ctx.integral`, never at the top level.
+- Data flows in by `ctx`, out by callbacks. Helpers live under `ctx.tenon`, never at the top level.
 - Slots are fields (by custom type name), pages (by key), bar items, and rich text extensions.
 - A registration can also have a server `load` function. It runs only on request, gets the signed-in user and a user-scoped `cms`, MUST only read, and MUST return JSON. The loader endpoint accepts registered keys only.
 - The schema sent to the admin never runs a loader. Branding is also served before sign-in, without the rest of the schema.

@@ -3,10 +3,10 @@ import { currentAdminLocale } from "../../admin/browser/locale.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
 
 // `API_BASE` of the client. Importing it would pull core code into the browser entry.
-const API = "/api/cms";
-const COOKIE = "integral-preview";
+const API = "/_tenon";
+const COOKIE = "tenon-preview";
 // `SESSION_HINT` of the auth middleware, repeated so no server code reaches the browser entry.
-const HINT = "integral-session";
+const HINT = "tenon-session";
 
 /** What the CMS answers for the admin bar of a page. */
 export type AdminBarData = {
@@ -62,8 +62,7 @@ export async function loadAdminBarItem(
     body: JSON.stringify({ kind: "bar-item", id, url: page, locale: currentAdminLocale() }),
   });
   if (res.status === 401) return "unauthorized";
-  if (!res.ok)
-    throw new Error(`integral-cms: reloading admin bar item "${id}" failed (${res.status})`);
+  if (!res.ok) throw new Error(`tenoncms: reloading admin bar item "${id}" failed (${res.status})`);
   return res.json();
 }
 

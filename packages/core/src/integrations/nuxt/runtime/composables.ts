@@ -7,7 +7,7 @@ import {
   useRoute,
   useState,
 } from "#app";
-import type cms from "#integral/config";
+import type cms from "#tenon/config";
 import {
   type Checked,
   type Collections as HttpCollections,
@@ -20,8 +20,8 @@ import {
   type Localization,
   type ReadOptions,
   switchTarget,
-} from "integral-cms/client";
-import { getDrafts, merge, subscribe } from "integral-cms/preview";
+} from "tenoncms/client";
+import { getDrafts, merge, subscribe } from "tenoncms/preview";
 import {
   computed,
   type MaybeRefOrGetter,
@@ -47,7 +47,7 @@ type Client = ReturnType<typeof createClient<typeof cms>>;
 type Config = Localization<string> | null;
 type Alternates = Record<string, string> | null;
 
-const LOCALIZATION = "integral:localization";
+const LOCALIZATION = "tenon:localization";
 
 const localization = (client: Client) => client.localization() as Promise<Config>;
 
@@ -95,7 +95,7 @@ function live<R extends PromiseLike<{ data: Ref<unknown> }> & { data: Ref<unknow
 function load<T>(name: string, key: () => string, read: () => Promise<T>) {
   return live(
     name,
-    useAsyncData(() => `integral:${key()}`, read),
+    useAsyncData(() => `tenon:${key()}`, read),
   );
 }
 
@@ -103,9 +103,9 @@ function load<T>(name: string, key: () => string, read: () => Promise<T>) {
  * The client's read methods for pages, each wrapped in `useAsyncData`. During SSR the request stays in-process;
  * on client-side navigation it hits the public read API. In the admin's live preview, `data` shows unsaved changes.
  * @example
- * const { data: post } = await useIntegral().findOne('posts', { where: { slug } })
+ * const { data: post } = await useTenon().findOne('posts', { where: { slug } })
  */
-export function useIntegral() {
+export function useTenon() {
   const client = useClient();
   const route = useRoute();
   const cached = useNuxtData<Config>(LOCALIZATION).data;
@@ -201,7 +201,7 @@ export function useLocale() {
   const client = useClient();
   const route = useRoute();
   const { data } = useAsyncData(LOCALIZATION, () => localization(client));
-  const alternates = useState<Alternates>("integral:alternates", () => null);
+  const alternates = useState<Alternates>("tenon:alternates", () => null);
 
   const config = computed(() => data.value ?? null);
   const current = computed(() => config.value && localeFromPath(route.path, config.value));
@@ -239,7 +239,7 @@ export function useLocale() {
  * useAlternates(() => page.value?.alternates)
  */
 export function useAlternates(source: () => Alternates | undefined) {
-  const alternates = useState<Alternates>("integral:alternates", () => null);
+  const alternates = useState<Alternates>("tenon:alternates", () => null);
   let mine: Alternates = null;
   watchEffect(() => (alternates.value = mine = source() ?? null));
   // A page that mounts first sets its own before this one is disposed.

@@ -36,7 +36,7 @@ export async function newApiKeySecret() {
  */
 export const apiKeyRoutesOff = () =>
   ({
-    id: "integral-api-key-routes-off",
+    id: "tenon-api-key-routes-off",
     hooks: {
       before: [
         {

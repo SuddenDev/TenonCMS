@@ -73,15 +73,15 @@ The frontend components render Tiptap JSON in an unstyled `<div>`, both on the s
 
 ```astro
 ---
-import Richtext from 'integral-cms/richtext/astro';
+import Richtext from 'tenoncms/richtext/astro';
 ---
 <Richtext content={post.body} class="prose" />
 ```
 
 ```vue
 <script setup lang="ts">
-import { Richtext } from "integral-cms/richtext/vue";
-defineProps<{ post: { body: import("integral-cms/richtext").RichtextDocument | null } }>();
+import { Richtext } from "tenoncms/richtext/vue";
+defineProps<{ post: { body: import("tenoncms/richtext").RichtextDocument | null } }>();
 </script>
 
 <template>
@@ -90,14 +90,14 @@ defineProps<{ post: { body: import("integral-cms/richtext").RichtextDocument | n
 ```
 
 ```tsx
-import { Richtext } from "integral-cms/richtext/react";
+import { Richtext } from "tenoncms/richtext/react";
 
 <Richtext content={post.body} className="prose" />;
 ```
 
 Use populated content for current media and internal-link URLs. The components do not fetch references themselves. Vue and React re-render when their content changes, including documents returned by the preview helpers.
 
-`renderRichtext(content, extensions?)` from `integral-cms/richtext` returns the same HTML for other templates. It uses Tiptap's static renderer, escapes text and attributes, validates URLs and rejects unsupported content rather than dropping it. Custom extensions MUST be trusted, work without a DOM and supply `renderHTML`; editor node views are not used. Pass their schema extensions as `{ featureName: [Extension] }`. The renderer does not change the input JSON.
+`renderRichtext(content, extensions?)` from `tenoncms/richtext` returns the same HTML for other templates. It uses Tiptap's static renderer, escapes text and attributes, validates URLs and rejects unsupported content rather than dropping it. Custom extensions MUST be trusted, work without a DOM and supply `renderHTML`; editor node views are not used. Pass their schema extensions as `{ featureName: [Extension] }`. The renderer does not change the input JSON.
 
 `richtextExtensions()` remains available for hosts that use Tiptap's rendering tools directly.
 
@@ -105,7 +105,7 @@ Use populated content for current media and internal-link URLs. The components d
 
 | Path                            | Responsibility                                                       |
 | ------------------------------- | -------------------------------------------------------------------- |
-| `index.ts`                      | Public exports for `integral-cms/richtext`.                          |
+| `index.ts`                      | Public exports for `tenoncms/richtext`.                              |
 | `config/types.ts`               | Document, reference, extension registration and editor contracts.    |
 | `config/check-config.ts`        | Field feature checks after plugin registrations merge.               |
 | `runtime/extensions.ts`         | Built-in Tiptap features and the shared editor/server schema.        |

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data } = await useIntegral().find("pages", { select: { title: true, path: true } });
+const { data } = await useTenon().find("pages", { select: { title: true, path: true } });
 const pages = computed(() => data.value?.filter((page) => page.path));
 const { localePath } = useLocale();
 </script>

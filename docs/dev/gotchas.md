@@ -8,12 +8,13 @@ Each of these cost a debugging round. Check here when something behaves strangel
 
 - Nitro rewrites `typeof window` to `"undefined"` as plain text, even inside strings. Keep browser-only code out of server bundles.
 - libsql loads its native binary (`@libsql/<platform>`) with a dynamic require, on import of the Node entry. The dialect imports it only for file URLs; remote URLs use `@libsql/client/web`.
-  - If Vite bundles core, the binding breaks. That is why the Astro adapter and `integralAdmin()` set core external in builds. Dev does not bundle, so core stays internal there.
+  - If Vite bundles core, the binding breaks. That is why the Astro adapter and `tenonAdmin()` set core external in builds. Dev does not bundle, so core stays internal there.
   - Nitro 2 (Nuxt) does not trace the binary, so the Nuxt module adds it by hand. Nitro 3 (TanStack Start) traces it on its own.
 - `tsdown` `copy` with a directory `from` nests that directory under `to`. Use the parent as `to`.
 - Build on the OS and CPU you deploy to. libsql ships one binary per platform.
-- esbuild (wrangler) reads the nearest `tsconfig.json` of each file. In this repo that applies core's `paths` to `packages/core/dist`, so `integral-cms/media/default` resolves to `src/` and pulls in IPX and sharp. Pass `--tsconfig tsconfig.json` to wrangler. Published installs ship no tsconfig and are not affected. Vite builds (the Astro adapter on Cloudflare) do not read `paths`.
+- esbuild (wrangler) reads the nearest `tsconfig.json` of each file. In this repo that applies core's `paths` to `packages/core/dist`, so `tenoncms/media/default` resolves to `src/` and pulls in IPX and sharp. Pass `--tsconfig tsconfig.json` to wrangler. Published installs ship no tsconfig and are not affected. Vite builds (the Astro adapter on Cloudflare) do not read `paths`.
 - `wrangler deploy` cannot create an R2 bucket on an account without R2. It skips the bucket, treats the binding as inherited, and the first deploy fails with `inherit binding 'MEDIA' is invalid: previous version does not have binding named 'MEDIA'`. Enable R2 in the Cloudflare dashboard first (`wrangler r2 bucket list` answers code 10042 until then).
+- TanStack Router treats a route file that starts with `_` as a pathless layout, so `_tenon.$.ts` never matches `/_tenon`. Name it `[_]tenon.$.ts`.
 
 **Watchers and build output**
 
@@ -28,7 +29,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - `nuxt preview` runs with its working directory in `.output/`, so a relative `file:./cms.db` lands in the build output and gets wiped. Use absolute paths.
 - A leftover service worker on `localhost:3000` from another project can hijack navigation. If a page works in incognito but not normally, check DevTools, Application, Service workers.
 - `configureServer` also runs during `vite build` (TanStack and Nitro). Check `this.environment.config.command === 'serve'`.
-- TanStack Start fails with `multiple entries detected` on a second client entry. `integralAdmin()` clears the admin chunk's entry flag before Start reads it.
+- TanStack Start fails with `multiple entries detected` on a second client entry. `tenonAdmin()` clears the admin chunk's entry flag before Start reads it.
 - TanStack Start streams HTML. Use `grep -a` on curl output, or grep treats it as binary and prints nothing.
 
 **Typechecking**

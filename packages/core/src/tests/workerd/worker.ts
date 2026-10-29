@@ -1,5 +1,5 @@
 import { defineCms } from "../../index.ts";
-import { durableObject, integralObject } from "../../integrations/cloudflare/index.ts";
+import { durableObject, tenonObject } from "../../integrations/cloudflare/index.ts";
 
 export const cms = defineCms({
   database: durableObject(),
@@ -45,7 +45,7 @@ export const cms = defineCms({
   },
 });
 
-export const CmsObject = integralObject(cms);
+export const CmsObject = tenonObject(cms);
 
 export default {
   fetch: (request, env) => env.CMS.getByName("cms").fetch(request),

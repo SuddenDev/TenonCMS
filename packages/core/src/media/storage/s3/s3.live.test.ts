@@ -6,12 +6,12 @@ import { s3 } from "./index.ts";
 // S3_TEST_ENDPOINT=http://localhost:9000 S3_TEST_KEY=minioadmin S3_TEST_SECRET=minioadmin npx vitest run s3.live
 const endpoint = process.env.S3_TEST_ENDPOINT;
 const options = {
-  bucket: process.env.S3_TEST_BUCKET ?? "integral-test",
+  bucket: process.env.S3_TEST_BUCKET ?? "tenon-test",
   region: process.env.S3_TEST_REGION ?? "us-east-1",
   endpoint,
   accessKeyId: process.env.S3_TEST_KEY ?? "",
   secretAccessKey: process.env.S3_TEST_SECRET ?? "",
-  publicUrl: `${endpoint}/integral-test`,
+  publicUrl: `${endpoint}/tenon-test`,
 };
 
 describe.skipIf(!endpoint)("s3 against a real bucket", { timeout: 60_000 }, () => {

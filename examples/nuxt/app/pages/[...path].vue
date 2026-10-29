@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { seoMeta } from "integral-cms/client";
-import { edit } from "integral-cms/preview";
+import { seoMeta } from "tenoncms/client";
+import { edit } from "tenoncms/preview";
 
 // `index.vue` and `[[locale]]/posts/[slug].vue` win over this route, so a CMS page at `/` never shows.
-// `path` is the route's path without the locale prefix; `useIntegral()` reads in the route's locale.
+// `path` is the route's path without the locale prefix; `useTenon()` reads in the route's locale.
 const { path } = useLocale();
-const cms = useIntegral();
+const cms = useTenon();
 const {
   data: page,
   status,

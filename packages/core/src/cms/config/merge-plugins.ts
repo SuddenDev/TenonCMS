@@ -1,7 +1,7 @@
 import type { Schema } from "../../schema/index.ts";
 import type { Plugin } from "../../plugins/types.ts";
 
-// Route prefixes core uses under `/api/cms`.
+// Route prefixes core uses under `/_tenon`.
 const reserved = [
   "account",
   "auth",
@@ -24,7 +24,7 @@ const reserved = [
  */
 export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Required<Schema> {
   const fail = (message: string) => {
-    throw new Error(`integral-cms: ${message}`);
+    throw new Error(`tenoncms: ${message}`);
   };
   const checkCollectionName = (name: string) => {
     if (name === "media") fail(`collection name "media" is reserved for the media library`);
@@ -38,7 +38,7 @@ export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Requir
 
   for (const plugin of plugins) {
     if (plugin.name === "admin") fail(`plugin name "admin" is reserved for admin extension routes`);
-    // the name becomes a route under /api/cms, so it must be a slug and must not clash with core routes
+    // the name becomes a route under /_tenon, so it must be a slug and must not clash with core routes
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(plugin.name) || reserved.includes(plugin.name))
       fail(`invalid plugin name "${plugin.name}"`);
     if (pluginNames.has(plugin.name)) fail(`duplicate plugin "${plugin.name}"`);

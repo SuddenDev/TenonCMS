@@ -44,7 +44,7 @@ type MediaCollection = {
 export type MediaOf<M> = [M] extends [false] ? {} : { media: MediaApi };
 
 /**
- * Which settings globals `defineCms()` adds. An omitted key is the default from `settings` in `integral-cms/presets`.
+ * Which settings globals `defineCms()` adds. An omitted key is the default from `settings` in `tenoncms/presets`.
  */
 export type SettingsOptions = {
   /** Site title, tagline, URL and favicon. `false` drops it, a `Global` replaces it. Stored as `general`. */
@@ -114,7 +114,7 @@ export type CmsOptions<
   globals?: G & NoInfer<CheckRefs<G, C & PluginCollections<PL>> & Record<string, Global>>;
   /**
    * Branding, custom fields, custom pages and the admin bar. Inline or imported from your own module; check an
-   * extracted object with `satisfies AdminOptions` from `integral-cms/admin`. Plugins add their own.
+   * extracted object with `satisfies AdminOptions` from `tenoncms/admin`. Plugins add their own.
    */
   admin?: AdminOptions;
   /** Plugins, from `definePlugin()`. Their collections, globals and hooks merge into the instance. */

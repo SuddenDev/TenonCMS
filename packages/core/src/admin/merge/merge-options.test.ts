@@ -148,7 +148,7 @@ describe("admin bar registration merge", () => {
     expect(bar.loaders.get("menu")?.load).toBe(parentLoad);
     expect(bar.loaders.get("child")?.load).toBe(childLoad);
     expect(bar.loaders.get("old")?.load).toBe(replaced);
-    expect(bar.loaders.get("old")?.source).toBe("integral.config.ts");
+    expect(bar.loaders.get("old")?.source).toBe("tenon.config.ts");
     expect(bar.loaders.size).toBe(3);
     expect(bar.items[0]).toEqual({
       id: "menu",
@@ -212,10 +212,10 @@ describe("admin registration validation", () => {
   it("requires a field mount, an items object and a valid position", () => {
     expect(host({ fields: { color: {} } })).toThrow("admin.fields.color.mount");
     expect(host({ adminBar: { items: () => ({}) } })).toThrow(
-      "items in integral.config.ts MUST be an object",
+      "items in tenon.config.ts MUST be an object",
     );
     expect(host({ adminBar: { items: [{ id: "a", label: "A" }] } })).toThrow(
-      "items in integral.config.ts MUST be an object",
+      "items in tenon.config.ts MUST be an object",
     );
     expect(host({ adminBar: { position: "top" } })).toThrow("adminBar.position");
   });
@@ -235,21 +235,19 @@ describe("admin registration validation", () => {
 
   it("requires a label and a plain value, for children too", () => {
     const item = (x: unknown) => host({ adminBar: { items: { a: x } } });
-    expect(item({})).toThrow('admin bar item "a" in integral.config.ts MUST have a label');
-    expect(item(true)).toThrow(
-      'admin bar item "a" in integral.config.ts MUST be an object or false',
-    );
+    expect(item({})).toThrow('admin bar item "a" in tenon.config.ts MUST have a label');
+    expect(item(true)).toThrow('admin bar item "a" in tenon.config.ts MUST be an object or false');
     expect(item(null)).toThrow("MUST be an object or false");
     expect(item(false)).not.toThrow();
     expect(item({ label: "A" })).not.toThrow();
     expect(item({ label: { en: "A", de: "B" } })).not.toThrow();
     for (const label of [{}, { en: "" }, { fr: "A" }, ["A"]])
-      expect(item({ label })).toThrow('admin bar item "a" in integral.config.ts MUST have a label');
+      expect(item({ label })).toThrow('admin bar item "a" in tenon.config.ts MUST have a label');
     expect(item({ label: "A", children: { b: {} } })).toThrow(
-      'admin bar item "b" in integral.config.ts MUST have a label',
+      'admin bar item "b" in tenon.config.ts MUST have a label',
     );
     expect(item({ label: "A", children: { b: false } })).toThrow(
-      'item "b" in integral.config.ts MUST be an object',
+      'item "b" in tenon.config.ts MUST be an object',
     );
     expect(item({ label: "A", children: [{ id: "b", label: "B" }] })).toThrow(
       "children MUST be an object",

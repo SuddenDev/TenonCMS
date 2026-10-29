@@ -7,8 +7,8 @@ Email is optional and runs on the server. The CMS uses it for password resets, e
 Set a transport and a sender once:
 
 ```ts
-import { defineCms } from "integral-cms";
-import { smtp } from "integral-cms/email/smtp";
+import { defineCms } from "tenoncms";
+import { smtp } from "tenoncms/email/smtp";
 
 export default defineCms({
   // Your collections, database and secret…
@@ -49,7 +49,7 @@ adapter: smtp({
 Any server code can send, including an Astro route or a Nuxt server endpoint, without a plugin:
 
 ```ts
-import cms from "./integral.config";
+import cms from "./tenon.config";
 
 await cms.email.send({
   to: "team@example.com",
@@ -104,10 +104,10 @@ email: {
 
 ## Use another provider
 
-Implement `EmailAdapter` from `integral-cms`:
+Implement `EmailAdapter` from `tenoncms`:
 
 ```ts
-import type { EmailAdapter } from "integral-cms";
+import type { EmailAdapter } from "tenoncms";
 
 const adapter: EmailAdapter = {
   async send(message) {
@@ -121,4 +121,4 @@ const adapter: EmailAdapter = {
 };
 ```
 
-`message` contains `from`, `to`, `subject`, an optional `replyTo`, and text and HTML bodies. Map it to the provider's API as needed. Core imports no SMTP runtime unless the host imports `integral-cms/email/smtp`.
+`message` contains `from`, `to`, `subject`, an optional `replyTo`, and text and HTML bodies. Map it to the provider's API as needed. Core imports no SMTP runtime unless the host imports `tenoncms/email/smtp`.

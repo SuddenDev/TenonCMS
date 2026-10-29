@@ -57,7 +57,7 @@ export default defineConfig(() => ({
     strictPort: true,
     // better-auth rejects requests whose origin differs from the API host.
     proxy: {
-      "/api/cms": { target, changeOrigin: true, headers: { origin: target } },
+      "/_tenon": { target, changeOrigin: true, headers: { origin: target } },
     },
   },
 }));

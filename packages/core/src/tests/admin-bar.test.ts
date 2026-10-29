@@ -10,7 +10,7 @@ async function signedIn(cms: ReturnType<typeof defineCms>) {
   await s.client.signUp(admin);
   const get = (url = "/page", mode = "site", extra = "") =>
     s.fetch(
-      `${origin}/api/cms/admin-bar?url=${encodeURIComponent(url)}&mode=${encodeURIComponent(mode)}${extra}`,
+      `${origin}/_tenon/admin-bar?url=${encodeURIComponent(url)}&mode=${encodeURIComponent(mode)}${extra}`,
     );
   const items = async (url?: string) => (await (await get(url)).json()).items;
   const ids = async (url?: string) => (await items(url)).map((i: { id: string }) => i.id);
@@ -43,7 +43,7 @@ describe("admin bar endpoint", () => {
 
   it("answers 401 without a session, with no-store", async () => {
     const { fetch } = setup();
-    const res = await fetch(`${origin}/api/cms/admin-bar?url=/&mode=site`);
+    const res = await fetch(`${origin}/_tenon/admin-bar?url=/&mode=site`);
     expect(res.status).toBe(401);
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
@@ -97,7 +97,7 @@ describe("admin bar endpoint", () => {
     const { client, fetch } = setup(defineCms(base));
     await client.signUp(admin);
     for (const q of ["", "?url=/", "?mode=site"])
-      expect((await fetch(`${origin}/api/cms/admin-bar${q}`)).status).toBe(400);
+      expect((await fetch(`${origin}/_tenon/admin-bar${q}`)).status).toBe(400);
   });
 });
 
@@ -369,7 +369,7 @@ describe("admin bar items", () => {
     const doc = await cms.create("posts", { title: "Published" });
     await cms.update("posts", doc.id, { title: "Draft" }, { draft: true });
     const read = async (fetch = s.fetch) =>
-      (await (await fetch(`${origin}/api/cms/admin-bar?url=/&mode=site`)).json()).items.find(
+      (await (await fetch(`${origin}/_tenon/admin-bar?url=/&mode=site`)).json()).items.find(
         (i: any) => i.id === "n",
       ).data;
     expect(await read()).toEqual({ title: "Published", email: admin.email });
@@ -378,7 +378,7 @@ describe("admin bar items", () => {
     await (await cms.auth()).api.signUpEmail({ body: second });
     const other = setup(cms);
     await other.client.signIn({ email: second.email, password: second.password });
-    await s.fetch(`${origin}/api/cms/preview`, {
+    await s.fetch(`${origin}/_tenon/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ perspective: "drafts" }),
@@ -390,9 +390,9 @@ describe("admin bar items", () => {
 
 describe("session hint cookie", () => {
   const hint = (res: Response) =>
-    res.headers.getSetCookie().find((c) => c.startsWith("integral-session="));
+    res.headers.getSetCookie().find((c) => c.startsWith("tenon-session="));
   const post = (fetch: ReturnType<typeof setup>["fetch"], path: string, body: object = {}) =>
-    fetch(`${origin}/api/cms/auth${path}`, {
+    fetch(`${origin}/_tenon/auth${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -402,10 +402,10 @@ describe("session hint cookie", () => {
     const { fetch } = setup();
 
     const signUp = hint(await post(fetch, "/sign-up/email", admin));
-    expect(signUp).toBe("integral-session=1; Max-Age=604800; Path=/; SameSite=Lax");
+    expect(signUp).toBe("tenon-session=1; Max-Age=604800; Path=/; SameSite=Lax");
 
     const signOut = hint(await post(fetch, "/sign-out"));
-    expect(signOut).toMatch(/^integral-session=; Max-Age=0; Path=\//);
+    expect(signOut).toMatch(/^tenon-session=; Max-Age=0; Path=\//);
 
     const { name, ...credentials } = admin;
     expect(hint(await post(fetch, "/sign-in/email", credentials))).toBe(signUp);
@@ -415,7 +415,7 @@ describe("session hint cookie", () => {
     const { fetch } = setup();
     await post(fetch, "/sign-up/email", admin);
 
-    expect(hint(await fetch(`${origin}/api/cms/auth/get-session`))).toBeUndefined();
+    expect(hint(await fetch(`${origin}/_tenon/auth/get-session`))).toBeUndefined();
     const wrong = await post(fetch, "/sign-in/email", {
       email: admin.email,
       password: "wrong-pass",
@@ -428,7 +428,7 @@ describe("session hint cookie", () => {
     const cms = defineCms({ ...base, auth: { advanced: { useSecureCookies: true } } });
     const { fetch } = setup(cms);
     expect(hint(await post(fetch, "/sign-up/email", admin))).toBe(
-      "integral-session=1; Max-Age=604800; Path=/; Secure; SameSite=Lax",
+      "tenon-session=1; Max-Age=604800; Path=/; Secure; SameSite=Lax",
     );
   });
 });

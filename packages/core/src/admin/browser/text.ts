@@ -28,7 +28,7 @@ const at = (tree: unknown, key: string) =>
  * @example
  * import en from "./locales/en.json";
  * import de from "./locales/de.json";
- * const t = translator({ en, de }, ctx.integral.locale);
+ * const t = translator({ en, de }, ctx.tenon.locale);
  * t("stats.count", { n: 3 });
  */
 export function translator(messages: Messages, locale: AdminLocale) {

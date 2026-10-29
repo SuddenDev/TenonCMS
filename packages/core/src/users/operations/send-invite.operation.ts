@@ -25,12 +25,12 @@ export async function sendInvite(
       role: { name: row.role, label: translate(label, "en") ?? row.role },
       url: link,
       inviter: { name: inviter.name, email: inviter.email },
-      site: core.admin.descriptor.name ?? "integral-cms",
+      site: core.admin.descriptor.name ?? "tenoncms",
     });
     await core.email.send({ ...content, to: row.email });
     return { ...result, sent: true };
   } catch (error) {
-    consola.withTag("integral").error("Sending an invite failed", error);
+    consola.withTag("tenon").error("Sending an invite failed", error);
     return { ...result, message: "Sending the invite failed" };
   }
 }

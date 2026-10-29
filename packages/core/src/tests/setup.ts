@@ -83,9 +83,9 @@ export function setup<
 }
 
 type Fetch = ReturnType<typeof setup>["fetch"];
-/** A JSON `POST` under `/api/cms`. */
+/** A JSON `POST` under `/_tenon`. */
 export const post = (fetch: Fetch, path: string, body: unknown) =>
-  fetch(`${origin}/api/cms${path}`, {
+  fetch(`${origin}/_tenon${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -105,11 +105,11 @@ export async function withAdmin<
   return { ...env, cms, create, me: me.user };
 }
 
-/** A fresh instance, a client with its own cookie jar, and a raw fetch under `/api/cms`. */
+/** A fresh instance, a client with its own cookie jar, and a raw fetch under `/_tenon`. */
 export function fresh() {
   const s = setup();
   const fetchWithSession = (path: string, init?: RequestInit) =>
-    s.fetch(`${origin}/api/cms${path}`, init);
+    s.fetch(`${origin}/_tenon${path}`, init);
   return { cms: s.cms, client: s.client, fetchWithSession };
 }
 export type Env = ReturnType<typeof fresh>;
@@ -125,7 +125,7 @@ export const published = {
 
 export const admin = { name: "Admin", email: "a@b.co", password: "password123" };
 
-export const tmpDb = () => `file:${mkdtempSync(join(tmpdir(), "integral-"))}/cms.db`;
+export const tmpDb = () => `file:${mkdtempSync(join(tmpdir(), "tenon-"))}/cms.db`;
 
 /**
  * A database that instances share, with `exec()` for raw SQL on it: a SQLite file, or one PGlite. `?` marks a
@@ -270,11 +270,11 @@ export async function seed(cms: ReturnType<typeof relational>) {
 }
 
 /** A temp directory for `local()`. */
-export const tmpDir = () => mkdtempSync(join(tmpdir(), "integral-media-"));
+export const tmpDir = () => mkdtempSync(join(tmpdir(), "tenon-media-"));
 
 /**
  * An instance with `media` on `local()` in a temp dir with 1 KB parts, `posts` with image and file fields, a client and a
- * raw fetch under `/api/cms`. `extra` goes into `defineCms()`.
+ * raw fetch under `/_tenon`. `extra` goes into `defineCms()`.
  */
 export function withMedia(media: Partial<MediaOptions> = {}, extra: object = {}) {
   const dir = tmpDir();
@@ -296,7 +296,7 @@ export function withMedia(media: Partial<MediaOptions> = {}, extra: object = {})
   });
   const s = setup(cms);
   const fetchWithSession = (path: string, init?: RequestInit) =>
-    s.fetch(`${origin}/api/cms${path}`, init);
+    s.fetch(`${origin}/_tenon${path}`, init);
   return { ...s, dir, fetchWithSession };
 }
 
@@ -359,7 +359,7 @@ export function localized(
   });
   const s = setup(cms);
   const fetchWithSession = (path: string, init?: RequestInit) =>
-    s.fetch(`${origin}/api/cms${path}`, init);
+    s.fetch(`${origin}/_tenon${path}`, init);
   return { ...s, fetchWithSession };
 }
 

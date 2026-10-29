@@ -238,7 +238,7 @@ describe("relation filters", () => {
     r = setup(relational());
     ids = await seed(r.cms);
   });
-  const get = (path: string) => r.cms.fetch(new Request(`${origin}/api/cms${path}`));
+  const get = (path: string) => r.cms.fetch(new Request(`${origin}/_tenon${path}`));
 
   it("filters by a single relation", async () => {
     expect((await r.cms.find("posts", { where: { author: ids.a.id } })).map((p) => p.id)).toEqual([

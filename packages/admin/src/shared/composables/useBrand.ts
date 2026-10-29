@@ -5,7 +5,7 @@ import { optionsKey } from "@/shared/options";
 export function useBrand() {
   const options = inject(optionsKey, {});
   return {
-    name: computed(() => options.name ?? "integral-cms"),
+    name: computed(() => options.name ?? "tenoncms"),
     logo: computed(() => options.logo),
     icon: computed(() => options.icon),
   };

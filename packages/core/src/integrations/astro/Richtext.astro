@@ -1,6 +1,6 @@
 ---
 import type { HTMLAttributes } from "astro/types";
-import { renderRichtext, type RichtextProps } from "integral-cms/richtext";
+import { renderRichtext, type RichtextProps } from "tenoncms/richtext";
 
 type Props = RichtextProps & Omit<HTMLAttributes<"div">, "content">;
 const { content, extensions, ...attrs } = Astro.props;

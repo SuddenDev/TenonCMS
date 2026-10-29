@@ -7,7 +7,7 @@ Three things live here: how people sign in, how users and roles work, and how yo
 The admin signs in at `/login`.
 
 - While no user exists, every admin URL leads to `/signup`, which creates the first admin. After that, sign-up is closed: `/signup` redirects to `/login`, and the sign-in shows no sign-up link. New users join through [invites](#users-and-roles).
-- `GET /api/cms/auth-status` answers `{ setup, signUp, passkeys }` for custom forms.
+- `GET /_tenon/auth-status` answers `{ setup, signUp, passkeys }` for custom forms.
 - The admin supports email and password, [passkeys](#passkeys), and password reset. Plugins that need other screens (2FA, magic link) work on the server but not in the admin yet.
 
 ### Account settings
@@ -15,7 +15,7 @@ The admin signs in at `/login`.
 **Account settings** in the user menu lets a user:
 
 - edit their name, admin language and time zone. Dates in forms and the publication status follow the time zone. Empty follows the device.
-- change the password (other sessions are signed out), or set a first one if they have none (`POST /api/cms/account/password`).
+- change the password (other sessions are signed out), or set a first one if they have none (`POST /_tenon/account/password`).
 - add or remove passkeys, when they are on.
 
 Language and time zone are stored on the user as better-auth fields `language` and `timezone`, validated on write. A host's own field of the same name replaces core's.
@@ -135,14 +135,14 @@ The link opens the admin's `/invite` page, where the person picks a name and pas
 
 For custom screens:
 
-| Route                              | Who    | Does                                                                          |
-| ---------------------------------- | ------ | ----------------------------------------------------------------------------- |
-| `GET /api/cms/invites`             | admins | Every invite, `expired` flagged. Tokens are never listed                      |
-| `POST /api/cms/invites`            | admins | `{ email, role, url }`: creates and sends. `url` MUST be on the site's origin |
-| `POST /api/cms/invites/:id/resend` | admins | `{ url }`: new link, sent again                                               |
-| `DELETE /api/cms/invites/:id`      | admins | Revokes                                                                       |
-| `POST /api/cms/invites/check`      | public | `{ token }`: `{ email, role, label }`, else 404                               |
-| `POST /api/cms/invites/accept`     | public | `{ token, name, password }`: creates the user and sets the session cookie     |
+| Route                             | Who    | Does                                                                          |
+| --------------------------------- | ------ | ----------------------------------------------------------------------------- |
+| `GET /_tenon/invites`             | admins | Every invite, `expired` flagged. Tokens are never listed                      |
+| `POST /_tenon/invites`            | admins | `{ email, role, url }`: creates and sends. `url` MUST be on the site's origin |
+| `POST /_tenon/invites/:id/resend` | admins | `{ url }`: new link, sent again                                               |
+| `DELETE /_tenon/invites/:id`      | admins | Revokes                                                                       |
+| `POST /_tenon/invites/check`      | public | `{ token }`: `{ email, role, label }`, else 404                               |
+| `POST /_tenon/invites/accept`     | public | `{ token, name, password }`: creates the user and sets the session cookie     |
 
 - Create and resend answer `{ invite, link, sent }`. A 502 with the same body means sending failed and the invite stays.
 - The client has `client.invites.list()`, `create()`, `resend()`, `revoke()`, `check()` and `accept()`.
@@ -165,7 +165,7 @@ An API key lets a script or another service use the API without signing in. Exam
 Send the key as `x-api-key`, or pass it to the client. Keep keys on the server: a key MUST NOT reach a browser.
 
 ```ts
-import { createClient } from "integral-cms/client";
+import { createClient } from "tenoncms/client";
 
 const client = createClient({ baseUrl: "https://example.com", apiKey: process.env.CMS_API_KEY });
 const posts = await client.find("posts");
@@ -185,7 +185,7 @@ A key holds operations per target, picked at creation:
 ```
 
 - Every collection takes `create`, `read`, `update` and `delete`, plugin collections and `media` included. A media upload needs `create` on `collection:media`, and so do its parts and its abort.
-- Every global takes `read` and `update`. `schema` takes `read`: `GET /api/cms/schema`, with `access` showing what the key MAY do.
+- Every global takes `read` and `update`. `schema` takes `read`: `GET /_tenon/schema`, with `access` showing what the key MAY do.
 - A target the key does not hold is a 403. A collection added later is not granted to existing keys.
 - Unknown targets and operations are a 400 at creation.
 
@@ -224,17 +224,17 @@ A key never reads drafts. Previews, users, invites, passwords, key management, p
 - **Revoke** disables a key at once. It stays listed, so `key:<id>` in `createdBy` keeps a name.
 - **Delete** removes it for good.
 
-| Route                               | Does                                                                       |
-| ----------------------------------- | -------------------------------------------------------------------------- |
-| `GET /api/cms/api-keys`             | Every key, revoked ones included, with `permissions`, `creator`, `enabled` |
-| `POST /api/cms/api-keys`            | `{ name, permissions, expiresIn? }`: the new key with `key`                |
-| `POST /api/cms/api-keys/:id/roll`   | A new secret for an active key: the key with `key`. A revoked key is a 404 |
-| `POST /api/cms/api-keys/:id/revoke` | Disables the key                                                           |
-| `DELETE /api/cms/api-keys/:id`      | Deletes the key                                                            |
+| Route                              | Does                                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------- |
+| `GET /_tenon/api-keys`             | Every key, revoked ones included, with `permissions`, `creator`, `enabled` |
+| `POST /_tenon/api-keys`            | `{ name, permissions, expiresIn? }`: the new key with `key`                |
+| `POST /_tenon/api-keys/:id/roll`   | A new secret for an active key: the key with `key`. A revoked key is a 404 |
+| `POST /_tenon/api-keys/:id/revoke` | Disables the key                                                           |
+| `DELETE /_tenon/api-keys/:id`      | Deletes the key                                                            |
 
 `expiresIn` is in seconds, from 1 to 365 days. Without it, the key does not expire. The client has `client.apiKeys.list()`, `create()`, `roll()`, `revoke()` and `delete()`. These routes need an admin's session: a key cannot manage keys.
 
-Core adds better-auth's [`apiKey()`](https://better-auth.com/docs/plugins/api-key) plugin without its per-key rate limit and without sessions for keys. Its own `/api/cms/auth/api-key/*` routes are closed.
+Core adds better-auth's [`apiKey()`](https://better-auth.com/docs/plugins/api-key) plugin without its per-key rate limit and without sessions for keys. Its own `/_tenon/auth/api-key/*` routes are closed.
 
 ## Access control
 

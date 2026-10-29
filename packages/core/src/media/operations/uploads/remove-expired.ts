@@ -4,7 +4,7 @@ import type { Database } from "../../../db/types.ts";
 import type { Storage } from "../../storage/types.ts";
 import { DAY, deleteUpload } from "./upload-row.ts";
 
-const log = consola.withTag("integral");
+const log = consola.withTag("tenon");
 
 /** Aborts uploads older than a day and deletes their rows. A failed abort is logged; the row goes anyway. */
 export async function removeExpired(storage: Storage, db: Kysely<Database>) {

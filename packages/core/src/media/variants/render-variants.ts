@@ -3,7 +3,7 @@ import type { Modifiers } from "../../schema/index.ts";
 import type { MediaCore } from "../runtime/create-media-core.ts";
 import { variantKey } from "./keys.ts";
 
-const log = consola.withTag("integral");
+const log = consola.withTag("tenon");
 
 /** Renders one variant of the file `key` and stores it. Returns the rendered bytes. */
 export async function renderVariant(

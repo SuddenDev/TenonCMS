@@ -1,6 +1,6 @@
 # client
 
-`integral-cms/client`: a typed HTTP client for `/api/cms`, with the same method names as the local API. It runs in the browser and imports types only. It does not render previews; that is `integral-cms/preview` (`src/preview/`). The admin uses this client too, so there is only one HTTP client.
+`tenoncms/client`: a typed HTTP client for `/_tenon`, with the same method names as the local API. It runs in the browser and imports types only. It does not render previews; that is `tenoncms/preview` (`src/preview/`). The admin uses this client too, so there is only one HTTP client.
 
 ## Follow a read
 
@@ -40,7 +40,7 @@ A part upload retries a network error, a 5xx, a 408 and a 429 3 times with backo
 
 ## Locales
 
-`Locale<C>` (from `schema/inference/locale.ts`, exported by `integral-cms/client`) is the union of the instance's `localization.locales`, `never` without it; the admin's untyped client allows any string.
+`Locale<C>` (from `schema/inference/locale.ts`, exported by `tenoncms/client`) is the union of the instance's `localization.locales`, `never` without it; the admin's untyped client allows any string.
 
 - Reads take `locale`, `fallback` and `alternates`, sent as `?locale=`, `?fallback=` and `?alternates=`.
 - Writes, drafts and `publish()` take `{ locale }`. Saves, draft saves and publishes also take `{ updatedAt }` (`?updatedAt=`): a newer stored version answers 409. `discard()` and `discardGlobal()` take `{ locale }` or `{ all: true }` (`?all=true`).

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { AdminBarItemContext } from "integral-cms/admin";
+import type { AdminBarItemContext } from "tenoncms/admin";
 import { computed } from "vue";
 import { texts } from "../utils/texts.ts";
 
 const props = defineProps<AdminBarItemContext<number>>();
-const t = computed(() => texts(props.integral.locale));
+const t = computed(() => texts(props.tenon.locale));
 </script>
 
 <!-- Styled inline, because the bar's shadow root gets no page CSS. -->

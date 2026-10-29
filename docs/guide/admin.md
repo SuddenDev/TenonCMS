@@ -1,10 +1,10 @@
 # Customize the admin
 
-Everything the admin needs from your project sits in one `admin` object in `integral.config.ts`: branding, custom fields, pages and the admin bar. Write it inline, or put it in a module and import it. Code that runs in the browser loads through `clientRef()`.
+Everything the admin needs from your project sits in one `admin` object in `tenon.config.ts`: branding, custom fields, pages and the admin bar. Write it inline, or put it in a module and import it. Code that runs in the browser loads through `clientRef()`.
 
 ```ts
 // admin.ts
-import { clientRef, type AdminOptions } from "integral-cms/admin";
+import { clientRef, type AdminOptions } from "tenoncms/admin";
 
 export const admin = {
   name: "Acme",
@@ -38,7 +38,7 @@ export const admin = {
   },
 } satisfies AdminOptions;
 
-// integral.config.ts
+// tenon.config.ts
 export default defineCms({ /* … */ admin });
 ```
 
@@ -58,11 +58,11 @@ Only `load` functions run on the server. Everything the browser runs is a `clien
 **`clientRef()`**
 
 - It names a module and an optional `#export` (default: `default`). Relative paths resolve from the project root, not from the file that calls it. Package paths resolve through package exports.
-- Astro, Nuxt and `integralAdmin()` find the literal `clientRef()` calls in the static imports of `integral.config.ts` without running it, and bundle those exports for the browser only.
+- Astro, Nuxt and `tenonAdmin()` find the literal `clientRef()` calls in the static imports of `tenon.config.ts` without running it, and bundle those exports for the browser only.
 - Computed references are rejected. Inline functions for `mount`, `onClick` or `pageHeader` are rejected too.
 - Adding a `clientRef()` needs a dev server restart.
 
-**What is public.** Only the login branding (`/admin-brand`). Fields, pages and bar items arrive after sign-in from `/schema` and `/admin-bar`, without loader functions. `POST /api/cms/admin/load` runs one loader for the signed-in user and answers with its data. It accepts registered keys only, and responses are `Cache-Control: no-store`.
+**What is public.** Only the login branding (`/admin-brand`). Fields, pages and bar items arrive after sign-in from `/schema` and `/admin-bar`, without loader functions. `POST /_tenon/admin/load` runs one loader for the signed-in user and answers with its data. It accepts registered keys only, and responses are `Cache-Control: no-store`.
 
 **Merging.** Plugin registrations come first, then the host's. A field or page key used twice throws. Host branding wins. Bar items replace earlier items with the same id.
 
@@ -70,7 +70,7 @@ Only `load` functions run on the server. Everything the browser runs is a `clien
 
 ## Branding
 
-- `name` shows in the top bar, on the login and in the page title (default `integral-cms`).
+- `name` shows in the top bar, on the login and in the page title (default `tenoncms`).
 - `logo` (top bar and login) and `icon` (the tile beside the name when there is no logo) are URLs, or `{ light, dark }` pairs that follow the admin's theme.
 - The admin links these files and does not bundle them. Put them in your `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
 - The favicon is `favicon` if set, else `icon`, else your `favicon.svg`, `.ico` or `.png` in the public folder. `favicon` takes a URL or a `{ light, dark }` pair.
@@ -112,14 +112,14 @@ Only `load` functions run on the server. Everything the browser runs is a `clien
 
 `pageHeader` controls the area above a page:
 
-| Value                       | Result                                                                                                                                 |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `true` (default)            | The title as text                                                                                                                      |
-| `false`                     | Nothing                                                                                                                                |
-| `[{ label, to }]`           | Breadcrumbs                                                                                                                            |
-| `clientRef()` of a function | `(crumbs, { params, query, data, integral })` returns an HTML string or breadcrumbs. `crumbs` are the route's. It MUST be synchronous. |
+| Value                       | Result                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `true` (default)            | The title as text                                                                                                                   |
+| `false`                     | Nothing                                                                                                                             |
+| `[{ label, to }]`           | Breadcrumbs                                                                                                                         |
+| `clientRef()` of a function | `(crumbs, { params, query, data, tenon })` returns an HTML string or breadcrumbs. `crumbs` are the route's. It MUST be synchronous. |
 
-The HTML string is not escaped. Escape untrusted values like `params`, and prefix links with `integral.base`.
+The HTML string is not escaped. Escape untrusted values like `params`, and prefix links with `tenon.base`.
 
 ## Writing a `mount` function
 
@@ -129,8 +129,8 @@ For Vue and React there are ready-made wrappers. Export their result and referen
 
 ```ts
 // src/admin/color.ts
-import { renderVue } from "integral-cms/admin/vue";
-import { renderReact } from "integral-cms/admin/react";
+import { renderVue } from "tenoncms/admin/vue";
+import { renderReact } from "tenoncms/admin/react";
 import ColorInput from "./ColorInput.vue";
 
 // A .vue component, gets the context as reactive props
@@ -164,12 +164,12 @@ export const mountColor: Mount<FieldContext> = (el, ctx) => {
 - **Fields** get `{ name, field, value, onChange, data }`.
 - **Pages** get `{ params, query, data }`: the route params, the query string and what the page's `load` returned.
 - **Bar items** get the bar context and `data`.
-- All of them also get `integral`:
+- All of them also get `tenon`:
   - `base`: the admin path to prefix links with
   - `navigate(path)`: opens an admin view without a reload
   - `reload()`: runs the `load` of that field, page or item again
   - `locale`: the admin language
-- Plain links under `base` also open in the admin. For writes, use `createClient()` from `integral-cms/client`. The admin's session cookie makes them work.
+- Plain links under `base` also open in the admin. For writes, use `createClient()` from `tenoncms/client`. The admin's session cookie makes them work.
 
 ### Loading data
 
@@ -190,20 +190,20 @@ Not available yet: switching between Drafts and Published without a reload, and 
 
 The admin speaks English and German.
 
-- Each user picks the language under "Interface language" in the user menu. The browser keeps the choice (`integral-admin-locale` in `localStorage`). Without one, the admin follows the browser language.
+- Each user picks the language under "Interface language" in the user menu. The browser keeps the choice (`tenon-admin-locale` in `localStorage`). Without one, the admin follows the browser language.
 - It is independent of the content languages in `localization`. Server validation messages stay English.
 - Every label and description you write takes a plain string, or one string per language: `label: { en: "Posts", de: "Beiträge" }`. That covers collections, globals, fields, blocks, `labels.singular` and `plural`, `nav.group`, page `title` and `description`, bar item labels (also from a loader) and `media.label`. A missing language shows English, then the first entry.
-- Your browser code gets the language as `ctx.integral.locale` (`"en"` or `"de"`), in pages, fields, page headers and bar items. A switch calls `update(ctx)`. Server `load` functions get it as `locale`.
+- Your browser code gets the language as `ctx.tenon.locale` (`"en"` or `"de"`), in pages, fields, page headers and bar items. A switch calls `update(ctx)`. Server `load` functions get it as `locale`.
 
-`translator()` from `integral-cms/admin` reads your own message files:
+`translator()` from `tenoncms/admin` reads your own message files:
 
 ```ts
-import { translator } from "integral-cms/admin";
+import { translator } from "tenoncms/admin";
 import en from "./locales/en.json";
 import de from "./locales/de.json";
 
 export const mountStats: Mount<PageContext> = (el, ctx) => {
-  const t = translator({ en, de }, ctx.integral.locale);
+  const t = translator({ en, de }, ctx.tenon.locale);
   el.textContent = t("stats.count", { n: 3 }); // "{n} quotes" in en.json
   // …
 };
@@ -213,6 +213,6 @@ Keys are dotted paths, `{name}` fills a parameter, and a missing key falls back 
 
 ## Serve the admin elsewhere
 
-Pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `integralAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
+Pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `tenonAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
 
 Plugins contribute the same `admin` object through [`definePlugin({ admin })`](./plugins.md).

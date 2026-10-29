@@ -1,10 +1,10 @@
-# integral-cms
+# tenoncms
 
 An embeddable CMS for Vite-based frameworks. It runs inside the host app (same repo, same deploy), with no separate service. Status: proof of concept. Vision, usage and roadmap: [README.md](README.md).
 
 Packages:
 
-- `packages/core` publishes as `integral-cms`
+- `packages/core` publishes as `tenoncms`
 - `packages/plugins` (private): the bundled plugins
 - `packages/admin` (private): the Vue admin
 - `examples/{astro,nuxt,tanstack-start,standalone}`
@@ -36,13 +36,13 @@ Read the doc for an area before you change it. Update it in the same change.
 
 - `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` / `dev:standalone`: build packages, then run the example (ports 4321 / 3000 / 3100 / 3200), the core watcher and the admin playground.
   - Core changes reload in the example without a restart.
-  - The playground has HMR on `localhost:5173/admin/` and proxies `/api/cms` to the example (`CMS_URL`).
-  - The example's `/admin` uses the admin built at startup. `pnpm --filter @integral-cms/admin watch` rebuilds it on change (full reload).
+  - The playground has HMR on `localhost:5173/admin/` and proxies `/_tenon` to the example (`CMS_URL`).
+  - The example's `/admin` uses the admin built at startup. `pnpm --filter @tenoncms/admin watch` rebuilds it on change (full reload).
 - `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`. Never run it while a dev watcher runs: the core build deletes `dist/`.
 - `pnpm build`: packages and all examples.
 - `pnpm typecheck`: runs `build:packages`, then typechecks all workspaces. Run it before calling work done. While a dev watcher runs, use `pnpm -r typecheck`.
 - `pnpm test`: Vitest in `packages/core` and `packages/plugins`, plus a few pure helpers in `packages/admin`. No build needed, tests import `src/`.
-  - Watch: `pnpm --filter integral-cms test:watch`.
+  - Watch: `pnpm --filter tenoncms test:watch`.
   - One test: `npx vitest run <file> -t '<name>'` in `packages/core`. `pnpm ... test -- -t` does not filter.
 - `pnpm lint` (oxlint) / `pnpm fmt` (oxfmt): the husky pre-commit hook runs lint-staged (`oxlint --fix`, then `oxfmt`). `pnpm install` enables it via `prepare`.
   - oxfmt cannot format `.astro`, so those files use Prettier with `prettier-plugin-astro` (`.prettierrc.json`).

@@ -174,8 +174,8 @@ describe("preview over HTTP", () => {
 
   it("ignores the cookie without a session", async () => {
     const res = await cms.fetch(
-      new Request(`${origin}/api/cms/collections/posts`, {
-        headers: { cookie: "integral-preview=drafts" },
+      new Request(`${origin}/_tenon/collections/posts`, {
+        headers: { cookie: "tenon-preview=drafts" },
       }),
     );
     expect(await res.json()).toEqual([]);
@@ -184,26 +184,26 @@ describe("preview over HTTP", () => {
   it("sets and clears the cookie", async () => {
     await s.client.signUp(admin);
     const call = (method: string, body?: object) =>
-      s.fetch(`${origin}/api/cms/preview`, {
+      s.fetch(`${origin}/_tenon/preview`, {
         method,
         headers: { "content-type": "application/json" },
         body: body && JSON.stringify(body),
       });
     const enter = await call("POST");
     expect(enter.status).toBe(204);
-    expect(enter.headers.get("set-cookie")).toBe("integral-preview=drafts; Path=/; SameSite=Lax");
+    expect(enter.headers.get("set-cookie")).toBe("tenon-preview=drafts; Path=/; SameSite=Lax");
     const published = await call("POST", { perspective: "published" });
     expect(published.headers.get("set-cookie")).toBe(
-      "integral-preview=published; Path=/; SameSite=Lax",
+      "tenon-preview=published; Path=/; SameSite=Lax",
     );
     const exit = await call("DELETE");
     expect(exit.status).toBe(204);
-    expect(exit.headers.get("set-cookie")).toMatch(/^integral-preview=; Max-Age=0/);
+    expect(exit.headers.get("set-cookie")).toMatch(/^tenon-preview=; Max-Age=0/);
   });
 
   it("rejects an unknown perspective", async () => {
     await s.client.signUp(admin);
-    const res = await s.fetch(`${origin}/api/cms/preview`, {
+    const res = await s.fetch(`${origin}/_tenon/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ perspective: "all" }),
@@ -213,7 +213,7 @@ describe("preview over HTTP", () => {
   });
 
   it("needs a session to set the cookie", async () => {
-    const res = await s.fetch(`${origin}/api/cms/preview`, { method: "POST" });
+    const res = await s.fetch(`${origin}/_tenon/preview`, { method: "POST" });
     expect(res.status).toBe(401);
   });
 });
@@ -223,7 +223,7 @@ describe("withSession", () => {
     new Request(origin, { headers: cookie ? { cookie } : undefined });
   async function session() {
     const res = await cms.fetch(
-      new Request(`${origin}/api/cms/auth/sign-up/email`, {
+      new Request(`${origin}/_tenon/auth/sign-up/email`, {
         method: "POST",
         headers: { "content-type": "application/json", origin },
         body: JSON.stringify(admin),
@@ -243,17 +243,17 @@ describe("withSession", () => {
   });
 
   it("reads drafts with a preview cookie and a session", async () => {
-    expect(await (await cms.withSession(request("integral-preview=drafts"))).find("posts")).toEqual(
+    expect(await (await cms.withSession(request("tenon-preview=drafts"))).find("posts")).toEqual(
       [],
     );
     const cookie = await session();
-    const api = await cms.withSession(request(`${cookie}; integral-preview=drafts`));
+    const api = await cms.withSession(request(`${cookie}; tenon-preview=drafts`));
     expect(await api.find("posts")).toHaveLength(1);
   });
 
   it("reads published content with the published perspective", async () => {
     const cookie = await session();
-    const api = await cms.withSession(request(`${cookie}; integral-preview=published`));
+    const api = await cms.withSession(request(`${cookie}; tenon-preview=published`));
     expect(await api.find("posts")).toEqual([]);
   });
 
@@ -517,7 +517,7 @@ describe("draft writes", () => {
   describe("over HTTP", () => {
     let s: ReturnType<typeof setup<typeof cms>>;
     const call = (method: string, path: string, body?: object) =>
-      s.fetch(`${origin}/api/cms${path}`, {
+      s.fetch(`${origin}/_tenon${path}`, {
         method,
         headers: { "content-type": "application/json" },
         body: body && JSON.stringify(body),

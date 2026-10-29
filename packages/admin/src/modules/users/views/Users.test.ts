@@ -43,7 +43,7 @@ function signIn(role: string) {
 
 beforeEach(() => {
   i18n.global.locale.value = "en";
-  document.cookie = "integral-preview=drafts";
+  document.cookie = "tenon-preview=drafts";
 });
 afterEach(cleanup);
 

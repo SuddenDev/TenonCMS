@@ -21,7 +21,7 @@ type Save = Write & ConflictOptions;
 type Discard = DiscardOption<{ localization: { locales: string[] } }>;
 
 /**
- * Typed HTTP client for `/api/cms`. It has the same methods as the local API, so code reads the same on
+ * Typed HTTP client for `/_tenon`. It has the same methods as the local API, so code reads the same on
  * both sides. Use it in the browser: admin pages, islands, client components. On the server, call the
  * `cms` instance directly.
  *
@@ -30,7 +30,7 @@ type Discard = DiscardOption<{ localization: { locales: string[] } }>;
  * Collection and global names and document types come from the registered `cms`. See {@link Register}.
  * Pass a type argument to override it.
  * @example
- * import { createClient } from 'integral-cms/client'
+ * import { createClient } from 'tenoncms/client'
  *
  * const client = createClient()
  * const posts = await client.find('posts', { where: { featured: true } })

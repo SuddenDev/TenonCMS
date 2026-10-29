@@ -1,6 +1,6 @@
 # Developer docs
 
-How integral-cms is built and why. These pages explain ideas and rules. They name few files and functions on purpose, because those change; for code, read the `README.md` in each folder of `packages/core/src/`.
+How tenoncms is built and why. These pages explain ideas and rules. They name few files and functions on purpose, because those change; for code, read the `README.md` in each folder of `packages/core/src/`.
 
 User-facing docs are in [../guide/](../guide/).
 

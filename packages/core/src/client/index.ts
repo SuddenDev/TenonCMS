@@ -21,10 +21,10 @@ export {
 
 /**
  * Holds the host's `cms` type, so `createClient()` is typed without a type argument.
- * The Astro and Nuxt adapters fill it in. Elsewhere, map `#integral/config` to your config file and
- * load `integral-cms/register` in `tsconfig.json`:
+ * The Astro and Nuxt adapters fill it in. Elsewhere, map `#tenon/config` to your config file and
+ * load `tenoncms/register` in `tsconfig.json`:
  * @example
- * "paths": { "#integral/config": ["./integral.config.ts"] },
- * "types": ["integral-cms/register"]
+ * "paths": { "#tenon/config": ["./tenon.config.ts"] },
+ * "types": ["tenoncms/register"]
  */
 export interface Register {}

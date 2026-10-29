@@ -1,10 +1,10 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { seoMeta } from "integral-cms/client";
-import { edit } from "integral-cms/preview";
-import { useDraft } from "integral-cms/preview/react";
-import cms from "../../integral.config";
+import { seoMeta } from "tenoncms/client";
+import { edit } from "tenoncms/preview";
+import { useDraft } from "tenoncms/preview/react";
+import cms from "../../tenon.config";
 
 const getPage = createServerFn()
   .validator((path: string) => path)
@@ -20,7 +20,7 @@ const getPage = createServerFn()
     return { page, general, seo };
   });
 
-// `/`, `/posts/$slug`, `/admin/$` and `/api/cms/$` win over this route, so a CMS page at `/` never shows.
+// `/`, `/posts/$slug`, `/admin/$` and `/_tenon/$` win over this route, so a CMS page at `/` never shows.
 export const Route = createFileRoute("/$")({
   loader: ({ params }) => getPage({ data: `/${params._splat ?? ""}` }),
   head: ({ loaderData }) => {

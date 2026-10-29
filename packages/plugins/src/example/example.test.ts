@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createClient } from "integral-cms/client";
-import { defineCms } from "integral-cms";
+import { createClient } from "tenoncms/client";
+import { defineCms } from "tenoncms";
 import { ExamplePlugin } from "./index.ts";
-import { libsql } from "integral-cms/libsql";
+import { libsql } from "tenoncms/libsql";
 
 const origin = "http://localhost";
 const admin = { name: "Admin", email: "a@b.co", password: "password123" };
@@ -29,28 +29,28 @@ function make() {
 describe("example", () => {
   it("trims quotes and serves a random one as text", async () => {
     const { cms, fetch } = make();
-    expect((await fetch(`${origin}/api/cms/example/random`)).status).toBe(404);
+    expect((await fetch(`${origin}/_tenon/example/random`)).status).toBe(404);
     await cms.create("quotes", { text: "  Less is more.  ", author: "Mies" });
-    expect(await (await fetch(`${origin}/api/cms/example/random`)).text()).toBe(
+    expect(await (await fetch(`${origin}/_tenon/example/random`)).text()).toBe(
       "Quote of the day: “Less is more.” (Mies)",
     );
     await cms.setGlobal("quoteSettings", { prefix: "Today" });
-    const res = await fetch(`${origin}/api/cms/example/random`);
+    const res = await fetch(`${origin}/_tenon/example/random`);
     expect(res.headers.get("content-type")).toMatch(/^text\/plain/);
     expect(await res.text()).toBe("Today: “Less is more.” (Mies)");
   });
 
   it("marks every response", async () => {
     const { fetch } = make();
-    expect((await fetch(`${origin}/api/cms/schema`)).headers.get("x-example")).toBe("1");
+    expect((await fetch(`${origin}/_tenon/schema`)).headers.get("x-example")).toBe("1");
   });
 
   it("exports quotes as CSV for signed-in users", async () => {
     const { cms, client, fetch } = make();
     await cms.create("quotes", { text: 'Say "hi"', author: "Anonymous", rating: "4" });
-    expect((await fetch(`${origin}/api/cms/example/quotes.csv`)).status).toBe(401);
+    expect((await fetch(`${origin}/_tenon/example/quotes.csv`)).status).toBe(401);
     await client.signUp(admin);
-    const res = await fetch(`${origin}/api/cms/example/quotes.csv`);
+    const res = await fetch(`${origin}/_tenon/example/quotes.csv`);
     expect(res.headers.get("content-type")).toMatch(/^text\/csv/);
     expect(await res.text()).toBe('text,author,rating\n"Say ""hi""","Anonymous","4"\n');
   });
@@ -80,11 +80,11 @@ describe("example", () => {
   it("mounts the field and pages with the chosen renderer", () => {
     const { fields, pages } = ExamplePlugin({ renderer: "vue" }).admin!;
     expect(fields!.rating.mount.clientRef).toBe(
-      "integral-cms/plugins/example/admin/vue#mountRatingField",
+      "tenoncms/plugins/example/admin/vue#mountRatingField",
     );
     expect(pages!["quote-stats"].mount.clientRef).toBe(
-      "integral-cms/plugins/example/admin/vue#mountStats",
+      "tenoncms/plugins/example/admin/vue#mountStats",
     );
-    expect(pages!.quote.mount.clientRef).toBe("integral-cms/plugins/example/admin/vue#mountQuote");
+    expect(pages!.quote.mount.clientRef).toBe("tenoncms/plugins/example/admin/vue#mountQuote");
   });
 });

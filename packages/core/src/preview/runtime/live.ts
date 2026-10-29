@@ -40,7 +40,7 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
     bar?.setEdit(edit);
     channel.post({ type: "mode", edit });
   };
-  const bar = name.startsWith("integral-preview-")
+  const bar = name.startsWith("tenon-preview-")
     ? startAdminBar("preview-tab", admin || "", setEditMode, {
         onSessionEnd: () => cleanup(),
         onExit: () => {

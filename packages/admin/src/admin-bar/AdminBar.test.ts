@@ -213,7 +213,7 @@ describe("language", () => {
   afterEach(() => localStorage.clear());
 
   it("labels the built-ins in the admin language and keeps host labels", async () => {
-    localStorage.setItem("integral-admin-locale", "de");
+    localStorage.setItem("tenon-admin-locale", "de");
     render(
       context([
         { id: "edit", label: "Edit", href: "/admin/presentation", builtIn: true },
@@ -227,7 +227,7 @@ describe("language", () => {
   });
 
   it("shows a host label in the admin language, children included", async () => {
-    localStorage.setItem("integral-admin-locale", "de");
+    localStorage.setItem("tenon-admin-locale", "de");
     render(
       context([
         { id: "docs", label: { en: "Docs", de: "Doku" }, href: "/docs" },
@@ -249,7 +249,7 @@ describe("language", () => {
   });
 
   it("names the preview tab's built-ins", async () => {
-    localStorage.setItem("integral-admin-locale", "de");
+    localStorage.setItem("tenon-admin-locale", "de");
     render({
       ...context([
         { id: "edit", label: "Back to visual editor", href: "/admin/presentation", builtIn: true },

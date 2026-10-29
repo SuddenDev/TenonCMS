@@ -1,10 +1,10 @@
 import node from "@astrojs/node";
 import { defineConfig, envField } from "astro/config";
-import integralCms from "integral-cms/astro";
+import tenonCms from "tenoncms/astro";
 
 export default defineConfig({
   adapter: node({ mode: "standalone" }),
-  integrations: [integralCms()],
+  integrations: [tenonCms()],
   env: {
     schema: {
       CMS_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),

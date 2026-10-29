@@ -16,7 +16,7 @@ export type S3Options = {
   endpoint?: string;
   /**
    * Public URL of the bucket, e.g. a custom domain or the R2 public URL. File URLs are `<publicUrl>/<key>`. Default: the bucket stays private and
-   * core serves files at `/api/cms/media/files/<key>`.
+   * core serves files at `/_tenon/media/files/<key>`.
    */
   publicUrl?: string;
   /** Part size of uploads in bytes. At least 5 MB, as S3 requires. Default 16 MB. */

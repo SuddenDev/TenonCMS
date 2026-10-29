@@ -20,7 +20,7 @@ import { guardAll } from "../../access/rule.ts";
 export async function regenerate(core: Core, scope: Scope, id?: string, { force = false } = {}) {
   const media = mediaOf(core);
   if (!media.images?.provider.render)
-    throw new Error("integral-cms: regenerate needs an image provider with `render`");
+    throw new Error("tenoncms: regenerate needs an image provider with `render`");
   await guardAll(core, scope, collectionTarget("media"), "update");
 
   const docs = await findDocs(await databaseForScope(core, scope), "media", id ? { id } : {});

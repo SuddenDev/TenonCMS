@@ -91,8 +91,8 @@ describe("API key callers", () => {
       permissions: { "collection:posts": ["read"] },
     });
     const res = await u.cms.fetch(
-      new Request(`${origin}/api/cms/collections/posts`, {
-        headers: { "x-api-key": key, cookie: "integral-preview=drafts" },
+      new Request(`${origin}/_tenon/collections/posts`, {
+        headers: { "x-api-key": key, cookie: "tenon-preview=drafts" },
       }),
     );
     expect(((await res.json()) as { id: string }[]).map((p) => p.id)).toEqual([live.id]);
@@ -225,7 +225,7 @@ describe("API key grid", () => {
     const k = await keyFor(m, { "collection:media": ["read"] });
     const put = await k.fetch(`${origin}${plan.parts[0].url}`, { method: "PUT", body: png });
     expect(put.status).toBe(403);
-    const abort = await k.fetch(`${origin}/api/cms/media/uploads/${plan.id}`, { method: "DELETE" });
+    const abort = await k.fetch(`${origin}/_tenon/media/uploads/${plan.id}`, { method: "DELETE" });
     expect(abort.status).toBe(403);
   });
 
@@ -253,7 +253,7 @@ describe("API key grid", () => {
       "collection:posts": ["create", "read", "update", "delete"],
     };
     const k = await keyFor(u, all);
-    expect((await k.fetch(`${origin}/api/cms/stats/me`)).status).toBe(403);
+    expect((await k.fetch(`${origin}/_tenon/stats/me`)).status).toBe(403);
     expect(await status(k.client.preview.enter())).toBe(403);
     expect(await status(k.client.invites.list())).toBe(403);
     expect(await status(k.client.apiKeys.list())).toBe(403);

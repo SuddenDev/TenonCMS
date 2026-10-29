@@ -1,4 +1,4 @@
-import type { Field, LocalApi } from "integral-cms";
+import type { Field, LocalApi } from "tenoncms";
 import type { User } from "better-auth";
 import type { IconName } from "./icons";
 
@@ -17,7 +17,7 @@ type Loaded<D> = unknown extends D ? Json : D;
  * Runs once with an empty element and the context. Render into `el` with any framework or plain DOM.
  * Return a cleanup function, or `{ update, unmount }` to also receive context changes.
  *
- * `renderVue()` from `integral-cms/admin/vue` and `renderReact()` from `integral-cms/admin/react` build one
+ * `renderVue()` from `tenoncms/admin/vue` and `renderReact()` from `tenoncms/admin/react` build one
  * from a component.
  * @example
  * const mount: Mount<FieldContext> = (el, { value, onChange }) => {
@@ -48,8 +48,8 @@ export type AdminLocale = "en" | "de";
  */
 export type Text = string | Partial<Record<AdminLocale, string>>;
 
-/** Helpers from the admin, in every context as `integral`. */
-export type IntegralContext = {
+/** Helpers from the admin, in every context as `tenon`. */
+export type TenonContext = {
   /** The admin language the user picked. A change of it calls `update(ctx)`. */
   locale: AdminLocale;
   /**
@@ -61,7 +61,7 @@ export type IntegralContext = {
   base: string;
   /**
    * Opens an admin view without reloading the page. For links, a plain `href` under `base` is enough.
-   * @param path Relative to {@link IntegralContext.base}, e.g. `/reports/posts/1?tab=body`.
+   * @param path Relative to {@link TenonContext.base}, e.g. `/reports/posts/1?tab=body`.
    */
   navigate: (path: string) => void;
   /**
@@ -94,13 +94,13 @@ export type FieldContext<D = unknown> = {
   /** What the server `load` of the field registration returned. `undefined` without a `load`. */
   data: D;
   /** Helpers from the admin. */
-  integral: IntegralContext;
+  tenon: TenonContext;
 };
 
 /**
  * Context of a custom page. Updates on every route change.
  *
- * To load or change content, use `createClient()` from `integral-cms/client`.
+ * To load or change content, use `createClient()` from `tenoncms/client`.
  * The admin's session cookie makes writes work.
  */
 export type PageContext<D = unknown> = {
@@ -111,7 +111,7 @@ export type PageContext<D = unknown> = {
   /** What the server `load` of the page registration returned. `undefined` without a `load`. */
   data: D;
   /** Helpers from the admin. */
-  integral: IntegralContext;
+  tenon: TenonContext;
 };
 
 /** Where and how an entry shows up in the admin navigation. */
@@ -208,14 +208,14 @@ export type AdminBarItemContext<D = unknown> = AdminBarContext & {
   /** What the server `load` of this item returned. `undefined` without a `load`. Never another item's data. */
   data: D;
   /** Helpers from the admin. The bar has no admin `base`, so only `reload` and `locale` are here. */
-  integral: Pick<IntegralContext, "reload" | "locale">;
+  tenon: Pick<TenonContext, "reload" | "locale">;
 };
 
 /** One step of the breadcrumbs. */
 export type Crumb = {
   /** Text of the step. */
   label: string;
-  /** Link target, relative to {@link IntegralContext.base}, e.g. `/content/reports`. */
+  /** Link target, relative to {@link TenonContext.base}, e.g. `/content/reports`. */
   to: string;
 };
 
@@ -341,7 +341,7 @@ export type PageRegistration<D = any> = {
    * - `false`: no header.
    * - `Crumb[]`: these breadcrumbs.
    * - `clientRef()` of a {@link PageHeader}: gets the breadcrumbs of the route and the page context, and returns
-   *   an HTML string or breadcrumbs. Links in the HTML under `integral.base` open without a reload. The admin
+   *   an HTML string or breadcrumbs. Links in the HTML under `tenon.base` open without a reload. The admin
    *   does not escape the string: escape every untrusted value, e.g. `params`.
    * @example
    * pageHeader: clientRef('./src/admin/reports.ts#header')
@@ -467,8 +467,8 @@ export type AdminBarOptions = {
  */
 export type AdminOptions = {
   /** Tiptap extensions supplied by the host or plugins. */
-  richtext?: import("integral-cms/richtext").RichtextOptions;
-  /** Name of the CMS in the sidebar, the login and the page title. Defaults to `integral-cms`. */
+  richtext?: import("tenoncms/richtext").RichtextOptions;
+  /** Name of the CMS in the sidebar, the login and the page title. Defaults to `tenoncms`. */
   name?: string;
   /** Wide logo for the sidebar header and the login. Defaults to the icon, then to a placeholder. */
   logo?: Themed;
@@ -547,7 +547,7 @@ export type AdminDescriptor = Omit<AdminOptions, "fields" | "pages" | "adminBar"
   richtext?: {
     extensions: Record<
       string,
-      { client: ClientRef<import("integral-cms/richtext").RichtextBrowserExtension> }
+      { client: ClientRef<import("tenoncms/richtext").RichtextBrowserExtension> }
     >;
   };
   fields: Record<string, FieldDescriptor>;

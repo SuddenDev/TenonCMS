@@ -1,13 +1,13 @@
 # Framework setup
 
-Every setup does the same three things: send `/api/cms/*` to the CMS, serve the admin page at `/admin`, and make the instance from `integral.config.ts` available to your pages. Astro and Nuxt have an adapter that does this for you. For other Vite frameworks, use `integralAdmin()`.
+Every setup does the same three things: send `/_tenon/*` to the CMS, serve the admin page at `/admin`, and make the instance from `tenon.config.ts` available to your pages. Astro and Nuxt have an adapter that does this for you. For other Vite frameworks, use `tenonAdmin()`.
 
-| Framework                             | Setup                                    |
-| ------------------------------------- | ---------------------------------------- |
-| [Astro](#astro)                       | `integral-cms/astro` integration         |
-| [Nuxt](#nuxt)                         | `integral-cms/nuxt` module               |
-| [TanStack Start](#tanstack-start)     | `integralAdmin()` plus two server routes |
-| [Anything else](#any-other-framework) | `cms.fetch(request)` and an admin page   |
+| Framework                             | Setup                                  |
+| ------------------------------------- | -------------------------------------- |
+| [Astro](#astro)                       | `tenoncms/astro` integration           |
+| [Nuxt](#nuxt)                         | `tenoncms/nuxt` module                 |
+| [TanStack Start](#tanstack-start)     | `tenonAdmin()` plus two server routes  |
+| [Anything else](#any-other-framework) | `cms.fetch(request)` and an admin page |
 
 To serve the admin under another path, pass `admin: '/cms'` to the Astro integration or the Nuxt module. Pass `admin: false` to ship no admin at all.
 
@@ -15,41 +15,41 @@ To serve the admin under another path, pass `admin: '/cms'` to the Astro integra
 
 ```ts
 // astro.config.ts: needs an SSR adapter, e.g. @astrojs/node
-import integralCms from "integral-cms/astro";
+import tenonCms from "tenoncms/astro";
 
 export default defineConfig({
   adapter: node({ mode: "standalone" }),
-  integrations: [integralCms()], // reads ./integral.config.ts, options: { entry, admin }
+  integrations: [tenonCms()], // reads ./tenon.config.ts, options: { entry, admin }
 });
 ```
 
-The integration adds a middleware that exposes the instance as `Astro.locals.integral`, fully typed. It is `cms.withSession(request)`, so the admin's preview sees drafts. Prerendered pages and `/api/cms` get the plain instance.
+The integration adds a middleware that exposes the instance as `Astro.locals.tenon`, fully typed. It is `cms.withSession(request)`, so the admin's preview sees drafts. Prerendered pages and `/_tenon` get the plain instance.
 
 ```astro
 ---
 export const prerender = false;
-const posts = await Astro.locals.integral.find("posts");
+const posts = await Astro.locals.tenon.find("posts");
 ---
 ```
 
 - Pages with `prerender = false` read live content. Prerendered pages read content at build time.
-- Secrets go through `astro:env`. See `examples/astro/integral.config.ts`.
+- Secrets go through `astro:env`. See `examples/astro/tenon.config.ts`.
 
 ### Astro on Cloudflare
 
 With `@astrojs/cloudflare` as the adapter, the CMS runs inside a Durable Object. The integration detects the adapter. See `examples/cloudflare`.
 
 ```ts
-// integral.config.ts
-import { durableObject } from "integral-cms/cloudflare";
+// tenon.config.ts
+import { durableObject } from "tenoncms/cloudflare";
 export default defineCms({ database: durableObject(), secret: CMS_SECRET /* ... */ });
 
 // src/worker.ts, set as `main` in wrangler.jsonc
 import { handle } from "@astrojs/cloudflare/handler";
-import { integralObject } from "integral-cms/cloudflare";
-import cms from "../integral.config";
+import { tenonObject } from "tenoncms/cloudflare";
+import cms from "../tenon.config";
 
-export const CmsObject = integralObject(cms);
+export const CmsObject = tenonObject(cms);
 export default { fetch: handle } satisfies ExportedHandler<Env>;
 ```
 
@@ -61,7 +61,7 @@ export default { fetch: handle } satisfies ExportedHandler<Env>;
 ```
 
 - The binding MUST be named `CMS`. All content lives in one object, `env.CMS.getByName("cms")`.
-- `Astro.locals.integral` is the [HTTP client](reading.md) over the object, not the local API. It forwards the request's cookie, so the session user's access rules apply, and the preview cookie shows drafts. Compared with the local API: no `withSession()` or `withDrafts()` (the cookie decides), `localization()` is an async method, new drafts go through `createDraft()`, and there is no `email` or `auth`. Writes need a session or an API key.
+- `Astro.locals.tenon` is the [HTTP client](reading.md) over the object, not the local API. It forwards the request's cookie, so the session user's access rules apply, and the preview cookie shows drafts. Compared with the local API: no `withSession()` or `withDrafts()` (the cookie decides), `localization()` is an async method, new drafts go through `createDraft()`, and there is no `email` or `auth`. Writes need a session or an API key.
 - Pages that read the CMS MUST NOT be prerendered: no object exists at build time. Set `output: "server"`. A prerendered page that reads it fails the build.
 - The server bundle is minified, because every wake of the object parses it again.
 - Media: `r2(env.MEDIA)` and `cloudflare({ binding: env.IMAGES })`, with `env` from `cloudflare:workers`. See [media](media.md#r2). The adapter adds the `IMAGES` binding and a KV `SESSION` binding by default; `wrangler deploy` creates the bucket and namespace for bindings without an ID, once R2 is enabled on the account.
@@ -71,10 +71,10 @@ export default { fetch: handle } satisfies ExportedHandler<Env>;
 With `@astrojs/vercel` as the adapter, the CMS runs in Vercel's Node functions. The integration needs no extra options. See `examples/vercel`.
 
 ```ts
-// integral.config.ts
+// tenon.config.ts
 import { attachDatabasePool } from "@vercel/functions";
-import { s3 } from "integral-cms/media/s3";
-import { postgres } from "integral-cms/postgres";
+import { s3 } from "tenoncms/media/s3";
+import { postgres } from "tenoncms/postgres";
 
 const database = postgres(DATABASE_URL);
 attachDatabasePool(database.pool);
@@ -117,14 +117,14 @@ Neon stores lifecycle rules but does not run them, so unfinished multipart uploa
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ["integral-cms/nuxt"], // reads ./integral.config.ts, options: integralCms: { entry, admin }
+  modules: ["tenoncms/nuxt"], // reads ./tenon.config.ts, options: tenonCms: { entry, admin }
   runtimeConfig: { cmsSecret: "", databaseUrl: `file:${resolve("cms.db")}` },
 });
 ```
 
-`integral.config.ts` can call `useRuntimeConfig()` for the secret and the database URL.
+`tenon.config.ts` can call `useRuntimeConfig()` for the secret and the database URL.
 
-The module auto-imports `useIntegral()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results.
+The module auto-imports `useTenon()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results.
 
 - During SSR it calls the CMS in-process. On client-side navigation it fetches the public read API.
 - Read options and document ids accept refs or getters. Use a getter for route-dependent filters, so reused pages update on navigation. The route's locale updates automatically.
@@ -132,10 +132,10 @@ The module auto-imports `useIntegral()`. It has the read methods of the client (
 
 ```vue
 <script setup lang="ts">
-const { data: posts } = await useIntegral().find("posts");
-const { data: post } = await useIntegral().findOne("posts", { where: { slug: "hello" } });
+const { data: posts } = await useTenon().find("posts");
+const { data: post } = await useTenon().findOne("posts", { where: { slug: "hello" } });
 const route = useRoute();
-const { data: current } = await useIntegral().findOne(
+const { data: current } = await useTenon().findOne(
   "posts",
   () =>
     ({
@@ -147,31 +147,32 @@ useAlternates(() => current.value?.alternates);
 </script>
 ```
 
-Server routes can import the instance as the default export of `#integral/config` (an alias for `integral.config.ts`) for writes or custom queries.
+Server routes can import the instance as the default export of `#tenon/config` (an alias for `tenon.config.ts`) for writes or custom queries.
 
 ## TanStack Start
 
-No module is needed. A splat server route hands API requests to the CMS, `integralAdmin()` builds the admin, and a second server route serves its page.
+No module is needed. A splat server route hands API requests to the CMS, `tenonAdmin()` builds the admin, and a second server route serves its page.
 
 ```ts
-// src/routes/api/cms/$.ts
+// src/routes/[_]tenon.$.ts
+// The brackets escape the `_`. A plain `_tenon` file is a pathless layout route.
 const handle = ({ request }: { request: Request }) => cms.fetch(request);
 
-export const Route = createFileRoute("/api/cms/$")({
+export const Route = createFileRoute("/_tenon/$")({
   server: { handlers: { GET: handle, POST: handle, PUT: handle, DELETE: handle } },
 });
 ```
 
 ```ts
 // vite.config.ts
-import { integralAdmin } from "integral-cms/vite";
+import { tenonAdmin } from "tenoncms/vite";
 
-export default defineConfig({ plugins: [tanstackStart(), nitro(), viteReact(), integralAdmin()] });
+export default defineConfig({ plugins: [tanstackStart(), nitro(), viteReact(), tenonAdmin()] });
 ```
 
 ```ts
 // src/routes/admin.$.ts
-import html from "#integral/admin-html";
+import html from "#tenon/admin-html";
 
 export const Route = createFileRoute("/admin/$")({
   server: {
@@ -186,24 +187,24 @@ Loaders run on the client and the server, so read content in a server function:
 
 ```tsx
 // src/routes/index.tsx
-import cms from "../../integral.config";
+import cms from "../../tenon.config";
 
 const getPosts = createServerFn().handler(() => cms.find("posts"));
 
 export const Route = createFileRoute("/")({ loader: () => getPosts(), component: Home });
 ```
 
-`integralAdmin()` also keeps `integral-cms` external in the SSR build, because bundling it breaks libsql's native binding. To use another admin path, pass `integralAdmin({ path: '/cms' })` and name the route file to match (`src/routes/cms.$.ts`).
+`tenonAdmin()` also keeps `tenoncms` external in the SSR build, because bundling it breaks libsql's native binding. To use another admin path, pass `tenonAdmin({ path: '/cms' })` and name the route file to match (`src/routes/cms.$.ts`).
 
 ## Any other framework
 
-Send `/api/cms/*` to `cms.fetch(request)`.
+Send `/_tenon/*` to `cms.fetch(request)`.
 
-- **With Vite**: use `integralAdmin()` as in TanStack Start, and return `#integral/admin-html` for `/admin` and `/admin/*`.
+- **With Vite**: use `tenonAdmin()` as in TanStack Start, and return `#tenon/admin-html` for `/admin` and `/admin/*`.
 - **Without Vite**: serve a page of its own with an empty element, and mount the admin into it:
 
 ```ts
-import { mountAdmin } from "integral-cms/admin/mount";
+import { mountAdmin } from "tenoncms/admin/mount";
 
 mountAdmin("#admin");
 ```

@@ -15,7 +15,7 @@
 | `config/api-keys.ts`                    | `apiKeys()`: better-auth's `apiKey()`; `apiKeyRoutesOff()` closes its HTTP routes; `newApiKeySecret()` for rolling. |
 | `middleware/api-key.middleware.ts`      | `csrfUnlessApiKey()`; `apiKeyReach()`: behind `session`, a key reaches only `/schema`.                              |
 | `middleware/session.middleware.ts`      | `optionalSession()` binds the CMS API to the caller once; `session` requires a session.                             |
-| `middleware/session-hint.middleware.ts` | `sessionHint()`: mirrors the session cookie in the readable `integral-session` hint cookie.                         |
+| `middleware/session-hint.middleware.ts` | `sessionHint()`: mirrors the session cookie in the readable `tenon-session` hint cookie.                            |
 | `endpoints/provider.endpoint.ts`        | Delegates GET and POST auth requests to better-auth.                                                                |
 | `endpoints/status.endpoint.ts`          | Public `GET /auth-status`: `signUpStatus()`, `no-store`.                                                            |
 | `endpoints/password.endpoint.ts`        | Protected `POST /account/password`: better-auth's server-only `setPassword()`.                                      |
@@ -33,6 +33,6 @@ Passkeys are the host's `passkey()` plugin; core does not bundle `@better-auth/p
 The admin's `/forgot-password` and `/reset-password` screens use Better Auth's request, callback and reset endpoints. The client passes the admin's own reset URL as `redirectTo`, so custom admin paths work. Better Auth validates callback origins, password rules, expiry and single-use tokens. The UI clears the token from the address after success and returns to sign-in.
 
 `sessionHint()` runs on `/auth/*`, before the provider endpoint. It reads the session cookie name from better-auth's
-options (`getCookies()`) and compares names without the secure prefix. A set session cookie sets `integral-session=1`
+options (`getCookies()`) and compares names without the secure prefix. A set session cookie sets `tenon-session=1`
 (not `HttpOnly`, `Lax`, path `/`, `Secure` when the session cookie is); a cleared or expired one clears it. The hint
 grants nothing. The site's preview runtime reads it only to decide whether asking for the admin bar is worth a request.

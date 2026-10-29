@@ -22,7 +22,7 @@ export function checkAccess(schema: Required<Schema>, roles: Role[]) {
 function checkRoles(known: Set<string>, owner: string, access: object | undefined) {
   for (const rule of Object.values(access ?? {}))
     for (const role of Array.isArray(rule) ? rule : [])
-      if (!known.has(role)) throw new Error(`integral-cms: ${owner} names unknown role "${role}"`);
+      if (!known.has(role)) throw new Error(`tenoncms: ${owner} names unknown role "${role}"`);
 }
 
 /** Checks the rules of each field, recursing into groups, arrays and blocks. `owner` is the dotted path so far. */
@@ -30,7 +30,7 @@ function walk(known: Set<string>, fields: Fields, owner: string) {
   for (const [key, f] of Object.entries(fields)) {
     checkRoles(known, `field "${owner}${key}"`, f.access);
     if (f.type === "join" && Object.keys(f.access ?? {}).some((op) => op !== "read"))
-      throw new Error(`integral-cms: join "${owner}${key}" takes \`access.read\` only`);
+      throw new Error(`tenoncms: join "${owner}${key}" takes \`access.read\` only`);
 
     if (f.type === "group" || f.type === "array") walk(known, f.fields, `${owner}${key}.`);
     if (f.type === "blocks")

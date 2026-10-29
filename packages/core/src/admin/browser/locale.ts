@@ -5,7 +5,7 @@ import type { AdminLocale } from "../index.d.ts";
 export const ADMIN_LOCALES = ["en", "de"] as const satisfies readonly AdminLocale[];
 
 /** `localStorage` key of the admin language. The admin bar reads it too. */
-export const ADMIN_LOCALE_KEY = "integral-admin-locale";
+export const ADMIN_LOCALE_KEY = "tenon-admin-locale";
 
 const supported = (code: string | null | undefined): code is AdminLocale =>
   (ADMIN_LOCALES as readonly string[]).includes(code ?? "");

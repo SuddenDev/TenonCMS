@@ -1,4 +1,4 @@
-# integral-cms core
+# tenoncms core
 
 A feature-first modular monolith. Each module owns a capability; collections and globals share the content engine. Hono adapts HTTP requests to the scoped local API. Public package imports remain defined by the root barrel and package export map.
 
@@ -47,7 +47,7 @@ The local API validates writes and runs hooks for every entry point. HTTP adds s
 
 ## Create a collection document
 
-For `POST /api/cms/collections/posts`, follow:
+For `POST /_tenon/collections/posts`, follow:
 
 1. [http/app.ts](http/app.ts) mounts the collection write group after CSRF and the optional session middleware.
 2. [collections/endpoints/create.endpoint.ts](collections/endpoints/create.endpoint.ts) checks the target, parses the body and calls the session-bound `cms.create()`.
@@ -59,7 +59,7 @@ Draft create uses the other route in the same endpoint file and the same operati
 
 ## Read a global
 
-For `GET /api/cms/globals/general`, follow:
+For `GET /_tenon/globals/general`, follow:
 
 1. [globals/endpoints/get.endpoint.ts](globals/endpoints/get.endpoint.ts) validates the name and read options and calls `c.var.cms`, which `optionalSession()` in [session.middleware.ts](auth/middleware/session.middleware.ts) scopes to the caller; drafts require a session plus the preview cookie.
 2. [get.local.ts](globals/operations/local/get.local.ts) checks the name. [get.operation.ts](globals/operations/get.operation.ts) enters the shared lifecycle without opening a read transaction.
@@ -72,7 +72,7 @@ With `?locale=de`, `readOptions()` in [read-options.ts](http/query/read-options.
 
 ## Complete an upload
 
-For `POST /api/cms/media/uploads/:id/complete`, follow:
+For `POST /_tenon/media/uploads/:id/complete`, follow:
 
 1. [media/endpoints/uploads.endpoint.ts](media/endpoints/uploads.endpoint.ts) runs in the protected media group. `findUpload()` in [upload-row.ts](media/operations/uploads/upload-row.ts) rejects unknown, expired or foreign uploads.
 2. [complete.operation.ts](media/operations/uploads/complete.operation.ts) enters the transaction lifetime, registers rollback cleanup, assembles the stored parts and verifies the expected byte count and image header.
@@ -83,7 +83,7 @@ Rollback runs storage abort and file/row cleanup through a live connection. Uplo
 
 ## Resolve a preview URL
 
-For `POST /api/cms/collections/posts/preview-url`, follow:
+For `POST /_tenon/collections/posts/preview-url`, follow:
 
 1. [collections/endpoints/preview-url.endpoint.ts](collections/endpoints/preview-url.endpoint.ts) checks the configured target and passes unsaved form state plus the session-bound API to the resolver. Globals have their corresponding feature endpoint.
 2. [preview/server/resolve-url.ts](preview/server/resolve-url.ts) clones the form state, calls the configured `preview` (else `permalink`) function, or resolves template fields. A relation placeholder loads one target hop through the local `findById()` with `populate: false`. With `?locale=`, the function gets the locale and, with `routing`, a `permalink` result gets the locale prefix.

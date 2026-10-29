@@ -7,7 +7,7 @@ const roots: string[] = [];
 
 /** Creates a temporary project with the given files, `path` relative to its root. Call `removeProjects()` after. */
 export async function tempProject(files: Record<string, string>) {
-  const root = await mkdtemp(join(tmpdir(), "integral-refs-"));
+  const root = await mkdtemp(join(tmpdir(), "tenon-refs-"));
   roots.push(root);
   for (const [path, code] of Object.entries(files)) {
     await mkdir(dirname(join(root, path)), { recursive: true });

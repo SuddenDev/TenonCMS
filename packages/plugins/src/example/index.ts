@@ -1,6 +1,6 @@
 import { Notice } from "./notice.ts";
-import { clientRef } from "integral-cms/admin";
-import { defineCollection, defineGlobal, definePlugin, type LocalApi } from "integral-cms";
+import { clientRef } from "tenoncms/admin";
+import { defineCollection, defineGlobal, definePlugin, type LocalApi } from "tenoncms";
 
 export type ExampleOptions = {
   /** Path of the admin, as set in the adapter. Default `/admin`. */
@@ -13,31 +13,31 @@ export type ExampleOptions = {
 // Obviosuly you wouldn't do that in reality
 const renderers = {
   html: {
-    field: clientRef("integral-cms/plugins/example/admin/html#mountRatingField"),
-    stats: clientRef("integral-cms/plugins/example/admin/html#mountStats"),
-    quote: clientRef("integral-cms/plugins/example/admin/html#mountQuote"),
-    header: clientRef("integral-cms/plugins/example/admin/html#statsHeader"),
+    field: clientRef("tenoncms/plugins/example/admin/html#mountRatingField"),
+    stats: clientRef("tenoncms/plugins/example/admin/html#mountStats"),
+    quote: clientRef("tenoncms/plugins/example/admin/html#mountQuote"),
+    header: clientRef("tenoncms/plugins/example/admin/html#statsHeader"),
   },
   vue: {
-    field: clientRef("integral-cms/plugins/example/admin/vue#mountRatingField"),
-    stats: clientRef("integral-cms/plugins/example/admin/vue#mountStats"),
-    quote: clientRef("integral-cms/plugins/example/admin/vue#mountQuote"),
-    header: clientRef("integral-cms/plugins/example/admin/vue#statsHeader"),
+    field: clientRef("tenoncms/plugins/example/admin/vue#mountRatingField"),
+    stats: clientRef("tenoncms/plugins/example/admin/vue#mountStats"),
+    quote: clientRef("tenoncms/plugins/example/admin/vue#mountQuote"),
+    header: clientRef("tenoncms/plugins/example/admin/vue#statsHeader"),
   },
   react: {
-    field: clientRef("integral-cms/plugins/example/admin/react#mountRatingField"),
-    stats: clientRef("integral-cms/plugins/example/admin/react#mountStats"),
-    quote: clientRef("integral-cms/plugins/example/admin/react#mountQuote"),
-    header: clientRef("integral-cms/plugins/example/admin/react#statsHeader"),
+    field: clientRef("tenoncms/plugins/example/admin/react#mountRatingField"),
+    stats: clientRef("tenoncms/plugins/example/admin/react#mountStats"),
+    quote: clientRef("tenoncms/plugins/example/admin/react#mountQuote"),
+    header: clientRef("tenoncms/plugins/example/admin/react#statsHeader"),
   },
 };
 
 // Apart from `renderers`, because the scan treats everything that the admin bar uses as site code, and
 // the bar MUST NOT load the page entries (they have CSS).
 const counts = {
-  html: clientRef("integral-cms/plugins/example/admin/html/bar#mountCount"),
-  vue: clientRef("integral-cms/plugins/example/admin/vue/bar#mountCount"),
-  react: clientRef("integral-cms/plugins/example/admin/react/bar#mountCount"),
+  html: clientRef("tenoncms/plugins/example/admin/html/bar#mountCount"),
+  vue: clientRef("tenoncms/plugins/example/admin/vue/bar#mountCount"),
+  react: clientRef("tenoncms/plugins/example/admin/react/bar#mountCount"),
 };
 
 /**
@@ -101,7 +101,7 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
         },
       ],
     },
-    // Runs for every request under /api/cms, before any route.
+    // Runs for every request under /_tenon, before any route.
     // Adds an `x-example` header to the response.
     publicMiddleware: async (c, next) => {
       await next();
@@ -115,7 +115,7 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
         console.info(`[example plugin] ${c.req.method} ${c.req.path} by ${c.var.user.name}`);
     },
 
-    // Mounted at /api/cms/example, open to everyone.
+    // Mounted at /_tenon/example, open to everyone.
     publicRoutes: (api) =>
       // `GET /random` returns a random quote as text, with the prefix from the settings.
       api.get("/random", async (c) => {
@@ -127,7 +127,7 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
         return c.text(`${prefix}: “${quote.text}” (${quote.author})`);
       }),
 
-    // Mounted at /api/cms/example, signed-in users only.
+    // Mounted at /_tenon/example, signed-in users only.
     routes: (api) =>
       // `GET /quotes.csv` downloads all quotes as a CSV file.
       api.get("/quotes.csv", async (c) => {
@@ -144,7 +144,7 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
         extensions: {
           exampleNotice: {
             schema: Notice,
-            client: clientRef("integral-cms/plugins/example/admin/richtext#notice"),
+            client: clientRef("tenoncms/plugins/example/admin/richtext#notice"),
           },
         },
       },

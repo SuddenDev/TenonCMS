@@ -6,7 +6,7 @@ import { i18n } from "@/shared/i18n";
 import { queryLocale } from "@/shared/locale";
 
 // A throwing or missing storage only means the choice is not remembered.
-const stored = useStorage("integral-locale", "", undefined, { onError: () => {} });
+const stored = useStorage("tenon-locale", "", undefined, { onError: () => {} });
 
 // Open forms. Each saves its pending edit and answers whether none is left.
 const flushers = new Set<() => Promise<boolean>>();

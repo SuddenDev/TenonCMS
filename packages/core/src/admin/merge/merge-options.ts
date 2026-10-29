@@ -30,7 +30,7 @@ export type AdminRuntime = {
 type Source = [name: string, admin: AdminOptions | PluginAdminOptions | undefined];
 
 const BRANDING = ["name", "logo", "icon", "favicon", "media"] as const;
-const HOST = "integral.config.ts";
+const HOST = "tenon.config.ts";
 
 /**
  * Combines the active registrations in plugin order, then host order.
@@ -55,11 +55,11 @@ export function mergeAdmin(plugins: readonly Plugin[], host: AdminOptions = {}):
 
     for (const [name, registration] of Object.entries(admin.richtext?.extensions ?? {})) {
       if (Object.hasOwn(richtext, name) || (RICHTEXT_FEATURES as readonly string[]).includes(name))
-        throw new Error(`integral-cms: duplicate rich text feature "${name}"`);
+        throw new Error(`tenoncms: duplicate rich text feature "${name}"`);
 
       requireRef(registration.client, `admin.richtext.extensions.${name}.client`, source);
       if (!registration.schema)
-        throw new Error(`integral-cms: rich text feature "${name}" needs a schema`);
+        throw new Error(`tenoncms: rich text feature "${name}" needs a schema`);
 
       richtext[name] = registration;
       descriptor.richtext ??= { extensions: {} };
@@ -104,7 +104,7 @@ function addEntries<D, C>(
 ) {
   for (const [key, value] of Object.entries(registrations ?? {})) {
     if (Object.hasOwn(descriptors, key))
-      throw new Error(`integral-cms: duplicate admin ${kind} key "${key}" in ${source}`);
+      throw new Error(`tenoncms: duplicate admin ${kind} key "${key}" in ${source}`);
 
     const { descriptor, loader } = describe(key, value, source);
     descriptors[key] = descriptor;

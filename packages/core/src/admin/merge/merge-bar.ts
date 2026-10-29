@@ -38,19 +38,15 @@ export function addBarItems(
 ) {
   if (bar === undefined || bar === false) {
     if (bar === false && !isHost)
-      throw new Error(
-        `integral-cms: admin.adminBar in ${source}: only the host can disable the bar`,
-      );
+      throw new Error(`tenoncms: admin.adminBar in ${source}: only the host can disable the bar`);
     return;
   }
   if (typeof bar !== "object" || bar === null)
-    throw new Error(`integral-cms: admin.adminBar in ${source} MUST be false or an object`);
+    throw new Error(`tenoncms: admin.adminBar in ${source} MUST be false or an object`);
   if (!isHost && "position" in bar)
-    throw new Error(`integral-cms: admin.adminBar in ${source}: only the host sets the position`);
+    throw new Error(`tenoncms: admin.adminBar in ${source}: only the host sets the position`);
   if (bar.items !== undefined && !isObject(bar.items))
-    throw new Error(
-      `integral-cms: admin.adminBar.items in ${source} MUST be an object of items by id`,
-    );
+    throw new Error(`tenoncms: admin.adminBar.items in ${source} MUST be an object of items by id`);
 
   for (const [id, item] of Object.entries(bar.items ?? {}) as [
     string,
@@ -63,7 +59,7 @@ export function addBarItems(
     for (const child of described.descriptor.children ?? [])
       if (BUILT_IN_IDS.has(child.id))
         throw new Error(
-          `integral-cms: child "${child.id}" of admin bar item "${described.descriptor.id}" in ${source} uses a built-in id; only a top-level item can replace a built-in`,
+          `tenoncms: child "${child.id}" of admin bar item "${described.descriptor.id}" in ${source} uses a built-in id; only a top-level item can replace a built-in`,
         );
     items.set(described.descriptor.id, described);
   }
@@ -90,7 +86,7 @@ function effectiveBar(entries: Map<string, DescribedItem>) {
   const loaders = new Map<string, Loader<BarItemLoadContext>>();
   const ids = new Set<string>();
   const claim = (id: string) => {
-    if (ids.has(id)) throw new Error(`integral-cms: duplicate admin bar item id "${id}"`);
+    if (ids.has(id)) throw new Error(`tenoncms: duplicate admin bar item id "${id}"`);
     ids.add(id);
   };
   for (const { descriptor, loaders: own } of entries.values()) {

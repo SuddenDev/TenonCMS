@@ -5,7 +5,7 @@ import type { Access } from "../../access/types.ts";
 
 /** The `media.images` option: responsive image variants. */
 export type ImagesOptions = {
-  /** Builds variant URLs: `ipx()` from `integral-cms/media/ipx`, `cloudflare()` from `integral-cms/media/cloudflare`, or your own. */
+  /** Builds variant URLs: `ipx()` from `tenoncms/media/ipx`, `cloudflare()` from `tenoncms/media/cloudflare`, or your own. */
   provider: ImageProvider;
   /** Default output format. Default `'webp'`. */
   format?: string;
@@ -21,7 +21,7 @@ export type ImagesOptions = {
 
 /** The `media` option of `defineCms()`. */
 export type MediaOptions = {
-  /** Where files live: `local()` from `integral-cms/media/local`, `s3()` from `integral-cms/media/s3`, or your own. */
+  /** Where files live: `local()` from `tenoncms/media/local`, `s3()` from `tenoncms/media/s3`, or your own. */
   storage: Storage;
   /** Largest accepted file in bytes. Default 100 MB. */
   maxSize?: number;

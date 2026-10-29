@@ -108,7 +108,7 @@ export function startAdminBar(
   const itemContext = (id: string, bar = context()): AdminBarItemContext<any> => ({
     ...bar,
     data: data.get(id),
-    integral: { reload: () => reload(id), locale: currentAdminLocale() },
+    tenon: { reload: () => reload(id), locale: currentAdminLocale() },
   });
 
   async function toItem(served: ResolvedBarItem): Promise<AdminBarItem | null> {
@@ -137,7 +137,7 @@ export function startAdminBar(
         item.children = kids.filter((kid) => !!kid);
       }
     } catch (error) {
-      console.error(`[integral] The admin bar item "${served.id}" failed to load.`, error);
+      console.error(`[tenon] The admin bar item "${served.id}" failed to load.`, error);
       return null;
     }
     return item;
@@ -204,7 +204,7 @@ export function startAdminBar(
   function show() {
     if (handle) return render();
     mounting ??= (async () => {
-      const { mountAdminBar } = await import("integral-cms/admin/bar");
+      const { mountAdminBar } = await import("tenoncms/admin/bar");
       if (stopped) return;
       // On `<html>`, outside `<body>`, so a morph or a framework render keeps it.
       host = document.createElement("div");
@@ -215,7 +215,7 @@ export function startAdminBar(
       handle = mountAdminBar(host.attachShadow({ mode: "open" }), context());
     })().catch((e) => {
       host?.remove();
-      console.warn("[integral] The admin bar failed to load.", e);
+      console.warn("[tenon] The admin bar failed to load.", e);
     });
   }
 
@@ -264,7 +264,7 @@ export function startAdminBar(
 }
 
 // The registry of discovered browser exports. Loads on the first item that has a reference.
-const loadRegistry = () => import("#integral/client-registry").then((m) => m.default);
+const loadRegistry = () => import("#tenon/client-registry").then((m) => m.default);
 
 // The item with this id, a dropdown child included.
 function find(list: AdminBarItem[], id: string): AdminBarItem | undefined {

@@ -30,7 +30,7 @@ The pages preset has `page.permalink` (`"{path}"`). Add `permalink: page.permali
 On the site, mark each element with `edit()` and start the runtime with `preview()`. It is safe on every page: visitors without a session see nothing.
 
 ```ts
-import { edit, preview } from "integral-cms/preview";
+import { edit, preview } from "tenoncms/preview";
 
 preview();
 // <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
@@ -57,14 +57,14 @@ defineCollection({ visualEditing: false, fields: { body: { type: "textarea" } } 
 Marked elements update on their own. To make lists and conditions follow too, Vue and React pages can use `useDraft()`. It merges the unsaved state into the document and starts the runtime. Items of an `array` or `blocks` field match by `id`, and a relation whose ids did not change keeps its populated value.
 
 ```ts
-import { useDraft } from "integral-cms/preview/vue"; // or integral-cms/preview/react
+import { useDraft } from "tenoncms/preview/vue"; // or tenoncms/preview/react
 const post = useDraft("posts", data); // Vue: a ref; React: the merged value
 ```
 
 ## Per framework
 
-- **Astro**: the integration injects `preview({ morph: true })` into every page. `integralCms({ preview: false })` leaves it out. Astro pages render on the server, so while you type only marked elements update. After each draft save, the runtime fetches the page again (with the preview cookie, so it renders the drafts) and morphs `<body>` and the title into it. Prerendered pages fetch their static HTML, so they only get the marked-element updates.
-- **Nuxt**: the module starts the runtime in a client plugin. `useIntegral()` merges the unsaved state into the `data` of `find`, `findOne`, `findById` and `getGlobal`. Pages only add `edit()`.
+- **Astro**: the integration injects `preview({ morph: true })` into every page. `tenonCms({ preview: false })` leaves it out. Astro pages render on the server, so while you type only marked elements update. After each draft save, the runtime fetches the page again (with the preview cookie, so it renders the drafts) and morphs `<body>` and the title into it. Prerendered pages fetch their static HTML, so they only get the marked-element updates.
+- **Nuxt**: the module starts the runtime in a client plugin. `useTenon()` merges the unsaved state into the `data` of `find`, `findOne`, `findById` and `getGlobal`. Pages only add `edit()`.
 - **TanStack Start and other Vite hosts**: call `preview()` once in the root component, in a `useEffect`, and pass loader data through `useDraft()`:
 
 ```tsx
@@ -78,11 +78,11 @@ const post = useDraft("posts", Route.useLoaderData());
 
 The runtime picks its mode from `window.name`:
 
-| Where                            | What it does                                                                                                                                                |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The admin's preview frame        | Applies the unsaved state. No bar.                                                                                                                          |
-| A preview tab the admin opened   | Also shows the admin bar with an "Edit" switch and "Exit preview".                                                                                          |
-| Any other page, signed-in editor | Shows the admin bar. Visitors download nothing extra: the bar loads only when the `integral-session` cookie is set. Sign-in sets it and sign-out clears it. |
+| Where                            | What it does                                                                                                                                             |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The admin's preview frame        | Applies the unsaved state. No bar.                                                                                                                       |
+| A preview tab the admin opened   | Also shows the admin bar with an "Edit" switch and "Exit preview".                                                                                       |
+| Any other page, signed-in editor | Shows the admin bar. Visitors download nothing extra: the bar loads only when the `tenon-session` cookie is set. Sign-in sets it and sign-out clears it. |
 
 ## Admin bar
 
@@ -99,8 +99,8 @@ The admin bar is a floating pill on your site with your brand, an Edit button, t
 ### Configure it
 
 ```ts
-// integral.config.ts
-import { clientRef } from "integral-cms/admin";
+// tenon.config.ts
+import { clientRef } from "tenoncms/admin";
 
 defineCms({
   admin: {
@@ -157,7 +157,7 @@ Rules:
 - **Link or dropdown**: the result is an overlay of `label`, `icon`, `href` and `children`. A loader may replace the children for the request with an object of the same shape. `null` hides the item for that request.
 - **Button or custom control**: the result is any JSON and arrives as `ctx.data`. `null` is valid data. Each item only sees its own data.
 - A loader that throws or returns something invalid is logged and the item is skipped. The rest of the bar stays.
-- `ctx.integral.reload()` runs one item's loader again.
+- `ctx.tenon.reload()` runs one item's loader again.
 
 ### Custom controls
 

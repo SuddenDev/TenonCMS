@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { PageContext } from "integral-cms/admin";
+import type { PageContext } from "tenoncms/admin";
 import { computed } from "vue";
 import type { Stats } from "../../types.ts";
 import { texts } from "../utils/texts.ts";
 
 const props = defineProps<PageContext<Stats>>();
-const t = computed(() => texts(props.integral.locale));
+const t = computed(() => texts(props.tenon.locale));
 </script>
 
 <template>
   <div class="header">
-    {{ t("title") }}&nbsp;&bullet;&nbsp;<a :href="`${integral.base}/content/collections/quotes`">{{
+    {{ t("title") }}&nbsp;&bullet;&nbsp;<a :href="`${tenon.base}/content/collections/quotes`">{{
       t("count", { n: data.count })
     }}</a>
   </div>

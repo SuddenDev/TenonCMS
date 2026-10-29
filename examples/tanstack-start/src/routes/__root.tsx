@@ -1,8 +1,8 @@
 import { HeadContent, Link, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { preview } from "integral-cms/preview";
+import { preview } from "tenoncms/preview";
 import { useEffect } from "react";
-import cms from "../../integral.config";
+import cms from "../../tenon.config";
 
 const getPages = createServerFn().handler(async () =>
   (await cms.find("pages", { select: { title: true, path: true } })).filter((p) => p.path),

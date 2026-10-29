@@ -52,7 +52,7 @@ describe("s3", () => {
   it("links files to the bucket's public URL, or to core for a private bucket", () => {
     expect(s3(options).url("a b/x.jpg")).toBe("https://media.example.com/a%20b/x.jpg");
     const { publicUrl: _, ...unlisted } = options;
-    expect(s3(unlisted).url("a b/x.jpg")).toBe("/api/cms/media/files/a%20b/x.jpg");
+    expect(s3(unlisted).url("a b/x.jpg")).toBe("/_tenon/media/files/a%20b/x.jpg");
   });
 
   it("uses virtual-hosted URLs on AWS", async () => {

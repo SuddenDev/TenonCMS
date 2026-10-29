@@ -3,7 +3,7 @@ import type { Caller, Core } from "../cms/runtime/types.ts";
 import { ForbiddenError } from "../errors.ts";
 
 /** The cookie that holds the perspective of a signed-in user's reads: `drafts` or `published`. */
-export const PREVIEW_COOKIE = "integral-preview";
+export const PREVIEW_COOKIE = "tenon-preview";
 
 /**
  * The caller of a request, and the perspective of its reads.

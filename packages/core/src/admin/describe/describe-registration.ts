@@ -31,7 +31,7 @@ function describeEntry<D extends { load?: true }>(
 ) {
   const path = `admin.${kind}.${key}`;
   const where = `${path} in ${source}`;
-  if (!isObject(value)) throw new Error(`integral-cms: ${where} MUST be an object`);
+  if (!isObject(value)) throw new Error(`tenoncms: ${where} MUST be an object`);
 
   const { mount, load: fn, ...rest } = value;
   requireRef(mount, `${path}.mount`, source);

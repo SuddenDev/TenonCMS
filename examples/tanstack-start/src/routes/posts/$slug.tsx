@@ -1,9 +1,9 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { edit } from "integral-cms/preview";
-import { useDraft } from "integral-cms/preview/react";
-import cms from "../../../integral.config";
+import { edit } from "tenoncms/preview";
+import { useDraft } from "tenoncms/preview/react";
+import cms from "../../../tenon.config";
 
 const getPost = createServerFn()
   .validator((slug: string) => slug)

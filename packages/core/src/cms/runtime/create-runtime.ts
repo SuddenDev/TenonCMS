@@ -51,7 +51,7 @@ export function createRuntime<A extends AuthOptions>(
   let authInstance: ReturnType<typeof createAuth<ReturnType<typeof authOptions<A>>>> | undefined;
   const auth = async () => {
     if (!secret || secret.length < 32)
-      throw new Error("integral-cms: `secret` MUST be at least 32 characters");
+      throw new Error("tenoncms: `secret` MUST be at least 32 characters");
     return (authInstance ??= createAuth((await connect()).options));
   };
 

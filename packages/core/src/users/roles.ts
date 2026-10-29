@@ -35,9 +35,9 @@ export const BUILT_IN_ROLES: Role[] = [
 export function normalizeRoles(roles: Record<string, RoleOptions> | undefined): Role[] {
   const own = Object.entries(roles ?? {}).map(([name, { label, description }]) => {
     if (BUILT_IN_ROLES.some((r) => r.name === name))
-      throw new Error(`integral-cms: role "${name}" is built in`);
+      throw new Error(`tenoncms: role "${name}" is built in`);
     if (!/^[a-z0-9-]+$/.test(name))
-      throw new Error(`integral-cms: role "${name}" MUST match [a-z0-9-]`);
+      throw new Error(`tenoncms: role "${name}" MUST match [a-z0-9-]`);
     return { name, label: label ?? name, ...(description !== undefined && { description }) };
   });
   return [...BUILT_IN_ROLES, ...own];

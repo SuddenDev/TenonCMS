@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createClient } from "integral-cms/client";
-import { defineCms, defineCollection } from "integral-cms";
-import { page } from "integral-cms/presets";
+import { createClient } from "tenoncms/client";
+import { defineCms, defineCollection } from "tenoncms";
+import { page } from "tenoncms/presets";
 import { RedirectsPlugin, resolveRedirect } from "./index.ts";
-import { libsql } from "integral-cms/libsql";
+import { libsql } from "tenoncms/libsql";
 
 const origin = "http://localhost";
 const admin = { name: "Admin", email: "a@b.co", password: "password123" };

@@ -218,7 +218,7 @@ describe("field rules", () => {
   it("reject a filter on a read-denied field", async () => {
     const u = await users();
     expect(await status(u.editor.find("posts", { where: { secret: "s" } }))).toBe(400);
-    expect((await u.anonFetch(`${origin}/api/cms/collections/posts?secret=s`)).status).toBe(400);
+    expect((await u.anonFetch(`${origin}/_tenon/collections/posts?secret=s`)).status).toBe(400);
   });
 
   it("keep the stored value of an update-denied field", async () => {

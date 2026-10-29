@@ -2,7 +2,7 @@ import { createElement, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import type { Mount } from "../index";
 
-export type { FieldContext, IntegralContext, Mount, PageContext } from "../index";
+export type { FieldContext, TenonContext, Mount, PageContext } from "../index";
 
 /**
  * Turns a React component into a {@link Mount}.
@@ -13,7 +13,7 @@ export type { FieldContext, IntegralContext, Mount, PageContext } from "../index
  * export const mountStats = renderReact(Stats)
  *
  * // admin.tsx
- * export function Stats({ params, integral }: PageContext) { … }
+ * export function Stats({ params, tenon }: PageContext) { … }
  */
 export function renderReact<Ctx extends object>(Component: ComponentType<Ctx>): Mount<Ctx> {
   return (el, ctx) => {

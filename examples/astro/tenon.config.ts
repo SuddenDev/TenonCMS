@@ -1,11 +1,11 @@
 import { CMS_SECRET, DATABASE_URL, SITE_URL, SMTP_URL, EMAIL_FROM } from "astro:env/server";
 import { passkey } from "@better-auth/passkey";
-import { defineCms, defineGlobal } from "integral-cms";
-import { libsql } from "integral-cms/libsql";
-import { smtp } from "integral-cms/email/smtp";
-import { ExamplePlugin } from "integral-cms/plugins/example";
-import { RedirectsPlugin } from "integral-cms/plugins/redirects";
-import { strings } from "integral-cms/presets";
+import { defineCms, defineGlobal } from "tenoncms";
+import { libsql } from "tenoncms/libsql";
+import { smtp } from "tenoncms/email/smtp";
+import { ExamplePlugin } from "tenoncms/plugins/example";
+import { RedirectsPlugin } from "tenoncms/plugins/redirects";
+import { strings } from "tenoncms/presets";
 import { authors } from "./collections/authors";
 import { comments } from "./collections/comments";
 import { pages } from "./collections/pages";

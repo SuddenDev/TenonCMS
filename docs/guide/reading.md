@@ -39,7 +39,7 @@ const page = await cms.findOne("pages", {
 | a relation or join `: { … }` | the resolved document, or each item of a `many` relation or join, with only the listed fields |
 | a field not listed           | left out                                                                                      |
 
-- `find`, `findOne`, `findById` and `getGlobal` accept `select`, in the local API, the client and `useIntegral()`. Writes do not.
+- `find`, `findOne`, `findById` and `getGlobal` accept `select`, in the local API, the client and `useTenon()`. Writes do not.
 - `id` always comes back, at every level that holds documents. `createdAt` and `updatedAt` come back only when listed. `select: {}` returns only `id`.
 - A join still comes back only when `populate` names it. `private` fields stay hidden without a session; selecting one is not an error.
 - Hooks see full documents. `select` runs after `afterRead` and before `afterOperation`.
@@ -60,8 +60,8 @@ await cms.update("posts", id, { views: 5 }); // title, body and the rest stay
 Reads work over HTTP without a session, because the site renders that content anyway. Writes and the schema endpoint need a session.
 
 ```text
-GET /api/cms/collections/posts?slug=hello&limit=1
-GET /api/cms/globals/general
+GET /_tenon/collections/posts?slug=hello&limit=1
+GET /_tenon/globals/general
 ```
 
 - Query params are equality filters, and `limit` caps the result.
@@ -72,10 +72,10 @@ GET /api/cms/globals/general
 
 ## Browser client
 
-In the browser (admin pages, islands, client components), `integral-cms/client` gives the same methods over HTTP, typed from your schema:
+In the browser (admin pages, islands, client components), `tenoncms/client` gives the same methods over HTTP, typed from your schema:
 
 ```ts
-import { createClient } from "integral-cms/client";
+import { createClient } from "tenoncms/client";
 
 const client = createClient();
 await client.find("posts", { where: { featured: true } });
@@ -86,14 +86,14 @@ await client.findOne("pages", {
 });
 await client.update("posts", id, post); // needs a session, so it works in admin pages
 await client.getSession(); // the signed-in admin, or null
-await client.request("/redirects/lookup", { query: { path } }); // any route under /api/cms, e.g. a plugin's
+await client.request("/redirects/lookup", { query: { path } }); // any route under /_tenon, e.g. a plugin's
 ```
 
 To type your own browser code, `Collections<C>` and `Globals<C>` give the schema as HTTP sends it, with `private` fields optional:
 
 ```ts
-import type { Collections } from "integral-cms/client";
-import type cms from "../integral.config";
+import type { Collections } from "tenoncms/client";
+import type cms from "../tenon.config";
 
 type PostFields = Collections<typeof cms>["posts"]["fields"];
 ```
@@ -102,8 +102,8 @@ The Astro and Nuxt adapters register your `cms` type, so `createClient()` needs 
 
 ```jsonc
 "compilerOptions": {
-  "types": ["integral-cms/register"],
-  "paths": { "#integral/config": ["./integral.config.ts"] }
+  "types": ["tenoncms/register"],
+  "paths": { "#tenon/config": ["./tenon.config.ts"] }
 }
 ```
 

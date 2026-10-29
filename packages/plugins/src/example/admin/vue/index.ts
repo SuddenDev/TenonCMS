@@ -1,6 +1,6 @@
 import { createApp } from "vue";
-import type { FieldContext, Mount, PageContext, PageHeader } from "integral-cms/admin";
-import { renderVue } from "integral-cms/admin/vue";
+import type { FieldContext, Mount, PageContext, PageHeader } from "tenoncms/admin";
+import { renderVue } from "tenoncms/admin/vue";
 import type { Stats as StatsData } from "../../types.ts";
 import Quote from "./Quote.vue";
 import RatingField from "./RatingField.vue";

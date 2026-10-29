@@ -16,7 +16,7 @@ export async function runLoader<C>(loader: Loader<C>, ctx: C, what: string): Pro
   try {
     return toJson(result, "result");
   } catch (e) {
-    consola.withTag("integral").error(`${what} in ${loader.source}: ${(e as Error).message}`);
+    consola.withTag("tenon").error(`${what} in ${loader.source}: ${(e as Error).message}`);
     throw new HTTPException(500, { message: "Internal Server Error" });
   }
 }

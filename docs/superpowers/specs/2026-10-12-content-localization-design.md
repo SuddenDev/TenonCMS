@@ -169,9 +169,9 @@ On the local API, over HTTP and in the client, for collections and globals:
 
 ### Localization endpoint
 
-- Public `GET /api/cms/localization` returns `{ locales, defaultLocale, fallback, routing }`, or `null` without `localization`. It holds no secret, so it needs no session. `/schema` stays protected.
+- Public `GET /_tenon/localization` returns `{ locales, defaultLocale, fallback, routing }`, or `null` without `localization`. It holds no secret, so it needs no session. `/schema` stays protected.
 - `client.localization()` fetches it once per client and caches the promise. Every framework helper builds on it plus the pure helpers.
-- The browser MUST NOT import `#integral/config` for it: the config pulls in server code.
+- The browser MUST NOT import `#tenon/config` for it: the config pulls in server code.
 
 ### `permalink`
 
@@ -202,7 +202,7 @@ posts: defineCollection({
 ### Adapters
 
 - Astro: the middleware sets `locals.locale` and `locals.path` (prefix removed) with `localeFromPath()`. The catch-all reads `{ where: { path: Astro.locals.path }, locale: Astro.locals.locale, alternates: true }`. No `[lang]` route folder.
-- Nuxt: auto-imported `useLocale()` loads the config with `useAsyncData("integral:localization", () => client.localization())` (in-process during SSR, then from the payload, so the browser does not fetch it again) and returns `{ locales, defaultLocale, locale, path, localePath(path, locale?), switchLocale(locale) }`; `locale` and `path` are computed from the route with `localeFromPath()`. `useAlternates(() => page.value?.alternates)` registers the page's alternates. `switchLocale()` is `navigateTo(switchTarget(…))`. `useIntegral()` reads default to `locale.value`.
+- Nuxt: auto-imported `useLocale()` loads the config with `useAsyncData("tenon:localization", () => client.localization())` (in-process during SSR, then from the payload, so the browser does not fetch it again) and returns `{ locales, defaultLocale, locale, path, localePath(path, locale?), switchLocale(locale) }`; `locale` and `path` are computed from the route with `localeFromPath()`. `useAlternates(() => page.value?.alternates)` registers the page's alternates. `switchLocale()` is `navigateTo(switchTarget(…))`. `useTenon()` reads default to `locale.value`.
 - TanStack Start, standalone and other sites: `client.localization()` plus the pure helpers.
 
 ## 7. Plugins

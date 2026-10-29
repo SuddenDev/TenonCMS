@@ -8,7 +8,7 @@ import { adminHtml } from "../../admin/html.ts";
 
 /**
  * Serves the admin on `path`: a second browser entry in the host's Vite build, on a page of its own.
- * Sets the Vite plugin, the `#integral/admin-html` virtual module and the routes.
+ * Sets the Vite plugin, the `#tenon/admin-html` virtual module and the routes.
  * @param runtime Absolute path of the module's `runtime/` folder.
  */
 export function setupAdmin(nuxt: Nuxt, path: string, runtime: string) {
@@ -21,7 +21,7 @@ export function setupAdmin(nuxt: Nuxt, path: string, runtime: string) {
 
   addVitePlugin(
     {
-      name: "integral-cms:admin",
+      name: "tenoncms:admin",
       configEnvironment: adminInput(entry),
       config: () => ({
         define: faviconDefine(resolve(nuxt.options.rootDir, nuxt.options.dir.public)),
@@ -44,7 +44,7 @@ export function setupAdmin(nuxt: Nuxt, path: string, runtime: string) {
   nuxt.hook("nitro:config", (config) => {
     config.virtual ??= {};
     // A function, because Nitro builds after the client manifest exists.
-    config.virtual["#integral/admin-html"] = () => `export default ${JSON.stringify(html)}`;
+    config.virtual["#tenon/admin-html"] = () => `export default ${JSON.stringify(html)}`;
   });
 
   // `/admin/**` does not match `/admin` itself.

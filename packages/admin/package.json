@@ -1,5 +1,5 @@
 {
-  "name": "@integral-cms/admin",
+  "name": "@tenoncms/admin",
   "version": "0.18.0",
   "private": true,
   "type": "module",

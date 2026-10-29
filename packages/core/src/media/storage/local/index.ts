@@ -13,7 +13,7 @@ export type LocalOptions = {
   dir: string;
   /** Part size of uploads in bytes. Every part is one request, so it MUST fit the body limit of a reverse proxy. Default 16 MB. */
   partSize?: number;
-  /** Public URL of `dir` when the host serves it itself, e.g. `https://cdn.example.com/uploads`. Default: core serves files at `/api/cms/media/files/<key>`. */
+  /** Public URL of `dir` when the host serves it itself, e.g. `https://cdn.example.com/uploads`. Default: core serves files at `/_tenon/media/files/<key>`. */
   baseUrl?: string;
 };
 

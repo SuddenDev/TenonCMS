@@ -4,11 +4,11 @@ import type { ImageProvider } from "./images/types.ts";
 import type { LocalOptions } from "./storage/local/index.ts";
 import type { Storage } from "./storage/types.ts";
 
-// Cloudflare Workers resolve `integral-cms/media/local`, `…/ipx` and `…/default` here: they need a filesystem and sharp.
+// Cloudflare Workers resolve `tenoncms/media/local`, `…/ipx` and `…/default` here: they need a filesystem and sharp.
 
 function unsupported(what: string): never {
   throw new Error(
-    `integral-cms: ${what} needs Node.js and does not run on Cloudflare Workers. Use r2() from integral-cms/media/r2 and cloudflare() from integral-cms/media/cloudflare.`,
+    `tenoncms: ${what} needs Node.js and does not run on Cloudflare Workers. Use r2() from tenoncms/media/r2 and cloudflare() from tenoncms/media/cloudflare.`,
   );
 }
 

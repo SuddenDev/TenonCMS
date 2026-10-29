@@ -12,7 +12,7 @@ const input = new TextEncoder().encode("aaaabbbbcc");
 let dir: string;
 let storage: ReturnType<typeof local>;
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), "integral-local-"));
+  dir = await mkdtemp(join(tmpdir(), "tenon-local-"));
   storage = local({ dir, partSize: 4 });
 });
 
@@ -95,7 +95,7 @@ describe("local", () => {
   });
 
   it("builds URLs", () => {
-    expect(storage.url("a b/é.jpg")).toBe("/api/cms/media/files/a%20b/%C3%A9.jpg");
+    expect(storage.url("a b/é.jpg")).toBe("/_tenon/media/files/a%20b/%C3%A9.jpg");
     expect(local({ dir, baseUrl: "https://cdn.example.com/u" }).url("a/b.jpg")).toBe(
       "https://cdn.example.com/u/a/b.jpg",
     );

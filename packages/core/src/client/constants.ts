@@ -1,5 +1,5 @@
 /** Path of the HTTP API. */
-export const API_BASE = "/api/cms";
+export const API_BASE = "/_tenon";
 
 /** The request header that carries an API key. */
 export const API_KEY_HEADER = "x-api-key";

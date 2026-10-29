@@ -1,5 +1,5 @@
-import { type Mount, type PageContext, translator } from "integral-cms/admin";
-import { CmsError, createClient } from "integral-cms/client";
+import { type Mount, type PageContext, translator } from "tenoncms/admin";
+import { CmsError, createClient } from "tenoncms/client";
 import css from "./admin.css?raw";
 import type { Redirect } from "./index.ts";
 import de from "./locales/de.json";
@@ -12,7 +12,7 @@ type T = ReturnType<typeof translator>;
 // A switch of the admin language renders the page again.
 export const mountTools: Mount<PageContext> = (el, ctx) => {
   addStyles();
-  let locale = ctx.integral.locale;
+  let locale = ctx.tenon.locale;
   const render = () => {
     const t = translator({ en, de }, locale);
     el.innerHTML = page(t);
@@ -24,14 +24,14 @@ export const mountTools: Mount<PageContext> = (el, ctx) => {
     };
     importer.onsubmit = (e) => {
       e.preventDefault();
-      void runImport(importer, ctx.integral.base, t);
+      void runImport(importer, ctx.tenon.base, t);
     };
   };
   render();
   return {
     update(next) {
-      if (next.integral.locale === locale) return;
-      locale = next.integral.locale;
+      if (next.tenon.locale === locale) return;
+      locale = next.tenon.locale;
       render();
     },
     unmount: () => {

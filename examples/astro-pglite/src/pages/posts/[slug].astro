@@ -1,7 +1,7 @@
 ---
-import { edit } from "integral-cms/preview";
+import { edit } from "tenoncms/preview";
 
-const post = await Astro.locals.integral.findOne("posts", { where: { slug: Astro.params.slug! } });
+const post = await Astro.locals.tenon.findOne("posts", { where: { slug: Astro.params.slug! } });
 if (!post) return new Response("Not found", { status: 404 });
 ---
 

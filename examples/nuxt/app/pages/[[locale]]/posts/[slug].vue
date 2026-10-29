@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { edit } from "integral-cms/preview";
-import { seoMeta } from "integral-cms/client";
+import { edit } from "tenoncms/preview";
+import { seoMeta } from "tenoncms/client";
 
 // `[[locale]]` is empty for the default locale (`/posts/x`) and the locale code otherwise (`/de/posts/x`).
 // `path` drops a valid prefix only, so `/xx/posts/x` keeps it and is a 404.
 const route = useRoute();
 const slug = computed(() => String(route.params.slug));
 const { path } = useLocale();
-const cms = useIntegral();
+const cms = useTenon();
 const {
   data: post,
   status,

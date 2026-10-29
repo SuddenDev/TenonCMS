@@ -8,10 +8,10 @@ import {
   DATABASE_URL,
   S3_BUCKET,
 } from "astro:env/server";
-import { defineCms } from "integral-cms";
-import { ipx } from "integral-cms/media/ipx";
-import { s3 } from "integral-cms/media/s3";
-import { postgres } from "integral-cms/postgres";
+import { defineCms } from "tenoncms";
+import { ipx } from "tenoncms/media/ipx";
+import { s3 } from "tenoncms/media/s3";
+import { postgres } from "tenoncms/postgres";
 
 const database = postgres(DATABASE_URL);
 // Fluid compute suspends idle instances. Their idle clients MUST close first.

@@ -1,4 +1,4 @@
-import { defineCollection } from "integral-cms";
+import { defineCollection } from "tenoncms";
 
 export const authors = defineCollection({
   label: "Authors",

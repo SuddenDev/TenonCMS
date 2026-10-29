@@ -1,10 +1,10 @@
 # Guides
 
-How to use integral-cms in your project. Each page starts with the idea, then shows examples.
+How to use tenoncms in your project. Each page starts with the idea, then shows examples.
 
 New here? Read [Framework setup](frameworks.md) and [Schema and fields](schema.md) first, then pick what you need.
 
-Building or changing integral-cms itself? See the [developer docs](../dev/README.md).
+Building or changing tenoncms itself? See the [developer docs](../dev/README.md).
 
 **Get started**
 

@@ -43,7 +43,7 @@ Core's `user.create.before` hook runs first, as now:
 
 ### Last-admin guard
 
-A small core plugin (`integral-last-admin`) adds a `hooks.before` on `/admin/set-role`. It refuses a change away from `admin` when no other active admin (role `admin`, not banned) exists, with 409 `At least one admin is required`. Ban and removal need no guard: the caller is an active admin, and better-auth refuses self-ban and self-removal, so one always remains.
+A small core plugin (`tenon-last-admin`) adds a `hooks.before` on `/admin/set-role`. It refuses a change away from `admin` when no other active admin (role `admin`, not banned) exists, with 409 `At least one admin is required`. Ban and removal need no guard: the caller is an active admin, and better-auth refuses self-ban and self-removal, so one always remains.
 
 ## Invites
 
@@ -111,7 +111,7 @@ type InviteTemplateData = {
 };
 ```
 
-`role.label` and `site` (the admin `name`, default `integral-cms`) are English text. The default template in `email/templates.ts` renders subject, text and escaped HTML. `email.templates.invite` replaces it.
+`role.label` and `site` (the admin `name`, default `tenoncms`) are English text. The default template in `email/templates.ts` renders subject, text and escaped HTML. `email.templates.invite` replaces it.
 
 ## Client
 

@@ -13,7 +13,7 @@ describe("adminPath", () => {
     expect(adminPath("//a/b//" as `/${string}`)).toBe("/a/b");
   });
 
-  it.each(["/", "/api/cms", "/api/cms/x", "/a b", '/a"><script>'])("rejects %s", (path) => {
+  it.each(["/", "/_tenon", "/_tenon/x", "/a b", '/a"><script>'])("rejects %s", (path) => {
     expect(() => adminPath(path as `/${string}`)).toThrow(/invalid admin path/);
   });
 });

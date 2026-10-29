@@ -23,7 +23,7 @@ Each new query is one more to port, and the test app should run on a real deploy
   - [x] Turso: remote URLs open `@libsql/client/web`, so the native binary is not loaded. Not deployed yet.
 - [x] Durable Object SQLite as the Cloudflare store, preferred over D1: D1 has no transactions that stay open across `await`, and writes rely on them (hooks, nested `cms` calls, `onDelete`).
   - [x] Prototype (a spike, removed after the move into core). Go. Results in [design decisions](docs/dev/design-decisions.md#durable-objects).
-  - [x] Move `durableObjectDialect()` into core (`integral-cms/cloudflare`), with the spike's tests. Adds `durableObject()` and `integralObject()`.
+  - [x] Move `durableObjectDialect()` into core (`tenoncms/cloudflare`), with the spike's tests. Adds `durableObject()` and `tenonObject()`.
   - [x] Host code reads and writes through `createClient({ fetch: (req) => env.CMS.getByName("cms").fetch(req) })`: typed from the schema, errors arrive as `CmsError`, privileged writes use an API key. No RPC proxy until something needs the local API's trust inside the object (RPC drops error classes: `ConflictError` arrives as a plain `Error`).
   - [x] An example on Cloudflare (Worker + object, `createClient()` over the object's `fetch`, minified) and a real deploy: `examples/cloudflare` with R2 and Cloudflare Images through bindings.
   - Cost: one object fits the included duration even when active 24/7. Keep it short-lived: no long `await`s in hooks. `r2()` proxies uploads and file reads through the object; move them to presigned URLs (`s3()`) and the Worker or a public bucket if that costs too much. Cache public reads, because the object sits in one region.
@@ -51,7 +51,7 @@ Each new query is one more to port, and the test app should run on a real deploy
 - [ ] Export and import: backups, moving between databases, seeding.
 - [ ] Field renames: a small content migration (`renameField`), because a renamed field orphans its stored JSON.
 - [ ] OpenAPI spec, generated from the zod schemas and `/schema`. Generated SDKs (hey-api) build on it for consumers without TypeScript; TypeScript hosts keep `createClient()`.
-- [ ] CLI for starters (`create-integral`): framework, database, deploy target, sample content. Needs export and import.
+- [ ] CLI for starters (`create-tenon`): framework, database, deploy target, sample content. Needs export and import.
 - [ ] Docs, then npm.
 
 ## After publishing

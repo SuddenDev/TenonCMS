@@ -6,9 +6,9 @@ import { useLocale } from "./useLocale";
 const switching = ref(false);
 const error = ref("");
 
-/** The value of the `integral-preview` cookie, or `null` when it is not set. */
+/** The value of the `tenon-preview` cookie, or `null` when it is not set. */
 export function readPerspective(): Perspective | null {
-  const value = document.cookie.match(/(?:^|;\s*)integral-preview=([^;]*)/)?.[1];
+  const value = document.cookie.match(/(?:^|;\s*)tenon-preview=([^;]*)/)?.[1];
   return value === "drafts" || value === "published" ? value : null;
 }
 

@@ -1,6 +1,6 @@
-import { defineCollection } from "integral-cms";
+import { defineCollection } from "tenoncms";
 
-// Visitors comment without a session, on the post page or with `POST /api/cms/collections/comments`. They see
+// Visitors comment without a session, on the post page or with `POST /_tenon/collections/comments`. They see
 // approved comments only; editors and admins moderate in the list, not on the page.
 export const comments = defineCollection({
   label: "Comments",

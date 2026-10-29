@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { describeModule } from "./module-syntax.ts";
 import { scanExport, scanModule } from "./scan-refs.ts";
 
-const ADMIN = `import { clientRef } from 'integral-cms/admin';`;
+const ADMIN = `import { clientRef } from 'tenoncms/admin';`;
 
 function parse(code: string) {
   const ast = parseAst(code);
@@ -17,7 +17,7 @@ function scan(code: string) {
 
 it("finds calls under the aliased name and on a namespace import", () => {
   const found = scan(
-    `import { clientRef as ref } from 'integral-cms/admin'; import * as admin from 'integral-cms/admin';
+    `import { clientRef as ref } from 'tenoncms/admin'; import * as admin from 'tenoncms/admin';
      ref('./a.ts'); admin.clientRef('./b.ts'); admin['clientRef']('./c.ts'); other('./d.ts');`,
   );
 
@@ -101,9 +101,9 @@ it("scans one export and reports the module it re-exports from", () => {
   const items = scanExport("refs.ts", info, "items");
 
   expect(items.refs).toEqual(new Map([["./a.ts", true]]));
-  // `clientRef` is an import too. The crawl skips it, because `integral-cms/admin` is a leaf.
+  // `clientRef` is an import too. The crawl skips it, because `tenoncms/admin` is a leaf.
   expect(items.siteImports).toEqual([
-    { source: "integral-cms/admin", exported: "clientRef" },
+    { source: "tenoncms/admin", exported: "clientRef" },
     { source: "./other.ts", exported: "other" },
     { source: "./star.ts", exported: "items" },
   ]);

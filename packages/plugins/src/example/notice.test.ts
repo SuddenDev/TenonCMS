@@ -1,5 +1,5 @@
 import { getSchema } from "@tiptap/core";
-import { richtextExtensions } from "integral-cms/richtext";
+import { richtextExtensions } from "tenoncms/richtext";
 import { expect, it } from "vitest";
 import { Notice } from "./notice.ts";
 import { notice } from "./admin/richtext.ts";

@@ -1,9 +1,9 @@
 import { CMS_SECRET } from "astro:env/server";
 import { env } from "cloudflare:workers";
-import { defineCms } from "integral-cms";
-import { durableObject } from "integral-cms/cloudflare";
-import { cloudflare } from "integral-cms/media/cloudflare";
-import { r2 } from "integral-cms/media/r2";
+import { defineCms } from "tenoncms";
+import { durableObject } from "tenoncms/cloudflare";
+import { cloudflare } from "tenoncms/media/cloudflare";
+import { r2 } from "tenoncms/media/r2";
 
 export default defineCms({
   database: durableObject(),

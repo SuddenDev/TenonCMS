@@ -3,15 +3,15 @@ import { parseAst, transformWithOxc } from "vite";
 import type { AstNode, Binding, Program } from "./types.ts";
 
 const SCRIPT = /\.[cm]?[jt]sx?$/;
-const ADMIN_ENTRY = "integral-cms/admin";
+const ADMIN_ENTRY = "tenoncms/admin";
 
 /** What one module declares, imports and exports. */
 export type ModuleInfo = {
   /** Local name → the import it stands for. */
   bindings: Map<string, Binding>;
-  /** Local names of `clientRef` imported from `integral-cms/admin`. */
+  /** Local names of `clientRef` imported from `tenoncms/admin`. */
   clientRefNames: Set<string>;
-  /** Local names of `import * as x from "integral-cms/admin"`. */
+  /** Local names of `import * as x from "tenoncms/admin"`. */
   adminNamespaces: Set<string>;
   /** Source of every static import and re-export, in module order. */
   sources: string[];

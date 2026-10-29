@@ -1,4 +1,4 @@
-import { defineCollection, ValidationError } from "integral-cms";
+import { defineCollection, ValidationError } from "tenoncms";
 
 export const posts = defineCollection({
   label: "Posts",

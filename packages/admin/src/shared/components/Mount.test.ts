@@ -2,7 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { createApp, h, nextTick, ref, shallowRef, type App } from "vue";
 import { i18n } from "@/shared/i18n";
-import { integralKey, registryKey } from "@/shared/options";
+import { tenonKey, registryKey } from "@/shared/options";
 import Mount from "./Mount.vue";
 
 let app: App | undefined;
@@ -13,7 +13,7 @@ afterEach(() => {
   root?.remove();
 });
 
-const integral = { base: "/admin", navigate: vi.fn(), reload: async () => {} };
+const tenon = { base: "/admin", navigate: vi.fn(), reload: async () => {} };
 
 function loader() {
   return {
@@ -33,7 +33,7 @@ function render(
   app = createApp({ render: () => h(Mount, props() as never) })
     .use(i18n)
     .provide(registryKey, registry)
-    .provide(integralKey, integral);
+    .provide(tenonKey, tenon);
   app.mount(root);
 }
 
@@ -46,7 +46,7 @@ it("mounts at once without a loader, with data undefined and a no-op reload", as
   const ctx = (mount.mock.calls[0] as any)[1];
   expect(ctx).toMatchObject({ value: 1 });
   expect(ctx.data).toBeUndefined();
-  await expect(ctx.integral.reload()).resolves.toBeUndefined();
+  await expect(ctx.tenon.reload()).resolves.toBeUndefined();
   expect(root.querySelector("[role=status]")).toBeNull();
 });
 
@@ -54,11 +54,11 @@ it("passes the admin language and updates the mount when it changes", async () =
   const h = handle();
   const mount = vi.fn(() => h);
   render(() => ({ mount, ctx: {} }));
-  expect((mount.mock.calls[0] as any)[1].integral.locale).toBe("en");
+  expect((mount.mock.calls[0] as any)[1].tenon.locale).toBe("en");
   i18n.global.locale.value = "de";
   await vi.waitFor(() =>
     expect(h.update).toHaveBeenLastCalledWith(
-      expect.objectContaining({ integral: expect.objectContaining({ locale: "de" }) }),
+      expect.objectContaining({ tenon: expect.objectContaining({ locale: "de" }) }),
     ),
   );
   i18n.global.locale.value = "en";
@@ -105,7 +105,7 @@ it("updates the existing handle when new data arrives", async () => {
   expect(h1.update).toHaveBeenCalledWith(expect.objectContaining({ data: 2 }));
 });
 
-it("passes value edits with the last data without a request, and reloads through integral.reload", async () => {
+it("passes value edits with the last data without a request, and reloads through tenon.reload", async () => {
   const l = loader();
   const h1 = handle();
   const mount = vi.fn(() => h1);
@@ -119,7 +119,7 @@ it("passes value edits with the last data without a request, and reloads through
   await nextTick();
   expect(h1.update).toHaveBeenCalledWith(expect.objectContaining({ value: "b", data: 1 }));
   expect(l.reload).not.toHaveBeenCalled();
-  await (mount.mock.calls[0] as any)[1].integral.reload();
+  await (mount.mock.calls[0] as any)[1].tenon.reload();
   expect(l.reload).toHaveBeenCalledOnce();
 });
 

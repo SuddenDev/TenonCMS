@@ -263,7 +263,7 @@ describe("populate over HTTP", () => {
     ids = await seed(r.cms);
   });
   const get = async (path: string) => {
-    const res = await r.cms.fetch(new Request(`${origin}/api/cms${path}`));
+    const res = await r.cms.fetch(new Request(`${origin}/_tenon${path}`));
     return { status: res.status, body: await res.json().catch(() => null) };
   };
 
@@ -355,7 +355,7 @@ describe("select over HTTP", () => {
     ids = await seed(r.cms);
   });
   const get = async (path: string) => {
-    const res = await r.cms.fetch(new Request(`${origin}/api/cms${path}`));
+    const res = await r.cms.fetch(new Request(`${origin}/_tenon${path}`));
     return { status: res.status, body: await res.json().catch(() => null) };
   };
 
@@ -487,7 +487,7 @@ describe("arrays", () => {
       ],
     });
     const get = async (path: string) => {
-      const res = await cms.fetch(new Request(`${origin}/api/cms${path}`));
+      const res = await cms.fetch(new Request(`${origin}/_tenon${path}`));
       return { status: res.status, body: await res.json() };
     };
     return { cms, image, page, menu, get };
@@ -593,7 +593,7 @@ describe("blocks", () => {
       ],
     });
     const get = async (path: string) => {
-      const res = await cms.fetch(new Request(`${origin}/api/cms${path}`));
+      const res = await cms.fetch(new Request(`${origin}/_tenon${path}`));
       return { status: res.status, body: await res.json() };
     };
     return { cms, image, page, doc, get };

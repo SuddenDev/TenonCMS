@@ -20,12 +20,12 @@ it.each(["css", "less", "sass", "scss", "styl", "stylus", "pcss", "postcss", "ss
 
 it("rejects eager CSS while accepting inline CSS and lazy styled fields", async () => {
   const root = await tempProject({
-    "integral.config.ts": `import { clientRef } from 'integral-cms/admin'; export default { fields: { color: clientRef('./field.ts') }, adminBar: { items: clientRef('./bar.ts') } };`,
+    "tenon.config.ts": `import { clientRef } from 'tenoncms/admin'; export default { fields: { color: clientRef('./field.ts') }, adminBar: { items: clientRef('./bar.ts') } };`,
     "field.ts": `import './field.css'; export default () => {};`,
     "bar.ts": `import './bar.css'; export default [];`,
     "bar.css": ".bar{}",
   });
-  const refs = await collectClientRefs(root, [join(root, "integral.config.ts")], relativeResolver);
+  const refs = await collectClientRefs(root, [join(root, "tenon.config.ts")], relativeResolver);
   expect(refs["./bar.ts"].site).toBe(true);
   await expect(checkSiteStyles([refs["./bar.ts"].file], relativeResolver)).rejects.toThrow(
     "eager CSS",
@@ -48,7 +48,7 @@ it("follows imports of imports", async () => {
 
 it("does not follow leaves or imports that do not resolve", async () => {
   const root = await tempProject({
-    "bar.ts": `import 'node:fs'; import 'integral-cms/admin'; import 'unknown-package'; import './data.json';`,
+    "bar.ts": `import 'node:fs'; import 'tenoncms/admin'; import 'unknown-package'; import './data.json';`,
     "data.json": "{}",
   });
   await expect(checkSiteStyles([join(root, "bar.ts")], relativeResolver)).resolves.toBeUndefined();
