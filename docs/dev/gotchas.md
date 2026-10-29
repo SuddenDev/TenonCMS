@@ -63,6 +63,8 @@ Each of these cost a debugging round. Check here when something behaves strangel
 ## Server, data and HTTP
 
 - PGlite has one connection, like `:memory:` libsql. The same rule applies.
+- better-auth's migrations take no lock. Several instances on one fresh Postgres database (serverless cold starts) failed with `relation "session" already exists` until `migrate()` ran them inside its locked transaction. Keep them there.
+- Vercel caps a request body at 4.5 MB. `s3()` is not affected: the browser uploads parts straight to the bucket. Storages that stream parts through the server (`local()`, `r2()`) would hit it, but `local()` fails there anyway, because the filesystem is read-only. Responses stream, so served files are not capped.
 - On Postgres, raw SQL MUST quote better-auth's camelCase columns (`"updatedAt"`) and compare its booleans with `true` / `false`. `WHERE 1` and `IS ?` fail; use `TRUE` and `IS NOT DISTINCT FROM`.
 - `:memory:` libsql has one connection. Code inside a transaction MUST use the transaction handle, and hooks MUST call the `cms` they get, or the call blocks or fails with `TRANSACTION_ACTIVE`.
 - Query parsers MUST build nested objects without a prototype. On a plain `{}`, a `__proto__` segment returns `Object.prototype` and the next write pollutes every object in the process.

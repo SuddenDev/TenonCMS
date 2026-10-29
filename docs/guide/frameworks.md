@@ -64,7 +64,42 @@ export default { fetch: handle } satisfies ExportedHandler<Env>;
 - `Astro.locals.integral` is the [HTTP client](reading.md) over the object, not the local API. It forwards the request's cookie, so the session user's access rules apply, and the preview cookie shows drafts. Compared with the local API: no `withSession()` or `withDrafts()` (the cookie decides), `localization()` is an async method, new drafts go through `createDraft()`, and there is no `email` or `auth`. Writes need a session or an API key.
 - Pages that read the CMS MUST NOT be prerendered: no object exists at build time. Set `output: "server"`. A prerendered page that reads it fails the build.
 - The server bundle is minified, because every wake of the object parses it again.
-- Media: `r2(env.MEDIA)` and `cloudflare({ binding: env.IMAGES })`, with `env` from `cloudflare:workers`. See [media](media.md#r2-binding). The adapter adds the `IMAGES` binding and a KV `SESSION` binding by default; `wrangler deploy` creates the bucket and namespace for bindings without an ID, once R2 is enabled on the account.
+- Media: `r2(env.MEDIA)` and `cloudflare({ binding: env.IMAGES })`, with `env` from `cloudflare:workers`. See [media](media.md#r2). The adapter adds the `IMAGES` binding and a KV `SESSION` binding by default; `wrangler deploy` creates the bucket and namespace for bindings without an ID, once R2 is enabled on the account.
+
+### Astro on Vercel
+
+With `@astrojs/vercel` as the adapter, the CMS runs in Vercel's Node functions. The integration needs no extra options. See `examples/vercel`.
+
+```ts
+// integral.config.ts
+import { attachDatabasePool } from "@vercel/functions";
+import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
+import { s3 } from "integral-cms/media/s3";
+import { postgres } from "integral-cms/postgres";
+
+const database = postgres(DATABASE_URL);
+attachDatabasePool(database.pool);
+
+export default defineCms({
+  database,
+  media: {
+    storage: s3({
+      bucket: S3_BUCKET_NAME,
+      region: AWS_REGION,
+      publicUrl: MEDIA_URL,
+      credentials: awsCredentialsProvider({ roleArn: AWS_ROLE_ARN }),
+    }),
+  },
+  auth: { rateLimit: { storage: "database" } },
+  // ...
+});
+```
+
+- Database: Postgres, for example Neon from the Vercel Marketplace. Use its pooled connection string. `attachDatabasePool()` closes idle connections before Vercel suspends the function.
+- Media: the function's disk is read-only, so the default media on the local disk does not work. Use `s3()` (AWS S3 from the Vercel Marketplace with `credentials` as above, or any S3-compatible bucket with keys) or `r2()` with keys. See [media](media.md#s3-and-r2). The browser uploads straight to the bucket, so Vercel's 4.5 MB request limit does not apply. The bucket needs CORS and a public URL.
+- Rate limits: better-auth keeps them in memory by default, and instances do not share memory. `rateLimit: { storage: "database" }` keeps them in a table.
+- Leave `site` unset if you use preview deployments. Passkeys only work on the host they were created on.
+- In a monorepo, the build command MUST build the CMS packages first.
 
 ## Nuxt
 

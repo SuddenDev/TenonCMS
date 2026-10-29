@@ -14,6 +14,7 @@
     "tarball": "pnpm build:packages && pnpm --filter integral-cms pack --pack-destination dist",
     "dev:astro": "pnpm build:packages && CMS_URL=http://localhost:4321 pnpm --parallel --filter integral-cms --filter @integral-cms/plugins --filter @integral-cms/admin --filter example-astro dev",
     "dev:astro-pglite": "pnpm build:packages && CMS_URL=http://localhost:4322 pnpm --parallel --filter integral-cms --filter @integral-cms/plugins --filter @integral-cms/admin --filter example-astro-pglite dev",
+    "dev:vercel": "pnpm build:packages && CMS_URL=http://localhost:4323 pnpm --parallel --filter integral-cms --filter @integral-cms/plugins --filter @integral-cms/admin --filter example-vercel dev",
     "dev:nuxt": "pnpm build:packages && CMS_URL=http://localhost:3000 pnpm --parallel --filter integral-cms --filter @integral-cms/plugins --filter @integral-cms/admin --filter example-nuxt dev",
     "dev:tanstack": "pnpm build:packages && CMS_URL=http://localhost:3100 pnpm --parallel --filter integral-cms --filter @integral-cms/plugins --filter @integral-cms/admin --filter example-tanstack-start dev",
     "dev:standalone": "pnpm build:packages && CMS_URL=http://localhost:3200 pnpm --parallel --filter integral-cms --filter @integral-cms/plugins --filter @integral-cms/admin --filter example-standalone dev",

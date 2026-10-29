@@ -1,4 +1,5 @@
 import { API_BASE } from "../../../client/index.ts";
+import { s3 } from "../s3/index.ts";
 import { encodeKey, type Storage } from "../types.ts";
 
 type R2Object = { size: number; httpMetadata?: { contentType?: string } };
@@ -46,13 +47,50 @@ export type R2Options = {
   publicUrl?: string;
 };
 
+/** Options of `r2()` with API keys. */
+export type R2ApiOptions = {
+  /** Cloudflare account ID. Requests go to `https://<accountId>.r2.cloudflarestorage.com`. */
+  accountId: string;
+  /**
+   * Where the bucket lives. Set `"eu"` for a bucket created with the EU data location. Requests then go to
+   * `https://<accountId>.eu.r2.cloudflarestorage.com`. `"default"` or omitted: the automatic location.
+   */
+  region?: "default" | "eu";
+  bucket: string;
+  /** Access key ID of an R2 API token. */
+  accessKeyId: string;
+  /** Secret access key of an R2 API token. */
+  secretAccessKey: string;
+  /** Public URL of the bucket, e.g. its custom domain. File URLs are `<publicUrl>/<key>`. */
+  publicUrl: string;
+  /** Part size of uploads in bytes. At least 5 MB, as R2 requires. Default 16 MB. */
+  partSize?: number;
+  /** Custom `fetch`. Defaults to the global `fetch`. */
+  fetch?: typeof fetch;
+};
+
 const MB = 1024 ** 2;
 
 /**
  * Stores media files in R2 through a bucket binding, e.g. `r2(env.MEDIA)` with `env` from `cloudflare:workers`. Needs no
- * keys and no CORS. Uploads stream through the Worker part by part; each part is held in memory.
+ * keys and no CORS. Uploads stream through the Worker part by part; each part is held in memory. Workers only.
  */
-export function r2(bucket: R2Bucket, { partSize = 16 * MB, publicUrl }: R2Options = {}): Storage {
+export function r2(bucket: R2Bucket, options?: R2Options): Storage;
+/**
+ * Stores media files in R2 through its S3 API, like `s3()`. Runs on Node and Workers. The browser uploads parts straight
+ * to the bucket, which needs CORS: allow `PUT` from the admin origin and expose `ETag`.
+ */
+export function r2(options: R2ApiOptions): Storage;
+export function r2(source: R2Bucket | R2ApiOptions, options?: R2Options): Storage {
+  if (!("accountId" in source)) return r2Binding(source, options);
+  const { accountId, region, ...rest } = source;
+  const host = [accountId, region === "eu" && "eu", "r2.cloudflarestorage.com"]
+    .filter(Boolean)
+    .join(".");
+  return s3({ ...rest, region: "auto", endpoint: `https://${host}` });
+}
+
+function r2Binding(bucket: R2Bucket, { partSize = 16 * MB, publicUrl }: R2Options = {}): Storage {
   return {
     partSize: Math.max(partSize, 5 * MB),
 

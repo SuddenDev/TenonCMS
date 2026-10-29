@@ -68,4 +68,4 @@ Some code ships to the browser: error classes, condition matching, small helpers
 
 - The root file only re-exports. The public API is what it lists.
 - Subpath exports group by purpose: the client, presets, plugins, media providers, framework adapters, admin helpers, preview, rich text and email. `package.json` has the full list.
-- Every framework dependency is an optional peer: `astro`, `vite`, `vue`, `react`, `react-dom`, `h3`, `@nuxt/kit`, `@nuxt/schema` and `aws4fetch`. Each is used only by the subpath that needs it.
+- Every framework dependency is an optional peer: `astro`, `vite`, `vue`, `react`, `react-dom`, `h3`, `@nuxt/kit` and `@nuxt/schema`. Each is used only by the subpath that needs it. `aws4fetch` is a dependency, because `r2()` imports `s3()` and Workers builds must resolve it even when only the binding is used.

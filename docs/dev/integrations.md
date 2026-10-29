@@ -29,6 +29,14 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 - The host adds a catch-all server route for `/api/cms` and a route that returns the admin HTML.
 - TanStack Start allows only one client entry, so the plugin must mark the admin chunk as a non-entry before Start reads it.
 
+## Vercel
+
+- No adapter code. With `@astrojs/vercel`, the Astro integration takes its default Node branch: core stays external in the server build, and `@vercel/nft` traces it, `pg` and `sharp` into the function.
+- `postgres()` returns its `pool`, so the host can hand it to `attachDatabasePool()` from `@vercel/functions`. Core imports nothing from Vercel.
+- Media: `s3()`, with `credentials` from `@vercel/oidc-aws-credentials-provider` for an AWS S3 bucket from the Vercel Marketplace.
+- `migrate()` locks on Postgres, so cold starts that run together on a fresh database do not race.
+- Not covered yet: Nuxt and TanStack Start on Vercel (Nitro's `vercel` preset), and Turso. `@libsql/client`'s Node entry imports the native `libsql` binary even for remote URLs.
+
 ## Cloudflare (Durable Objects)
 
 - `integral-cms/cloudflare` runs the CMS inside a SQLite-backed Durable Object, because writes hold a transaction across `await` and D1 cannot. See [design decisions](design-decisions.md#durable-objects).

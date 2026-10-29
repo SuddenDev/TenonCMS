@@ -13,16 +13,38 @@ export type S3Options = {
    * for MinIO. Requests then use path-style URLs. Default: AWS, with virtual-hosted URLs.
    */
   endpoint?: string;
-  /** Access key ID for the S3-compatible service. */
-  accessKeyId: string;
-  /** Secret access key for the S3-compatible service. */
-  secretAccessKey: string;
   /** Public URL of the bucket, e.g. a custom domain or the R2 public URL. File URLs are `<publicUrl>/<key>`. */
   publicUrl: string;
   /** Part size of uploads in bytes. At least 5 MB, as S3 requires. Default 16 MB. */
   partSize?: number;
   /** Custom `fetch`. Defaults to the global `fetch`. */
   fetch?: typeof fetch;
+} & (
+  | {
+      /** Access key ID for the S3-compatible service. */
+      accessKeyId: string;
+      /** Secret access key for the S3-compatible service. */
+      secretAccessKey: string;
+      credentials?: never;
+    }
+  | {
+      accessKeyId?: never;
+      secretAccessKey?: never;
+      /**
+       * Temporary credentials instead of keys, such as `awsCredentialsProvider({ roleArn })` from
+       * `@vercel/oidc-aws-credentials-provider` for an AWS S3 bucket from the Vercel Marketplace. Called again when the credentials
+       * expire within 5 minutes. Without `expiration`, called before every request.
+       */
+      credentials: () => Promise<S3Credentials>;
+    }
+);
+
+/** What a `credentials` provider returns. */
+export type S3Credentials = {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken?: string;
+  expiration?: Date;
 };
 
 const MB = 1024 ** 2;

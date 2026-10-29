@@ -1,0 +1,34 @@
+---
+import { edit } from "integral-cms/preview";
+
+const posts = await Astro.locals.integral.find("posts");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>integral-cms on Vercel</title>
+  </head>
+  <body>
+    <h1>Posts</h1>
+    <ul id="posts">
+      {posts.map((post) => (
+        <li>
+          {post.hero && (
+            <img
+              data-cms={edit("posts", post.id, "hero")}
+              data-cms-attr="src,srcset,alt"
+              src={post.hero.src}
+              srcset={post.hero.srcset}
+              alt={post.hero.alt ?? ""}
+            />
+          )}
+          <a href={`/posts/${post.slug}`} data-cms={edit("posts", post.id, "title")}>
+            {post.title}
+          </a>
+          <p>{post.author?.name}</p>
+        </li>
+      ))}
+    </ul>
+  </body>
+</html>

@@ -30,7 +30,7 @@ A joined query reads two tables with the same column names, so conditions and `O
 | `map-document.ts`              | Decode JSON, merge locale rows and attach document/global metadata.                                 |
 | `migrations/cms.ts`            | SQLite migration keys/bodies and the Kysely migrator. Shipped migrations MUST NOT change.           |
 | `migrations/postgres.ts`       | The Postgres migrations. A new migration gets a key here and in `cms.ts`.                           |
-| `migrations/migrate.ts`        | Run CMS migrations, then better-auth migrations.                                                    |
+| `migrations/migrate.ts`        | Run CMS migrations, then better-auth migrations. On Postgres in one locked transaction.             |
 | `migrations/sync-localized.ts` | `syncLocalized()`: moves values between shared data and locale rows when the localized keys change. |
 | `queries/document-sql.ts`      | Shared perspective, JSON, row-column and ID expressions, and `holdsAt()` for reference scans.       |
 | `queries/documents/`           | Find, load, batched ID reads, insert, update and delete.                                            |
@@ -71,6 +71,7 @@ A localized collection or global keeps shared fields in `cms_documents` / `cms_g
 - Times are milliseconds in `bigint`. Both drivers parse `bigint` as a number; `pg` would return a string.
 - `cms_documents` and `cms_versions` have a `rowid` identity column, so `ORDER BY … rowid` works in both.
 - better-auth's columns are camelCase. Raw SQL MUST quote them (`k."createdAt"`), or Postgres folds them to lowercase. Its booleans are `boolean`: compare with `true` / `false`, and read them as a number or a boolean.
+- `migrate()` runs both migration sets in one transaction that holds `pg_advisory_xact_lock`. A transaction lock, not a session lock: behind PgBouncer in transaction mode (Neon's pooled URL), a session lock can stay on another server connection. `migrate.live.test.ts` checks four instances on one fresh database; it needs `POSTGRES_TEST_URL`.
 - PGlite has one connection. Like `:memory:` libsql, a query outside `trx` during a transaction waits forever.
 
 ## Invite and user queries

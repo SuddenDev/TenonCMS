@@ -61,6 +61,6 @@ The browser client mirrors the local API over HTTP and is typed from the schema.
 - **Published reads** see published rows and `data`. **Draft reads** see every row and use the draft where one exists.
 - Relation ids sit in the JSON. Reverse lookups scan the JSON, with one nested step per list level. Id lists go in as one JSON parameter, so there is no variable limit.
 - A localized query joins the locale table twice (requested and default). Qualify every column.
-- **Migrations** are code in the bundle, run lazily on first use, before better-auth's. Add a new key; never edit one that shipped.
+- **Migrations** are code in the bundle, run lazily on first use, before better-auth's. Add a new key; never edit one that shipped. On Postgres both run in one transaction under `pg_advisory_xact_lock`, so serverless instances that start together on a fresh database wait for each other. SQLite has no lock between processes.
 - Postgres and PGlite run the same queries, with a branch where the SQL differs. See the [db README](../../packages/core/src/db/README.md#postgres).
 - The libsql and PGlite drivers are our own thin Kysely dialects. `node:sqlite` uses Kysely's `SqliteDialect` over a `better-sqlite3`-shaped wrapper. Postgres uses Kysely's `PostgresDialect` over a `pg` pool that reads `bigint` as a number.

@@ -17,6 +17,9 @@ Each new query is one more to port, and the test app should run on a real deploy
 - [x] Postgres and PGlite together (one dialect). PGlite also fits tests and local dev. The JSON SQL (`json_extract`, `json_each`, `holdsAt()`) needs a layer per dialect.
 - [x] Cloudflare Workers: D1 driver or Durable Objects, bindings per request, R2 (`r2()` binding or `s3()`), Cloudflare Images (`cloudflare({ binding })`).
 - [ ] Vercel: Node functions with Turso or Postgres.
+  - [x] `examples/vercel`: Astro, Postgres with `attachDatabasePool()`, AWS S3 from the Marketplace through `s3()` with OIDC `credentials`, rate limits in the database. Builds and passes the smoke tests locally. Migrations lock on Postgres, so cold starts do not race.
+  - [ ] A real deploy, including bucket CORS and the public URL.
+  - [ ] Turso: `@libsql/client` loads the native binary even for remote URLs.
 - [ ] Durable Object SQLite as the Cloudflare store, preferred over D1: D1 has no transactions that stay open across `await`, and writes rely on them (hooks, nested `cms` calls, `onDelete`).
   - [x] Prototype (a spike, removed after the move into core). Go. Results in [design decisions](docs/dev/design-decisions.md#durable-objects).
   - [x] Move `durableObjectDialect()` into core (`integral-cms/cloudflare`), with the spike's tests. Adds `durableObject()` and `integralObject()`.
@@ -26,7 +29,7 @@ Each new query is one more to port, and the test app should run on a real deploy
   - The same object can later hold WebSockets for presence and multiplayer (Hibernation API).
 - [ ] [celld](https://celld.dev/): a self-hosted Workers and Durable Objects runtime with the data in your own bucket. Skipped while it is in beta (v0.6.2 on 2026-10-28). Its docs list `sql.exec()`, `transaction()` and `blockConcurrencyWhile()`. `celld deploy` stops on unknown `wrangler.jsonc` keys such as `minify`.
 - [ ] Media defaults per target: `local('./.uploads')` does not work serverless.
-- [ ] Rate limits: better-auth keeps them in memory by default, which serverless instances do not share.
+- [ ] Rate limits: better-auth keeps them in memory by default, which serverless instances do not share. A host can set `auth: { rateLimit: { storage: "database" } }` (the Vercel example does). Maybe make it the default.
 - [ ] Bundle size (the spike: 934 KiB gzipped, 664 KiB minified; `examples/cloudflare`: 2.0 MB minified, 575 KB gzipped). Every wake of an object parses it again.
   - [ ] Passkeys opt-in: `@better-auth/passkey` and its WebAuthn and certificate libraries are 626 KiB raw, always bundled (`auth/config/build-options.ts`).
   - [ ] Maybe: check and render rich text on the server without tiptap and ProseMirror (962 KiB raw). Only if size becomes a problem, because the checks MUST match the editor's schema.

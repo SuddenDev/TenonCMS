@@ -197,6 +197,7 @@
     "@tiptap/pm": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
     "@tiptap/static-renderer": "^3.32.0",
+    "aws4fetch": "^1.0.20",
     "better-auth": "^1.7.5",
     "client-zip": "^2.5.1",
     "consola": "^3.4.2",
@@ -221,7 +222,6 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "astro": "^7.3.4",
-    "aws4fetch": "^1.0.20",
     "h3": "^1.15.11",
     "happy-dom": "^20.14.5",
     "idiomorph": "^0.8.0",
@@ -241,7 +241,6 @@
     "@nuxt/kit": ">=3",
     "@nuxt/schema": ">=3",
     "astro": ">=5",
-    "aws4fetch": ">=1.0.20",
     "h3": ">=1.15",
     "pg": ">=8",
     "react": ">=18",
@@ -263,9 +262,6 @@
       "optional": true
     },
     "astro": {
-      "optional": true
-    },
-    "aws4fetch": {
       "optional": true
     },
     "h3": {

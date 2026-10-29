@@ -179,4 +179,36 @@ describe("s3", () => {
     expect(s3(options).url("a b/x.jpg")).toBe("https://media.example.com/a%20b/x.jpg");
     expect(s3({ ...options, partSize: 1024 }).partSize).toBe(5 * 1024 ** 2);
   });
+
+  it("signs with temporary credentials from a provider, with their session token", async () => {
+    const { calls, fetch } = fake();
+    const { accessKeyId, secretAccessKey, ...rest } = options;
+    const credentials = async () => ({ accessKeyId, secretAccessKey, sessionToken: "t1" });
+    await s3({ ...rest, credentials, fetch }).delete("x.jpg");
+    expect(calls[0].headers.get("x-amz-security-token")).toBe("t1");
+    const url = new URL(await s3({ ...rest, credentials }).partUrl!("x.jpg", "u1", 1, 3600));
+    expect(url.searchParams.get("X-Amz-Security-Token")).toBe("t1");
+  });
+
+  it("asks the provider again only when the credentials expire within 5 minutes", async () => {
+    const { calls, fetch } = fake();
+    const { accessKeyId, secretAccessKey, ...rest } = options;
+    let minutes = 4;
+    let asked = 0;
+    const credentials = async () => ({
+      accessKeyId,
+      secretAccessKey,
+      sessionToken: `t${++asked}`,
+      expiration: new Date(Date.now() + minutes * 60_000),
+    });
+    const storage = s3({ ...rest, credentials, fetch });
+    await storage.delete("a.jpg");
+    await storage.delete("b.jpg");
+    expect(asked).toBe(2);
+    minutes = 60;
+    await storage.delete("c.jpg");
+    await storage.delete("d.jpg");
+    expect(asked).toBe(3);
+    expect(calls[3].headers.get("x-amz-security-token")).toBe("t3");
+  });
 });

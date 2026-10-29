@@ -11,10 +11,12 @@ const types = {
 /**
  * The `database` of a CMS on a Postgres server, through a `pg` pool.
  * @param config A connection string, or the options of the pool.
+ * @returns The options, and `pool` for a platform that manages idle clients, such as `attachDatabasePool()` on Vercel.
  * @example
  * export default defineCms({ database: postgres(process.env.DATABASE_URL!), ... })
  */
-export function postgres(config: string | pg.PoolConfig): DatabaseOptions {
+export function postgres(config: string | pg.PoolConfig): DatabaseOptions & { pool: pg.Pool } {
   const options = typeof config === "string" ? { connectionString: config } : config;
-  return { dialect: new PostgresDialect({ pool: new pg.Pool({ ...options, types }) }) };
+  const pool = new pg.Pool({ ...options, types });
+  return { dialect: new PostgresDialect({ pool }), pool };
 }

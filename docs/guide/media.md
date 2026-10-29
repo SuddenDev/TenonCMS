@@ -1,6 +1,6 @@
 # Media
 
-Every instance has a media library: uploads into folders, `image` and `file` fields, and responsive images. Files live on the local disk, in S3 (any S3-compatible service, R2 included) or in R2 through a Workers binding.
+Every instance has a media library: uploads into folders, `image` and `file` fields, and responsive images. Files live on the local disk, in S3 or any S3-compatible service, or in R2 (with keys, or through a Workers binding).
 
 ## Setup
 
@@ -98,19 +98,32 @@ await cms.media.delete(doc.id);
 
 ### S3 and R2
 
-`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl, partSize = 16 MB })` signs with `aws4fetch` (install it), so it runs on Node and Workers. The browser uploads parts straight to the bucket. `publicUrl` is where the bucket is public.
+`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket. `publicUrl` is where the bucket is public.
 
 - Bucket CORS MUST allow `PUT` from the admin origin and expose the `ETag` header. Without `ETag` an upload fails with a message that names the CORS setting.
 - Add a lifecycle rule that aborts incomplete multipart uploads after one day.
-- R2: `region: 'auto'`, `endpoint: 'https://<account>.r2.cloudflarestorage.com'`.
+- R2: use `r2()` with keys, see [R2](#r2). With `s3()`: `region: 'auto'`, `endpoint: 'https://<account>.r2.cloudflarestorage.com'`.
 - MinIO: `endpoint: 'http://localhost:9000'` (`docker run -p 9000:9000 minio/minio server /data`).
+- Temporary credentials: pass `credentials` instead of the two keys. It is a function that returns `{ accessKeyId, secretAccessKey, sessionToken?, expiration? }`, and core asks it again when the credentials expire within 5 minutes. An AWS S3 bucket from the Vercel Marketplace has no keys; it uses `credentials: awsCredentialsProvider({ roleArn: process.env.AWS_ROLE_ARN! })` from `@vercel/oidc-aws-credentials-provider`.
 
-### R2 binding
+### R2
 
-`r2(env.MEDIA, { partSize = 16 MB, publicUrl? })` from `integral-cms/media/r2` stores files in R2 through a bucket binding (`env` from `cloudflare:workers`). It needs no keys and no CORS, and `wrangler dev` simulates the bucket. Core serves files at `/api/cms/media/files/<key>`; set `publicUrl` when the bucket has a public domain.
+`r2()` from `integral-cms/media/r2` has two modes:
 
+|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                  | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, publicUrl, partSize? })` |
+| ------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Through       | A bucket binding (`env` from `cloudflare:workers`)          | R2's S3 API, same as `s3()` with `region: 'auto'`                                        |
+| Runs on       | Workers only                                                | Node and Workers                                                                         |
+| Keys and CORS | Not needed                                                  | Needed, see [S3 and R2](#s3-and-r2)                                                      |
+| `publicUrl`   | Optional. Core serves files at `/api/cms/media/files/<key>` | Required                                                                                 |
+
+With the binding:
+
+- `wrangler dev` simulates the bucket.
 - Parts go through the Worker and, with `integralObject()`, through the CMS object. Each part is held in memory, and `partSize` is at least 5 MB, as R2 requires.
 - A move reads and writes the file, because bindings cannot copy.
+
+With keys, set `region: 'eu'` for a bucket created with that data location. Requests then go to `<account>.eu.r2.cloudflarestorage.com`.
 
 Unfinished uploads are aborted after 24 hours. An upload can have up to 10 000 parts, and the part size grows for larger files.
 
