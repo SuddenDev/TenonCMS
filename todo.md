@@ -36,7 +36,7 @@ Each new query is one more to port, and the test app should run on a real deploy
 
 ## 3. Driven by the test app
 
-- [ ] Fix TS2589: a `relation` inside `blocks` makes `find()` on that collection too deep to type. Found by the spike.
+- [x] Fix TS2589: a `relation` inside `blocks` makes `find()` on that collection too deep to type. Found by the spike.
 - [ ] Frontend components for Nuxt, Astro and React: image (`srcset` is computed already), rich text renderer, maybe a blocks renderer. Build one framework first, then port.
 - [ ] Search: in the admin first (`LIKE` on title fields), later FTS5 / `tsvector` and a shared function. Depends on the database work.
 - [ ] Jobs and cron: one protected `POST /jobs/run`, triggered per platform (Cloudflare Cron Triggers, Vercel Cron, an interval on Node).

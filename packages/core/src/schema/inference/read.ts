@@ -114,10 +114,18 @@ type RequiredReadFields<Collections, F extends Fields, Spec> = {
   >;
 };
 
-/** Data of `F` as a read returns it. Unnamed joins are absent; named joins are required. */
-export type Resolve<Collections, F extends Fields, Spec> = Simplify<
-  OptionalReadFields<Collections, F, Spec> & RequiredReadFields<Collections, F, Spec>
->;
+/**
+ * Data of `F` as a read returns it. Unnamed joins are absent; named joins are required.
+ * It MUST NOT be wrapped in `Simplify`: a callback on a read result (`docs.map((doc) => …)`) makes TypeScript
+ * instantiate the type again, and a `Simplify` at every level hits TS2589 below a group, array or blocks field.
+ * The types that wrap it simplify instead.
+ */
+export type Resolve<Collections, F extends Fields, Spec> = OptionalReadFields<
+  Collections,
+  F,
+  Spec
+> &
+  RequiredReadFields<Collections, F, Spec>;
 
 /** An untyped schema (the admin's) reads plain records. The recursive types would not terminate. */
 export type Wide<Collections> = string extends keyof Collections ? true : false;

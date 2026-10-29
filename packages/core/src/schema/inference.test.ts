@@ -806,6 +806,7 @@ async function arrayReadTypes() {
   const item = (await cms.find("menus"))[0].links![0];
   const id: string = item.id;
   item.page?.title satisfies string | undefined;
+  (await cms.find("menus")).map((doc) => doc.links?.map((link) => link.page?.title));
   const ids = (await cms.find("menus", { populate: false }))[0].links![0];
   ids.page satisfies string | null | undefined;
   // @ts-expect-error `populate: false` returns ids inside items too
@@ -856,6 +857,9 @@ async function blocksReadTypes() {
   });
   const item = (await cms.find("landing"))[0].content![0];
   const id: string = item.id;
+  // A callback makes TypeScript instantiate the read type again.
+  (await cms.find("landing")).map((doc) => doc.content);
+  (await cms.find("landing")).filter((doc) => doc.content?.map((block) => block.blockType));
   if (item.blockType === "hero") item.page?.title satisfies string | undefined;
   else item.body satisfies string | null | undefined;
 

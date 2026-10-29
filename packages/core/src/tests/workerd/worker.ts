@@ -24,8 +24,7 @@ export const cms = defineCms({
         ],
       },
     },
-    // A relation inside blocks, for reference scans over `json_each`. Kept out of `posts`: reading it makes the
-    // `find()` types too deep (TS2589), which core still has to fix.
+    // A relation inside blocks, for reference scans over `json_each`.
     pages: {
       fields: {
         sections: {
