@@ -35,7 +35,17 @@ Each block takes:
 | `fields`      | The fields of an item of this block                                  |
 | `label`       | Name in the block picker and the row header. Default: the block name |
 | `description` | Help text in the block picker                                        |
-| `icon`        | A Lucide icon name for the block picker and the row header           |
+| `icon`        | A Lucide icon name for the block picker, row header and outline      |
+| `image`       | A picture for the block picker, in place of the icon. See below      |
+
+`image` is a URL the site serves, usually an absolute path like `/blocks/hero.jpg` from the site's public folder. The picker shows it as is, cropped to 16:9.
+
+## In the admin
+
+- **Add** opens a picker with a card per block. It opens inside the document pane, so the visual preview stays visible.
+- Drag a row by its handle to reorder it, or into or out of a nested list. A placeholder shows where it lands. A list takes only items of the same block (or array field), never inside the item itself, and not past `maxRows`.
+- The row menu has **Move to** (the lists the item can go to, up or down the nesting) and **Collapse all** (every row of the field, at every depth).
+- A row with nested lists has an **Outline** button. It shows the tree below the row, and its items move by drag and drop too.
 
 ## Nested and shared blocks
 

@@ -383,9 +383,13 @@ export default {
     actions: "{name} actions",
     add: "Add {label}",
     block: "Block",
+    collapseAll: "Collapse all",
     duplicate: "Duplicate",
     item: "Item",
+    moveTo: "Move to",
+    noTargets: "No other place takes this item",
     numbered: "{label} {n}",
+    outline: "Outline of {name}",
     unknownBlock: "Unknown block {type}",
   },
   locales: {

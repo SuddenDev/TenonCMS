@@ -22,6 +22,7 @@ import { useI18n } from "vue-i18n";
 import Icon from "@/shared/components/Icon.vue";
 import { COLLAPSED, usePane } from "@/shared/composables/usePanes";
 import { Button } from "../ui/button";
+import { providePaneElement } from "./context";
 import { ScrollArea } from "../ui/scroll-area";
 
 const props = withDefaults(defineProps<PaneProps>(), {
@@ -41,6 +42,7 @@ const { expanded, toggleExpand, collapsed, hidden, stacked, toggle, back, width,
   props.collapsible,
   props.width,
 );
+providePaneElement(currentElement);
 
 const style = computed(() =>
   stacked.value || expanded.value

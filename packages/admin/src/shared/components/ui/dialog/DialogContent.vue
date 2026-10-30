@@ -16,7 +16,12 @@ defineOptions({
 
 const props = withDefaults(
   defineProps<
-    DialogContentProps & { class?: HTMLAttributes["class"]; showCloseButton?: boolean }
+    DialogContentProps & {
+      class?: HTMLAttributes["class"];
+      showCloseButton?: boolean;
+      // Opens the dialog inside this element instead of over the page. It SHOULD be positioned.
+      container?: HTMLElement;
+    }
   >(),
   {
     showCloseButton: true,
@@ -24,7 +29,7 @@ const props = withDefaults(
 );
 const emits = defineEmits<DialogContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = reactiveOmit(props, "class", "container");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 const { t } = useI18n();
@@ -36,8 +41,8 @@ function keepOpenForToast(event: Event) {
 </script>
 
 <template>
-  <DialogPortal>
-    <DialogOverlay />
+  <DialogPortal :to="container">
+    <DialogOverlay :class="container && 'absolute'" />
     <DialogContent
       data-slot="dialog-content"
       v-bind="{ ...$attrs, ...forwarded }"
@@ -45,6 +50,7 @@ function keepOpenForToast(event: Event) {
       :class="
         cn(
           'bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm',
+          container && 'absolute',
           props.class,
         )
       "

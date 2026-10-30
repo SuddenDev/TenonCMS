@@ -9,3 +9,7 @@ export type PaneSort = { value: string; label: string };
 export const [injectPaneMenuContext, providePaneMenuContext] = createContext<{
   layout: Ref<PaneLayout>;
 }>("PaneMenu");
+
+// The pane's element. Dialogs of its content MAY open inside it, so they leave the rest of the page visible.
+export const [injectPaneElement, providePaneElement] =
+  createContext<Ref<HTMLElement | undefined>>("Pane");

@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { Field } from "@/shared/api";
-import { blocksOf } from "../../../../../../core/src/schema/traversal/blocks-of";
 import { itemFields } from "../../../../../../core/src/schema/traversal/item-fields";
 import { active } from "@/modules/documents/fields";
-import { itemTitle, type Item } from "@/modules/documents/items";
+import { blockOf, itemTitle, type Item, nestedLists } from "@/modules/documents/items";
+import {
+  injectItemTree,
+  type MoveTarget,
+  useItemNames,
+} from "@/modules/documents/composables/useItemTree";
 import Icon from "@/shared/components/Icon.vue";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -18,10 +22,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import FieldInput from "../FieldInput.vue";
 import FieldLayout from "./FieldLayout.vue";
+import ItemOutlineDialog from "./ItemOutlineDialog.vue";
 
 const props = defineProps<{
   item: Item;
@@ -46,13 +54,24 @@ const emit = defineEmits<{
 }>();
 const { t } = useI18n();
 const fields = computed(() => itemFields(props.field, props.item));
-const block = computed(() => {
-  const blocks = props.field.type === "blocks" ? blocksOf(props.field) : undefined;
-  return blocks && Object.hasOwn(blocks, props.item.blockType)
-    ? blocks[props.item.blockType]
-    : undefined;
-});
+const block = computed(() => blockOf(props.field, props.item));
 const title = computed(() => itemTitle(props.item, props.field));
+const tree = injectItemTree();
+const { itemName, listName } = useItemNames();
+const nested = computed(() => nestedLists(props.field, props.item, props.path).length > 0);
+const outline = ref(false);
+
+// Computed only once the "Move to" menu renders.
+const targets = computed(() =>
+  tree.targets({ path: props.path, item: props.item, field: props.field }),
+);
+// The top list shows its own name. A nested one shows the item that holds it, like "Section › Children".
+const targetName = (target: MoveTarget) => {
+  const list = listName(target.field, target.key);
+  if (!target.owner) return list;
+  const { item, field, index } = target.owner;
+  return `${itemTitle(item, field) || itemName(field, item, index)} › ${list}`;
+};
 </script>
 
 <template>
@@ -80,6 +99,25 @@ const title = computed(() => itemTitle(props.item, props.field));
           <span v-if="title" class="text-muted-foreground truncate text-xs">{{ label }}</span>
         </span>
       </CollapsibleTrigger>
+      <Button
+        v-if="nested"
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        :aria-label="t('items.outline', { name: label })"
+        :title="t('items.outline', { name: label })"
+        @click="outline = true"
+      >
+        <Icon name="list-tree" />
+      </Button>
+      <ItemOutlineDialog
+        v-if="nested"
+        v-model:open="outline"
+        :item="item"
+        :field="field"
+        :path="path"
+        :label="title || label"
+      />
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <Button
@@ -99,8 +137,29 @@ const title = computed(() => itemTitle(props.item, props.field));
           <DropdownMenuItem :disabled="last" @select="emit('move', 1)">
             <Icon name="arrow-down" />{{ t("common.moveDown") }}
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Icon name="corner-down-right" />{{ t("items.moveTo") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent class="max-h-80 overflow-y-auto">
+              <DropdownMenuItem
+                v-for="target in targets"
+                :key="target.path"
+                :style="{ paddingLeft: `${0.5 + target.depth * 0.75}rem` }"
+                @select="tree.moveTo(path, target.path, target.index)"
+              >
+                <span class="truncate">{{ targetName(target) }}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem v-if="!targets.length" disabled>
+                {{ t("items.noTargets") }}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem :disabled="full" @select="emit('duplicate')">
             <Icon name="copy" />{{ t("items.duplicate") }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @select="tree.open.clear()">
+            <Icon name="chevrons-down-up" />{{ t("items.collapseAll") }}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" @select="emit('remove')">

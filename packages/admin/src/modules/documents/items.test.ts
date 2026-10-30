@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { ArrayField, BlocksField } from "../../../../core/src/schema";
-import { duplicateItem, itemTitle, moveItem, newItem } from "./items";
+import { blocksOf } from "../../../../core/src/schema/traversal/blocks-of";
+import {
+  blockOf,
+  canHold,
+  duplicateItem,
+  itemTitle,
+  moveItem,
+  moveItemTo,
+  nestedLists,
+  newItem,
+} from "./items";
 import { isEmpty, normalize, titleField } from "./fields";
 
 const slides = {
@@ -179,4 +189,88 @@ it("fills rich text defaults from the reactive admin schema", async () => {
   });
 
   expect(normalize(fields, {}, false, true).body).toEqual(fields.body.default);
+});
+
+describe("moveItemTo", () => {
+  const tree = () => [
+    { id: "a", blockType: "text" },
+    { id: "c", blockType: "cols", cols: [{ id: "x", blockType: "text" }] },
+    { id: "b", blockType: "text" },
+  ];
+  const ids = (list: { id: string }[]) => list.map((i) => i.id);
+
+  it("moves within one list, before the given position", () => {
+    const list = tree();
+    moveItemTo(list, "0", "", 3);
+    expect(ids(list)).toEqual(["c", "b", "a"]);
+
+    moveItemTo(list, "2", "", 0);
+    expect(ids(list)).toEqual(["a", "c", "b"]);
+  });
+
+  it("moves into a nested list that sits after the item", () => {
+    const list = tree();
+    moveItemTo(list, "0", "1.cols", 0);
+
+    expect(ids(list)).toEqual(["c", "b"]);
+    expect(ids(list[0].cols!)).toEqual(["a", "x"]);
+  });
+
+  it("moves out of a nested list", () => {
+    const list = tree();
+    moveItemTo(list, "1.cols.0", "", 2);
+
+    expect(ids(list)).toEqual(["a", "c", "x", "b"]);
+    expect(list[1].cols).toEqual([]);
+  });
+});
+
+describe("canHold", () => {
+  const text = { fields: { body: { type: "text" } } };
+  const a = { type: "blocks", blocks: { text } } as unknown as BlocksField;
+  const b = { type: "blocks", blocks: { text, other: text } } as unknown as BlocksField;
+  const c = {
+    type: "blocks",
+    blocks: { text: { fields: {} } },
+  } as unknown as BlocksField;
+
+  it("takes a block item when the list has the same block under the same key", () => {
+    expect(canHold(b, a, { id: "1", blockType: "text" })).toBe(true);
+    expect(canHold(c, a, { id: "1", blockType: "text" })).toBe(false);
+    expect(canHold(a, b, { id: "1", blockType: "other" })).toBe(false);
+  });
+
+  it("takes an array item only into the same field", () => {
+    expect(canHold(slides, slides, { id: "1" })).toBe(true);
+    expect(canHold({ ...slides }, slides, { id: "1" })).toBe(false);
+    expect(canHold(a, slides, { id: "1" })).toBe(false);
+  });
+});
+
+describe("blockOf", () => {
+  it("is the block of a block item, undefined for an unknown block or an array", () => {
+    expect(blockOf(content, { id: "1", blockType: "text" })).toBe(blocksOf(content).text);
+    expect(blockOf(content, { id: "1", blockType: "toString" })).toBeUndefined();
+    expect(blockOf(slides, { id: "1" })).toBeUndefined();
+  });
+});
+
+describe("nestedLists", () => {
+  it("finds the lists of an item, also inside groups", () => {
+    const item = newItem(slides);
+    item.meta = { tags: [] };
+    const field = {
+      type: "array",
+      fields: { ...slides.fields, meta: { type: "group", fields: { tags: slides.fields.tags } } },
+    } as unknown as ArrayField;
+
+    expect(nestedLists(field, item, "list.0").map((l) => [l.key, l.path])).toEqual([
+      ["tags", "list.0.meta.tags"],
+      ["tags", "list.0.tags"],
+    ]);
+  });
+
+  it("is empty for an unknown block", () => {
+    expect(nestedLists(content, { id: "1", blockType: "gone" }, "c.0")).toEqual([]);
+  });
 });

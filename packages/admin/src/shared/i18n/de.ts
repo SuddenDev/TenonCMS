@@ -398,9 +398,13 @@ export default {
     actions: "Aktionen für {name}",
     add: "{label} hinzufügen",
     block: "Block",
+    collapseAll: "Alle einklappen",
     duplicate: "Duplizieren",
     item: "Element",
+    moveTo: "Verschieben nach",
+    noTargets: "Kein anderer Ort nimmt dieses Element auf",
     numbered: "{label} {n}",
+    outline: "Gliederung von {name}",
     unknownBlock: "Unbekannter Block {type}",
   },
   locales: {

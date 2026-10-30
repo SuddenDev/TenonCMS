@@ -14,8 +14,13 @@ export type Block = Layout & {
   label?: Text;
   /** Help text in the admin's block picker. */
   description?: Text;
-  /** Lucide icon in the admin's block picker. */
+  /** Lucide icon in the admin's block picker, row header and outline. */
   icon?: IconName;
+  /**
+   * Picture in the admin's block picker, in place of the icon. A URL the site serves, usually an absolute path like
+   * `/blocks/hero.jpg`. It is shown as is, cropped to 16:9.
+   */
+  image?: string;
   /** The fields of an item of this block. `blockType` and `id` MUST NOT be among them. */
   fields: Fields;
 };

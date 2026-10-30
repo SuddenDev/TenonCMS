@@ -42,6 +42,8 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 - **The "…" menu** (`DocActions`) has labeled groups: **Document** (History) for a saved entry the user MAY update, and **Translation** (Copy from, Copy to, Remove translation, Discard all) while the form is editable. The copy submenus label their languages too.
 - **History**: `VersionHistory` replaces the form in `DocPane` and `GlobalEdit`. Opening it saves pending edits first. A version opens in `DocForm` without save handlers, so it is read-only and has no status bar and no autosave. `changedKeys()` (`modules/documents/versions.ts`) compares it with the version before it; `DocForm`'s `changed` marks those top-level fields and fades the rest. A change inside a group, array or blocks field marks the whole field. The list is split into calendar groups by `groupByTime()`. Both views have a back button at the top. Restore is off while the form would be read-only (Published view, someone else's lock). A language switch closes it.
 - **Fields** are rendered by one recursive component. Conditions, layout (tabs, fieldsets, widths), lists and blocks are handled there.
+- **Lists**: the top `ItemList` of a field creates the item tree (`useItemTree`), and its nested lists and the outline dialog share it. It holds the open rows (by id, so a row stays open when it moves), the dragged item and the drop position. Moves between lists change the form data in place (`moveItemTo`). Drag and drop is native HTML5; the innermost list that takes the item handles `dragover`, others let it bubble.
+- **Pane dialogs**: `Pane` provides its element (`injectPaneElement`). `DialogContent`'s `container` opens a dialog inside it, which the block picker and the outline use.
 
 ## UI rules
 
