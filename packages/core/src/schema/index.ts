@@ -1,6 +1,6 @@
 export type * from "./fields/index.ts";
 export type * from "./hooks/index.ts";
-export type { CheckRefs } from "./inference/check-refs.ts";
+export type { CheckRefs, CheckSharedBlocks } from "./inference/check-refs.ts";
 export type { Data, Doc, File, FilterKey, GlobalMeta, Image } from "./inference/data.ts";
 export type {
   Checked,

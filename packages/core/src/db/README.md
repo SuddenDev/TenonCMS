@@ -14,7 +14,7 @@ A localized collection or global reads with a `Loc` (`document-sql.ts`): the req
 
 A joined query reads two tables with the same column names, so conditions and `ORDER BY` on `cms_documents` MUST be qualified (`cms_documents.created_at`, `cms_documents.id`). `jsonAt(path, drafts, loc)` reads a localized key as `COALESCE(requested, default)` with fallback, so a filter matches the value a read returns.
 
-`holdsAt(source, path, many, id)` asks whether a relation at a `Step[]` path in a JSON column holds `id`. Each array or blocks step adds one nested `json_each` over the items, filtered by `blockType` for a block; a `many` relation adds one more. JSON paths, block names and the id are parameters. `referencingDocs()`, `referencingGlobal()` and `referencingLocales()` (on `l.data` and `l.draft`) use it.
+`holdsAt(source, path, many, id)` asks whether a relation at a `Step[]` path in a JSON column holds `id`. Each array or blocks step adds one nested `json_each` over the items, filtered by `blockType` for a block; a `many` relation adds one more. JSON paths, block names and the id are parameters. `referencingDocs()`, `referencingGlobal()` and `referencingLocales()` (on `l.data` and `l.draft`) take a `Holds` condition on a column: `holdsAt()`, or `containsText()` for an owner whose blocks nest without limit.
 
 ## Files
 

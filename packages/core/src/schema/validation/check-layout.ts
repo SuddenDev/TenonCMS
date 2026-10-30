@@ -1,4 +1,5 @@
-import type { Fields, Layout } from "../index.ts";
+import type { Block, Fields, Layout } from "../index.ts";
+import { unseenBlocks } from "../traversal/blocks-of.ts";
 
 /**
  * Checks the admin layout of a set of fields and of every group, array item and block inside it.
@@ -6,7 +7,12 @@ import type { Fields, Layout } from "../index.ts";
  * @throws {Error} For a `tab` or `fieldset` the nearest owner does not define, or a fieldset whose fields do not share
  * their tabs.
  */
-export function checkLayout(fields: Fields, layout: Layout, where: string) {
+export function checkLayout(
+  fields: Fields,
+  layout: Layout,
+  where: string,
+  seen = new Set<Block>(),
+) {
   const tabsOf = new Map<string, string>();
   for (const [key, f] of Object.entries(fields)) {
     const at = `${where}.${key}`;
@@ -21,9 +27,10 @@ export function checkLayout(fields: Fields, layout: Layout, where: string) {
         fail(`fieldset "${where}.${f.fieldset}" holds fields of different tabs`);
       tabsOf.set(f.fieldset, tabs);
     }
-    if (f.type === "group" || f.type === "array") checkLayout(f.fields, f, at);
+    if (f.type === "group" || f.type === "array") checkLayout(f.fields, f, at, seen);
     if (f.type === "blocks")
-      for (const [name, b] of Object.entries(f.blocks)) checkLayout(b.fields, b, `${at}.${name}`);
+      for (const [name, b] of unseenBlocks(f, seen))
+        checkLayout(b.fields, b, `${at}.${name}`, seen);
   }
 }
 

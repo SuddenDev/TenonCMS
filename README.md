@@ -160,7 +160,7 @@ Commands, rules and architecture notes are in [CLAUDE.md](CLAUDE.md) and `docs/d
 
 Working:
 
-- Schema-in-code collections and globals with inferred types, relations, lists and blocks
+- Schema-in-code collections and globals with inferred types, relations, lists and blocks (nested and shared)
 - Hooks, validation, conditions, drafts and publishing, per-locale content
 - Page and SEO preset, live preview and an admin bar on the site
 - Rich text: Tiptap JSON with internal links and images, and Astro, Vue and React renderers

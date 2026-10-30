@@ -57,7 +57,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 | `integrity/find-references.ts`                        | Every document and global that points to a document.                                                                                 |
 | `integrity/apply-on-delete.ts`                        | `restrict`, then `set-null`, then `cascade` after a delete.                                                                          |
 
-References inside array and block items follow `Step[]` paths (`schema/traversal/relation-paths.ts`). `checkRefs()` and `clear()` in `apply-on-delete.ts` reach every item that holds a value through `holdersAt()`: `checkRefs()` fails at the positional path (`links.1.page`), and `set-null` clears the value in each item and keeps the items.
+`checkRefs()` walks the data with `eachField()`, so it reaches references at any depth and fails at the positional path (`links.1.page`). `references()` runs one query per `Step[]` path (`schema/traversal/relation-paths.ts`). An owner with a block inside itself (`nestsItself()`) has no complete list of paths: one text search finds its rows that contain the id, and a walk over each row gives positional paths. `clear()` in `apply-on-delete.ts` reaches every item that holds the value through `holdersAt()`, and `set-null` clears it in each item and keeps the items.
 
 `writes/remove-document.ts` deletes the row first and applies `onDelete` effects in the same transaction. Effects use the original scope, so a cascade that comes back to a deleted row finds nothing and cycles end. Hooks MUST make nested calls through the `cms` they get, so the calls join the transaction.
 

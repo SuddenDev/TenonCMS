@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
-import type { Field } from "@/shared/api";
+import type { Block } from "@/shared/api";
 import Icon from "@/shared/components/Icon.vue";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 
 defineProps<{
-  blocks?: Extract<Field, { type: "blocks" }>["blocks"];
+  blocks?: Record<string, Block>;
   label: string;
   disabled: boolean;
 }>();

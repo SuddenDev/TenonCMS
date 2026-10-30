@@ -1,29 +1,16 @@
 ---
 import { seoMeta } from "tenoncms";
 import { edit } from "tenoncms/preview";
+import Blocks from "../components/Blocks.astro";
 import Header from "../components/Header.astro";
+import { findPage } from "../lib/find-page";
 
 export const prerender = false;
 
 // Static routes like `/` and `/about` win over this one, so CMS pages at those paths never show.
 // `locals.path` is the URL path without the locale prefix.
 const { tenon: cms, locale, path } = Astro.locals;
-const page = await cms.findOne("pages", {
-  where: { path },
-  locale,
-  alternates: true,
-  populate: { hero: true, seo: { image: true }, content: { hero: { image: true } } },
-  select: {
-    title: true,
-    path: true,
-    body: true,
-    seo: true,
-    hero: true,
-    content: true,
-    locale: true,
-    alternates: true,
-  },
-});
+const page = await findPage(cms, path, locale);
 if (!page) return new Response("Not found", { status: 404 });
 const [general, seo] = await Promise.all([
   cms.getGlobal("general", { locale }),
@@ -64,28 +51,6 @@ const meta = seoMeta(page, { general, seo });
     <p style="white-space: pre-wrap" data-cms={edit("pages", page.id, "body")}>
       {page.body}
     </p>
-    {page.content?.map((item, i) =>
-      item.blockType === "hero" ? (
-        <section>
-          <h2 data-cms={edit("pages", page.id, `content.${i}.title`)}>{item.title}</h2>
-          {item.image && (
-            <img
-              data-cms={edit("pages", page.id, `content.${i}.image`)}
-              src={item.image.src}
-              srcset={item.image.srcset}
-              sizes="(min-width: 720px) 720px, 100vw"
-              width={item.image.width}
-              height={item.image.height}
-              alt={item.image.alt ?? ""}
-              style="max-width: 100%; height: auto"
-            />
-          )}
-        </section>
-      ) : (
-        <p style="white-space: pre-wrap" data-cms={edit("pages", page.id, `content.${i}.body`)}>
-          {item.body}
-        </p>
-      ),
-    )}
+    {page.content && <Blocks id={page.id} path="content" items={page.content} />}
   </body>
 </html>

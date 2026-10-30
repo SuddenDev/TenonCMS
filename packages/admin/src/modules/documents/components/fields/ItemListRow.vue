@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { Field } from "@/shared/api";
+import { blocksOf } from "../../../../../../core/src/schema/traversal/blocks-of";
 import { itemFields } from "../../../../../../core/src/schema/traversal/item-fields";
 import { active } from "@/modules/documents/fields";
 import { itemTitle, type Item } from "@/modules/documents/items";
@@ -46,7 +47,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const fields = computed(() => itemFields(props.field, props.item));
 const block = computed(() => {
-  const blocks = props.field.type === "blocks" ? props.field.blocks : undefined;
+  const blocks = props.field.type === "blocks" ? blocksOf(props.field) : undefined;
   return blocks && Object.hasOwn(blocks, props.item.blockType)
     ? blocks[props.item.blockType]
     : undefined;

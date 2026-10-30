@@ -217,6 +217,9 @@ export function equals(db: Db, key: string, value: unknown, drafts = false, loc?
   return value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`;
 }
 
+/** A condition on the JSON column `column`, which a reference scan passes to its queries. */
+export type Holds = (column: string) => RawBuilder<boolean>;
+
 /**
  * Whether the relation at `path` in the JSON column `source` holds `id`. Each {@link Each} step scans the items with
  * one nested `json_each` (`jsonb_array_elements` on Postgres); a `many` relation is an array. JSON paths, block types

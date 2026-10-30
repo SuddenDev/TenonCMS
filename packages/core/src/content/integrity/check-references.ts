@@ -1,8 +1,7 @@
 import { type Database } from "../../db/types.ts";
-import { type Fields } from "../../schema/index.ts";
-import { relationPaths } from "../../schema/traversal/relation-paths.ts";
-import { holdersAt } from "../../schema/traversal/holders-at.ts";
-import { targetOf } from "../../schema/traversal/reference-fields.ts";
+import { type Fields, type RefField } from "../../schema/index.ts";
+import { eachField } from "../../schema/traversal/each-field.ts";
+import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { existingIds } from "../../db/queries/references/existing-ids.query.ts";
 import { accepts } from "../../media/library/names.ts";
@@ -10,7 +9,7 @@ import { ValidationError } from "../../errors.ts";
 import type { Kysely } from "kysely";
 
 /**
- * Every id MUST exist in its target collection. One query per relation field, for every item that holds it.
+ * Every id MUST exist in its target collection. One query per relation field, for every item at any depth that holds it.
  * Files of `image` and `file` fields MUST also fit the field's `accept` and `maxSize`; an `image` only takes `image/*`.
  *
  * @throws {ValidationError} At the positional path of the first value that fails, e.g. `links.1.page`.
@@ -21,13 +20,16 @@ export async function checkRefs(
   data: Record<string, unknown>,
   self?: { collection: string; id: string },
 ) {
-  for (const { path, field } of relationPaths(fields)) {
+  const byField = new Map<RefField, { at: string; ids: string[] }[]>();
+  await eachField(fields, data, (key, f, holder, at) => {
+    if (!isRef(f)) return;
+    const value = holder[key];
+    const ids: string[] = value == null ? [] : f.many ? value : [value];
+    if (ids.length) byField.set(f, [...(byField.get(f) ?? []), { at, ids }]);
+  });
+
+  for (const [field, held] of byField) {
     const to = targetOf(field);
-    const held = holdersAt(data, path).flatMap(({ parent, key, at }) => {
-      const value = parent[key];
-      const ids: string[] = value == null ? [] : field.many ? value : [value];
-      return ids.length ? [{ at, ids }] : [];
-    });
     const fail = (at: string, message: string): never => {
       throw new ValidationError({ [at]: message });
     };
@@ -35,7 +37,6 @@ export async function checkRefs(
     if (self && to === self.collection)
       for (const h of held)
         if (h.ids.includes(self.id)) fail(h.at, "A document cannot reference itself");
-    if (!held.length) continue;
     const ids = [...new Set(held.flatMap((h) => h.ids))];
 
     if (field.type === "relation") {

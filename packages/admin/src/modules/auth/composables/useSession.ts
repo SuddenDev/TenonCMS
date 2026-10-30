@@ -1,6 +1,7 @@
 import { configureKey } from "@/shared/options";
 import { inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { client, schema, type Session } from "@/shared/api";
+import { linkBlocks } from "../../../../../core/src/schema/config/link-blocks";
 import { readPerspective } from "@/shared/composables/usePerspective";
 import { useTimeZone } from "@/shared/composables/useTimeZone";
 import { useAdminLocale } from "@/shared/i18n";
@@ -37,7 +38,7 @@ export function useSession() {
     preferred.value = user.value?.timezone ?? null;
     const language = (locales as readonly string[]).find((l) => l === user.value?.language);
     if (language) locale.value = language as typeof locale.value;
-    if (user.value && s) schema.value = s;
+    if (user.value && s) show(s);
     loading.value = false;
   }
 
@@ -48,12 +49,19 @@ export function useSession() {
     updateUser({ language }).catch(console.error);
   });
 
+  // The linked schema can hold cycles, so a refresh compares the JSON it was linked from.
+  let shown = "";
+  function show(s: typeof schema.value) {
+    shown = JSON.stringify(s);
+    schema.value = linkBlocks(s);
+  }
+
   // The config can change while the admin is open, e.g. when editing tenon.config.ts in dev.
   // Unchanged responses are skipped, so a refresh does not re-render open forms.
   function refreshSchema() {
     if (!user.value || document.hidden) return;
     client.getSchema().then((s) => {
-      if (JSON.stringify(s) !== JSON.stringify(schema.value)) schema.value = s;
+      if (JSON.stringify(s) !== shown) show(s);
     }, load);
   }
 

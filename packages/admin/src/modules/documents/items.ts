@@ -1,4 +1,5 @@
 import type { ArrayField, BlocksField, Fields } from "../../../../core/src/schema";
+import { blocksOf } from "../../../../core/src/schema/traversal/blocks-of";
 import { itemFields } from "../../../../core/src/schema/traversal/item-fields";
 import { normalize } from "./fields";
 
@@ -10,7 +11,7 @@ export type Item = { id: string; [key: string]: any };
  * A block item also has its `blockType`.
  */
 export function newItem(field: ArrayField | BlocksField, blockType?: string): Item {
-  const fields = field.type === "blocks" ? field.blocks[blockType!].fields : field.fields;
+  const fields = field.type === "blocks" ? blocksOf(field)[blockType!].fields : field.fields;
   return {
     id: crypto.randomUUID(),
     ...(field.type === "blocks" && { blockType }),

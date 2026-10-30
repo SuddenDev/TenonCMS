@@ -1,5 +1,6 @@
 // This file MUST have type imports only. The admin bundles it.
 import type { Field, Fields } from "../fields/index.ts";
+import { blocksOf } from "./blocks-of.ts";
 
 /**
  * Finds the fields of one item of an `array` or `blocks` field. A block item's fields are those of its `blockType`.
@@ -11,6 +12,6 @@ export function itemFields(field: Field, item: unknown): Fields | undefined {
   if (field.type !== "blocks") return undefined;
   const type = (item as { blockType?: unknown }).blockType;
   return typeof type === "string" && Object.hasOwn(field.blocks, type)
-    ? field.blocks[type].fields
+    ? blocksOf(field)[type].fields
     : undefined;
 }

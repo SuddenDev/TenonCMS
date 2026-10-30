@@ -10,17 +10,8 @@ export const pages = defineCollection({
     ...seo.fields,
     body: { type: "textarea" },
     hero: { label: { en: "Hero Image" }, type: "image" },
-    content: {
-      type: "blocks",
-      blocks: {
-        hero: {
-          label: "Hero",
-          icon: "image",
-          fields: { title: { type: "text" }, image: { type: "image" } },
-        },
-        text: { label: "Text", icon: "type", fields: { body: { type: "textarea" } } },
-      },
-    },
+    // Shared blocks from `blocks` in tenon.config.ts.
+    content: { type: "blocks", blocks: ["hero", "text", "section"] },
   },
   hooks: page.hooks,
   permalink: page.permalink,

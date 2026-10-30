@@ -15,6 +15,28 @@ import { kitchenSink } from "./globals/kitchen-sink";
 export default defineCms({
   localization: { locales: ["en", "de"], defaultLocale: "en", fallback: false },
   roles: { author: { label: { en: "Author", de: "Autor" }, description: "Writes own posts" } },
+  // A section holds other blocks, sections included, so page content nests to any depth.
+  blocks: {
+    hero: {
+      label: "Hero",
+      icon: "image",
+      fields: { title: { type: "text" }, image: { type: "image" } },
+    },
+    text: { label: "Text", icon: "type", fields: { body: { type: "textarea" } } },
+    section: {
+      label: "Section",
+      description: "A heading with blocks inside, sections included.",
+      icon: "layers",
+      fields: {
+        title: { type: "text" },
+        children: {
+          type: "blocks",
+          labels: { singular: "Block", plural: "Blocks" },
+          blocks: ["hero", "text", "section"],
+        },
+      },
+    },
+  },
   collections: { posts, authors, comments, pages },
   globals: {
     kitchenSink,

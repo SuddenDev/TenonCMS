@@ -19,7 +19,7 @@ const reserved = [
  * Add the collections and globals of all plugins to the host's schema
  * @param plugins The plugins in the order they are registered
  * @param schema The host's schema with its own collections and globals
- * @returns A new schema that contains the host's and the plugins' collections and globals
+ * @returns A new schema with the host's and the plugins' collections and globals, and the host's shared blocks
  * @throws If a plugin name is invalid or used twice, or if a collection or global name is already taken
  */
 export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Required<Schema> {
@@ -56,5 +56,5 @@ export function mergePlugins(plugins: readonly Plugin[], schema: Schema): Requir
     }
   }
 
-  return { collections, globals };
+  return { collections, globals, blocks: schema.blocks ?? {} };
 }

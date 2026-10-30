@@ -1,19 +1,12 @@
-import { type Db, holdsAt } from "../document-sql.ts";
-import type { Step } from "../../../schema/traversal/relation-paths.ts";
+import type { Db, Holds } from "../document-sql.ts";
 
-/** The raw JSON of global `name` if its relation at `path` holds `id`. Reads published data. */
-export async function referencingGlobal(
-  db: Db,
-  name: string,
-  path: Step[],
-  many: boolean | undefined,
-  id: string,
-) {
+/** The raw JSON of global `name` if its published data `holds`. */
+export async function referencingGlobal(db: Db, name: string, holds: Holds) {
   const row = await db
     .selectFrom("cms_globals")
     .select("data")
     .where("name", "=", name)
-    .where(holdsAt(db, "data", path, many, id))
+    .where(holds("data"))
     .executeTakeFirst();
   return row?.data;
 }

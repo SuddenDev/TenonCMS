@@ -94,7 +94,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                              | Length, and a regular expression for the whole value |
 | `min`, `max`                        | `number`                                                                                        | Number range                                         |
 | `fields`                            | `group`, `array`                                                                                | The fields of the group, or of each item             |
-| `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name                  |
+| `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name, or shared names |
 | `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                |
 | `labels`                            | `array`, `blocks`                                                                               | `{ singular, plural }` item labels in the admin      |
 | `validate`                          | all but `join`                                                                                  | Your own check, on the server                        |

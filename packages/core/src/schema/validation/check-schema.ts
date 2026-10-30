@@ -2,10 +2,12 @@ import { type Condition } from "../condition.ts";
 import { fieldAt } from "../traversal/field-at.ts";
 import { targetOf } from "../traversal/reference-fields.ts";
 import { pathKey, plainPath, relationPaths } from "../traversal/relation-paths.ts";
+import { blocksOf, unseenBlocks } from "../traversal/blocks-of.ts";
 import { placeholders } from "../../preview/templates/placeholders.ts";
 import type { Localization } from "../../cms/config/options.ts";
 import {
   type ArrayField,
+  type Block,
   type BlocksField,
   type Collection,
   type Field,
@@ -126,6 +128,7 @@ function checkLocalized({ name, fields, localized, global }: Owner, enabled: boo
       `${global ? "global" : "collection"} "${name}" is localized but the \`localization\` option is missing`,
     );
   if (localized && name === "media" && !global) fail(`collection "media" cannot be localized`);
+  const seen = new Set<Block>();
   const walk = (fs: Fields, where: string, inside?: string) => {
     for (const [key, f] of Object.entries(fs)) {
       const at = `${where}.${key}`;
@@ -137,7 +140,7 @@ function checkLocalized({ name, fields, localized, global }: Owner, enabled: boo
       if (f.type === "group") walk(f.fields, at, inside ?? "a group");
       if (f.type === "array") walk(f.fields, at, "an array item");
       if (f.type === "blocks")
-        for (const [name, b] of Object.entries(f.blocks))
+        for (const [name, b] of unseenBlocks(f, seen))
           walk(b.fields, `${at}.${name}`, "a block item");
     }
   };
@@ -180,13 +183,13 @@ function checkJoins(collections: Collections, { name, fields, global }: Owner) {
   }
 }
 
-function hasJoin(fields: Fields): boolean {
+function hasJoin(fields: Fields, seen = new Set<Block>()): boolean {
   return Object.values(fields).some((f) =>
     f.type === "join"
       ? true
       : f.type === "group" || f.type === "array"
-        ? hasJoin(f.fields)
-        : f.type === "blocks" && Object.values(f.blocks).some((b) => hasJoin(b.fields)),
+        ? hasJoin(f.fields, seen)
+        : f.type === "blocks" && unseenBlocks(f, seen).some(([, b]) => hasJoin(b.fields, seen)),
   );
 }
 
@@ -206,7 +209,13 @@ function checkNumber(f: NumberField, at: string) {
     fail(`slider "${at}" needs min and max`);
 }
 
-function checkFields(fields: Fields, root: Fields, where: string, top: boolean) {
+function checkFields(
+  fields: Fields,
+  root: Fields,
+  where: string,
+  top: boolean,
+  seen = new Set<Block>(),
+) {
   for (const [key, f] of Object.entries(fields)) {
     const at = `${where}.${key}`;
     if (
@@ -227,15 +236,15 @@ function checkFields(fields: Fields, root: Fields, where: string, top: boolean) 
       const target = path.startsWith("/") ? fieldAt(root, path.slice(1)) : fieldAt(fields, path);
       if (!target) fail(`condition on "${at}" names unknown field "${path}"`);
     }
-    if (f.type === "group") checkFields(f.fields, root, at, false);
+    if (f.type === "group") checkFields(f.fields, root, at, false, seen);
     if (f.type === "array") {
       checkItems(f, at);
-      checkFields(f.fields, root, at, false);
+      checkFields(f.fields, root, at, false, seen);
     }
     if (f.type === "blocks") {
       checkItems(f, at);
-      for (const [name, b] of Object.entries(f.blocks))
-        checkFields(b.fields, root, `${at}.${name}`, false);
+      for (const [name, b] of unseenBlocks(f, seen))
+        checkFields(b.fields, root, `${at}.${name}`, false, seen);
     }
   }
 }
@@ -246,7 +255,7 @@ function checkItems(f: ArrayField | BlocksField, at: string) {
     fail(`array "${at}" cannot have an item field named "id"`);
   if (f.type === "blocks") {
     if (!Object.keys(f.blocks).length) fail(`blocks "${at}" has no blocks`);
-    for (const [name, b] of Object.entries(f.blocks))
+    for (const [name, b] of Object.entries(blocksOf(f)))
       for (const reserved of ["id", "blockType"])
         if (Object.hasOwn(b.fields, reserved))
           fail(`blocks "${at}.${name}" cannot have an item field named "${reserved}"`);

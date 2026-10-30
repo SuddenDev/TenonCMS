@@ -7,7 +7,15 @@ import type { Plugin } from "../../plugins/index.ts";
 import type { settings } from "../../presets/settings.ts";
 import type { RoleOptions } from "../../users/roles.ts";
 import type { DatabaseOptions } from "../../db/create-db.ts";
-import type { CheckRefs, Collection, Global, MediaApi, RootHooks } from "../../schema/index.ts";
+import type {
+  Block,
+  CheckRefs,
+  CheckSharedBlocks,
+  Collection,
+  Global,
+  MediaApi,
+  RootHooks,
+} from "../../schema/index.ts";
 
 export type PopulateOptions = {
   /** Hops resolved by `populate: true`. Default 2. */
@@ -108,10 +116,17 @@ export type CmsOptions<
   M extends MediaOptions | boolean | undefined = undefined,
   S extends false | SettingsOptions | undefined = undefined,
   L extends string = string,
+  B extends Record<string, Block> = {},
 > = {
+  /**
+   * Blocks that `blocks` fields name instead of defining them: `blocks: { section: "section" }`. A shared block MAY
+   * name itself in its own fields, so its items nest to any depth.
+   */
+  blocks?: B & NoInfer<CheckSharedBlocks<B, C & PluginCollections<PL>>> & Record<string, Block>;
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
-  collections?: C & NoInfer<CheckRefs<C, C & PluginCollections<PL>> & Record<string, Collection>>;
-  globals?: G & NoInfer<CheckRefs<G, C & PluginCollections<PL>> & Record<string, Global>>;
+  collections?: C &
+    NoInfer<CheckRefs<C, C & PluginCollections<PL>, B> & Record<string, Collection>>;
+  globals?: G & NoInfer<CheckRefs<G, C & PluginCollections<PL>, B> & Record<string, Global>>;
   /**
    * Branding, custom fields, custom pages and the admin bar. Inline or imported from your own module; check an
    * extracted object with `satisfies AdminOptions` from `tenoncms/admin`. Plugins add their own.

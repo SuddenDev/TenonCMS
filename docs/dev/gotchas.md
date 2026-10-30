@@ -69,6 +69,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - Typing the auth plugins with better-auth's `passkey()` breaks the declaration build (`defineCms` cannot be named without `@simplewebauthn/server`). Cast it, and destructure `plugins` out of the host options first, or the spread intersects both types into `never`.
 - `defineCms()` infers literal locales through a `const` type parameter. The locale type is `never` without `localization` and `string` for an untyped instance. Check both builds after changing read options or locale metadata.
 - A callback on a read result (`docs.map((doc) => …)`, `filter`) makes TypeScript instantiate the read type again. With `Simplify` around `Resolve`, a collection with a group, array or blocks field hits TS2589 there. Only the types that wrap `Resolve` simplify. Type tests MUST include such a callback, because property access alone does not trigger it.
+- `Extract<X, Fields>` on a nested level of a type that follows shared blocks overflows the stack in `tsc`: it makes TypeScript check the endless type against `Fields`. Use `Replace` inside, and `Extract` only at the top.
 - `@ts-expect-error` covers the next line only. When the formatter wraps a call, the directive MUST sit directly above the line with the invalid value.
 
 ## Server, data and HTTP

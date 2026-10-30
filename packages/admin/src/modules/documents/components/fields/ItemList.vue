@@ -3,6 +3,7 @@ import { inject, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import type { Field } from "@/shared/api";
+import { blocksOf } from "../../../../../../core/src/schema/traversal/blocks-of";
 import { focusKey } from "@/modules/documents/fields";
 import { duplicateItem, type Item, moveItem, newItem } from "@/modules/documents/items";
 import { FieldError } from "@/shared/components/ui/field";
@@ -23,7 +24,7 @@ const props = defineProps<{
 const model = defineModel<Item[]>({ required: true });
 const { t } = useI18n();
 const path = () => props.path ?? props.name;
-const blocks = () => (props.field.type === "blocks" ? props.field.blocks : undefined);
+const blocks = () => (props.field.type === "blocks" ? blocksOf(props.field) : undefined);
 const singular = () =>
   text(props.field.labels?.singular) ?? t(blocks() ? "items.block" : "items.item");
 // The block of a row. Undefined for an array and for an unknown block.

@@ -1,4 +1,5 @@
-import { type Fields, type RefField } from "../index.ts";
+import { type Block, type Fields, type RefField } from "../index.ts";
+import { blocksOf } from "./blocks-of.ts";
 import { isRef } from "./reference-fields.ts";
 
 /** A step into every item of an array, or with `blockType` into every item of that block type. */
@@ -9,25 +10,27 @@ export type Step = string | Each;
 
 /**
  * Finds every `relation`, `image` and `file` at the top level, inside groups, array items and block items.
+ * A block inside itself is not entered again, so where `nestsItself()` is true the paths miss the
+ * deeper items.
  * @returns Each field with its path, in field order, one path per block. The first step is always a top-level key.
  */
 export function relationPaths(
   fields: Fields,
   prefix: Step[] = [],
+  open: Block[] = [],
 ): { path: Step[]; field: RefField }[] {
-  return Object.entries(fields).flatMap(([key, f]) =>
-    isRef(f)
-      ? [{ path: [...prefix, key], field: f }]
-      : f.type === "group"
-        ? relationPaths(f.fields, [...prefix, key])
-        : f.type === "array"
-          ? relationPaths(f.fields, [...prefix, key, { each: true }])
-          : f.type === "blocks"
-            ? Object.entries(f.blocks).flatMap(([blockType, b]) =>
-                relationPaths(b.fields, [...prefix, key, { each: true, blockType }]),
-              )
-            : [],
-  );
+  return Object.entries(fields).flatMap(([key, f]) => {
+    if (isRef(f)) return [{ path: [...prefix, key], field: f }];
+    if (f.type === "group") return relationPaths(f.fields, [...prefix, key], open);
+    if (f.type === "array") return relationPaths(f.fields, [...prefix, key, { each: true }], open);
+    if (f.type === "blocks")
+      return Object.entries(blocksOf(f)).flatMap(([blockType, b]) => {
+        if (open.includes(b)) return [];
+        return relationPaths(b.fields, [...prefix, key, { each: true, blockType }], [...open, b]);
+      });
+
+    return [];
+  });
 }
 
 /**

@@ -29,7 +29,8 @@ export function readEndpoint(
   schema: Schema,
   { media, site, admin, localization, roles, email, permissions }: SchemaExtras,
 ) {
-  const publicSchema = JSON.parse(JSON.stringify(schema, publicValue));
+  const names = new Map(Object.entries(schema.blocks ?? {}).map(([name, b]) => [b, name]));
+  const publicSchema = JSON.parse(JSON.stringify(schema, publicValue(names)));
   for (const kind of ["collections", "globals"] as const)
     for (const [name, entry] of Object.entries(schema[kind] ?? {}))
       if (entry.permalink) publicSchema[kind][name].preview = true;
@@ -63,10 +64,16 @@ export function readEndpoint(
 // Only the options of a field, block, collection or global are touched: a field, block, tab or fieldset MAY be named
 // `hooks`, `access`, `preview` or `permalink`. `JSON.stringify` drops other functions, like `validate`, itself.
 // The admin only needs to know that a preview exists (`preview` or `permalink`), so either form is sent as `true`.
-function publicValue(this: any, key: string, value: any) {
-  if (typeof this?.type !== "string" && !isObject(this?.fields)) return value;
-  if (key === "hooks" || key === "access") return undefined;
-  if (key === "permalink") return undefined;
-  if (key === "preview") return !!value || undefined;
-  return value;
-}
+// A shared block is sent once, in `blocks`, and by name everywhere else, so a block inside itself ends.
+const publicValue = (names: Map<object, string>) =>
+  function (this: any, key: string, value: any) {
+    if (typeof this?.type !== "string" && !isObject(this?.fields)) return value;
+    if (key === "hooks" || key === "access") return undefined;
+    if (key === "permalink") return undefined;
+    if (key === "preview") return !!value || undefined;
+    if (this.type === "blocks" && key === "blocks")
+      return Object.fromEntries(
+        Object.entries(value).map(([k, b]) => [k, names.get(b as object) ?? b]),
+      );
+    return value;
+  };

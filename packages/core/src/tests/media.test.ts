@@ -771,7 +771,11 @@ describe("default media", () => {
   it("uses local storage in ./.uploads and prerendered WebP at quality 85", async () => {
     const { defaultMedia } = await import("../media/default.ts");
     const { createMediaCore } = await import("../media/runtime/create-media-core.ts");
-    const media = createMediaCore(defaultMedia(false)!, { collections: {}, globals: {} });
+    const media = createMediaCore(defaultMedia(false)!, {
+      collections: {},
+      globals: {},
+      blocks: {},
+    });
     expect(media.storage.url("a.png")).toBe("/_tenon/media/files/a.png");
     const key = `test-${crypto.randomUUID()}.txt`;
     await media.storage.put(key, text("x"), "text/plain");

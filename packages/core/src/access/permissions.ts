@@ -3,6 +3,7 @@ import { inner, outerScope } from "../cms/runtime/operation-context.ts";
 import { collectionTarget, globalTarget } from "../content/targets.ts";
 import { hookArgs } from "../content/lifecycle/hook-args.ts";
 import type { Fields } from "../schema/index.ts";
+import { blocksOf } from "../schema/traversal/blocks-of.ts";
 import { fieldAllowed } from "./field-access.ts";
 import { type Op, decide } from "./rule.ts";
 import type { FieldAccess } from "./types.ts";
@@ -13,7 +14,8 @@ type Json = Record<string, any>;
  * Adds what the caller MAY do to a copy of the `/schema` JSON, for the admin and API keys: `access` with every
  * operation on each collection and global (`true`, `false`, or a `where` the admin matches a document against), and
  * `access` with the denied operations (`false`) on each field. Rules run without a document, `id` or `data`, and
- * `read` in the caller's `perspective`; the server stays the authority.
+ * `read` in the caller's `perspective`; the server stays the authority. A shared block is sent once, so its rules run
+ * without a collection or global, with paths from the block.
  * @returns The copy.
  */
 export async function withPermissions(core: Core, json: Json, visitor: Caller) {
@@ -35,6 +37,17 @@ export async function withPermissions(core: Core, json: Json, visitor: Caller) {
       target.access[op] = await decide(core, s, name, op, op === "read" ? { draft } : {});
     await fieldPermissions(s, entry.fields, target.fields, hookArgs(s, name, {}), "");
   }
+
+  const shared = {
+    cms: s.cms,
+    user: s.user,
+    apiKey: s.apiKey,
+    context: s.context,
+    draft: false,
+    locale: s.locale,
+  };
+  for (const [name, block] of Object.entries(core.schema.blocks))
+    await fieldPermissions(s, block.fields, out.blocks[name].fields, shared, "");
   return out;
 }
 
@@ -57,13 +70,14 @@ async function fieldPermissions(
     if (f.type === "group" || f.type === "array")
       await fieldPermissions(s, f.fields, target[key].fields, base, `${prefix}${key}.`);
     if (f.type === "blocks")
-      for (const [name, block] of Object.entries(f.blocks))
-        await fieldPermissions(
-          s,
-          block.fields,
-          target[key].blocks[name].fields,
-          base,
-          `${prefix}${key}.`,
-        );
+      for (const [name, block] of Object.entries(blocksOf(f)))
+        if (typeof target[key].blocks[name] === "object")
+          await fieldPermissions(
+            s,
+            block.fields,
+            target[key].blocks[name].fields,
+            base,
+            `${prefix}${key}.`,
+          );
   }
 }

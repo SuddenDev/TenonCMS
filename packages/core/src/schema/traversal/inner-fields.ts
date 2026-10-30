@@ -1,4 +1,5 @@
 import { type BlocksField, type Collection, type Field, type GroupField } from "../index.ts";
+import { blocksOf } from "./blocks-of.ts";
 
 /**
  * Finds the fields a value continues with: a group's or an array item's own, the target collection's for a relation
@@ -19,5 +20,5 @@ export function innerFields(collections: Record<string, Collection>, f: Field) {
  */
 export const blockGroups = (f: BlocksField): Record<string, GroupField> =>
   Object.fromEntries(
-    Object.entries(f.blocks).map(([name, b]) => [name, { type: "group", fields: b.fields }]),
+    Object.entries(blocksOf(f)).map(([name, b]) => [name, { type: "group", fields: b.fields }]),
   );

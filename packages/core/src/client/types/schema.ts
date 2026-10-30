@@ -8,6 +8,7 @@ import type {
   Schema,
   SelectOf,
 } from "../../schema/index.ts";
+import type { Replace } from "../../schema/inference/common.ts";
 import type { Register } from "../index.ts";
 
 // Fields as the HTTP API sends them: private fields optional, inside groups, array items and block items too.
@@ -17,14 +18,12 @@ type HttpFields<F> = string extends keyof F ? F : { [K in keyof F]: HttpField<F[
 type HttpField<F> = F extends { private: true } ? Omit<HttpGroup<F>, "required"> : HttpGroup<F>;
 
 type HttpGroup<F> = F extends { type: "group" | "array"; fields: infer G }
-  ? Omit<F, "fields"> & { fields: Extract<HttpFields<G>, Fields> }
+  ? Replace<F, "fields", HttpFields<G>>
   : F extends { type: "blocks"; blocks: infer B }
-    ? Omit<F, "blocks"> & {
-        blocks: { [K in keyof B]: Omit<B[K], "fields"> & { fields: HttpBlockFields<B[K]> } };
-      }
+    ? Replace<F, "blocks", { [K in keyof B]: Replace<B[K], "fields", HttpBlockFields<B[K]>> }>
     : F;
 
-type HttpBlockFields<B> = B extends { fields: infer G } ? Extract<HttpFields<G>, Fields> : never;
+type HttpBlockFields<B> = B extends { fields: infer G } ? HttpFields<G> : never;
 
 // `Extract` keeps the result assignable to `Fields`.
 type Http<R> = string extends keyof R

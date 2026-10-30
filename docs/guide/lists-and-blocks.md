@@ -37,6 +37,43 @@ Each block takes:
 | `description` | Help text in the block picker                                        |
 | `icon`        | A Lucide icon name for the block picker and the row header           |
 
+## Nested and shared blocks
+
+A block can have its own `blocks` fields, so items nest. A `columns` block with a `left` and a `right` list works with plain objects. Reuse a block in several places by importing the same object.
+
+Only a block that contains itself, like a `section` inside a `section`, needs a name: an object cannot point to itself while you define it. Put such blocks in `defineCms({ blocks })` and write the name where the block object would go:
+
+```ts
+defineCms({
+  blocks: {
+    text: { fields: { body: { type: "textarea" } } },
+    section: {
+      label: "Section",
+      fields: {
+        title: { type: "text" },
+        children: { type: "blocks", blocks: ["section", "text"] },
+      },
+    },
+  },
+  collections: {
+    pages: {
+      fields: {
+        content: { type: "blocks", blocks: { hero, section: "section", text: "text" } },
+      },
+    },
+  },
+});
+```
+
+- The key is what `blockType` stores, and the value names the shared block. They are usually the same, but `{ note: 'text' }` stores `note`.
+- A list of names is short for keys that equal the names: `["section", "text"]` is `{ section: "section", text: "text" }`.
+- A field MAY mix shared blocks and blocks defined in place, in the record form.
+- A name that is not in `defineCms({ blocks })` is a type error in the `defineCms` call, which lists the names you can use. Inside a collection file, the editor cannot suggest names, because `defineCollection` does not know the shared blocks.
+- Items nest to any depth. Validation, defaults, hooks, `private`, `populate` and `onDelete` work at every level, with positional paths like `content.0.children.2.body`.
+- Result types follow the nesting, so `blockType` narrows at every level.
+- `/schema` sends a shared block once, in `blocks`, and its name everywhere else.
+- The admin asks the field `access` rules of a shared block once, without `collection` or `global`, to lock its inputs. The server still checks every read and write with the full arguments.
+
 ## How items are stored
 
 Items live in the document JSON. Every item has a stable `id`. A block item also has its block name in `blockType`:
@@ -88,4 +125,4 @@ cms.find("pages", {
 - No `join` inside items, no join `on` path into items, and no `unique` inside items.
 - In a localized collection or global, a top-level list is one localized key: each locale has its own list, or all share it with `localized: false`. Fields inside items MUST NOT set `localized`.
 - A custom field's server `load` inside a block item finds its field through the saved document, so it needs one.
-- `defineCms` throws at startup for a join, `unique` or `localized` inside items, a join `on` into items, an empty `blocks` record, a negative `minRows` or `maxRows`, and `minRows` above `maxRows`.
+- `defineCms` throws at startup for a join, `unique` or `localized` inside items, a join `on` into items, an empty `blocks` record, a block name that `defineCms({ blocks })` does not hold, a negative `minRows` or `maxRows`, and `minRows` above `maxRows`.

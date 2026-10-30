@@ -52,9 +52,10 @@ At each hook stage the order is: field hooks, then the collection or global, the
 
 ## Integrity
 
-- **References**: ids are checked to exist, not to point at the document itself, and files are checked for type and size. Errors use the positional path (`links.1.page`).
+- **References**: ids are checked to exist, not to point at the document itself, and files are checked for type and size, at any depth. Errors use the positional path (`links.1.page`).
 - **Unique**: each top-level unique field scans the published data of the collection. A localized field compares what a read in that locale would return.
 - **Deleting**: when a document goes, every relation to it applies its `onDelete` rule after the row is deleted, in the same transaction: first `restrict`, then `set-null`, then `cascade`. Effect writes skip custom validation but keep hooks.
+- **Finding references**: one SQL query per relation path. An owner with a block inside itself has no complete list of paths, so it gets one text search for the id per owner, and a walk over each matching row finds the exact fields.
 
 ## Localization
 

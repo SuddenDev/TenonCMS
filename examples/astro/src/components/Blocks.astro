@@ -1,0 +1,43 @@
+---
+import { edit } from "tenoncms/preview";
+import type { PageBlock } from "../lib/find-page";
+
+interface Props {
+  /** The page that holds the blocks. */
+  id: string;
+  /** Dot path of the list, like `content` or `content.2.children`. */
+  path: string;
+  items: readonly PageBlock[];
+}
+
+const { id, path, items } = Astro.props;
+---
+
+{items.map((item, i) =>
+  item.blockType === "hero" ? (
+    <section>
+      <h2 data-cms={edit("pages", id, `${path}.${i}.title`)}>{item.title}</h2>
+      {item.image && (
+        <img
+          data-cms={edit("pages", id, `${path}.${i}.image`)}
+          src={item.image.src}
+          srcset={item.image.srcset}
+          sizes="(min-width: 720px) 720px, 100vw"
+          width={item.image.width}
+          height={item.image.height}
+          alt={item.image.alt ?? ""}
+          style="max-width: 100%; height: auto"
+        />
+      )}
+    </section>
+  ) : item.blockType === "section" ? (
+    <section style="border-left: 2px solid #ddd; padding-left: 1rem">
+      <h3 data-cms={edit("pages", id, `${path}.${i}.title`)}>{item.title}</h3>
+      {item.children && <Astro.self id={id} path={`${path}.${i}.children`} items={item.children} />}
+    </section>
+  ) : (
+    <p style="white-space: pre-wrap" data-cms={edit("pages", id, `${path}.${i}.body`)}>
+      {item.body}
+    </p>
+  ),
+)}

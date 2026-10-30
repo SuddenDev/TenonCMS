@@ -22,12 +22,21 @@ Code: `packages/core/src/schema/` (see its README).
 
 A few helpers walk the fields of a document, so every feature agrees on what a path means. Do not write another walk.
 
-- One value walker visits fields in order, into groups and into each list item. Defaults, slugs, field hooks, custom `validate` and field access use it.
-- Reference checks, `onDelete` effects and reverse lookups use relation paths. Population, `select` and response filtering use the inner-field helpers.
+- One value walker visits fields in order, into groups and into each list item. Defaults, slugs, field hooks, custom `validate`, field access and reference checks use it.
+- `onDelete` effects and reverse lookups use relation paths. Population, `select` and response filtering use the inner-field helpers.
 - The write validator is built from the data itself and follows the same rules for groups and items.
 - A relation path through a list has "each item" steps. Paths print as `links[].page` or `content[hero].image`.
 - A condition path MUST NOT cross a list. Joins are never stored, so the walkers skip them.
 - Localized fields: a group is one localized key, joins are none, and `localized: false` shares a top-level field.
+
+## Shared blocks
+
+- `defineCms({ blocks })` holds blocks that `blocks` fields name instead of defining them. At startup, `linkBlocks()` replaces each name with the one shared object, so a block that contains itself becomes a cycle of objects. The admin links the `/schema` JSON the same way.
+- Everything after linking sees only block objects (`blocksOf()`), so the item helpers need no change.
+- A walk that follows a value ends on its own. A walk over the schema alone MUST share a `seen` set (`unseenBlocks()`) or skip a block it is inside (`relationPaths()`), or it never ends.
+- Relation paths miss the items below a repeat. Where `nestsItself()` is true, reverse lookups search the rows whose JSON contains the id, then walk each row.
+- `/schema` sends each shared block once, in `blocks`, and its name everywhere else. A linked schema MUST NOT go through `JSON.stringify`.
+- Types: `LinkedOwners` resolves the names the same way, and only when shared blocks exist, so other schemas keep their exact types.
 
 ## Conditions and JSON
 

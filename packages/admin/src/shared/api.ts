@@ -13,7 +13,7 @@ export type {
   Version,
   VersionWithData,
 } from "../../../core/src/client";
-export type { Data, Field, Fields, Layout, MediaRead } from "../../../core/src/schema";
+export type { Block, Data, Field, Fields, Layout, MediaRead } from "../../../core/src/schema";
 
 export const client = createClient<{ schema: Schema }>();
 

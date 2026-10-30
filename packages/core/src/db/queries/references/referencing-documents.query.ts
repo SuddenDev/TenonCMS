@@ -1,17 +1,10 @@
-import { type Db, holdsAt } from "../document-sql.ts";
-import type { Step } from "../../../schema/traversal/relation-paths.ts";
+import type { Db, Holds } from "../document-sql.ts";
 
-/** Documents of `collection` whose relation at `path` holds `id`, as `{ id, data }` with the raw JSON. Reads published data. */
-export const referencingDocs = (
-  db: Db,
-  collection: string,
-  path: Step[],
-  many: boolean | undefined,
-  id: string,
-) =>
+/** Documents of `collection` whose published data `holds`, as `{ id, data }` with the raw JSON. */
+export const referencingDocs = (db: Db, collection: string, holds: Holds) =>
   db
     .selectFrom("cms_documents")
     .select(["id", "data"])
     .where("collection", "=", collection)
-    .where(holdsAt(db, "data", path, many, id))
+    .where(holds("data"))
     .execute();

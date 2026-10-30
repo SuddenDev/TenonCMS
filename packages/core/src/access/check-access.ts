@@ -1,4 +1,5 @@
-import type { Fields, Schema } from "../schema/index.ts";
+import type { Block, Fields, Schema } from "../schema/index.ts";
+import { unseenBlocks } from "../schema/traversal/blocks-of.ts";
 import type { Role } from "../users/roles.ts";
 
 /**
@@ -26,15 +27,15 @@ function checkRoles(known: Set<string>, owner: string, access: object | undefine
 }
 
 /** Checks the rules of each field, recursing into groups, arrays and blocks. `owner` is the dotted path so far. */
-function walk(known: Set<string>, fields: Fields, owner: string) {
+function walk(known: Set<string>, fields: Fields, owner: string, seen = new Set<Block>()) {
   for (const [key, f] of Object.entries(fields)) {
     checkRoles(known, `field "${owner}${key}"`, f.access);
     if (f.type === "join" && Object.keys(f.access ?? {}).some((op) => op !== "read"))
       throw new Error(`tenoncms: join "${owner}${key}" takes \`access.read\` only`);
 
-    if (f.type === "group" || f.type === "array") walk(known, f.fields, `${owner}${key}.`);
+    if (f.type === "group" || f.type === "array") walk(known, f.fields, `${owner}${key}.`, seen);
     if (f.type === "blocks")
-      for (const [name, block] of Object.entries(f.blocks))
-        walk(known, block.fields, `${owner}${key}.${name}.`);
+      for (const [name, block] of unseenBlocks(f, seen))
+        walk(known, block.fields, `${owner}${key}.${name}.`, seen);
   }
 }

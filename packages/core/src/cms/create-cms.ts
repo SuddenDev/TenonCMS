@@ -6,7 +6,7 @@ import { caller } from "../auth/get-caller.ts";
 import { createMediaCore } from "../media/runtime/create-media-core.ts";
 import type { MediaOptions } from "../media/config/options.ts";
 import { type Plugin } from "../plugins/index.ts";
-import type { Collection, Global, Schema } from "../schema/index.ts";
+import type { Block, Collection, Global, Schema } from "../schema/index.ts";
 import type { Api } from "./api/types.ts";
 import { createLocalApi } from "./api/create-local-api.ts";
 import type { AuthOptions } from "../auth/config/options.ts";
@@ -25,6 +25,8 @@ import type {
 import { mergePlugins } from "./config/merge-plugins.ts";
 import { createSiteSettings } from "./config/site-settings.ts";
 import { checkSchema } from "../schema/validation/check-schema.ts";
+import { linkBlocks } from "../schema/config/link-blocks.ts";
+import type { LinkedOwners } from "../schema/inference/linked.ts";
 import { defaultMedia } from "tenoncms/media/default";
 import { mediaCollection } from "../media/config/collection.ts";
 import { localizedKeys } from "../schema/traversal/localized-fields.ts";
@@ -60,6 +62,7 @@ export function defineCms<
   const M extends MediaOptions | boolean | undefined = undefined,
   const S extends SettingsOptions | false | undefined = undefined,
   const L extends string = never,
+  const B extends Record<string, Block> = {},
 >({
   database,
   secret,
@@ -75,10 +78,10 @@ export function defineCms<
   admin,
   roles: roleOptions,
   ...own
-}: CmsOptions<C, G, A, P, PL, M, S, L>) {
+}: CmsOptions<C, G, A, P, PL, M, S, L, B>) {
   type T = {
-    collections?: C & PluginCollections<PL> & MediaCollections<M>;
-    globals?: G & PluginGlobals<PL> & SettingsGlobals<S>;
+    collections?: LinkedOwners<C & PluginCollections<PL> & MediaCollections<M>, B>;
+    globals?: LinkedOwners<G & PluginGlobals<PL> & SettingsGlobals<S>, B>;
   };
   type D = DefaultDepth<P>;
 
@@ -116,10 +119,10 @@ export function defineCms<
   const mediaSchema = mediaOptions
     ? { collections: { media: { ...mediaCollection, access: mediaOptions.access } } }
     : undefined;
-  const schema = {
+  const schema = linkBlocks({
     ...settingsSchema,
     collections: { ...settingsSchema.collections, ...mediaSchema?.collections },
-  };
+  });
 
   // check if the schema is valid before proceeding
   checkSchema(schema, populateOption, localization);

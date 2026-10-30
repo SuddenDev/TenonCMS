@@ -24,7 +24,7 @@ An API key caller has `apiKey` and no `user`. `decide()` checks its grid first: 
 
 `Scope.overrideAccess` skips every rule. The server `cms` and its `withDrafts()` set it; `withSession()` and every HTTP scope do not. So host code that renders for visitors MUST read through `withSession()` or HTTP, or it sees everything. `inner()` keeps the caller's flag on the scope, so an operation checks its caller, and binds the `cms` that hooks get with `overrideAccess`, so presets, `onDelete` effects and cascades keep working.
 
-The admin shows what `/schema` allows: `withPermissions()` runs each rule for the caller (a user, or a key with `schema: ["read"]`), `read` in the perspective of the preview cookie. The admin hides an entry without `read`. User management is not an access rule: it belongs to the built-in `admin` role (see `../users/`).
+The admin shows what `/schema` allows: `withPermissions()` runs each rule for the caller (a user, or a key with `schema: ["read"]`), `read` in the perspective of the preview cookie. The fields of a shared block are asked once, without `collection` or `global`, because `/schema` sends the block once. The admin hides an entry without `read`. User management is not an access rule: it belongs to the built-in `admin` role (see `../users/`).
 
 ## Files
 
