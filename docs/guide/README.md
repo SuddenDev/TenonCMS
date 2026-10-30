@@ -2,7 +2,7 @@
 
 How to use tenoncms in your project. Each page starts with the idea, then shows examples.
 
-New here? Read [Framework setup](frameworks.md) and [Schema and fields](schema.md) first, then pick what you need.
+New here? Follow [Your first site](first-site.md), or read [Framework setup](frameworks.md) and [Schema and fields](schema.md) first, then pick what you need.
 
 Building or changing tenoncms itself? See the [developer docs](../dev/README.md).
 
@@ -10,6 +10,7 @@ Building or changing tenoncms itself? See the [developer docs](../dev/README.md)
 
 | Guide                            | What it covers                               |
 | -------------------------------- | -------------------------------------------- |
+| [Your first site](first-site.md) | Step by step from empty project to deploy    |
 | [Framework setup](frameworks.md) | Astro, Nuxt, TanStack Start, any Vite host   |
 | [Schema and fields](schema.md)   | Field types, options, validation, conditions |
 
