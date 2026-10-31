@@ -1165,3 +1165,34 @@ it("infers rich text JSON and excludes it from filters", () => {
   >();
   expectTypeOf<FilterKey<typeof fields>>().toEqualTypeOf<"title">();
 });
+
+it("infers link values, populated links, and excludes them from filters", () => {
+  const fields = {
+    cta: { type: "link", required: true },
+    title: { type: "text" },
+  } as const satisfies Fields;
+  const cms = defineCms({
+    collections: {
+      pages: { permalink: "/{slug}", fields: { slug: { type: "slug" } } },
+      posts: { fields },
+    },
+    database: libsql(":memory:"),
+    secret: "x".repeat(32),
+  });
+  const run = async () => {
+    const read = (await cms.findById("posts", "x"))!;
+    expectTypeOf(read.cta).toEqualTypeOf<import("../links/config/types.ts").LinkRead>();
+    const raw = (await cms.findById("posts", "x", { populate: false }))!;
+    expectTypeOf(raw.cta).toEqualTypeOf<import("../links/config/types.ts").LinkValue>();
+    // @ts-expect-error a stored link has no title
+    raw.cta.title;
+    // @ts-expect-error links are not filterable
+    await cms.find("posts", { where: { cta: "x" } });
+  };
+
+  expectTypeOf<Data<typeof fields>["cta"]>().toEqualTypeOf<
+    import("../links/config/types.ts").LinkValue
+  >();
+  expectTypeOf<FilterKey<typeof fields>>().toEqualTypeOf<"title">();
+  expect(run).toBeTypeOf("function");
+});

@@ -1,8 +1,9 @@
 import type { AnyExtension, Editor, Extensions } from "@tiptap/core";
 import type { ClientRef, Text } from "../../admin/index.d.ts";
+import type { LinkReference } from "../../links/config/types.ts";
 
 /** A CMS relation inside a Tiptap node or mark. `deleted` is owned by the server. */
-export type RichtextReference = { collection: string; id: string; deleted?: true };
+export type RichtextReference = LinkReference;
 /** A standard Tiptap JSON node or mark. */
 export type RichtextNode = {
   type: string;
@@ -29,9 +30,3 @@ export type RichtextRegistration = {
 };
 /** Registrations are keyed by the feature name used in a field's `allowed` list. */
 export type RichtextOptions = { extensions?: Record<string, RichtextRegistration> };
-/** Grouped results of the protected internal-link search. */
-export type RichtextTargets = {
-  collection: string;
-  label: Text;
-  items: { id: string; label: string }[];
-}[];

@@ -13,6 +13,8 @@ export {
   breadcrumbs,
   localeFromPath,
   localizePath,
+  type MenuItem,
+  menuItems,
   SLUG_PATTERN,
   seoMeta,
   slugify,

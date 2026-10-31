@@ -38,6 +38,12 @@ A few helpers walk the fields of a document, so every feature agrees on what a p
 - `/schema` sends each shared block once, in `blocks`, and its name everywhere else. A linked schema MUST NOT go through `JSON.stringify`.
 - Types: `LinkedOwners` resolves the names the same way, and only when shared blocks exist, so other schemas keep their exact types.
 
+## Links and display
+
+- `link` (`fields/link.ts`) stores `{ reference }` or `{ href }` with an optional `target`. Its zod schema first drops read decoration (`storedLink()`), then checks the shape and URL (`checkLinkValue()`), drafts included. Both live in `links/runtime/value.ts`, which the admin bundles.
+- `link` is not filterable (`filterable()`, `FilterKey`) and not in the `unique` types. A read types it `LinkRead` when the field populates, else `LinkValue`.
+- `appearance: "tree"` on `array` and `blocks` is admin only. The server ignores it.
+
 ## Conditions and JSON
 
 Anything the admin evaluates MUST be JSON: conditions, the built-in checks and plain defaults. They run in both places. `validate`, function defaults and hooks run on the server only, so the schema sent to the admin has them stripped.

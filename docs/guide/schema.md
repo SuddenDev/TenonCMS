@@ -81,6 +81,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | `relation`, `join` | Ids of other documents, and the reverse side | [Relations](./relations.md)               |
 | `image`, `file`    | Media ids                                    | [Media](./media.md)                       |
 | `richtext`         | A Tiptap document                            | [Rich text](./richtext.md)                |
+| `link`             | A link to a document or a URL                | [Links](#links)                           |
 | `custom:<name>`    | Your own input in the admin                  | [Customize the admin](./admin.md)         |
 
 ## Field options
@@ -97,6 +98,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name, or shared names |
 | `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                |
 | `labels`                            | `array`, `blocks`                                                                               | `{ singular, plural }` item labels in the admin      |
+| `appearance`                        | `array`, `blocks`                                                                               | `"tree"`: edit the items as a tree in the admin      |
 | `validate`                          | all but `join`                                                                                  | Your own check, on the server                        |
 | `condition`                         | all                                                                                             | The field applies only when this matches             |
 | `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value             |
@@ -207,3 +209,36 @@ seo: {
 - Inner `required` fields apply only when the group is present.
 - The admin saves an optional group that holds only empty values as `null`.
 - Filters (`where`, query strings) accept top-level fields only, not groups or their inner fields.
+
+## Links
+
+A `link` field points to a document of a collection with a `permalink`, or to a URL. Menus use it, see [Menus](./menus.md).
+
+```ts
+cta: { type: "link" }
+cta: { type: "link", required: true }
+```
+
+It stores one of these, with an optional `target` (`_self`, `_blank`, `_parent`, `_top`):
+
+```ts
+{ reference: { collection: "pages", id: "p1" }, target: "_blank" }
+{ href: "https://example.com" }
+```
+
+- An `href` follows the rich text rules: HTTP(S), `mailto:`, `tel:`, relative paths and fragments. Executable schemes are rejected.
+- A bad shape, a bad `href` or a collection without a `permalink` is a field error at its path, like `items.0.children.2.link`, also in drafts.
+- Publishing checks that the target exists. Drafts keep the loose checks.
+- It works at every depth in groups and lists. It is not filterable and cannot be `unique`.
+
+A populated read adds the target's `permalink` as `href`, in the read's locale and perspective, with the locale prefix of `routing`, and its title as `title`. This also holds in a collection or global that is not localized. Preview URLs are never used.
+
+```ts
+{ reference: { collection: "pages", id: "p1" }, href: "/de/about", title: "Über uns" }
+```
+
+- A target that is not available (deleted, unpublished in a public read, denied, or missing in the locale with `fallback: false`) reads as `href: null` and `broken: true`. It is never an error.
+- `populate: false` returns the stored value. A write ignores `href`, `title` and `broken` next to a `reference`, so a read value can be saved back.
+- Deleting a linked document throws `LinkedContentError` (409, `LINKED_CONTENT`), like [rich text](./richtext.md#deleting-linked-content). `{ allowBrokenLinks: true }` deletes it and marks `reference.deleted: true` in every value that pointed to it.
+
+In the admin, one input searches titles across collections with a `permalink` and takes a typed URL ("Use https://…"). A switch opens the link in a new tab.

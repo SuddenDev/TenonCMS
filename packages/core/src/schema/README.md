@@ -64,4 +64,4 @@ Defaults, slugs, custom validators, field hooks and reference checks share one `
 
 Browser code MUST import field and schema contracts with `import type`, so zod stays on the server. `condition.ts` MUST stay import-free. The `inference/` types run nothing; after a change there, check both `pnpm typecheck` and the tsdown d.ts build, because the read types sit close to TS2589 and to tsdown's memory limit.
 
-`fields/richtext.ts` declares the standard Tiptap JSON field. The [richtext module](../richtext/README.md) owns its shared schema, feature policy, embedded relations and read decoration.
+`fields/richtext.ts` declares the standard Tiptap JSON field. The [richtext module](../richtext/README.md) owns its shared schema, feature policy and Tiptap decoration. `fields/link.ts` declares the `link` field. The [links module](../links/README.md) owns the value checks, resolution and integrity of both. `appearance: "tree"` on `array` and `blocks` is admin only.

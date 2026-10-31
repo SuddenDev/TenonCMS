@@ -1,4 +1,4 @@
-import { breakRichtextLinks } from "../../richtext/integrity/break-links.ts";
+import { breakLinks } from "../../links/integrity/break-links.ts";
 import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { collectionTarget, target, targetKey } from "../targets.ts";
@@ -40,7 +40,7 @@ export async function remove(
 
   const base = hookArgs(s, collectionTarget(collection), { id, doc });
   await runHooks(slot(core, collectionTarget(collection), "beforeDelete"), "doc", doc, base);
-  await breakRichtextLinks(db, core, collection, id, options.allowBrokenLinks);
+  await breakLinks(db, core, collection, id, options.allowBrokenLinks);
 
   await deleteDoc(db, collection, id);
   if (core.localization) await deleteLocales(db, DOCUMENT_LOCALES, id);

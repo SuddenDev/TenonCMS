@@ -1,7 +1,9 @@
 import type { ArrayField, Block, BlocksField, Fields } from "../../../../core/src/schema";
 import { blocksOf } from "../../../../core/src/schema/traversal/blocks-of";
 import { itemFields } from "../../../../core/src/schema/traversal/item-fields";
+import type { LinkResolution } from "../../../../core/src/links/config/types";
 import { normalize } from "./fields";
+import { linkHost } from "./links";
 
 export type ListField = ArrayField | BlocksField;
 
@@ -73,6 +75,27 @@ export function moveItemTo(list: Item[], from: string, to: string, index: number
   target.splice(source === target && i < index ? index - 1 : index, 0, item);
 }
 
+/**
+ * Inserts `item` into the list at the path `to`, relative to `list`, at `index` or at the end. Changes it in place.
+ * @returns The item's position.
+ */
+export function insertItemAt(list: Item[], to: string, item: Item, index?: number) {
+  const target: Item[] = valueAt(list, to);
+  const at = index ?? target.length;
+  target.splice(at, 0, item);
+  return at;
+}
+
+/**
+ * Removes the item at the path `at`, relative to `list`, in place.
+ * @returns The removed item.
+ */
+export function removeItemAt(list: Item[], at: string): Item {
+  const cut = at.lastIndexOf(".");
+  const source: Item[] = valueAt(list, at.slice(0, Math.max(cut, 0)));
+  return source.splice(Number(at.slice(cut + 1)), 1)[0];
+}
+
 function renew(value: Record<string, any>, fields: Fields) {
   for (const [k, f] of Object.entries(fields)) {
     const v = value[k];
@@ -105,4 +128,67 @@ export function itemTitle(item: Item, field: ArrayField | BlocksField): string {
     if (TEXT.includes(f.type) && typeof v === "string" && v.trim()) return v;
   }
   return "";
+}
+
+/** Looks up the resolution of a link reference, see `useLinks()`. */
+export type ResolveLink = (reference: {
+  collection: string;
+  id: string;
+}) => LinkResolution | undefined;
+
+/**
+ * What a tree row shows. `title`: the first text value, else the title of the first `link` field (`fromLink`), else
+ * empty. `line`: the link's path, or the host of an external link, with the `collection` of a reference. Without a
+ * link, there is no `line`.
+ */
+export function treeRow(
+  item: Item,
+  field: ListField,
+  resolve: ResolveLink,
+): { title: string; fromLink: boolean; line?: string; collection?: string } {
+  const fields = itemFields(field, item) ?? {};
+  const key = Object.keys(fields).find((k) => fields[k].type === "link" && item[k]);
+  const link = key ? item[key] : undefined;
+  const resolved = link?.reference ? resolve(link.reference) : undefined;
+  const title = itemTitle(item, field);
+  const linkTitle = resolved?.title ?? "";
+  const row = { title: title || linkTitle, fromLink: !title && !!linkTitle };
+
+  if (link?.reference)
+    return resolved?.href
+      ? { ...row, line: resolved.href, collection: link.reference.collection }
+      : { ...row, collection: link.reference.collection };
+  if (typeof link?.href === "string") return { ...row, line: linkHost(link.href) };
+  return row;
+}
+
+/** Whether `errors` holds a message at `path` or below it. A row uses it for itself and its descendants. */
+export function hasErrorsAt(errors: Record<string, string> | undefined, path: string) {
+  return Object.keys(errors ?? {}).some((key) => key === path || key.startsWith(`${path}.`));
+}
+
+/**
+ * The items from the top list down to the deepest one whose path is `target` or holds it. Only lists that
+ * `nestedLists()` finds are followed.
+ * @returns An empty list when `target` is outside the list at `path`.
+ */
+export function itemChain(field: ListField, items: Item[], path: string, target: string) {
+  const chain: { path: string; item: Item; field: ListField }[] = [];
+  let list = { field, items, path };
+
+  while (target.startsWith(`${list.path}.`)) {
+    const index = Number(target.slice(list.path.length + 1).split(".")[0]);
+    const item = list.items[index];
+    if (!item) break;
+
+    const at = `${list.path}.${index}`;
+    chain.push({ path: at, item, field: list.field });
+    const next = nestedLists(list.field, item, at).find(
+      (l) => target === l.path || target.startsWith(`${l.path}.`),
+    );
+    if (!next) break;
+    list = next;
+  }
+
+  return chain;
 }

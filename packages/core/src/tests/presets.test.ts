@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { CmsError } from "../client/index.ts";
-import { defineCms } from "../index.ts";
-import { nestedPaths, page, seo, strings } from "../presets/index.ts";
+import { defineCms, menuItems } from "../index.ts";
+import { menu, nestedPaths, page, seo, strings } from "../presets/index.ts";
 import { admin, fresh, origin, setup, status, type Env, testDatabase, testDb } from "./setup.ts";
 
 let cms: Env["cms"];
@@ -333,5 +333,133 @@ describe("strings preset", () => {
       readMore: "Mehr lesen",
       subscribe: "Sign up",
     });
+  });
+});
+
+describe("menu preset", () => {
+  const { blocks, fields } = menu();
+  const make = () =>
+    defineCms({
+      collections: {
+        pages: {
+          titleField: "title",
+          permalink: "/{slug}",
+          fields: { title: { type: "text" }, slug: { type: "slug" } },
+        },
+      },
+      blocks: { ...blocks },
+      globals: {
+        mainMenu: { label: "Main menu", nav: { display: "settings" }, fields: { ...fields } },
+      },
+      database: testDatabase(),
+      secret: "x".repeat(32),
+      media: false,
+    });
+
+  it("nests links and headings and renders with menuItems()", async () => {
+    const cms = make();
+    const about = await cms.create("pages", { title: "About", slug: "about" });
+    const shoes = await cms.create("pages", { title: "Shoes", slug: "shoes" });
+    const link = (id: string) => ({ reference: { collection: "pages", id } });
+    await cms.setGlobal("mainMenu", {
+      items: [
+        { blockType: "link", link: link(about.id) },
+        {
+          blockType: "heading",
+          label: "Products",
+          children: [
+            {
+              blockType: "link",
+              label: "All shoes",
+              link: link(shoes.id),
+              children: [
+                { blockType: "link", link: { href: "https://example.com", target: "_blank" } },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const items = menuItems((await cms.getGlobal("mainMenu")).items);
+
+    expect(items).toMatchObject([
+      { type: "link", label: "About", href: "/about", children: [] },
+      {
+        type: "heading",
+        label: "Products",
+        href: null,
+        children: [
+          {
+            type: "link",
+            label: "All shoes",
+            href: "/shoes",
+            children: [{ type: "link", label: "", href: "https://example.com", target: "_blank" }],
+          },
+        ],
+      },
+    ]);
+    items[1].children[0].children[0].href satisfies string | null;
+  });
+
+  it("requires a link on a link item and a label on a heading", async () => {
+    const cms = make();
+
+    await expect(
+      cms.setGlobal("mainMenu", {
+        items: [{ blockType: "heading", children: [{ blockType: "link" }] }],
+      }),
+    ).rejects.toMatchObject({
+      errors: {
+        "items.0.label": expect.any(String),
+        "items.0.children.0.link": expect.any(String),
+      },
+    });
+  });
+
+  it("takes blocks of the host wherever a link goes", async () => {
+    const withButton = menu({
+      blocks: {
+        button: {
+          fields: {
+            label: { type: "text", required: true },
+            link: { type: "link", required: true },
+            style: { type: "select", options: ["primary", "secondary"] },
+          },
+        },
+      },
+    });
+    const cms = defineCms({
+      blocks: { ...withButton.blocks },
+      globals: { mainMenu: { fields: { ...withButton.fields } } },
+      database: testDatabase(),
+      secret: "x".repeat(32),
+      media: false,
+    });
+    const button = { label: "Shop", link: { href: "https://example.com" }, style: "primary" };
+    await cms.setGlobal("mainMenu", {
+      items: [
+        { blockType: "button", ...button },
+        {
+          blockType: "link",
+          link: { href: "/a" },
+          children: [{ blockType: "button", ...button }],
+        },
+        { blockType: "heading", label: "More", children: [{ blockType: "button", ...button }] },
+      ],
+    });
+
+    const items = menuItems((await cms.getGlobal("mainMenu")).items);
+
+    expect(items).toMatchObject([
+      { type: "button", label: "Shop", href: "https://example.com", style: "primary" },
+      { type: "link", children: [{ type: "button", style: "primary" }] },
+      { type: "heading", children: [{ type: "button", style: "primary" }] },
+    ]);
+  });
+
+  it("rejects a block named like a preset block", () => {
+    // @ts-expect-error `link` is the preset's block
+    menu({ blocks: { link: { fields: {} } } });
   });
 });

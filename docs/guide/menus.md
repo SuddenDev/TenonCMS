@@ -1,0 +1,157 @@
+# Menus
+
+A menu is a global with a list of links that nest. The `menu` preset gives you the fields, the admin shows them as a tree, and `menuItems()` turns a read into entries you can render.
+
+## Set it up
+
+```ts
+import { defineCms } from "tenoncms";
+import { menu } from "tenoncms/presets";
+
+const mainMenu = menu();
+
+defineCms({
+  blocks: { ...mainMenu.blocks },
+  globals: {
+    mainMenu: {
+      label: "Main menu",
+      localized: true,
+      nav: { display: "settings" },
+      fields: { ...mainMenu.fields },
+    },
+  },
+});
+```
+
+- `blocks` holds two [shared blocks](./lists-and-blocks.md#nested-and-shared-blocks):
+  - `menuLink`: `label` (text, optional), `link` (a [`link` field](./schema.md#links), required) and `children` (links and headings).
+  - `menuHeading`: `label` (text, required) and `children` (links).
+- `fields.items` is a `blocks` field with `appearance: "tree"`. `blockType` stores `link` and `heading`.
+- A link MAY hold links directly. A heading is never required.
+- The blocks are shared because `menuLink` contains itself. A change to `menuLink` applies at every depth.
+- Where the menu shows in the admin is up to `nav` on the global. Add more globals for more menus, like a footer menu. Menus that share blocks MUST come from one `menu()` call.
+
+## Edit it
+
+The admin shows the items as a tree:
+
+- Drag rows to reorder and nest them. **Move to** in the row menu does the same with the keyboard.
+- A click opens the item in a sheet next to the preview. Edits apply at once.
+- The link input searches pages and other collections with a `permalink`. Typing a URL offers "Use https://…".
+- Leave the label empty to use the target's title. The row shows that title in muted text.
+
+See [Tree appearance](./lists-and-blocks.md#tree-appearance) for the details.
+
+## Render it
+
+```ts
+import { menuItems } from "tenoncms";
+
+const menu = await cms.getGlobal("mainMenu", { locale });
+const items = menuItems(menu.items);
+// [{ type: "link", label: "About", href: "/about", target: undefined, children: [...] }]
+```
+
+- `menuItems()` is in `tenoncms` and `tenoncms/client`. It makes no queries, so the read MUST be populated (the default).
+- `type` is the item's `blockType`.
+- `label` is the item's label, else the link's title, else `""`.
+- `href` and `target` come from the item's link. A heading has `href: null`.
+- An item whose link is broken (a deleted, unpublished or untranslated target) is left out, with its children.
+- Other item fields, like an `icon` you add, pass through with their types.
+
+An Astro component that calls itself for the children:
+
+```astro
+---
+const { items } = Astro.props;
+---
+<ul>
+  {items.map((item) => (
+    <li>
+      {item.href ? <a href={item.href} target={item.target}>{item.label}</a> : <span>{item.label}</span>}
+      {item.children.length > 0 && <Astro.self items={item.children} />}
+    </li>
+  ))}
+</ul>
+```
+
+`examples/astro` renders its main menu this way in `src/components/MenuList.astro`.
+
+## Customize it
+
+Add blocks of your own with `blocks`. Each one goes wherever a link goes: at the top, under links and under headings.
+
+```ts
+const mainMenu = menu({
+  blocks: {
+    button: {
+      label: "Button",
+      fields: {
+        label: { type: "text", required: true },
+        link: { type: "link", required: true },
+        style: { type: "select", options: ["primary", "secondary"] },
+      },
+    },
+  },
+});
+```
+
+- `blockType` stores the key, `button`. The shared block is named after it, `menuButton`.
+- The keys `link` and `heading` belong to the preset.
+- `menuItems()` gives the item `type: "button"`, and `style` passes through. A block with a `link` field gets `href` and `target`; one without has `href: null`.
+
+Everything else is plain objects, so you change it with spreads. More fields on links, or flat links:
+
+```ts
+const { menuLink } = mainMenu.blocks;
+const { children, ...flatLink } = menuLink.fields;
+
+defineCms({
+  blocks: {
+    ...mainMenu.blocks,
+    menuLink: {
+      ...menuLink,
+      fields: { ...menuLink.fields, icon: { type: "select", options: ["home", "mail", "phone"] } },
+    },
+    // Flat links: menuLink: { ...menuLink, fields: flatLink },
+  },
+});
+```
+
+Without headings, remove `heading` from both lists of blocks:
+
+```ts
+const { menuLink } = mainMenu.blocks;
+const { heading, ...itemBlocks } = mainMenu.fields.items.blocks;
+const { heading: _, ...childBlocks } = menuLink.fields.children.blocks;
+
+defineCms({
+  blocks: {
+    menuLink: {
+      ...menuLink,
+      fields: {
+        ...menuLink.fields,
+        children: { ...menuLink.fields.children, blocks: childBlocks },
+      },
+    },
+  },
+  globals: {
+    mainMenu: { fields: { items: { ...mainMenu.fields.items, blocks: itemBlocks } } },
+  },
+});
+```
+
+## Languages
+
+The preset does not set `localized`. The global does.
+
+|                     | `localized: true`       | not localized           |
+| ------------------- | ----------------------- | ----------------------- |
+| Tree                | one per locale          | one, shared             |
+| Internal link paths | per locale              | per locale              |
+| Empty label         | target title per locale | target title per locale |
+| Typed label         | per locale              | the same everywhere     |
+
+- A locale without its own menu reads the default locale's with `fallback`. `copyGlobalLocale` copies a menu to a new locale.
+- A target without a version in the read's locale resolves to the default locale's with `fallback`. Without it, the link is broken and `menuItems()` leaves it out.
+- A shared tree with translated labels is not possible yet.

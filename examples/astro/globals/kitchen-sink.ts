@@ -220,6 +220,7 @@ export const kitchenSink = defineGlobal({
     gallery: { type: "image", tab: "media", many: true, folder: "kitchen-sink" },
     author: { type: "relation", tab: "media", collection: "authors", width: "1/2" },
     posts: { type: "relation", tab: "media", collection: "posts", many: true, width: "1/2" },
+    cta: { type: "link", tab: "media", description: "A page, a post or a URL." },
 
     // Groups and lists
     meta: {
@@ -262,6 +263,18 @@ export const kitchenSink = defineGlobal({
             lng: { type: "number", min: -180, max: 180, width: "1/2" },
           },
         },
+      },
+    },
+    outline: {
+      type: "array",
+      tab: "structure",
+      appearance: "tree",
+      label: "Outline",
+      description: "An array shown as a tree.",
+      labels: { singular: "Entry" },
+      fields: {
+        title: { type: "text", required: true },
+        children: { type: "array", fields: { title: { type: "text", required: true } } },
       },
     },
     links: {

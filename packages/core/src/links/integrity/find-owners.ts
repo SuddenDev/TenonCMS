@@ -2,23 +2,23 @@ import type { Core } from "../../cms/runtime/types.ts";
 import type { Db } from "../../db/queries/document-sql.ts";
 import type { Fields } from "../../schema/fields/index.ts";
 import type { LinkedReference } from "../../errors.ts";
-import { hasRichtext } from "../runtime/fields.ts";
+import { hasLinkingFields } from "../runtime/fields.ts";
 
 /** One stored published or draft value and its transaction-bound writer. */
-export type RichtextOwner = {
+export type LinkOwner = {
   owner: Omit<LinkedReference, "field">;
   fields: Fields;
   data: Record<string, any>;
   save(data: Record<string, any>): Promise<unknown>;
 };
 
-/** Scans only collections and globals whose schemas contain rich text. Call inside the deletion transaction. */
-export async function richtextOwners(db: Db, core: Core) {
-  // shortcut: scans rich text owners in memory; index references when deletion scans become slow.
-  const rows: RichtextOwner[] = [];
+/** Scans only collections and globals whose schemas contain linking fields. Call inside the deletion transaction. */
+export async function linkOwners(db: Db, core: Core) {
+  // shortcut: scans link owners in memory; index references when deletion scans become slow.
+  const rows: LinkOwner[] = [];
 
   for (const [collection, entry] of Object.entries(core.schema.collections)) {
-    if (!hasRichtext(entry.fields)) continue;
+    if (!hasLinkingFields(entry.fields)) continue;
 
     for (const row of await db
       .selectFrom("cms_documents")
@@ -72,7 +72,7 @@ export async function richtextOwners(db: Db, core: Core) {
   }
 
   for (const [global, entry] of Object.entries(core.schema.globals)) {
-    if (!hasRichtext(entry.fields)) continue;
+    if (!hasLinkingFields(entry.fields)) continue;
 
     const row = await db
       .selectFrom("cms_globals")

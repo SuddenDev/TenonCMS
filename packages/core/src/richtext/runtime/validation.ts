@@ -1,13 +1,11 @@
 import type { Schema } from "@tiptap/pm/model";
 import { richtextSchema, RICHTEXT_FEATURES } from "./extensions.ts";
 import { walkRichtext } from "./walk.ts";
+import { safeLinkUrl } from "../../links/runtime/url.ts";
 import type { RichtextDocument, RichtextRegistration } from "../config/types.ts";
 
-/** Accepts web URLs, email, telephone, relative paths and fragments. */
-export function safeRichtextUrl(value: unknown): value is string {
-  if (typeof value !== "string" || /[\s\p{Cc}]/u.test(value)) return false;
-  return !/^[a-z][a-z\d+.-]*:/i.test(value) || /^(https?:|mailto:|tel:)/i.test(value);
-}
+/** Accepts web URLs, email, telephone, relative paths and fragments. The rules of every link, see `safeLinkUrl()`. */
+export const safeRichtextUrl = safeLinkUrl;
 
 /** Checks document shape before the schema parser can drop unknown nodes, marks or attributes. */
 export function checkRichtextShape(value: unknown, depth = 0): asserts value is RichtextDocument {

@@ -8,7 +8,7 @@ import LinkDialog from "./LinkDialog.vue";
 let app: App | undefined;
 let root: HTMLElement;
 beforeEach(() => {
-  vi.spyOn(client.richtext, "resolve").mockImplementation(async (document) => document);
+  vi.spyOn(client.links, "resolve").mockImplementation(async (document) => document);
 });
 afterEach(() => {
   app?.unmount();
@@ -42,7 +42,7 @@ async function render(attrs: Record<string, any> = {}) {
 }
 
 it("loads the selected title when reopening a saved link outside the search results", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([]);
+  vi.spyOn(client.links, "search").mockResolvedValue([]);
   const load = vi.spyOn(client, "findById").mockResolvedValue({ id: "saved", name: "Saved post" });
   await render({ reference: { collection: "posts", id: "saved" } });
   await vi.waitFor(() =>
@@ -56,7 +56,7 @@ it("loads the selected title when reopening a saved link outside the search resu
 });
 
 it("keeps the reference visible when its target cannot be loaded", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([]);
+  vi.spyOn(client.links, "search").mockResolvedValue([]);
   vi.spyOn(client, "findById").mockRejectedValue(new Error("Not found"));
   await render({ reference: { collection: "posts", id: "missing" } });
   await vi.waitFor(() =>
@@ -68,7 +68,7 @@ it("keeps the reference visible when its target cannot be loaded", async () => {
 });
 
 it("does not apply an old title after reopening for another link", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([]);
+  vi.spyOn(client.links, "search").mockResolvedValue([]);
   let resolveFirst!: (value: any) => void;
   vi.spyOn(client, "findById")
     .mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)))
@@ -89,7 +89,7 @@ it("does not apply an old title after reopening for another link", async () => {
 });
 
 it("omits empty search groups while retaining groups with matches", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([
+  vi.spyOn(client.links, "search").mockResolvedValue([
     { collection: "posts", label: "Posts", items: [{ id: "post", label: "A post" }] },
     { collection: "pages", label: "Pages", items: [] },
   ]);
@@ -108,7 +108,7 @@ it("omits empty search groups while retaining groups with matches", async () => 
 });
 
 it("shows the empty state without group headings when no targets match", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([
+  vi.spyOn(client.links, "search").mockResolvedValue([
     { collection: "posts", label: "Posts", items: [] },
   ]);
   await render();
@@ -127,7 +127,7 @@ it("shows the empty state without group headings when no targets match", async (
 
 it("uses server search results and clears headings when the next search has no matches", async () => {
   const search = vi
-    .spyOn(client.richtext, "search")
+    .spyOn(client.links, "search")
     .mockResolvedValueOnce([
       { collection: "posts", label: "Posts", items: [{ id: "post", label: "A post" }] },
     ]);
@@ -155,13 +155,13 @@ it("uses server search results and clears headings when the next search has no m
 });
 
 it("shows the resolved permalink beside a saved reference", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([]);
+  vi.spyOn(client.links, "search").mockResolvedValue([]);
   vi.spyOn(client, "findById").mockResolvedValue({
     id: "saved",
     name: "Saved post",
     path: "/wrong",
   });
-  vi.mocked(client.richtext.resolve).mockImplementation(async (document) => {
+  vi.mocked(client.links.resolve).mockImplementation(async (document) => {
     document.content![0].content![0].marks![0].attrs!.href = "/en/articles/saved";
     return document;
   });
@@ -171,17 +171,17 @@ it("shows the resolved permalink beside a saved reference", async () => {
   );
 
   expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain("/wrong");
-  expect(client.richtext.resolve).toHaveBeenCalledWith(expect.objectContaining({ type: "doc" }), {
+  expect(client.links.resolve).toHaveBeenCalledWith(expect.objectContaining({ type: "doc" }), {
     locale: "en",
   });
 });
 
 it("shows the permalink after selecting a new reference", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([
+  vi.spyOn(client.links, "search").mockResolvedValue([
     { collection: "posts", label: "Posts", items: [{ id: "post", label: "A post" }] },
   ]);
   vi.spyOn(client, "findById").mockResolvedValue({ id: "post", name: "A post" });
-  vi.mocked(client.richtext.resolve).mockImplementation(async (document) => {
+  vi.mocked(client.links.resolve).mockImplementation(async (document) => {
     document.content![0].content![0].marks![0].attrs!.href = "/en/articles/post";
     return document;
   });
@@ -195,12 +195,12 @@ it("shows the permalink after selecting a new reference", async () => {
 });
 
 it("ignores a late permalink response after reopening for another reference", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([]);
+  vi.spyOn(client.links, "search").mockResolvedValue([]);
   vi.spyOn(client, "findById")
     .mockResolvedValueOnce({ id: "first", name: "First post" })
     .mockResolvedValueOnce({ id: "second", name: "Second post" });
   let finishFirst!: () => void;
-  vi.mocked(client.richtext.resolve)
+  vi.mocked(client.links.resolve)
     .mockImplementationOnce(
       (document) =>
         new Promise((resolve) => {
@@ -215,7 +215,7 @@ it("ignores a late permalink response after reopening for another reference", as
       return document;
     });
   const { open, attributes } = await render({ reference: { collection: "posts", id: "first" } });
-  await vi.waitFor(() => expect(client.richtext.resolve).toHaveBeenCalledOnce());
+  await vi.waitFor(() => expect(client.links.resolve).toHaveBeenCalledOnce());
   open.value = false;
   await nextTick();
   attributes.value = { reference: { collection: "posts", id: "second" } };
@@ -230,9 +230,9 @@ it("ignores a late permalink response after reopening for another reference", as
 });
 
 it("keeps the selected title when permalink resolution fails", async () => {
-  vi.spyOn(client.richtext, "search").mockResolvedValue([]);
+  vi.spyOn(client.links, "search").mockResolvedValue([]);
   vi.spyOn(client, "findById").mockResolvedValue({ id: "saved", name: "Saved post" });
-  vi.mocked(client.richtext.resolve).mockRejectedValue(new Error("Cannot resolve link"));
+  vi.mocked(client.links.resolve).mockRejectedValue(new Error("Cannot resolve link"));
   await render({ reference: { collection: "posts", id: "saved" } });
   await vi.waitFor(() =>
     expect(document.querySelector('[role="alert"]')?.textContent).toBe("Cannot resolve link"),

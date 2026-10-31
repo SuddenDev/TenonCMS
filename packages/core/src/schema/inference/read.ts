@@ -1,5 +1,6 @@
 import type { Field, Fields } from "../fields/index.ts";
 import type { FieldsOf, Simplify } from "./common.ts";
+import type { LinkRead, LinkValue } from "../../links/config/types.ts";
 import type {
   FieldValue,
   File,
@@ -95,9 +96,13 @@ type FieldReadValue<Collections, FieldType, Spec> = FieldType extends {
           ? MediaFieldValue<FieldType, Spec>
           : FieldType extends { type: "join" }
             ? JoinValue<Collections, FieldType, Spec>
-            : FieldType extends Field
-              ? FieldValue<FieldType>
-              : never;
+            : FieldType extends { type: "link" }
+              ? Off<Spec> extends true
+                ? LinkValue
+                : LinkRead
+              : FieldType extends Field
+                ? FieldValue<FieldType>
+                : never;
 
 type OptionalReadFields<Collections, F extends Fields, Spec> = {
   [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: FieldReadValue<

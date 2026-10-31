@@ -1,4 +1,5 @@
 import type { RichtextDocument } from "../richtext/config/types.ts";
+import type { LinkReference } from "../links/config/types.ts";
 import type { ConflictOptions, DeleteOptions } from "../errors.ts";
 import type { Schema } from "../schema/index.ts";
 import { API_KEY_HEADER } from "./constants.ts";
@@ -184,10 +185,16 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       { method = "GET", body, query } = {} as NonNullable<Parameters<Client["request"]>[1]>,
     ) => request(method, path, body, query),
 
-    richtext: {
-      resolve: (document: RichtextDocument, options: { locale?: string } = {}) =>
-        request("POST", "/admin/richtext/resolve", { document, ...options }),
-      search: (options = {}) => request("GET", "/admin/richtext/targets", undefined, options),
+    links: {
+      resolve: (input: RichtextDocument | LinkReference[], options: { locale?: string } = {}) =>
+        request(
+          "POST",
+          "/admin/links/resolve",
+          Array.isArray(input)
+            ? { references: input, ...options }
+            : { document: input, ...options },
+        ),
+      search: (options = {}) => request("GET", "/admin/links/search", undefined, options),
     },
 
     media: {

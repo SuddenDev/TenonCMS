@@ -1,9 +1,11 @@
 import type { RichtextDocument } from "../../richtext/config/types.ts";
+import type { LinkValue } from "../../links/config/types.ts";
 import type { Field, Fields } from "../fields/index.ts";
 import type { Keys } from "./common.ts";
 
 type Scalar = {
   richtext: RichtextDocument;
+  link: LinkValue;
   text: string;
   textarea: string;
   date: string;
@@ -114,8 +116,8 @@ export type Image = File & {
 /** A populated `image` or `file`, or several with `many`. */
 export type MediaValue<F, T> = F extends { many: true } ? T[] : T;
 
-/** Field keys that `where` accepts. Groups, arrays, blocks, joins and `many` relations and selects are not filterable. */
+/** Field keys that `where` accepts. Rich text, links, groups, arrays, blocks, joins and `many` relations and selects are not filterable. */
 export type FilterKey<F extends Fields> = Exclude<
   keyof F,
-  Keys<F, { type: "group" | "array" | "blocks" | "join" | "richtext" } | { many: true }>
+  Keys<F, { type: "group" | "array" | "blocks" | "join" | "richtext" | "link" } | { many: true }>
 >;

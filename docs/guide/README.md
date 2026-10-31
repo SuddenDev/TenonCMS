@@ -37,6 +37,7 @@ Building or changing tenoncms itself? See the [developer docs](../dev/README.md)
 | Guide                             | What it covers                                                 |
 | --------------------------------- | -------------------------------------------------------------- |
 | [Pages and SEO](pages-and-seo.md) | Nested page paths, `seoMeta()`, `breadcrumbs()`, site settings |
+| [Menus](menus.md)                 | The `menu` preset, the tree editor, `menuItems()`              |
 | [Live preview](live-preview.md)   | `permalink`, `edit()`, the visual editor, the admin bar        |
 
 **Run it**

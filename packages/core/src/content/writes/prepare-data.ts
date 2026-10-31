@@ -1,4 +1,5 @@
 import { prepareRichtext } from "../../richtext/writes/prepare-richtext.ts";
+import { prepareLinks } from "../../links/writes/prepare-links.ts";
 import type { WriteState } from "./write-document.ts";
 import { slot } from "../../content/lifecycle/collect-hooks.ts";
 import { runHooks } from "../../schema/runtime/run-hooks.ts";
@@ -49,6 +50,7 @@ export async function prepareData(state: WriteState, input: unknown) {
   );
 
   prepareRichtext(core, fields, prepared, sourceData, loose, args.originalDoc);
+  prepareLinks(core, fields, prepared, sourceData);
 
   return prepared;
 }

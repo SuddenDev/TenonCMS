@@ -1,3 +1,4 @@
+export { menu } from "./menu.ts";
 export { page } from "./page.ts";
 export { seo } from "./seo.ts";
 export { settings } from "./settings.ts";

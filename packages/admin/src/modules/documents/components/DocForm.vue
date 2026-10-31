@@ -10,6 +10,7 @@ import { Button } from "@/shared/components/ui/button";
 import FieldInput from "./FieldInput.vue";
 import FieldLayout from "./fields/FieldLayout.vue";
 import { useAutosave } from "@/modules/documents/composables/useAutosave";
+import { provideLinks } from "@/modules/documents/composables/useLinks";
 import Icon from "@/shared/components/Icon.vue";
 
 // `isNew`: plain `default` values pre-fill the form, and slugs follow their `from` field. Function defaults are not in the schema; the server fills them.
@@ -49,6 +50,10 @@ const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
 const { t, locale } = useI18n();
 
 const data = ref(normalize(props.fields, props.initial, false, props.isNew));
+provideLinks(
+  () => props.fields,
+  () => data.value,
+);
 // Fields can change after mount, so the payload follows the current fields.
 const payload = () => normalize(props.fields, data.value, true) as Data<Fields>;
 const drafts = !!props.saveDraft;

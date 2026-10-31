@@ -1,4 +1,5 @@
 import type { RichtextField } from "./richtext.ts";
+import type { LinkField } from "./link.ts";
 import type { ArrayField, ItemLabels } from "./array.ts";
 import type { BooleanField } from "./boolean.ts";
 import type { Block, BlocksField } from "./blocks.ts";
@@ -33,6 +34,7 @@ export type {
   MediaFieldOptions,
   Modifiers,
   JoinField,
+  LinkField,
   Fieldset,
   Layout,
   Placement,
@@ -49,6 +51,7 @@ export type {
 /** One field of a collection, a global or a group. `type` picks the kind of value. */
 export type Field =
   | RichtextField
+  | LinkField
   | TextField
   | DateField
   | DateTimeField

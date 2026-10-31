@@ -29,11 +29,9 @@ import { Label } from "@/shared/components/ui/label";
 import Icon from "@/shared/components/Icon.vue";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import MediaField from "@/modules/media/components/MediaField.vue";
-import { safeRichtextUrl } from "../../../../../../../core/src/richtext/runtime/validation";
-import type {
-  RichtextReference,
-  RichtextTargets,
-} from "../../../../../../../core/src/richtext/config/types";
+import { safeLinkUrl } from "../../../../../../../core/src/links/runtime/url";
+import type { LinkTargets } from "../../../../../../../core/src/links/config/types";
+import type { RichtextReference } from "../../../../../../../core/src/richtext/config/types";
 
 const props = defineProps<{ attrs: Record<string, any> }>();
 const emit = defineEmits<{ apply: [attrs: Record<string, any>, label: string]; remove: [] }>();
@@ -48,7 +46,7 @@ const reference = ref<RichtextReference>();
 const referencePath = ref("");
 const label = ref("");
 const media = ref<string | null>(null);
-const groups = ref<RichtextTargets>([]);
+const groups = ref<LinkTargets>([]);
 
 const target = ref("_self");
 const targetOptions = [
@@ -102,7 +100,7 @@ watch([open, reference], async ([visible, selected], _, onCleanup) => {
     const key = collection ? titleField(collection) : "";
     label.value = String(doc[key] || doc.id);
 
-    const resolved = await client.richtext.resolve(
+    const resolved = await client.links.resolve(
       {
         type: "doc",
         content: [
@@ -134,7 +132,7 @@ function search() {
 
   timer = setTimeout(async () => {
     try {
-      const found = await client.richtext.search({
+      const found = await client.links.search({
         query: query.value,
         locale: locale.value,
       });
@@ -178,7 +176,7 @@ watch(media, (id) => {
 
 function apply() {
   const url = href.value.trim();
-  if (!reference.value && (!url || !safeRichtextUrl(url))) {
+  if (!reference.value && (!url || !safeLinkUrl(url))) {
     error.value = t("richtext.invalidUrl");
     return;
   }

@@ -1,4 +1,4 @@
-import { checkRichtextReferences } from "../../richtext/integrity/check-references.ts";
+import { checkLinkTargets } from "../../links/integrity/check-links.ts";
 import { hookArgs } from "../lifecycle/hook-args.ts";
 import { slot } from "../lifecycle/collect-hooks.ts";
 import { afterRead } from "../lifecycle/run-read-hooks.ts";
@@ -42,7 +42,7 @@ export async function persistDocument(state: WriteState, data: Record<string, an
   if (!isDraft) {
     if (name.kind === "collection") await checkUnique(db, name.name, fields, data, id, locale);
     if (mode !== "deletion-effect") {
-      await checkRichtextReferences(db, core, fields, data);
+      await checkLinkTargets(db, core, fields, data);
       await checkRefs(db, fields, data, id ? { collection: name.name, id } : undefined);
     }
   }

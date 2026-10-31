@@ -43,7 +43,7 @@ describe("read admission", () => {
     );
     await env.cms.create("pages", { title: "secret phrase", slug: "page" });
     await env.client.signUp(admin);
-    const res = await env.fetch("http://localhost/_tenon/admin/richtext/targets?query=secret");
+    const res = await env.fetch("http://localhost/_tenon/admin/links/search?query=secret");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
   });
@@ -83,7 +83,7 @@ it("skips a stale configured search field without failing other collections", as
   );
   await env.cms.create("posts", { title: "find me", slug: "found" });
   await env.client.signUp(admin);
-  const response = await env.fetch("http://localhost/_tenon/admin/richtext/targets?query=find");
+  const response = await env.fetch("http://localhost/_tenon/admin/links/search?query=find");
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual([
     expect.objectContaining({

@@ -26,11 +26,13 @@ A link or image can point to a CMS document or to a URL.
 - Resolution follows the read's perspective and locale, batches loads by collection and runs the target's read hooks. It embeds no target documents or private fields.
 - `attrs.broken` marks a target that is not available.
 
-In the browser, `client.richtext.search({ query, locale })` returns up to 20 title matches per collection that has a `permalink`. `client.richtext.resolve(document, { locale })` decorates unsaved editor JSON. Both need a session.
+Rich text shares these rules with the [`link` field](./schema.md#links): URL safety, target resolution, the publish check and deletion.
+
+In the browser, `client.links.search({ query, locale })` returns up to 20 title matches per collection that has a `permalink`. `client.links.resolve(document, { locale })` decorates unsaved editor JSON. Both need a session and read in the perspective of the preview cookie.
 
 ## Deleting linked content
 
-Deleting a document or file that rich text links to throws `LinkedContentError` (HTTP 409, `code: 'LINKED_CONTENT'`). It names the owner, field, locale and draft.
+Deleting a document or file that rich text or a `link` field links to throws `LinkedContentError` (HTTP 409, `code: 'LINKED_CONTENT'`). It names the owner, field, locale and draft.
 
 - The admin asks for confirmation and retries with `{ allowBrokenLinks: true }`. Server code can pass the same option to `cms.delete`, `cms.media.delete` and `cms.discard`.
 - A confirmed delete keeps the text and the reference and marks it `reference.deleted: true` in every published, draft and locale value. Images become placeholders you can repair.

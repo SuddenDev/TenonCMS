@@ -5,11 +5,16 @@ import {
   blockOf,
   canHold,
   duplicateItem,
+  hasErrorsAt,
+  insertItemAt,
+  itemChain,
+  removeItemAt,
   itemTitle,
   moveItem,
   moveItemTo,
   nestedLists,
   newItem,
+  treeRow,
 } from "./items";
 import { isEmpty, normalize, titleField } from "./fields";
 
@@ -272,5 +277,114 @@ describe("nestedLists", () => {
 
   it("is empty for an unknown block", () => {
     expect(nestedLists(content, { id: "1", blockType: "gone" }, "c.0")).toEqual([]);
+  });
+});
+
+const menu = {
+  type: "blocks",
+  blocks: {
+    link: {
+      label: "Link",
+      fields: {
+        label: { type: "text" },
+        link: { type: "link" },
+        children: { type: "blocks", blocks: {} },
+      },
+    },
+  },
+} as unknown as BlocksField;
+blocksOf(blocksOf(menu).link.fields.children as BlocksField).link = blocksOf(menu).link;
+
+describe("treeRow", () => {
+  const about = { collection: "pages", id: "a" };
+  const resolve = (r: { id: string }) =>
+    r.id === "a" ? { href: "/about", title: "About" } : { href: null, broken: true as const };
+
+  it("uses the first text value and the link's path with its collection", () => {
+    expect(
+      treeRow(
+        { id: "1", blockType: "link", label: "Home", link: { reference: about } },
+        menu,
+        resolve,
+      ),
+    ).toEqual({ title: "Home", fromLink: false, line: "/about", collection: "pages" });
+  });
+
+  it("falls back to the link's title", () => {
+    expect(
+      treeRow({ id: "1", blockType: "link", link: { reference: about } }, menu, resolve),
+    ).toEqual({
+      title: "About",
+      fromLink: true,
+      line: "/about",
+      collection: "pages",
+    });
+  });
+
+  it("shows the host of an external link and nothing for an empty item", () => {
+    expect(
+      treeRow(
+        { id: "1", blockType: "link", link: { href: "https://example.com/x" } },
+        menu,
+        resolve,
+      ),
+    ).toEqual({ title: "", fromLink: false, line: "example.com" });
+    expect(treeRow({ id: "1", blockType: "link" }, menu, resolve)).toEqual({
+      title: "",
+      fromLink: false,
+    });
+  });
+});
+
+describe("hasErrorsAt", () => {
+  const errors = { "items.0.children.2.link": "Invalid link" };
+
+  it("marks the row with the error and each ancestor row", () => {
+    expect(hasErrorsAt(errors, "items.0.children.2")).toBe(true);
+    expect(hasErrorsAt(errors, "items.0")).toBe(true);
+    expect(hasErrorsAt(errors, "items.0.children.1")).toBe(false);
+    expect(hasErrorsAt(errors, "items.1")).toBe(false);
+  });
+});
+
+describe("itemChain", () => {
+  it("lists the items from the top down to the one that holds a path", () => {
+    const deep = { id: "c", blockType: "link", children: [] };
+    const top = {
+      id: "a",
+      blockType: "link",
+      children: [{ id: "b", blockType: "link", children: [deep] }],
+    };
+    const items = [{ id: "x", blockType: "link", children: [] }, top];
+
+    expect(
+      itemChain(menu, items, "items", "items.1.children.0.children.0.label").map((i) => i.path),
+    ).toEqual(["items.1", "items.1.children.0", "items.1.children.0.children.0"]);
+    expect(itemChain(menu, items, "items", "items.1.children.0").map((i) => i.item.id)).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(itemChain(menu, items, "items", "other.0")).toEqual([]);
+  });
+});
+
+describe("insertItemAt and removeItemAt", () => {
+  it("change nested lists in place by path", () => {
+    const list = [
+      { id: "a", children: [{ id: "b" }] },
+      { id: "c", children: [] },
+    ];
+
+    insertItemAt(list, "0.children", { id: "x" });
+    insertItemAt(list, "", { id: "y" }, 1);
+
+    expect(list.map((i) => i.id)).toEqual(["a", "y", "c"]);
+    expect(list[0].children.map((i: { id: string }) => i.id)).toEqual(["b", "x"]);
+    expect(removeItemAt(list, "0.children.0")).toEqual({ id: "b" });
+    expect(removeItemAt(list, "1")).toEqual({ id: "y" });
+    expect(list).toEqual([
+      { id: "a", children: [{ id: "x" }] },
+      { id: "c", children: [] },
+    ]);
   });
 });

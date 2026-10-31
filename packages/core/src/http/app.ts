@@ -1,5 +1,5 @@
-import { richtextResolveEndpoint } from "../richtext/endpoints/resolve.endpoint.ts";
-import { richtextTargetsEndpoint } from "../richtext/endpoints/targets.endpoint.ts";
+import { linkResolveEndpoint } from "../links/endpoints/resolve.endpoint.ts";
+import { linkSearchEndpoint } from "../links/endpoints/search.endpoint.ts";
 import { adminBrand } from "../admin/merge/merge-options.ts";
 import { Hono } from "hono";
 import { API_BASE } from "../client/constants.ts";
@@ -85,8 +85,8 @@ export function createApp(core: Core, site?: string) {
   signedIn.route("/", locksEndpoint(core));
   signedIn.route("/", versionsEndpoint(core));
   signedIn.route("/", loadEndpoint(core));
-  signedIn.route("/", richtextTargetsEndpoint(core));
-  signedIn.route("/", richtextResolveEndpoint(core));
+  signedIn.route("/", linkSearchEndpoint(core));
+  signedIn.route("/", linkResolveEndpoint(core));
   mountRoutes(signedIn, plugins, "routes");
   signedIn.route("/", collections.previews);
   signedIn.route("/", globals.previews);

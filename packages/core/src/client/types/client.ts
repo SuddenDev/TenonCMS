@@ -1,4 +1,5 @@
-import type { RichtextDocument, RichtextTargets } from "../../richtext/config/types.ts";
+import type { RichtextDocument } from "../../richtext/config/types.ts";
+import type { LinkReference, LinkResolution, LinkTargets } from "../../links/config/types.ts";
 import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { AdminDescriptor, Text } from "../../admin/index.d.ts";
 import type { Localization } from "../../cms/config/options.ts";
@@ -451,12 +452,20 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     },
   ): Promise<T>;
 
-  /** Rich text links for the admin's editor. Both read in the perspective of the preview cookie, see `preview.enter()`. */
-  richtext: {
-    /** Fills the `href` and `src` of every link in an unsaved document. `POST /_tenon/admin/richtext/resolve` */
+  /**
+   * Link targets for the admin's link inputs and rich text editor. Both need a session and read in the perspective of
+   * the preview cookie, see `preview.enter()`.
+   */
+  links: {
+    /**
+     * Resolves each reference to the target's `permalink` and title, in order. An unavailable target has `href: null`
+     * and `broken: true`. `POST /_tenon/admin/links/resolve`
+     */
+    resolve(references: LinkReference[], options?: { locale?: string }): Promise<LinkResolution[]>;
+    /** Fills the `href` and `src` of every link in an unsaved rich text document. `POST /_tenon/admin/links/resolve` */
     resolve(document: RichtextDocument, options?: { locale?: string }): Promise<RichtextDocument>;
-    /** Finds link targets by title. `GET /_tenon/admin/richtext/targets` */
-    search(options?: { query?: string; locale?: string }): Promise<RichtextTargets>;
+    /** Finds up to 20 link targets per collection with a `permalink`, by title. `GET /_tenon/admin/links/search` */
+    search(options?: { query?: string; locale?: string }): Promise<LinkTargets>;
   };
   /** The media library. See {@link MediaClient}. */
   media: MediaClient;

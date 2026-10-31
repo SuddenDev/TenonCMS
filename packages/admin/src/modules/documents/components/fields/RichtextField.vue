@@ -82,7 +82,7 @@ onMounted(async () => {
 
     const document = model.value ?? empty;
     const initial = richtextReferences(document).length
-      ? await client.richtext.resolve(document, { locale: locale.value })
+      ? await client.links.resolve(document, { locale: locale.value })
       : document;
     if (disposed) return;
 
@@ -185,7 +185,7 @@ async function refreshReferences() {
   const request = ++referenceRequest;
 
   try {
-    const resolved = await client.richtext.resolve(document, { locale: locale.value });
+    const resolved = await client.links.resolve(document, { locale: locale.value });
     if (!disposed && request === referenceRequest && editor.value)
       decorateReferences(editor.value, resolved);
   } catch (error) {

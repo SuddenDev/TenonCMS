@@ -18,7 +18,8 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `access/`       | Access rules: decisions, field stripping, `/schema` permissions.  | [README](access/README.md)                  |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |
 | `db/`           | Connection, fixed migrations and named content queries.           | [README](db/README.md)                      |
-| `richtext/`     | Rich-text config, runtime, reads/writes, integrity and endpoints. | [README](richtext/README.md)                |
+| `richtext/`     | Rich-text config, runtime, reads and writes.                      | [README](richtext/README.md)                |
+| `links/`        | Shared link rules for rich text and `link` fields, and endpoints. | [README](links/README.md)                   |
 | `media/`        | Uploads, library actions, images, variants and storage.           | [README](media/README.md)                   |
 | `preview/`      | Preview URL resolution and browser draft/DOM runtime.             | [README](preview/README.md)                 |
 | `client/`       | Browser-safe typed HTTP client.                                   | [create-client.ts](client/create-client.ts) |
@@ -64,7 +65,7 @@ For `GET /_tenon/globals/general`, follow:
 1. [globals/endpoints/get.endpoint.ts](globals/endpoints/get.endpoint.ts) validates the name and read options and calls `c.var.cms`, which `optionalSession()` in [session.middleware.ts](auth/middleware/session.middleware.ts) scopes to the caller; drafts require a session plus the preview cookie.
 2. [get.local.ts](globals/operations/local/get.local.ts) checks the name. [get.operation.ts](globals/operations/get.operation.ts) enters the shared lifecycle without opening a read transaction.
 3. [read-global.ts](content/reads/read-global.ts) uses [access/read.ts](access/read.ts) for admission and loads the appropriate perspective using [load-global.query.ts](db/queries/globals/load-global.query.ts).
-4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. Embedded rich-text links and images resolve through [resolve-richtext.ts](richtext/reads/resolve-richtext.ts). `afterRead()` removes the fields the caller MAY NOT read ([access/field-access.ts](access/field-access.ts)).
+4. [read-results.ts](content/reads/read-results.ts) runs read hooks, batched population and selection. Embedded rich-text links and images resolve through [resolve-richtext.ts](richtext/reads/resolve-richtext.ts), `link` fields through [resolve-links.ts](links/reads/resolve-links.ts); both load targets with [resolve-targets.ts](links/reads/resolve-targets.ts). `afterRead()` removes the fields the caller MAY NOT read ([access/field-access.ts](access/field-access.ts)).
 
 Globals retain their own lifecycle: they skip collection `beforeOperation` and `afterOperation`. A never-saved global returns publication metadata with no saved field values.
 

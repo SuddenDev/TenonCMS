@@ -71,6 +71,23 @@ curl -s -o /dev/null -w '%{http_code}\n' -b $K $B/_tenon/invites
 
 Expect a link (201, or 502 with the link when `SMTP_URL` points at no running catcher), `{ user }` with the session cookie, then `403`: the editor cannot manage invites. In Chrome, the Bitwarden extension's `BIT-NOTIFICATION-BAR-ROOT` overlay can swallow clicks at the top right of the admin; check with `document.elementFromPoint()` before suspecting the UI.
 
+Menus, on the Astro example (`B=localhost:4321`): after the sign-up above, link a page from the main menu, then resolve it and render the header.
+
+```sh
+P=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
+  -d '{"title":"About","slug":"about"}' $B/_tenon/collections/pages | node -pe 'JSON.parse(require("fs").readFileSync(0)).id')
+curl -s -o /dev/null -w '%{http_code}\n' -b $J -X PUT -H 'content-type: application/json' -H "origin: http://$B" \
+  -d "{\"items\":[{\"blockType\":\"link\",\"link\":{\"reference\":{\"collection\":\"pages\",\"id\":\"$P\"}},\"children\":[{\"blockType\":\"link\",\"label\":\"Docs\",\"link\":{\"href\":\"https://example.com\"}}]}]}" \
+  $B/_tenon/globals/mainMenu
+curl -s "$B/_tenon/globals/mainMenu"
+curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
+  -d "{\"references\":[{\"collection\":\"pages\",\"id\":\"$P\"}]}" $B/_tenon/admin/links/resolve
+curl -s $B/ | grep -o 'href="/about"[^>]*>About'
+curl -s -o /dev/null -w '%{http_code}\n' -b $J -X DELETE -H "origin: http://$B" $B/_tenon/collections/pages/$P
+```
+
+Expect `200`; the menu with `"href":"/about","title":"About"` on the page link; `[{"href":"/about","title":"About"}]`; the link in the header HTML; then `409` (`LINKED_CONTENT`). In the admin, Settings › Main menu shows the tree: drag a row onto another, open its sheet, and check that the preview follows the edit.
+
 ## Postgres
 
 PGlite runs the integration suite already. This checks `postgres()` and the `pg` pool against a real server, in a throwaway container.

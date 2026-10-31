@@ -1,7 +1,8 @@
 ---
-import { localizePath } from "tenoncms";
+import { localizePath, menuItems } from "tenoncms";
 import cms from "../../tenon.config";
 import LocaleSwitch from "./LocaleSwitch.astro";
+import MenuList from "./MenuList.astro";
 
 interface Props {
   alternates?: Record<string, string>;
@@ -9,9 +10,13 @@ interface Props {
 
 const { alternates } = Astro.props;
 const { tenon, locale } = Astro.locals;
-const pages = (await tenon.find("pages", { locale, select: { title: true, path: true } })).filter(
-  (page) => page.path,
-);
+// The main menu from the admin. Until it has items, the header lists the pages.
+const menu = menuItems((await tenon.getGlobal("mainMenu", { locale })).items);
+const pages = menu.length
+  ? []
+  : (await tenon.find("pages", { locale, select: { title: true, path: true } })).filter(
+      (page) => page.path,
+    );
 const l = cms.localization!;
 ---
 
@@ -21,6 +26,7 @@ const l = cms.localization!;
       <strong>Home</strong>
     </a>
     <a href="/#posts">Posts</a>
+    {menu.length > 0 && <MenuList items={menu} />}
     {pages.map((page) => (
       <a href={localizePath(page.path!, locale as string, l)}>{page.title}</a>
     ))}
@@ -41,5 +47,6 @@ const l = cms.localization!;
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 </style>

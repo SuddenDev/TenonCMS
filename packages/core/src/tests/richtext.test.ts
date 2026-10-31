@@ -132,19 +132,19 @@ it("protects search and resolution endpoints and returns grouped, bounded result
   const cms = make();
   const { client } = setup(cms);
 
-  await expect(client.richtext.search()).rejects.toMatchObject({ status: 401 });
+  await expect(client.links.search()).rejects.toMatchObject({ status: 401 });
 
   const page = await cms.create("pages", { title: "About us", slug: "about" });
   await cms.create("pages", { title: "Different", slug: "different" });
   await client.signUp(admin);
 
-  const groups = await client.richtext.search({ query: "ABOUT" });
+  const groups = await client.links.search({ query: "ABOUT" });
 
   expect(groups).toEqual([
     { collection: "pages", label: "pages", items: [{ id: page.id, label: "About us" }] },
   ]);
 
-  const resolved = await client.richtext.resolve(link(page.id));
+  const resolved = await client.links.resolve(link(page.id));
 
   expect(resolved.content?.[0].content?.[0].marks?.[0].attrs?.href).toBe("/about");
 
@@ -172,9 +172,9 @@ it("searches and resolves in the perspective of the preview cookie", async () =>
   const { client } = setup(cms);
   await client.signUp(admin);
   const page = await cms.create("pages", { title: "Draft page", slug: "draft" }, { draft: true });
-  const found = async () => (await client.richtext.search({ query: "draft" }))[0].items;
+  const found = async () => (await client.links.search({ query: "draft" }))[0].items;
   const href = async () =>
-    (await client.richtext.resolve(link(page.id))).content?.[0].content?.[0].marks?.[0].attrs?.href;
+    (await client.links.resolve(link(page.id))).content?.[0].content?.[0].marks?.[0].attrs?.href;
 
   expect(await found()).toEqual([]);
   expect(await href()).toBeNull();

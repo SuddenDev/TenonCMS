@@ -1,4 +1,5 @@
 import { resolveRichtext } from "../../richtext/reads/resolve-richtext.ts";
+import { resolveLinks } from "../../links/reads/resolve-links.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
 import { collectionTarget, type ContentTarget, isMedia, target } from "../targets.ts";
 import { databaseForScope } from "../../cms/runtime/transaction.ts";
@@ -38,6 +39,7 @@ export async function readDocs(
 
   await populate(await databaseForScope(core, s), collections, fields, before, plan, {
     richtext: (values) => resolveRichtext(core, s, values),
+    links: (values) => resolveLinks(core, s, values),
     drafts,
     loc: (collection) => locOf(core, s, collections[collection]),
     access: (collection) => readDecision(core, s, collectionTarget(collection)),

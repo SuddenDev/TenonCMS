@@ -1,0 +1,50 @@
+---
+// The part of a `menuItems()` entry this list renders.
+interface Entry {
+  label: string;
+  href: string | null;
+  target?: string;
+  children: Entry[];
+}
+interface Props {
+  items: Entry[];
+}
+
+// Renders one level of the main menu and calls itself for the children.
+const { items } = Astro.props;
+---
+
+<ul>
+  {items.map((item) => (
+    <li>
+      {item.href ? (
+        <a
+          href={item.href}
+          target={item.target}
+          rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
+        >
+          {item.label}
+        </a>
+      ) : (
+        <span>{item.label}</span>
+      )}
+      {item.children.length > 0 && <Astro.self items={item.children} />}
+    </li>
+  ))}
+</ul>
+
+<style>
+  ul {
+    display: flex;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  ul ul {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-left: 0.75rem;
+    font-size: 0.9em;
+  }
+</style>

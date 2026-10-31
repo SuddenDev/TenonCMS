@@ -47,6 +47,23 @@ Each block takes:
 - The row menu has **Move to** (the lists the item can go to, up or down the nesting) and **Collapse all** (every row of the field, at every depth).
 - A row with nested lists has an **Outline** button. It shows the tree below the row, and its items move by drag and drop too.
 
+## Tree appearance
+
+`appearance: "tree"` shows the list as a compact tree instead of inline rows. [Menus](./menus.md) use it.
+
+```ts
+items: { type: "blocks", appearance: "tree", blocks: { link: "menuLink", heading: "menuHeading" } }
+```
+
+- Each item is a row with a drag handle, a chevron (only with children), the block icon, a title and a second line. The title is the first text value, else the title of the item's first `link` field, in muted text, else the item name (`Link 3`). The second line is the link's path or external host, with the collection, or else the block label.
+- With one nested list, its items indent below the row. With two or more, each list shows its label.
+- A click on a row opens the item in a sheet inside the document pane, so the preview stays visible. The sheet shows the trail (`Items › Products › Shoes`) and the item's fields, without the lists the tree shows. Edits apply at once, so autosave and live preview follow; **Done** closes it. Discard and version history undo changes.
+- The row menu has **Add child**, **Duplicate**, **Move to** and **Delete**. With two or more nested lists, Add child asks which list.
+- Drag and drop works as in the inline view. **Expand all** and **Collapse all** sit above the tree.
+- **Add** appends an item and opens its sheet. With more than one block, the block picker opens first.
+- A row with an error in it or below it shows a dot, and so does each row above it. A failed save opens the rows down to the first error.
+- `edit()` on a field inside an item opens that item's sheet and focuses the field.
+
 ## Nested and shared blocks
 
 A block can have its own `blocks` fields, so items nest. A `columns` block with a `left` and a `right` list works with plain objects. Reuse a block in several places by importing the same object.
@@ -127,7 +144,7 @@ cms.find("pages", {
 
 ## On a site
 
-`edit("pages", page.id, "content.2.title")` binds a field of an item to an element for [live preview](./live-preview.md). The admin opens that row and focuses the field.
+`edit("pages", page.id, "content.2.title")` binds a field of an item to an element for [live preview](./live-preview.md). The admin opens that row and focuses the field. In a tree, it opens the item's sheet.
 
 ## Limits
 

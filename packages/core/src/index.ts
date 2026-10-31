@@ -79,6 +79,8 @@ export {
   breadcrumbs,
   localeFromPath,
   localizePath,
+  type MenuItem,
+  menuItems,
   SLUG_PATTERN,
   seoMeta,
   slugify,
@@ -86,3 +88,11 @@ export {
 } from "./helpers/index.ts";
 
 export type { RichtextDocument, RichtextNode, RichtextReference } from "./richtext/config/types.ts";
+export type {
+  LinkRead,
+  LinkReference,
+  LinkResolution,
+  LinkTarget,
+  LinkTargets,
+  LinkValue,
+} from "./links/config/types.ts";

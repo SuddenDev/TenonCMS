@@ -116,6 +116,9 @@ const rows: [string, unknown][] = [
       )}
       <p>Author: {sink.author?.name ?? "–"}</p>
       <p>Posts: {list(sink.posts?.map((post) => post.title))}</p>
+      <p>
+        Link: {sink.cta?.href ? <a href={sink.cta.href}>{sink.cta.title ?? sink.cta.href}</a> : "–"}
+      </p>
 
       <h2>Groups</h2>
       <section>

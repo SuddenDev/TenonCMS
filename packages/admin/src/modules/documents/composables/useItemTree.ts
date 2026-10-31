@@ -1,13 +1,19 @@
 import { computed, inject, type InjectionKey, provide, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
+import { blocksOf } from "../../../../../core/src/schema/traversal/blocks-of";
 import {
   blockOf,
   canHold,
+  duplicateItem,
+  insertItemAt,
   type Item,
+  itemTitle,
   type ListField,
   moveItemTo,
   nestedLists,
+  newItem,
+  removeItemAt,
 } from "@/modules/documents/items";
 
 // `path` is the item's dot path in the form, like `content.0.children.2`.
@@ -113,7 +119,64 @@ function createItemTree(top: () => Top) {
     return out;
   }
 
-  return { open, dragged, over, start, end, hover, drop, moveTo, targets };
+  // The tree display: the path of the item in the edit sheet, and the list that waits for a block pick.
+  const editing = ref<string | null>(null);
+  const picking = ref<{ path: string; field: ListField; owner?: Item } | null>(null);
+
+  /**
+   * Appends a new item to the list at `list` and opens its sheet. `owner` is the item that holds the list; it expands.
+   * A blocks field with more than one block asks for the block first, see `picking`.
+   */
+  function add(list: string, field: ListField, owner?: Item, blockType?: string) {
+    const names = field.type === "blocks" ? Object.keys(blocksOf(field)) : [];
+    if (field.type === "blocks" && !blockType && names.length !== 1) {
+      picking.value = { path: list, field, owner };
+      return;
+    }
+
+    const item = newItem(field, blockType ?? names[0]);
+    const index = insertItemAt(top().items, relative(list), item);
+    if (owner) open.add(owner.id);
+    editing.value = `${list}.${index}`;
+  }
+
+  function pick(blockType: string) {
+    const p = picking.value;
+    picking.value = null;
+    if (p) add(p.path, p.field, p.owner, blockType);
+  }
+
+  function duplicate(path: string, item: Item, field: ListField) {
+    insertItemAt(
+      top().items,
+      relative(parentOf(path)),
+      duplicateItem(item, field),
+      positionOf(path) + 1,
+    );
+  }
+
+  function remove(path: string) {
+    if (editing.value === path || editing.value?.startsWith(`${path}.`)) editing.value = null;
+    removeItemAt(top().items, relative(path));
+  }
+
+  return {
+    open,
+    dragged,
+    over,
+    start,
+    end,
+    hover,
+    drop,
+    moveTo,
+    targets,
+    editing,
+    picking,
+    add,
+    pick,
+    duplicate,
+    remove,
+  };
 }
 
 /**
@@ -166,5 +229,17 @@ export function useItemNames() {
     field.type === "blocks"
       ? (text(blockOf(field, item)?.label) ?? String(item.blockType))
       : t("items.numbered", { label: text(field.labels?.singular) ?? t("items.item"), n: i + 1 });
-  return { listName, itemName };
+  // The top list shows its own name. A nested one shows the item that holds it, like "Section › Children".
+  const targetName = (target: MoveTarget) => {
+    const list = listName(target.field, target.key);
+    if (!target.owner) return list;
+    const { item, field, index } = target.owner;
+    return `${itemTitle(item, field) || itemName(field, item, index)} › ${list}`;
+  };
+  // A tree row without a title is numbered, like "Link 3".
+  const treeItemName = (field: ListField, item: Item, i: number) =>
+    field.type === "blocks"
+      ? t("items.numbered", { label: itemName(field, item, i), n: i + 1 })
+      : itemName(field, item, i);
+  return { listName, itemName, treeItemName, targetName };
 }

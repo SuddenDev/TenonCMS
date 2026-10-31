@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { text } from "@/shared/i18n";
 import type { FieldProps } from "./types";
 import ItemList from "./ItemList.vue";
+import ItemTree from "./ItemTree.vue";
 import SharedMarker from "./SharedMarker.vue";
 import { FieldSet, FieldLegend, FieldDescription } from "@/shared/components/ui/field";
 
@@ -22,7 +23,8 @@ const required = computed(() => props.field.required && !props.loose);
     <FieldDescription v-if="field.description" class="-mt-1">{{
       text(field.description)
     }}</FieldDescription>
-    <ItemList
+    <component
+      :is="field.appearance === 'tree' ? ItemTree : ItemList"
       v-model="model"
       :name="name"
       :field="field"

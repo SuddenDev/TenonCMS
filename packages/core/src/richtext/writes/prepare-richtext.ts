@@ -1,9 +1,13 @@
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Fields } from "../../schema/fields/index.ts";
 import { ValidationError } from "../../errors.ts";
-import { richtextFields } from "../runtime/fields.ts";
+import { linkingValues } from "../../links/runtime/fields.ts";
+import { deletedTargets, keepDeletedMarker } from "../../links/runtime/held-links.ts";
 import { richtextReferences, storedRichtext, walkRichtext } from "../runtime/walk.ts";
 import { validateRichtext } from "../runtime/validation.ts";
+
+const richtextValues = (fields: Fields, data: Record<string, any>) =>
+  linkingValues(fields, data).filter((f) => f.field.type === "richtext");
 
 /** Canonicalizes rich text and protects server-owned deletion markers on every write, including drafts. */
 export function prepareRichtext(
@@ -14,19 +18,12 @@ export function prepareRichtext(
   loose: boolean,
   validatedSource: Record<string, any> | undefined,
 ) {
-  const originals = new Map(richtextFields(fields, source ?? {}).map((f) => [f.path, f.value]));
-  const deleted = new Set(
-    [...originals.values()].flatMap((value) =>
-      richtextReferences(value)
-        .filter((r) => r.reference.deleted)
-        .map((r) => `${r.reference.collection}:${r.reference.id}`),
-    ),
-  );
+  const deleted = deletedTargets(fields, source);
   const validated = new Map(
-    richtextFields(fields, validatedSource ?? {}).map((f) => [f.path, f.value]),
+    richtextValues(fields, validatedSource ?? {}).map((f) => [f.path, f.value]),
   );
 
-  for (const held of richtextFields(fields, data)) {
+  for (const held of richtextValues(fields, data)) {
     try {
       const value = storedRichtext(held.value);
       walkRichtext(value, (node) => {
@@ -34,13 +31,7 @@ export function prepareRichtext(
           node.attrs.rel = "noopener noreferrer";
       });
 
-      for (const { reference } of richtextReferences(value)) {
-        const known = deleted.has(`${reference.collection}:${reference.id}`);
-        if (reference.deleted && !known)
-          throw new Error("Deletion markers are owned by the server");
-
-        if (known) reference.deleted = true;
-      }
+      for (const { reference } of richtextReferences(value)) keepDeletedMarker(reference, deleted);
 
       const baseline = validated.get(held.path);
       const unchanged =

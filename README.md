@@ -114,6 +114,7 @@ Then wire your framework: [Framework setup](docs/guide/frameworks.md).
 | Guide                                        | What it covers                                                 |
 | -------------------------------------------- | -------------------------------------------------------------- |
 | [Pages and SEO](docs/guide/pages-and-seo.md) | Nested page paths, `seoMeta()`, `breadcrumbs()`, site settings |
+| [Menus](docs/guide/menus.md)                 | The `menu` preset, the tree editor, `menuItems()`              |
 | [Live preview](docs/guide/live-preview.md)   | `permalink`, `edit()`, the visual editor, the admin bar        |
 
 **Run it**

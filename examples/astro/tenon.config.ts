@@ -5,18 +5,29 @@ import { libsql } from "tenoncms/libsql";
 import { smtp } from "tenoncms/email/smtp";
 import { ExamplePlugin } from "tenoncms/plugins/example";
 import { RedirectsPlugin } from "tenoncms/plugins/redirects";
-import { strings } from "tenoncms/presets";
+import { menu, strings } from "tenoncms/presets";
 import { authors } from "./collections/authors";
 import { comments } from "./collections/comments";
 import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
 import { kitchenSink } from "./globals/kitchen-sink";
 
+const mainMenu = menu({
+  blocks: {
+    button: {
+      label: "Button",
+      icon: "a-arrow-down",
+      fields: { label: { type: "text" }, link: { type: "link" } },
+    },
+  },
+});
+
 export default defineCms({
   localization: { locales: ["en", "de"], defaultLocale: "en", fallback: false },
   roles: { author: { label: { en: "Author", de: "Autor" }, description: "Writes own posts" } },
   // A section holds other blocks, sections included, so page content nests to any depth.
   blocks: {
+    ...mainMenu.blocks,
     hero: {
       label: "Hero",
       icon: "image",
@@ -40,6 +51,21 @@ export default defineCms({
   collections: { posts, authors, comments, pages },
   globals: {
     kitchenSink,
+    mainMenu: defineGlobal({
+      label: "Main menu",
+      localized: true,
+      nav: { display: "settings", icon: "menu", order: 2 },
+      fields: {
+        cta: {
+          type: "group",
+          fields: {
+            cta: { type: "text" },
+            ctaLink: { type: "link" },
+          },
+        },
+        ...mainMenu.fields,
+      },
+    }),
     footer: defineGlobal({
       label: "Footer",
       description: "Links and copyright line",

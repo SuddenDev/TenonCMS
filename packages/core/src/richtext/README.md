@@ -1,18 +1,18 @@
 # Rich text
 
-Owns the Tiptap document format, feature policy, rendering and embedded CMS references. The field contract stays in [schema](../schema/fields/richtext.ts), the editor in `packages/admin`, and the framework components in [integrations](../integrations/README.md). The [content engine](../content/README.md) calls this module during reads, writes and deletion.
+Owns the Tiptap document format, feature policy and rendering. Embedded CMS references follow the shared rules of the [links](../links/README.md) module: URL safety, target resolution, the publish check and deletion. This module keeps the Tiptap parts: walking the document, image `src`/`srcset` and stored JSON. The field contract stays in [schema](../schema/fields/richtext.ts), the editor in `packages/admin`, and the framework components in [integrations](../integrations/README.md). The [content engine](../content/README.md) calls this module during reads, writes and deletion.
 
 ## Follow a write
 
 `content/writes/prepare-data.ts` → `writes/prepare-richtext.ts` → `runtime/validation.ts`
 
-`prepareRichtext()` strips read decoration, preserves server-owned deletion markers and validates changed published content. Before saving, `content/writes/persist-document.ts` calls `integrity/check-references.ts` to check document and image targets in the write transaction.
+`prepareRichtext()` strips read decoration, keeps server-owned deletion markers (`keepDeletedMarker()` from links) and validates changed published content. Before saving, `content/writes/persist-document.ts` calls `links/integrity/check-links.ts` to check document and image targets in the write transaction.
 
 ## Follow a read
 
 `content/reads/read-results.ts` → `reads/resolve-richtext.ts` → `runtime/walk.ts`
 
-`resolveRichtext()` decorates embedded references in batches using the caller's locale and perspective. `runtime/render.ts` turns validated JSON into HTML without fetching references or mounting an editor. Deletion goes through `integrity/break-links.ts` and `integrity/find-owners.ts` in the deletion transaction.
+`resolveRichtext()` loads the targets through `resolveLinkTargets()` from links, using the caller's locale and perspective, then decorates the nodes. `runtime/render.ts` turns validated JSON into HTML without fetching references or mounting an editor. Deletion goes through `links/integrity/break-links.ts` in the deletion transaction.
 
 ## Field configuration
 
@@ -36,7 +36,7 @@ A link mark or image node holds `attrs.reference: { collection, id }`. A manuall
 
 `storedRichtext()` removes read decoration for saving. The write pipeline also removes it. Reference identities survive HTML clipboard operations through `data-cms-reference` attributes.
 
-The protected `client.richtext.search({ query, locale })` method returns collection sections containing at most 20 title matches each. It searches only collections with a `permalink`. `client.richtext.resolve(document, { locale })` decorates unsaved editor JSON without writing anything. Both read in the perspective of the preview cookie, like every other read.
+The protected `client.links.search({ query, locale })` method returns collection sections containing at most 20 title matches each. It searches only collections with a `permalink`. `client.links.resolve(document, { locale })` decorates unsaved editor JSON without writing anything. Both read in the perspective of the preview cookie, like every other read. `safeRichtextUrl()` is `safeLinkUrl()` from links.
 
 ## Deletion
 
@@ -44,7 +44,7 @@ Deleting a target with incoming rich-text references throws `LinkedContentError`
 
 The check and deletion share a transaction. Confirmed deletion preserves the reference and text, recording `reference.deleted: true` in every affected published/draft/locale value. Images remain repairable placeholders. This metadata is server-owned; writes cannot invent it. Existing broken references can remain when a document is edited or published. Ordinary relation restrictions and media storage cleanup timing still apply.
 
-Reverse discovery scans JSON only for owners whose schemas contain rich text. It needs no database migration. Add an index if the number or size of those owners makes deletions slow.
+Reverse discovery (in links) scans JSON only for owners whose schemas contain rich text or `link` fields. It needs no database migration. Add an index if the number or size of those owners makes deletions slow.
 
 ## Plugin extensions
 
@@ -103,21 +103,16 @@ Use populated content for current media and internal-link URLs. The components d
 
 ## Files
 
-| Path                            | Responsibility                                                       |
-| ------------------------------- | -------------------------------------------------------------------- |
-| `index.ts`                      | Public exports for `tenoncms/richtext`.                              |
-| `config/types.ts`               | Document, reference, extension registration and editor contracts.    |
-| `config/check-config.ts`        | Field feature checks after plugin registrations merge.               |
-| `runtime/extensions.ts`         | Built-in Tiptap features and the shared editor/server schema.        |
-| `runtime/validation.ts`         | JSON shape, URL safety, feature and content checks.                  |
-| `runtime/walk.ts`               | Document traversal, reference extraction and stored JSON.            |
-| `runtime/fields.ts`             | Rich-text fields inside groups, arrays and blocks.                   |
-| `runtime/render.ts`             | Validated HTML rendering for frontend components and direct callers. |
-| `reads/resolve-richtext.ts`     | Batched link and image URL decoration.                               |
-| `writes/prepare-richtext.ts`    | Write normalization, deletion markers and content validation.        |
-| `integrity/check-references.ts` | Publication checks for referenced documents and images.              |
-| `integrity/find-owners.ts`      | Published, draft and locale values with rich-text fields.            |
-| `integrity/break-links.ts`      | Deletion conflicts and repairable broken references.                 |
-| `endpoints/`                    | Protected target search and unsaved-content resolution.              |
+| Path                         | Responsibility                                                       |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `index.ts`                   | Public exports for `tenoncms/richtext`.                              |
+| `config/types.ts`            | Document, reference, extension registration and editor contracts.    |
+| `config/check-config.ts`     | Field feature checks after plugin registrations merge.               |
+| `runtime/extensions.ts`      | Built-in Tiptap features and the shared editor/server schema.        |
+| `runtime/validation.ts`      | JSON shape, URL safety, feature and content checks.                  |
+| `runtime/walk.ts`            | Document traversal, reference extraction and stored JSON.            |
+| `runtime/render.ts`          | Validated HTML rendering for frontend components and direct callers. |
+| `reads/resolve-richtext.ts`  | Link and image URL decoration from the resolved targets.             |
+| `writes/prepare-richtext.ts` | Write normalization, deletion markers and content validation.        |
 
 Internal browser code MUST use type-only imports from `config/types.ts` and import runtime functions from their leaves. Runtime files MUST stay free of the CMS runtime and database imports. The public export names and package paths stay independent of this source layout. The admin lazy-loads the rich-text field and its Tiptap dependencies.

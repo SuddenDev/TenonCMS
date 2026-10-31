@@ -9,7 +9,10 @@ export function titleField(collection: Pick<Collection, "titleField" | "fields">
   return (
     collection.titleField ??
     Object.keys(collection.fields).find(
-      (k) => !["group", "array", "blocks", "join", "richtext"].includes(collection.fields[k].type),
+      (k) =>
+        !["group", "array", "blocks", "join", "richtext", "link"].includes(
+          collection.fields[k].type,
+        ),
     ) ??
     ""
   );

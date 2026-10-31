@@ -18,6 +18,7 @@ import DateField from "./fields/DateField.vue";
 import SlugField from "./fields/SlugField.vue";
 import SelectField from "./fields/SelectField.vue";
 import RelationField from "./fields/RelationField.vue";
+import LinkField from "./fields/LinkField.vue";
 import BooleanField from "./fields/BooleanField.vue";
 import GroupField from "./fields/GroupField.vue";
 import ArrayField from "./fields/ArrayField.vue";
@@ -39,6 +40,7 @@ const fields: Record<string, Component> = {
   slug: SlugField,
   select: SelectField,
   relation: RelationField,
+  link: LinkField,
   boolean: BooleanField,
   group: GroupField,
   array: ArrayField,

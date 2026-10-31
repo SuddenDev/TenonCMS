@@ -5,11 +5,7 @@ import type { Field } from "@/shared/api";
 import { itemFields } from "../../../../../../core/src/schema/traversal/item-fields";
 import { active } from "@/modules/documents/fields";
 import { blockOf, itemTitle, type Item, nestedLists } from "@/modules/documents/items";
-import {
-  injectItemTree,
-  type MoveTarget,
-  useItemNames,
-} from "@/modules/documents/composables/useItemTree";
+import { injectItemTree, useItemNames } from "@/modules/documents/composables/useItemTree";
 import Icon from "@/shared/components/Icon.vue";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -57,7 +53,7 @@ const fields = computed(() => itemFields(props.field, props.item));
 const block = computed(() => blockOf(props.field, props.item));
 const title = computed(() => itemTitle(props.item, props.field));
 const tree = injectItemTree();
-const { itemName, listName } = useItemNames();
+const { targetName } = useItemNames();
 const nested = computed(() => nestedLists(props.field, props.item, props.path).length > 0);
 const outline = ref(false);
 
@@ -65,13 +61,6 @@ const outline = ref(false);
 const targets = computed(() =>
   tree.targets({ path: props.path, item: props.item, field: props.field }),
 );
-// The top list shows its own name. A nested one shows the item that holds it, like "Section › Children".
-const targetName = (target: MoveTarget) => {
-  const list = listName(target.field, target.key);
-  if (!target.owner) return list;
-  const { item, field, index } = target.owner;
-  return `${itemTitle(item, field) || itemName(field, item, index)} › ${list}`;
-};
 </script>
 
 <template>

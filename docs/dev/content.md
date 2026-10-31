@@ -48,11 +48,14 @@ At each hook stage the order is: field hooks, then the collection or global, the
 - One query per relation or join field, per hop, no matter how many documents there are.
 - A populate plan decides which fields resolve and what plan their values continue with. Groups, arrays and blocks pass the plan through and do not count as a hop. Joins resolve only when named.
 - Target collections apply their own read rule and run their own read hooks, in the same scope. A target the caller cannot read counts as missing.
+- Rich text and `link` fields resolve like a relation (on with a hop left, off with `populate: false`), but in place: `resolveLinkTargets()` loads each target collection once per field per hop and adds `href` (the `permalink` in the scope's locale) and `title`. The scope's locale reaches it even when the owner is not localized. An unavailable target reads as `href: null, broken: true`.
 - A missing target (dangling id, or one the caller cannot read) reads as `null` in a single relation and is left out of a `many` list.
 
 ## Integrity
 
 - **References**: ids are checked to exist, not to point at the document itself, and files are checked for type and size, at any depth. Errors use the positional path (`links.1.page`).
+- **Links**: rich text and `link` fields share one owner, `packages/core/src/links/` (see its README). Publishing checks their targets (`checkLinkTargets()`), and every write, drafts included, protects the server-owned `reference.deleted` marker. A `link` reference MUST name a collection with a `permalink`, also in drafts.
+- **Deleting a link target**: `breakLinks()` runs before the row delete, in the same transaction. It scans every published, draft and locale value of owners with rich text or `link` fields and throws `LinkedContentError` per owner value and field. With `allowBrokenLinks` it sets `reference.deleted: true` and drops the read decoration instead.
 - **Unique**: each top-level unique field scans the published data of the collection. A localized field compares what a read in that locale would return.
 - **Deleting**: when a document goes, every relation to it applies its `onDelete` rule after the row is deleted, in the same transaction: first `restrict`, then `set-null`, then `cascade`. Effect writes skip custom validation but keep hooks.
 - **Finding references**: one SQL query per relation path. An owner with a block inside itself has no complete list of paths, so it gets one text search for the id per owner, and a walk over each matching row finds the exact fields.

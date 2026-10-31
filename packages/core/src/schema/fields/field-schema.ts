@@ -1,4 +1,5 @@
 import { richtextFieldSchema } from "./richtext.ts";
+import { linkFieldSchema } from "./link.ts";
 import type { z } from "zod";
 import { type StoredField, type GroupField, type ArrayField, type BlocksField } from "./index.ts";
 import { textSchema } from "./text.ts";
@@ -23,6 +24,8 @@ export function fieldSchema(
   switch (field.type) {
     case "richtext":
       return richtextFieldSchema();
+    case "link":
+      return linkFieldSchema();
     case "text":
     case "textarea":
       return textSchema(field, on);

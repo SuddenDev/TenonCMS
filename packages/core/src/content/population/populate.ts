@@ -27,6 +27,8 @@ type Collections = Record<string, Collection>;
 /** Read hooks of the target collection. They get the loaded documents per field per hop, and MAY replace them. */
 export type ReadHooks = {
   richtext?(values: RichtextDocument[]): Promise<void>;
+  /** Adds `href`, `title` and `broken` to stored `link` values in place. */
+  links?(values: Record<string, any>[]): Promise<void>;
   /** Loads targets in the drafts perspective. */
   drafts: boolean;
   /** How a localized target collection reads, in the locale of the outer read. */
@@ -80,6 +82,8 @@ export async function populate(
         }
     } else if (field.type === "richtext") {
       await read.richtext?.(docs.map((d) => d[key]).filter(Boolean));
+    } else if (field.type === "link") {
+      await read.links?.(docs.map((d) => d[key]).filter(isObject));
     } else if (isRef(field)) {
       await resolveRef(ctx, docs, key, field);
     } else if (field.type === "join") {

@@ -7,36 +7,33 @@ import { locOf } from "../../content/reads/loc-of.ts";
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
 import { beforeRead, afterRead } from "../../content/lifecycle/run-read-hooks.ts";
 import { collectionTarget } from "../../content/targets.ts";
-import type { RichtextTargets } from "../config/types.ts";
 import { ValidationError } from "../../errors.ts";
 import { readDecision, canQueryField } from "../../access/read.ts";
+import type { LinkTargets } from "../config/types.ts";
+import { linkTitleKey } from "../runtime/title-key.ts";
 
 /**
- * `GET /admin/richtext/targets`: a bounded title search across collections with public permalinks, within each
+ * `GET /admin/links/search`: a bounded title search across collections with public permalinks, within each
  * collection's read rule, in the perspective of the preview cookie.
  * @returns The route. A query longer than 200 characters answers 400.
  */
-export function richtextTargetsEndpoint(core: Core) {
-  return new Hono<Env>().get("/admin/richtext/targets", async (c) => {
+export function linkSearchEndpoint(core: Core) {
+  return new Hono<Env>().get("/admin/links/search", async (c) => {
     const query = c.req.query("query") ?? "";
     const { perspective } = c.var;
-    if (query.length > 200) throw new ValidationError({ query: "Invalid rich text search" });
+    if (query.length > 200) throw new ValidationError({ query: "Invalid link search" });
 
     const scope = withLocale(core, outerScope({ user: c.var.user, perspective }), {
       locale: c.req.query("locale"),
     });
     const s = inner(core, scope, undefined, {});
     const db = await core.db();
-    const results: RichtextTargets = [];
+    const results: LinkTargets = [];
 
     for (const [name, entry] of Object.entries(core.schema.collections)) {
       if (!entry.permalink) continue;
 
-      const key =
-        entry.titleField ??
-        Object.keys(entry.fields).find((k) =>
-          ["text", "textarea", "slug"].includes(entry.fields[k].type),
-        );
+      const key = linkTitleKey(entry);
       if (!key || !(await canQueryField(core, s, collectionTarget(name), key))) continue;
       const access = await readDecision(core, s, collectionTarget(name));
       if (access === false) continue;
