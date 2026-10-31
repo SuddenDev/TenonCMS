@@ -23,7 +23,7 @@ notes: {
 },
 ```
 
-The pages preset has `page.permalink` (`"{path}"`). Add `permalink: page.permalink` to the collection. A placeholder that names no stored field throws at startup.
+The pages preset has `page().permalink` (`"{path}"`). Add it as `permalink` to the collection. A placeholder that names no stored field throws at startup.
 
 ## 2. Mark what a field renders
 

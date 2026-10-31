@@ -39,7 +39,7 @@ function urlOf(image: Image) {
 }
 
 /**
- * The `<head>` values of a document with `seo.fields`. Stores nothing.
+ * The `<head>` values of a document with `seo().fields`. Stores nothing.
  * - `title`: `seo.title`, or the document's `title` when it is empty, so the fallback follows title changes. With `general.title`, it follows after `seo.separator` (default `" · "`).
  * - `description`: `seo.description`, or `undefined`. There is no fallback.
  * - `noindex`: `true` when the document's or the site's `seo.noindex` is `true`.

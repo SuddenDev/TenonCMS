@@ -1,4 +1,4 @@
-import { settings as defaults } from "../../presets/settings.ts";
+import { settings } from "../../presets/settings.ts";
 import type { Global, Schema } from "../../schema/index.ts";
 import type { SettingsOptions } from "./options.ts";
 
@@ -18,6 +18,7 @@ export function createSiteSettings(
 ) {
   if (option === false) return schema;
 
+  const defaults = settings();
   const { favicon, ...general } = defaults.general.fields;
   const { image, ...seo } = defaults.seo.fields;
   const globals: Record<string, Global> = {

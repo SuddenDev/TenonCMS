@@ -55,13 +55,13 @@ describe("preview", () => {
   it("accepts the pages preset", () => {
     expect(() =>
       defineCms({
-        collections: { pages: page },
+        collections: { pages: page() },
         media: false,
         database: options.database,
         secret: options.secret,
       }),
     ).not.toThrow();
-    expect(page.permalink).toBe("{path}");
+    expect(page().permalink).toBe("{path}");
   });
 
   it("sends `preview: true` in the schema", async () => {

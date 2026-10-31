@@ -1,6 +1,6 @@
 # Pages and SEO
 
-`tenoncms/presets` gives you pages with nested URLs and SEO fields. They are plain field objects and named hook records. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
+`tenoncms/presets` gives you pages with nested URLs and SEO fields. Each preset is a function that returns plain field objects and named hook records. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
 
 ## The page preset
 
@@ -9,15 +9,19 @@
 import { defineCollection } from "tenoncms";
 import { page, seo } from "tenoncms/presets";
 
+const preset = page();
+
 export const pages = defineCollection({
   label: "Pages",
   titleField: "title",
-  fields: { ...page.fields, ...seo.fields, body: { type: "textarea" } },
-  hooks: page.hooks,
+  fields: { ...preset.fields, ...seo().fields, body: { type: "textarea" } },
+  hooks: preset.hooks,
 });
 ```
 
-`page.fields`:
+`page()` takes one option, `collection`: the collection the pages live in, which `parent` points to. Default `'pages'`.
+
+`page().fields`:
 
 | Field    | Definition                                                                        |
 | -------- | --------------------------------------------------------------------------------- |
@@ -26,7 +30,7 @@ export const pages = defineCollection({
 | `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }`                 |
 | `path`   | `{ type: 'text', readOnly: true }`                                                |
 
-`seo.fields` is one optional group `seo` with `title`, `description`, `image` (the social image) and `noindex`. Without [media](./media.md), leave `image` out.
+`seo().fields` is one optional group `seo` with `title`, `description`, `image` (the social image) and `noindex`. Without [media](./media.md), leave `image` out.
 
 Paths are stored, so reads never compute them:
 
@@ -34,7 +38,7 @@ Paths are stored, so reads never compute them:
 - A child has `<parent path>/<slug>`, like `/about/team`. A child of `/` has `/<slug>`.
 - A page with children cannot be deleted (409, `restrict`), so no subtree is lost.
 
-`page.hooks`:
+`page().hooks`:
 
 | Stage          | Name               | Does                                                                                                                      |
 | -------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
@@ -50,18 +54,19 @@ The slug itself needs no hook: `from: 'title'` fills an empty slug on the server
 Use plain JavaScript:
 
 ```ts
-const { image, ...seoRest } = seo.fields.seo.fields
-const { uniquePath, ...beforeChange } = page.hooks.beforeChange
+const docs = page({ collection: 'docs' })
+const seoGroup = seo().fields.seo
+const { image, ...seoRest } = seoGroup.fields
+const { uniquePath, ...beforeChange } = docs.hooks.beforeChange
 
 fields: {
-  ...page.fields,
-  parent: { ...page.fields.parent, collection: 'docs' }, // another collection name
-  seo: { ...seo.fields.seo, fields: { ...seoRest, keywords: { type: 'text' } } },
+  ...docs.fields,
+  seo: { ...seoGroup, fields: { ...seoRest, keywords: { type: 'text' } } },
 },
-hooks: { beforeChange, afterChange: page.hooks.afterChange },
+hooks: { beforeChange, afterChange: docs.hooks.afterChange },
 ```
 
-`nestedPaths()` returns the same hooks for other field names. Every option defaults to the name in `page.fields`. The slug's `path` option MUST name the same path field, so the admin shows the right prefix:
+`nestedPaths()` returns the same hooks for other field names. Every option defaults to the name in `page().fields`. The slug's `path` option MUST name the same path field, so the admin shows the right prefix:
 
 ```ts
 fields: {
@@ -180,13 +185,12 @@ The `settings` option drops or replaces them:
 ```ts
 import { settings } from "tenoncms/presets";
 
+const { general } = settings();
+
 defineCms({
   settings: {
     // Extend the default.
-    general: {
-      ...settings.general,
-      fields: { ...settings.general.fields, analyticsId: { type: "text" } },
-    },
+    general: { ...general, fields: { ...general.fields, analyticsId: { type: "text" } } },
     // Drop one. `settings: false` drops both.
     seo: false,
   },

@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { defineCms, definePlugin } from "../index.ts";
 import { mediaCollection } from "../media/config/collection.ts";
-import { seo, settings, strings } from "../presets/index.ts";
+import { menu, seo, settings, strings } from "../presets/index.ts";
 import { published, setup, unpublished, testDatabase } from "./setup.ts";
 
 describe("presets", () => {
   it("general has title, tagline, url and favicon", () => {
-    const { fields } = settings.general;
+    const { fields } = settings().general;
     expect(Object.keys(fields)).toEqual(["title", "tagline", "url", "favicon"]);
     expect(fields.title).toMatchObject({ type: "text", required: true });
     expect(fields.favicon.type).toBe("image");
   });
 
   it("seo has separator, image, verification and noindex", () => {
-    const { fields } = settings.seo;
+    const { fields } = settings().seo;
     expect(Object.keys(fields)).toEqual(["separator", "image", "verification", "noindex"]);
     expect(fields.separator).toMatchObject({ type: "text", default: " · " });
     expect(fields.image.type).toBe("image");
@@ -22,7 +22,7 @@ describe("presets", () => {
   });
 
   it("place both on the settings hub with a label and a description", () => {
-    const { general, seo } = settings;
+    const { general, seo } = settings();
     expect(general.nav).toMatchObject({ display: "settings", order: 1 });
     expect(general.nav).not.toHaveProperty("group");
     expect(seo.nav).toMatchObject({ display: "settings", order: 2 });
@@ -49,7 +49,13 @@ describe("presets", () => {
         else if (value && typeof value === "object") walk(value);
       }
     };
-    walk({ settings, seo, strings: strings({}), media: mediaCollection });
+    walk({
+      settings: settings(),
+      seo: seo(),
+      menu: menu(),
+      strings: strings({}),
+      media: mediaCollection,
+    });
     expect(texts.length).toBeGreaterThan(10);
     for (const text of texts)
       expect(text).toEqual({ en: expect.any(String), de: expect.any(String) });
@@ -57,7 +63,7 @@ describe("presets", () => {
 
   it("checks the url pattern", async () => {
     const cms = defineCms({
-      settings: { general: settings.general },
+      settings: { general: settings().general },
       database: testDatabase(),
       secret: "x".repeat(32),
     });

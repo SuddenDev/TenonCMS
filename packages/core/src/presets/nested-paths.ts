@@ -2,7 +2,7 @@
 import { ValidationError } from "../errors.ts";
 import type { LocalApi } from "../schema/index.ts";
 
-/** Field names the `nestedPaths()` hooks read and write. Each defaults to the name in `page.fields`. */
+/** Field names the `nestedPaths()` hooks read and write. Each defaults to the name in `page().fields`. */
 export type NestedPathsOptions = {
   /** The `slug` field. Default `'slug'`. */
   slug?: string;
@@ -22,7 +22,7 @@ type Args = { data: any; id?: string; collection?: string; cms: LocalApi };
  * - `uniquePath` rejects a path another document has.
  * - `updateChildPaths` updates the paths below a document when its path changes.
  *
- * They are named records, so a host can leave one out by name: `const { uniquePath, ...beforeChange } = page.hooks.beforeChange`.
+ * They are named records, so a host can leave one out by name: `const { uniquePath, ...beforeChange } = page().hooks.beforeChange`.
  * Nesting without paths keeps only `validParent`. All run in the write's transaction, so two parallel saves cannot claim the same path.
  */
 export function nestedPaths({

@@ -1,6 +1,6 @@
 // Helpers run in browser bundles too, so this file MUST have no imports.
 
-/** Field names `breadcrumbs()` reads. Each defaults to the name in `page.fields`. */
+/** Field names `breadcrumbs()` reads. Each defaults to the name in `page().fields`. */
 export type BreadcrumbsOptions = {
   /** The field shown as the crumb's text. Default `'title'`. */
   title?: string;

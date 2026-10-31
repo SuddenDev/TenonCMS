@@ -329,8 +329,8 @@ describe("draft writes", () => {
           },
         },
         pages: {
-          fields: page.fields,
-          hooks: page.hooks,
+          fields: page().fields,
+          hooks: page().hooks,
         },
         notes: {
           fields: { post: { type: "relation", collection: "posts", onDelete: "set-null" } },

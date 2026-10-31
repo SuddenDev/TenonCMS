@@ -1073,8 +1073,8 @@ describe("nested paths", () => {
         pages: {
           localized: true,
           // A shared parent keeps the tree the same in every locale.
-          fields: { ...page.fields, parent: { ...page.fields.parent, localized: false } },
-          hooks: page.hooks,
+          fields: { ...page().fields, parent: { ...page().fields.parent, localized: false } },
+          hooks: page().hooks,
         },
       },
     });

@@ -13,8 +13,8 @@ function make(localizedPages = false, collections = ["pages"], locales?: string[
     localization: { locales: ["en", "de"], defaultLocale: "en" },
     collections: {
       pages: defineCollection({
-        fields: page.fields,
-        hooks: page.hooks,
+        fields: page().fields,
+        hooks: page().hooks,
         localized: localizedPages,
       }),
       posts: defineCollection({ fields: { title: { type: "text" }, path: { type: "text" } } }),

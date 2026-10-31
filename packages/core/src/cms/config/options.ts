@@ -52,7 +52,7 @@ type MediaCollection = {
 export type MediaOf<M> = [M] extends [false] ? {} : { media: MediaApi };
 
 /**
- * Which settings globals `defineCms()` adds. An omitted key is the default from `settings` in `tenoncms/presets`.
+ * Which settings globals `defineCms()` adds. An omitted key is the default from `settings()` in `tenoncms/presets`.
  */
 export type SettingsOptions = {
   /** Site title, tagline, URL and favicon. `false` drops it, a `Global` replaces it. Stored as `general`. */
@@ -61,7 +61,7 @@ export type SettingsOptions = {
   seo?: Global | false;
 };
 
-type Defaults = typeof settings;
+type Defaults = ReturnType<typeof settings>;
 type SettingsGlobal<S, K extends keyof Defaults> = K extends keyof S
   ? [S[K]] extends [false]
     ? unknown

@@ -3,7 +3,7 @@ import { page } from "./page.ts";
 
 const path = async (slug: string, parentPath?: string) =>
   (
-    await page.hooks.beforeChange.buildPath({
+    await page().hooks.beforeChange.buildPath({
       data: { slug, parent: parentPath === undefined ? null : "p" },
       collection: "pages",
       cms: { findById: async () => ({ path: parentPath }) },

@@ -19,11 +19,11 @@ describe("page preset", () => {
       collections: {
         pages: {
           titleField: "title",
-          fields: { ...page.fields, ...seo.fields, body: { type: "textarea" } },
+          fields: { ...page().fields, ...seo().fields, body: { type: "textarea" } },
           hooks: {
-            afterChange: page.hooks.afterChange,
+            afterChange: page().hooks.afterChange,
             beforeChange: {
-              ...page.hooks.beforeChange,
+              ...page().hooks.beforeChange,
               fail: ({ originalDoc }) => {
                 if (originalDoc && originalDoc.slug === failSlug) throw new Error("boom");
               },
@@ -163,9 +163,9 @@ describe("page preset", () => {
   });
 
   it("disables a hook omitted by name", async () => {
-    const { uniquePath, ...beforeChange } = page.hooks.beforeChange;
+    const { uniquePath, ...beforeChange } = page().hooks.beforeChange;
     const cms = defineCms({
-      collections: { pages: { fields: page.fields, hooks: { beforeChange } } },
+      collections: { pages: { fields: page().fields, hooks: { beforeChange } } },
       database: testDatabase(),
       secret: "x".repeat(32),
     });
@@ -173,6 +173,20 @@ describe("page preset", () => {
     await expect(cms.create("pages", { title: "About", slug: "about" })).resolves.toMatchObject({
       path: "/about",
     });
+  });
+
+  it("nests pages of another collection", async () => {
+    const docs = page({ collection: "docs" });
+    const cms = defineCms({
+      collections: { docs: { fields: docs.fields, hooks: docs.hooks } },
+      database: testDatabase(),
+      secret: "x".repeat(32),
+    });
+    const guide = await cms.create("docs", { title: "Guide", slug: "guide" });
+    const start = await cms.create("docs", { title: "Start", slug: "start", parent: guide.id });
+
+    expect(start.path).toBe("/guide/start");
+    docs.fields.parent.collection satisfies "docs";
   });
 
   it("stores seo as sent", async () => {
@@ -236,14 +250,14 @@ describe("nestedPaths", () => {
       collections: {
         pages: {
           fields: {
-            ...page.fields,
+            ...page().fields,
             title: {
               type: "text",
               required: true,
               hooks: { afterRead: [({ value }) => `${value} *`] },
             },
           },
-          hooks: page.hooks,
+          hooks: page().hooks,
         },
       },
       database: testDatabase(),

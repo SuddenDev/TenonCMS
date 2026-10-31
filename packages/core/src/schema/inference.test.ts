@@ -577,8 +577,8 @@ function slugTypes() {
 // Checked by `pnpm typecheck` only.
 function pageTypes() {
   const pages = defineCollection({
-    fields: { ...page.fields, body: { type: "textarea" } },
-    hooks: page.hooks,
+    fields: { ...page().fields, body: { type: "textarea" } },
+    hooks: page().hooks,
   });
   (d: Doc<typeof pages.fields>) =>
     [d.title, d.slug, d.path] satisfies [string, string, string | null | undefined];
