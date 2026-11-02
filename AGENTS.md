@@ -41,9 +41,10 @@ Read the doc for an area before you change it. Update it in the same change.
 - `pnpm build:packages`: required after any change in `packages/*`, because examples consume `dist/`. Never run it while a dev watcher runs: the core build deletes `dist/`.
 - `pnpm build`: packages and all examples.
 - `pnpm typecheck`: runs `build:packages`, then typechecks all workspaces. Run it before calling work done. While a dev watcher runs, use `pnpm -r typecheck`.
-- `pnpm test`: Vitest in `packages/core` and `packages/plugins`, plus a few pure helpers in `packages/admin`. No build needed, tests import `src/`.
+- `pnpm test`: the fast pass. Vitest in `packages/core` (project `node`: unit tests and the integration suite on libsql), `packages/plugins`, plus a few pure helpers in `packages/admin`. No build needed, tests import `src/`.
+  - `pnpm test:full`: also runs the integration suite on PGlite and `node:sqlite`, and the workerd tests. Run it before calling work done that touches SQL, migrations or the database adapters.
   - Watch: `pnpm --filter tenoncms test:watch`.
-  - One test: `npx vitest run <file> -t '<name>'` in `packages/core`. `pnpm ... test -- -t` does not filter.
+  - One test: `npx vitest run --project node <file> -t '<name>'` in `packages/core`. `pnpm ... test -- -t` does not filter.
 - `pnpm lint` (oxlint) / `pnpm fmt` (oxfmt): the husky pre-commit hook runs lint-staged (`oxlint --fix`, then `oxfmt`). `pnpm install` enables it via `prepare`.
   - oxfmt cannot format `.astro`, so those files use Prettier with `prettier-plugin-astro` (`.prettierrc.json`).
   - In `*.test.ts`, unused vars and expressions are allowed, because the type tests rely on them.

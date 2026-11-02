@@ -14,7 +14,8 @@ const alias = (mediaDefault: string) => ({
 });
 
 // `*.workerd.test.ts` runs in workerd, inside the Worker of `src/tests/workerd/`. The `pglite` and `sqlite` projects
-// run the integration suite and the database tests again on PGlite and `node:sqlite`.
+// run the integration suite and the database tests again on PGlite and `node:sqlite`. `pnpm test` runs only `node`,
+// `pnpm test:full` runs every project.
 export default defineConfig({
   test: {
     projects: [
@@ -29,8 +30,8 @@ export default defineConfig({
           include: ["src/tests/*.test.ts", "src/db/{migrations,queries}/**/*.test.ts"],
           exclude: ["**/*.workerd.test.ts"],
           env: { CMS_TEST_DB: "pglite" },
-          // ponytail: each test boots its own PGlite, which takes seconds under load. Clone a migrated template
-          // per worker if the suite gets too slow.
+          // ponytail: each test clones a migrated PGlite (`setup.ts`), about 0.1 s per instance. Reset one database
+          // per file instead if the suite gets too slow.
           testTimeout: 20_000,
           hookTimeout: 30_000,
         },

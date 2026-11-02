@@ -3,12 +3,15 @@ import { DatabaseSync } from "node:sqlite";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient as createLibsql } from "@libsql/client";
-import { PGlite } from "@electric-sql/pglite";
+import { PGlite, type PGliteInterface } from "@electric-sql/pglite";
 import { PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from "kysely";
 import { expect } from "vitest";
+import { authOptions } from "../auth/config/build-options.ts";
+import type { AuthOptions } from "../auth/config/options.ts";
 import { CmsError, createClient } from "../client/index.ts";
 import { pgliteDialect } from "../db/adapters/pglite.ts";
-import type { DatabaseOptions } from "../db/create-db.ts";
+import { createDb, type DatabaseOptions } from "../db/create-db.ts";
+import { migrate } from "../db/migrations/migrate.ts";
 import { defineCms, type MediaOptions, type PopulateOptions, type Schema } from "../index.ts";
 import { pglite } from "../integrations/pglite/index.ts";
 import { local } from "../media/storage/local/index.ts";
@@ -19,6 +22,25 @@ import { sqlite } from "../integrations/sqlite/index.ts";
 export const onPglite = process.env.CMS_TEST_DB === "pglite";
 /** Whether the suite runs on `node:sqlite` (the `sqlite` project) instead of libsql. */
 const onNodeSqlite = process.env.CMS_TEST_DB === "sqlite";
+
+// One migrated PGlite per worker. A clone of it skips the WASM boot and the CMS and auth migrations.
+let template: Promise<PGlite> | undefined;
+const migratedPglite = () =>
+  (template ??= (async () => {
+    const client = new PGlite();
+    const db = createDb({ dialect: pgliteDialect(client) });
+    await migrate(db, authOptions(db, base.secret, {} as AuthOptions));
+    return client;
+  })());
+
+/** A clone of the migrated PGlite. It clones on the first query, because the driver's client MUST be synchronous. */
+function clonePglite() {
+  const clone = migratedPglite().then((client) => client.clone());
+  return {
+    query: async (...args: Parameters<PGlite["query"]>) => (await clone).query(...args),
+    close: async () => (await clone).close(),
+  } as PGliteInterface;
+}
 
 /**
  * An in-memory database. Like libsql's `:memory:`, each connection opens its own empty one, so instances that share
@@ -31,7 +53,7 @@ export const testDatabase = (): DatabaseOptions =>
           createAdapter: () => new PostgresAdapter(),
           createIntrospector: (db) => new PostgresIntrospector(db),
           createQueryCompiler: () => new PostgresQueryCompiler(),
-          createDriver: () => pgliteDialect(new PGlite()).createDriver(),
+          createDriver: () => pgliteDialect(clonePglite()).createDriver(),
         },
       }
     : onNodeSqlite

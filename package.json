@@ -21,6 +21,7 @@
     "build": "pnpm build:packages && pnpm --filter \"./examples/*\" build",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "test": "pnpm --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin test",
+    "test:full": "pnpm --filter tenoncms test:full && pnpm --filter @tenoncms/plugins --filter @tenoncms/admin test",
     "fmt": "oxfmt && prettier --write \"**/*.astro\"",
     "fmt:check": "oxfmt --check && prettier --check \"**/*.astro\"",
     "lint": "oxlint",

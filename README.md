@@ -155,6 +155,7 @@ Commands, rules and architecture notes are in [CLAUDE.md](CLAUDE.md) and `docs/d
 | `pnpm --filter @tenoncms/admin watch`                             | Rebuild the admin into the example on change                                 |
 | `pnpm build`                                                      | Build packages and all examples                                              |
 | `pnpm test`                                                       | Run the unit and integration tests                                           |
+| `pnpm test:full`                                                  | Also run the integration tests on PGlite, `node:sqlite` and workerd          |
 | `pnpm typecheck`                                                  | Build packages, then type-check everything                                   |
 
 ## Status

@@ -179,8 +179,9 @@
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run --project node",
+    "test:full": "vitest run",
+    "test:watch": "vitest --project node"
   },
   "dependencies": {
     "@better-auth/api-key": "1.7.14",
