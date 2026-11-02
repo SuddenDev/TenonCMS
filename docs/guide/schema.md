@@ -86,25 +86,25 @@ Each database has its own entry and driver, so you install only the one you use:
 
 ## Field options
 
-| Option                              | Types                                                                                           | What it does                                         |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `label`, `description`              | all                                                                                             | Label and help text in the admin                     |
-| `placeholder`                       | `text`, `textarea`, `number`, `date`, `datetime`                                                | Shown in the empty input                             |
-| `required`                          | all but `join`                                                                                  | The value MUST be present                            |
-| `default`                           | all but `join`                                                                                  | Value on `create` when the field is `undefined`      |
-| `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                              | Length, and a regular expression for the whole value |
-| `min`, `max`                        | `number`                                                                                        | Number range                                         |
-| `fields`                            | `group`, `array`                                                                                | The fields of the group, or of each item             |
-| `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name, or shared names |
-| `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                |
-| `labels`                            | `array`, `blocks`                                                                               | `{ singular, plural }` item labels in the admin      |
-| `appearance`                        | `array`, `blocks`                                                                               | `"tree"`: edit the items as a tree in the admin      |
-| `validate`                          | all but `join`                                                                                  | Your own check, on the server                        |
-| `condition`                         | all                                                                                             | The field applies only when this matches             |
-| `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value             |
-| `private`                           | all                                                                                             | Keep the value out of public HTTP reads              |
-| `readOnly`                          | all but `join`                                                                                  | The admin shows the input disabled                   |
-| `hooks`                             | all but `join`                                                                                  | See [Hooks](./hooks.md)                              |
+| Option                              | Types                                                                                           | What it does                                           |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `label`, `description`              | all                                                                                             | Label and help text in the admin                       |
+| `placeholder`                       | `text`, `textarea`, `number`, `date`, `datetime`                                                | Shown in the empty input                               |
+| `required`                          | all but `join`                                                                                  | The value MUST be present                              |
+| `default`                           | all but `join`                                                                                  | Value on `create` when the field is `undefined`        |
+| `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                              | Length, and a regular expression for the whole value   |
+| `min`, `max`                        | `number`                                                                                        | Number range                                           |
+| `fields`                            | `group`, `array`                                                                                | The fields of the group, or of each item               |
+| `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name, or shared names   |
+| `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                  |
+| `itemLabels`                        | `array`, `blocks`                                                                               | `{ singular, plural, title }` item labels in the admin |
+| `appearance`                        | `array`, `blocks`                                                                               | `"tree"`: edit the items as a tree in the admin        |
+| `validate`                          | all but `join`                                                                                  | Your own check, on the server                          |
+| `condition`                         | all                                                                                             | The field applies only when this matches               |
+| `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value               |
+| `private`                           | all                                                                                             | Keep the value out of public HTTP reads                |
+| `readOnly`                          | all but `join`                                                                                  | The admin shows the input disabled                     |
+| `hooks`                             | all but `join`                                                                                  | See [Hooks](./hooks.md)                                |
 
 The admin receives the schema as JSON, so functions never reach the browser:
 
@@ -219,12 +219,15 @@ cta: { type: "link" }
 cta: { type: "link", required: true }
 ```
 
-It stores one of these, with an optional `target` (`_self`, `_blank`, `_parent`, `_top`):
+It stores one of these, with an optional `target` (`_self`, `_blank`, `_parent`, `_top`) and an optional `suffix`:
 
 ```ts
 { reference: { collection: "pages", id: "p1" }, target: "_blank" }
+{ reference: { collection: "pages", id: "p1" }, suffix: "?ref=nav#team" }
 { href: "https://example.com" }
 ```
+
+- A `suffix` is a query and anchor that a read appends to `href`, for a reference and for a URL. It starts with `?` or `#` and has no whitespace. A `#` suffix replaces the fragment of the URL, a `?` suffix replaces its query and fragment.
 
 - An `href` follows the rich text rules: HTTP(S), `mailto:`, `tel:`, relative paths and fragments. Executable schemes are rejected.
 - A bad shape, a bad `href` or a collection without a `permalink` is a field error at its path, like `items.0.children.2.link`, also in drafts.
@@ -241,4 +244,4 @@ A populated read adds the target's `permalink` as `href`, in the read's locale a
 - `populate: false` returns the stored value. A write ignores `href`, `title` and `broken` next to a `reference`, so a read value can be saved back.
 - Deleting a linked document throws `LinkedContentError` (409, `LINKED_CONTENT`), like [rich text](./richtext.md#deleting-linked-content). `{ allowBrokenLinks: true }` deletes it and marks `reference.deleted: true` in every value that pointed to it.
 
-In the admin, one input searches titles across collections with a `permalink` and takes a typed URL ("Use https://…"). A switch opens the link in a new tab.
+In the admin, one input searches titles across collections with a `permalink` and takes a typed URL ("Use https://…"). A second input sets the `suffix`, and a switch opens the link in a new tab.

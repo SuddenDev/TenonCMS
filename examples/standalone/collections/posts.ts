@@ -11,7 +11,7 @@ export const posts = defineCollection({
     body: { type: "textarea" },
     links: {
       type: "array",
-      labels: { singular: "Link", plural: "Links" },
+      itemLabels: { singular: "Link", plural: "Links" },
       fields: {
         label: { type: "text", required: true },
         url: { type: "text" },

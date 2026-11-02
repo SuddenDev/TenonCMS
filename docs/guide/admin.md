@@ -192,7 +192,7 @@ The admin speaks English and German.
 
 - Each user picks the language under "Interface language" in the user menu. The browser keeps the choice (`tenon-admin-locale` in `localStorage`). Without one, the admin follows the browser language.
 - It is independent of the content languages in `localization`. Server validation messages stay English.
-- Every label and description you write takes a plain string, or one string per language: `label: { en: "Posts", de: "Beiträge" }`. That covers collections, globals, fields, blocks, `labels.singular` and `plural`, `nav.group`, page `title` and `description`, bar item labels (also from a loader) and `media.label`. A missing language shows English, then the first entry.
+- Every label and description you write takes a plain string, or one string per language: `label: { en: "Posts", de: "Beiträge" }`. That covers collections, globals, fields, blocks, `itemLabels.singular` and `plural`, `nav.group`, page `title` and `description`, bar item labels (also from a loader) and `media.label`. A missing language shows English, then the first entry.
 - Your browser code gets the language as `ctx.tenon.locale` (`"en"` or `"de"`), in pages, fields, page headers and bar items. A switch calls `update(ctx)`. Server `load` functions get it as `locale`.
 
 `translator()` from `tenoncms/admin` reads your own message files:

@@ -74,6 +74,38 @@ describe("link values", () => {
     expect((await cms.getGlobal("nav")).cta).toMatchObject({ href: "/about", title: "About" });
   });
 
+  it("appends the suffix to the resolved href of a reference and of a URL", async () => {
+    const cms = make();
+    const page = await cms.create("pages", { title: "About", slug: "about" });
+    const article = await cms.create("articles", {
+      cta: { ...to(page.id), suffix: "?ref=nav#team" },
+      sections: [{ link: { href: "https://example.com/a?x=1#old", suffix: "#team" } }],
+    });
+
+    const read = await cms.findById("articles", article.id);
+
+    expect(read?.cta).toMatchObject({ href: "/about?ref=nav#team", suffix: "?ref=nav#team" });
+    expect(read?.sections?.[0].link).toMatchObject({ href: "https://example.com/a?x=1#team" });
+    expect((await cms.findById("articles", article.id, { populate: false }))?.cta).toEqual({
+      ...to(page.id),
+      suffix: "?ref=nav#team",
+    });
+  });
+
+  it("keeps the suffix when a read value is saved again", async () => {
+    const cms = make();
+    const page = await cms.create("pages", { title: "About", slug: "about" });
+    const article = await cms.create("articles", { cta: { ...to(page.id), suffix: "#team" } });
+    const read = await cms.findById("articles", article.id);
+
+    await cms.update("articles", article.id, { cta: read!.cta });
+
+    expect((await cms.findById("articles", article.id, { populate: false }))?.cta).toEqual({
+      ...to(page.id),
+      suffix: "#team",
+    });
+  });
+
   it("returns the stored value with populate: false", async () => {
     const cms = make();
     const page = await cms.create("pages", { title: "About", slug: "about" });

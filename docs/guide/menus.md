@@ -8,7 +8,7 @@ A menu is a global with a list of links that nest. The `menu` preset gives you t
 import { defineCms } from "tenoncms";
 import { menu } from "tenoncms/presets";
 
-const mainMenu = menu();
+const mainMenu = menu({ depth: 2 });
 
 defineCms({
   blocks: { ...mainMenu.blocks },
@@ -23,12 +23,13 @@ defineCms({
 });
 ```
 
-- `blocks` holds two [shared blocks](./lists-and-blocks.md#nested-and-shared-blocks):
+- `depth` is how many levels of children a menu has below the top. `0` (default) is a flat list, `1` allows one level, `-1` is unlimited. A heading counts as a level, so a flat menu has no headings.
+- The two blocks are:
   - `menuLink`: `label` (text, optional), `link` (a [`link` field](./schema.md#links), required) and `children` (links and headings).
   - `menuHeading`: `label` (text, required) and `children` (links).
 - `fields.items` is a `blocks` field with `appearance: "tree"`. `blockType` stores `link` and `heading`.
 - A link MAY hold links directly. A heading is never required.
-- The blocks are shared because `menuLink` contains itself. A change to `menuLink` applies at every depth.
+- Only an unlimited menu (`depth: -1`) puts the blocks in `blocks`, as [shared blocks](./lists-and-blocks.md#nested-and-shared-blocks), because `menuLink` contains itself. A change to `menuLink` then applies at every depth. A finite menu nests the blocks inline and its `blocks` is empty, so `blocks: { ...mainMenu.blocks }` is harmless and `depth` can change later.
 - Where the menu shows in the admin is up to `nav` on the global. Add more globals for more menus, like a footer menu. Menus that share blocks MUST come from one `menu()` call.
 
 ## Edit it
@@ -83,6 +84,7 @@ Add blocks of your own with `blocks`. Each one goes wherever a link goes: at the
 
 ```ts
 const mainMenu = menu({
+  depth: -1,
   blocks: {
     button: {
       label: "Button",
@@ -96,7 +98,7 @@ const mainMenu = menu({
 });
 ```
 
-- `blockType` stores the key, `button`. The shared block is named after it, `menuButton`.
+- `blockType` stores the key, `button`. In an unlimited menu the shared block is named after it, `menuButton`.
 - The keys `link` and `heading` belong to the preset.
 - `menuItems()` gives the item `type: "button"`, and `style` passes through. A block with a `link` field gets `href` and `target`; one without has `href: null`.
 

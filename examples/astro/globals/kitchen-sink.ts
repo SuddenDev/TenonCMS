@@ -271,7 +271,7 @@ export const kitchenSink = defineGlobal({
       appearance: "tree",
       label: "Outline",
       description: "An array shown as a tree.",
-      labels: { singular: "Entry" },
+      itemLabels: { singular: "Entry" },
       fields: {
         title: { type: "text", required: true },
         children: { type: "array", fields: { title: { type: "text", required: true } } },
@@ -280,7 +280,7 @@ export const kitchenSink = defineGlobal({
     links: {
       type: "array",
       tab: "structure",
-      labels: { singular: "Link", plural: "Links" },
+      itemLabels: { singular: "Link", plural: "Links" },
       maxRows: 5,
       fieldsets: { more: { label: "More", collapsible: true, collapsed: true } },
       fields: {
@@ -293,7 +293,7 @@ export const kitchenSink = defineGlobal({
     sections: {
       type: "blocks",
       tab: "structure",
-      labels: { singular: "Section", plural: "Sections" },
+      itemLabels: { singular: "Section", plural: "Sections" },
       blocks: {
         hero: {
           label: "Hero",

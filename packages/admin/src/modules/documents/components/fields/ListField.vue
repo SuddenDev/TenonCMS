@@ -24,7 +24,7 @@ const sharedStructure = computed(
 <template>
   <FieldSet :disabled="field.readOnly" class="gap-3">
     <FieldLegend variant="label" class="mb-3">
-      {{ text(field.labels?.plural) ?? text(field.label) ?? name }}
+      {{ text(field.itemLabels?.plural) ?? text(field.label) ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
       <SharedMarker v-else-if="sharedStructure" :label="t('structure.shared')" />

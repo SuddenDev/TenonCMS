@@ -121,8 +121,22 @@ export function duplicateItem(item: Item, field: ArrayField | BlocksField): Item
 
 const TEXT = ["text", "textarea", "slug"];
 
-/** The first non-empty text value of an item, for its row header. Empty when it has none or the block is unknown. */
+/**
+ * The row title of an item: the `itemLabels.title` template filled with its values, else its first non-empty text
+ * value. Empty when it has neither or the block is unknown.
+ */
 export function itemTitle(item: Item, field: ArrayField | BlocksField): string {
+  const template = field.itemLabels?.title;
+  if (template) {
+    const title = template
+      .replace(/\{(\w+)\}/g, (_, key) => {
+        const v = item[key];
+        return typeof v === "string" || typeof v === "number" ? String(v) : "";
+      })
+      .trim();
+    if (title.replace(/[^\p{L}\p{N}]/gu, "")) return title;
+  }
+
   for (const [k, f] of Object.entries(itemFields(field, item) ?? {})) {
     const v = item[k];
     if (TEXT.includes(f.type) && typeof v === "string" && v.trim()) return v;

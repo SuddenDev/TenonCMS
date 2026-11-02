@@ -29,7 +29,7 @@ const { t } = useI18n();
 const path = () => props.path ?? props.name;
 const field = computed(() => props.field as ListField);
 const singular = () =>
-  text(props.field.labels?.singular) ??
+  text(props.field.itemLabels?.singular) ??
   t(props.field.type === "blocks" ? "items.block" : "items.item");
 const full = () => props.field.maxRows !== undefined && model.value.length >= props.field.maxRows;
 

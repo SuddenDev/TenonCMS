@@ -29,6 +29,21 @@ describe("checkLinkValue", () => {
       expect(() => checkLinkValue(value), JSON.stringify(value)).toThrow();
   });
 
+  it("accepts a suffix that starts with ? or # and holds no whitespace", () => {
+    for (const suffix of ["#team", "?ref=nav", "?ref=nav#team"])
+      expect(() => checkLinkValue({ href: "/a", suffix }), suffix).not.toThrow();
+    expect(() =>
+      checkLinkValue({ reference: { collection: "pages", id: "1" }, suffix: "#team" }),
+    ).not.toThrow();
+  });
+
+  it("rejects a bad suffix", () => {
+    for (const suffix of ["team", "#", "?", "# a", "#a\u0000", "", 1, null])
+      expect(() => checkLinkValue({ href: "/a", suffix }), String(suffix)).toThrow(
+        "Invalid link suffix",
+      );
+  });
+
   it("rejects executable schemes", () => {
     expect(() => checkLinkValue({ href: "javascript:alert(1)" })).toThrow("Unsafe URL");
   });
@@ -46,6 +61,16 @@ describe("storedLink", () => {
   it("keeps a URL and drops unknown keys", () => {
     expect(storedLink({ href: "/about", extra: 1 })).toEqual({ href: "/about" });
     expect(storedLink({ href: "/about", title: "x", broken: true })).toEqual({ href: "/about" });
+  });
+
+  it("keeps the suffix", () => {
+    const reference = { collection: "pages", id: "1" };
+
+    expect(storedLink({ reference, suffix: "#team", href: "/x" })).toEqual({
+      reference,
+      suffix: "#team",
+    });
+    expect(storedLink({ href: "/a", suffix: "?x=1" })).toEqual({ href: "/a", suffix: "?x=1" });
   });
 
   it("returns other values unchanged", () => {

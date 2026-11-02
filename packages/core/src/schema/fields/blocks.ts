@@ -42,8 +42,8 @@ export type BlocksField = Base<Record<string, any>[]> & {
   minRows?: number;
   /** Most items. Checked only when the field applies. */
   maxRows?: number;
-  /** Admin labels. */
-  labels?: ItemLabels;
+  /** Admin labels of the items and the list. */
+  itemLabels?: ItemLabels;
   /**
    * Admin only. `"tree"` shows the items as collapsible rows that nest, with an edit sheet per item. Default: each item
    * edits inline.

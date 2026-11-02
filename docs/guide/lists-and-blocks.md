@@ -6,7 +6,7 @@ An `array` is a list of items that share one set of fields. A `blocks` field is 
 links: {
   type: 'array',
   maxRows: 5,
-  labels: { singular: 'Link', plural: 'Links' },
+  itemLabels: { singular: 'Link', plural: 'Links' },
   fields: {
     label: { type: 'text', required: true },
     page: { type: 'relation', collection: 'pages' },
@@ -26,7 +26,9 @@ content: {
 },
 ```
 
-`fields`, `blocks`, `minRows`, `maxRows` and `labels` are in [Field options](./schema.md#field-options). `labels.singular` names the add button ("Add Link") and an array row ("Link 2"). A block row shows its block label.
+`fields`, `blocks`, `minRows`, `maxRows` and `itemLabels` are in [Field options](./schema.md#field-options). `itemLabels.singular` names the add button ("Add Link") and an array row ("Link 2"). A block row shows its block label.
+
+A row title is the item's first non-empty text value. `itemLabels.title` sets it with a template over the item's own fields, like `title: "{name} ({role})"`. Text and number values fill a placeholder. Without a result, the first text value is used.
 
 Each block takes:
 

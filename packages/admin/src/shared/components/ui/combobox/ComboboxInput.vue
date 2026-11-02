@@ -24,7 +24,7 @@ const forwarded = useForwardPropsEmits(props, emits);
 
 <template>
   <InputGroup>
-    <InputGroupAddon>
+    <InputGroupAddon class="ml-0.75">
       <Icon name="search" class="size-3 shrink-0 opacity-50" />
     </InputGroupAddon>
     <ComboboxInputControl v-bind="{ ...$attrs, ...forwarded }" />

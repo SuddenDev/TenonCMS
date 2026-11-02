@@ -13,6 +13,7 @@ import { posts } from "./collections/posts";
 import { kitchenSink } from "./globals/kitchen-sink";
 
 const mainMenu = menu({
+  depth: -1,
   blocks: {
     button: {
       label: "Button",
@@ -42,7 +43,7 @@ export default defineCms({
         title: { type: "text" },
         children: {
           type: "blocks",
-          labels: { singular: "Block", plural: "Blocks" },
+          itemLabels: { singular: "Block", plural: "Blocks" },
           blocks: ["hero", "text", "section"],
         },
       },

@@ -149,6 +149,27 @@ describe("itemTitle", () => {
     expect(itemTitle({ id: "1", n: 3, a: " ", b: "Hi" }, fields)).toBe("Hi");
     expect(itemTitle({ id: "1", n: 3 }, fields)).toBe("");
   });
+
+  it("fills `itemLabels.title` with the item's values", () => {
+    const field = {
+      type: "array",
+      itemLabels: { title: "{a} ({n})" },
+      fields: { n: { type: "number" }, a: { type: "text" }, b: { type: "text" } },
+    } as never;
+
+    expect(itemTitle({ id: "1", n: 3, a: "Hi", b: "x" }, field)).toBe("Hi (3)");
+    expect(itemTitle({ id: "1", a: "Hi" }, field)).toBe("Hi ()");
+  });
+
+  it("falls back to the first text value when the template renders empty", () => {
+    const field = {
+      type: "array",
+      itemLabels: { title: "{a}" },
+      fields: { a: { type: "text" }, b: { type: "text" } },
+    } as never;
+
+    expect(itemTitle({ id: "1", b: "B" }, field)).toBe("B");
+  });
 });
 
 describe("fields", () => {

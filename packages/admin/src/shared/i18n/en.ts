@@ -406,6 +406,9 @@ export default {
   links: {
     broken: "Broken link",
     newTab: "Open in new tab",
+    addSuffix: "suffix",
+    suffix: "Query and anchor",
+    suffixPlaceholder: "?ref=nav#team",
     search: "Search content or enter a URL…",
     use: "Use {url}",
   },

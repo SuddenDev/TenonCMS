@@ -12,7 +12,7 @@ The zod schema of a `link` field drops read decoration (`storedLink()`) and chec
 
 `content/reads/read-results.ts` → `reads/resolve-links.ts` → `reads/resolve-targets.ts`
 
-`resolveLinkTargets()` loads the targets of many references with one load per collection, in the scope's perspective and locale, within each collection's read rule and read hooks. `href` is the `permalink` with the locale prefix, or a media file's URL; preview URLs are never used. `resolveLinks()` adds `href`, `title` and `broken` to `link` values in place. Rich text decorates its nodes from the same targets. The scope's locale reaches resolution even when the owner is not localized.
+`resolveLinkTargets()` loads the targets of many references with one load per collection, in the scope's perspective and locale, within each collection's read rule and read hooks. `href` is the `permalink` with the locale prefix, or a media file's URL; preview URLs are never used. `resolveLinks()` adds `href`, `title` and `broken` to `link` values in place and appends a `suffix` to the `href` (`withSuffix()`). Rich text decorates its nodes from the same targets. The scope's locale reaches resolution even when the owner is not localized.
 
 ## Follow a delete
 
@@ -24,7 +24,8 @@ The zod schema of a `link` field drops read decoration (`storedLink()`) and chec
 
 ```ts
 { reference: { collection: "pages", id: "p1" }, target: "_blank" } // stored
-{ href: "https://example.com" } // stored
+{ href: "https://example.com", suffix: "#team" } // stored
+{ reference: { collection: "pages", id: "p1" }, suffix: "?ref=nav#team", href: "/de/about?ref=nav#team" } // read
 { reference: { collection: "pages", id: "p1" }, href: "/de/about", title: "Über uns" } // read
 { reference: { collection: "pages", id: "p1" }, href: null, broken: true } // read, unavailable
 ```
@@ -38,20 +39,20 @@ Both need a session and read in the perspective of the preview cookie.
 
 ## Files
 
-| Path                       | Responsibility                                                              |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `config/types.ts`          | `LinkReference`, `LinkValue`, `LinkRead`, `LinkResolution`, search results. |
-| `runtime/url.ts`           | `safeLinkUrl()`: the URL rules of every link. No imports.                   |
-| `runtime/value.ts`         | `checkLinkValue()`, `storedLink()`, `linkKey()`. The admin bundles it.      |
-| `runtime/fields.ts`        | Rich text and `link` values inside groups, arrays and blocks.               |
-| `runtime/held-links.ts`    | Every reference of a value, and the deletion marker rules.                  |
-| `runtime/title-key.ts`     | The field that names a link target.                                         |
-| `reads/resolve-targets.ts` | Batched target loads with `href` and `title`.                               |
-| `reads/resolve-links.ts`   | `link` value decoration and `resolveReferences()`.                          |
-| `writes/prepare-links.ts`  | Collection check and deletion markers on every write.                       |
-| `integrity/check-links.ts` | Publication checks of document and image targets.                           |
-| `integrity/find-owners.ts` | Published, draft and locale values of owners with links.                    |
-| `integrity/break-links.ts` | Deletion conflicts and repairable broken references.                        |
-| `endpoints/`               | Protected target search and resolution.                                     |
+| Path                       | Responsibility                                                                |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `config/types.ts`          | `LinkReference`, `LinkValue`, `LinkRead`, `LinkResolution`, search results.   |
+| `runtime/url.ts`           | `safeLinkUrl()`, `isLinkSuffix()`, `withSuffix()`: the URL rules. No imports. |
+| `runtime/value.ts`         | `checkLinkValue()`, `storedLink()`, `linkKey()`. The admin bundles it.        |
+| `runtime/fields.ts`        | Rich text and `link` values inside groups, arrays and blocks.                 |
+| `runtime/held-links.ts`    | Every reference of a value, and the deletion marker rules.                    |
+| `runtime/title-key.ts`     | The field that names a link target.                                           |
+| `reads/resolve-targets.ts` | Batched target loads with `href` and `title`.                                 |
+| `reads/resolve-links.ts`   | `link` value decoration and `resolveReferences()`.                            |
+| `writes/prepare-links.ts`  | Collection check and deletion markers on every write.                         |
+| `integrity/check-links.ts` | Publication checks of document and image targets.                             |
+| `integrity/find-owners.ts` | Published, draft and locale values of owners with links.                      |
+| `integrity/break-links.ts` | Deletion conflicts and repairable broken references.                          |
+| `endpoints/`               | Protected target search and resolution.                                       |
 
 `runtime/` files MUST stay free of the CMS runtime and database imports; `url.ts`, `value.ts` and `fields.ts` are browser-safe. Reverse discovery reads JSON and needs no migration. Add an index if deletions get slow.

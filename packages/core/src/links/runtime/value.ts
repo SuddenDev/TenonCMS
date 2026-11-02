@@ -1,6 +1,6 @@
 // This file MUST import only `url.ts` and types. The admin bundles it.
 import type { LinkReference, LinkValue } from "../config/types.ts";
-import { safeLinkUrl } from "./url.ts";
+import { isLinkSuffix, safeLinkUrl } from "./url.ts";
 
 const TARGETS = ["_self", "_blank", "_parent", "_top"];
 
@@ -27,17 +27,21 @@ export function checkLinkValue(value: unknown): asserts value is LinkValue {
     throw new Error("Invalid link reference");
   if ("href" in value && (!href || !safeLinkUrl(href))) throw new Error("Unsafe URL");
   if (target !== undefined && !TARGETS.includes(target)) throw new Error("Invalid link target");
+  if ("suffix" in value && !isLinkSuffix(value.suffix)) throw new Error("Invalid link suffix");
 }
 
 /**
  * Removes read decoration and unknown keys before a write. A value with a `reference` loses its `href`, `title` and
- * `broken`. Anything that is not an object stays as it is.
+ * `broken`. A `suffix` stays. Anything that is not an object stays as it is.
  * @returns A copy, which {@link checkLinkValue} then checks.
  */
 export function storedLink(value: unknown): unknown {
   if (!isRecord(value)) return value;
 
-  const target = value.target === undefined ? {} : { target: value.target };
+  const target = {
+    ...(value.target !== undefined && { target: value.target }),
+    ...(value.suffix !== undefined && { suffix: value.suffix }),
+  };
   if (!("reference" in value))
     return "href" in value ? { href: value.href, ...target } : { ...target };
 

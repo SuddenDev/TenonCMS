@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { safeLinkUrl } from "./url.ts";
+import { safeLinkUrl, withSuffix } from "./url.ts";
 
 it("accepts web, email and telephone URLs, relative paths and fragments", () => {
   for (const url of [
@@ -27,4 +27,12 @@ it("rejects executable schemes, whitespace, control characters and non-strings",
     null,
   ])
     expect(safeLinkUrl(url)).toBe(false);
+});
+
+it("appends a suffix to a URL, replacing the part it covers", () => {
+  expect(withSuffix("/about", "#team")).toBe("/about#team");
+  expect(withSuffix("/about", "?ref=nav#team")).toBe("/about?ref=nav#team");
+  expect(withSuffix("/about?x=1#old", "#team")).toBe("/about?x=1#team");
+  expect(withSuffix("/about?x=1#old", "?y=2")).toBe("/about?y=2");
+  expect(withSuffix("/about?x=1", undefined)).toBe("/about?x=1");
 });

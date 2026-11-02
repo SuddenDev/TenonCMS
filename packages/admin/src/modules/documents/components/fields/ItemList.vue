@@ -32,7 +32,7 @@ const { itemName } = useItemNames();
 const path = () => props.path ?? props.name;
 const blocks = () => (props.field.type === "blocks" ? blocksOf(props.field) : undefined);
 const singular = () =>
-  text(props.field.labels?.singular) ?? t(blocks() ? "items.block" : "items.item");
+  text(props.field.itemLabels?.singular) ?? t(blocks() ? "items.block" : "items.item");
 const full = () => props.field.maxRows !== undefined && model.value.length >= props.field.maxRows;
 
 // Rows added in this session open, saved ones start collapsed.

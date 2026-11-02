@@ -422,6 +422,9 @@ export default {
   links: {
     broken: "Defekter Link",
     newTab: "In neuem Tab öffnen",
+    addSuffix: "Suffix",
+    suffix: "Query und Anker",
+    suffixPlaceholder: "?ref=nav#team",
     search: "Inhalte suchen oder URL eingeben …",
     use: "{url} verwenden",
   },

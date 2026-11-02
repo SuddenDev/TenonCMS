@@ -351,7 +351,7 @@ describe("strings preset", () => {
 });
 
 describe("menu preset", () => {
-  const { blocks, fields } = menu();
+  const { blocks, fields } = menu({ depth: -1 });
   const make = () =>
     defineCms({
       collections: {
@@ -433,6 +433,7 @@ describe("menu preset", () => {
 
   it("takes blocks of the host wherever a link goes", async () => {
     const withButton = menu({
+      depth: -1,
       blocks: {
         button: {
           fields: {
@@ -470,6 +471,60 @@ describe("menu preset", () => {
       { type: "link", children: [{ type: "button", style: "primary" }] },
       { type: "heading", children: [{ type: "button", style: "primary" }] },
     ]);
+  });
+
+  describe("depth", () => {
+    const build = (depth?: number) => {
+      const preset = menu(depth === undefined ? {} : { depth });
+      return defineCms({
+        blocks: { ...preset.blocks },
+        globals: { mainMenu: { fields: { ...preset.fields } } },
+        database: testDatabase(),
+        secret: "x".repeat(32),
+        media: false,
+      });
+    };
+    const link = (children?: unknown[]) => ({
+      blockType: "link",
+      link: { href: "/a" },
+      ...(children && { children }),
+    });
+
+    // Unknown keys are stripped on write, so a level beyond `depth` is dropped, not rejected.
+    const levels = (items: any[]): number =>
+      items.length ? 1 + Math.max(...items.map((i) => levels(i.children ?? []))) : 0;
+    const store = async (cms: ReturnType<typeof build>, items: unknown[]) =>
+      levels(((await cms.setGlobal("mainMenu", { items })) as any).items);
+
+    it("is flat by default, without headings or children", async () => {
+      const cms = build();
+
+      expect(await store(cms, [link(), link([link()])])).toBe(1);
+      await expect(
+        cms.setGlobal("mainMenu", { items: [{ blockType: "heading", label: "A" }] }),
+      ).rejects.toBeDefined();
+    });
+
+    it("keeps exactly `depth` levels below the top", async () => {
+      const cms = build(3);
+
+      expect(await store(cms, [link([link([link([link([link()])])])])])).toBe(4);
+    });
+
+    it("lets a heading group links and count as a level", async () => {
+      const cms = build(1);
+      const heading = (children: unknown[]) => ({ blockType: "heading", label: "H", children });
+
+      expect(await store(cms, [heading([link([link()])])])).toBe(2);
+      await expect(
+        cms.setGlobal("mainMenu", { items: [heading([heading([link()])])] }),
+      ).rejects.toBeDefined();
+    });
+
+    it("needs no shared blocks unless unlimited", () => {
+      expect(menu({ depth: 2 }).blocks).toEqual({});
+      expect(Object.keys(menu({ depth: -1 }).blocks)).toEqual(["menuLink", "menuHeading"]);
+    });
   });
 
   it("rejects a block named like a preset block", () => {

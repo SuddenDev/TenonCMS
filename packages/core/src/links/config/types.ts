@@ -6,8 +6,14 @@ export type LinkReference = { collection: string; id: string; deleted?: true };
 /** Where a link opens. The admin offers `_self` and `_blank`. */
 export type LinkTarget = "_self" | "_blank" | "_parent" | "_top";
 
-/** The stored value of a `link` field: a reference to a document with a `permalink`, or a URL. */
-export type LinkValue = ({ reference: LinkReference } | { href: string }) & { target?: LinkTarget };
+/**
+ * The stored value of a `link` field: a reference to a document with a `permalink`, or a URL. `suffix` is appended to
+ * the resolved `href`. It starts with `?` or `#` and replaces the query and fragment it covers.
+ */
+export type LinkValue = ({ reference: LinkReference } | { href: string }) & {
+  target?: LinkTarget;
+  suffix?: string;
+};
 
 /** What a link resolves to. `href` is `null` and `broken` is `true` for an unavailable target. */
 export type LinkResolution = { href: string | null; title?: string; broken?: true };

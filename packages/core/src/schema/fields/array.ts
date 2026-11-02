@@ -9,6 +9,12 @@ export type ItemLabels = {
   singular?: Text;
   /** The list, e.g. `Slides`, as its heading in the admin. Default: the field's `label`. */
   plural?: Text;
+  /**
+   * Row title as a template over the item's own fields: `"{label} ({role})"`. Only text and number values fill a
+   * placeholder, and a missing one is empty. Default, or when the result is empty: the first non-empty text value of the
+   * item.
+   */
+  title?: string;
 };
 
 /** A list of items that share one set of fields. Its validator is built by `dataSchema()` from the items. */
@@ -25,8 +31,8 @@ export type ArrayField = Base<Record<string, any>[]> &
     minRows?: number;
     /** Most items. Checked only when the field applies. */
     maxRows?: number;
-    /** Admin labels. */
-    labels?: ItemLabels;
+    /** Admin labels of the items and the list. */
+    itemLabels?: ItemLabels;
     /**
      * Admin only. `"tree"` shows the items as collapsible rows that nest, with an edit sheet per item. Default: each item
      * edits inline.

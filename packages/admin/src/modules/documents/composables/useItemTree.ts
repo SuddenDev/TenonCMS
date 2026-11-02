@@ -223,12 +223,15 @@ export function useListDrop(
 export function useItemNames() {
   const { t } = useI18n();
   const listName = (field: ListField, key: string) =>
-    text(field.labels?.plural) ?? text(field.label) ?? key;
+    text(field.itemLabels?.plural) ?? text(field.label) ?? key;
   // A block row shows its block label, an array row "Item 2".
   const itemName = (field: ListField, item: Item, i: number) =>
     field.type === "blocks"
       ? (text(blockOf(field, item)?.label) ?? String(item.blockType))
-      : t("items.numbered", { label: text(field.labels?.singular) ?? t("items.item"), n: i + 1 });
+      : t("items.numbered", {
+          label: text(field.itemLabels?.singular) ?? t("items.item"),
+          n: i + 1,
+        });
   // The top list shows its own name. A nested one shows the item that holds it, like "Section › Children".
   const targetName = (target: MoveTarget) => {
     const list = listName(target.field, target.key);
