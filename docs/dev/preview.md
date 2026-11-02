@@ -19,7 +19,7 @@ Browser entry points MUST NOT import the server resolver, zod or the CMS runtime
 
 - It picks a mode from the window: inside the admin's preview iframe, in a preview tab the admin opened, or on any other page (admin bar only).
 - It accepts messages only from the expected parent or opener, and only from the configured admin origin.
-- It tells the admin which documents a page shows (so "On this page" works) and highlights bound elements on request.
+- It tells the admin the page's URL and which documents it shows (so "On this page" works), again after every DOM change and `popstate`, because client-side navigation sends no new `ready`. The admin writes the URL to `?url=`. It highlights bound elements on request.
 - Unsaved edits arrive as `draft` messages. They apply to bound elements immediately. With the `morph` option, pages that render on the server refresh after each save: the runtime fetches the page again with the preview cookie and morphs the DOM. `morph` is off by default; the Astro adapter turns it on.
 - A draft only applies to data of the same locale (or no locale).
 - The admin sends image, file and relation fields as documents, not ids. `patch()` ignores an object without `data-cms-attr`, so text bound to a relation keeps the page's value.

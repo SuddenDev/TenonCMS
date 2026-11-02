@@ -59,6 +59,7 @@ defineCms({
 ```
 
 - Core owns `database`, `basePath` and `secret`. It always turns `emailAndPassword` on, because the admin login needs it. Your other email options stay.
+- Set the site's origin as `baseURL` in production, or the `BETTER_AUTH_URL` environment variable. Without it, better-auth takes the origin from each request and logs "Base URL is not set" on start. Core does not set it, because the CMS MAY run on another origin than `site`. For several hosts, use better-auth's dynamic `baseURL` with `allowedHosts`.
 - `modelName` is not accepted. Core reads the `user` table by name, so auth tables keep their default names.
 - Only the first user can sign up without a session (`/auth-status` reports `setup`). After that, a request MAY create a user only with the session of a user whose role is `admin`, on every endpoint (email sign-up, social sign-in, magic link, other plugins). Anything else returns 403. Server code that calls better-auth without a request is trusted.
 - Core's first-user rule runs before your `databaseHooks.user.create.before`.

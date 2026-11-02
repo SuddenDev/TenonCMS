@@ -22,6 +22,7 @@ type SeoSettings = {
   general?: { title?: string | null; url?: string | null } | null;
   seo?: {
     separator?: string | null;
+    description?: string | null;
     image?: Image;
     verification?: { google?: string | null; bing?: string | null } | null;
     noindex?: boolean | null;
@@ -41,7 +42,7 @@ function urlOf(image: Image) {
 /**
  * The `<head>` values of a document with `seo().fields`. Stores nothing.
  * - `title`: `seo.title`, or the document's `title` when it is empty, so the fallback follows title changes. With `general.title`, it follows after `seo.separator` (default `" · "`).
- * - `description`: `seo.description`, or `undefined`. There is no fallback.
+ * - `description`: the document's `seo.description`, else the site's, else `undefined`.
  * - `noindex`: `true` when the document's or the site's `seo.noindex` is `true`.
  * - `canonical`: the URL of the document's own locale in `alternates`, else `general.url` joined with the document's `path`. `undefined` unless one of them exists.
  * - `alternates`: `{ hreflang, href }[]` for the `<link rel="alternate">` tags, from `doc.alternates` (`x-default` included). Absolute against `general.url` when it is set. Empty without `doc.alternates`.
@@ -64,7 +65,7 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
 
   return {
     title: site ? page + (seo?.separator ?? " · ") + site : page,
-    description: doc.seo?.description || undefined,
+    description: doc.seo?.description || seo?.description || undefined,
     noindex: doc.seo?.noindex === true || seo?.noindex === true,
     canonical: own ?? (base && path ? join(base, path) : undefined),
     alternates,

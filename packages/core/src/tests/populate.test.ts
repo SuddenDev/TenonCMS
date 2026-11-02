@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 import { defineCms } from "../index.ts";
 import { modifierId } from "../media/images/modifiers.ts";
 import { local } from "../media/storage/local/index.ts";
 import { seo } from "../presets/index.ts";
 import type { Modifiers } from "../schema/index.ts";
+import type { RelationSelect } from "../schema/fields/relation.ts";
 import { png300 } from "./fixtures.ts";
 import {
   fresh,
@@ -252,6 +253,98 @@ describe("select", () => {
       ],
       ["id", "title"],
     ]);
+  });
+});
+
+describe("default select of a relation", () => {
+  const define = <const S extends RelationSelect = { title: true; path: true }>(
+    select: S = { title: true, path: true } as never,
+  ) =>
+    defineCms({
+      collections: {
+        pages: {
+          fields: {
+            title: { type: "text" },
+            path: { type: "text" },
+            body: { type: "text" },
+            blocks: {
+              type: "blocks",
+              blocks: {
+                cta: {
+                  fields: {
+                    label: { type: "text" },
+                    link: {
+                      type: "group",
+                      fields: { page: { type: "relation", collection: "pages", select } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      globals: {
+        nav: {
+          fields: {
+            items: {
+              type: "array",
+              fields: {
+                label: { type: "text" },
+                page: { type: "relation", collection: "pages", select: { path: true } },
+              },
+            },
+          },
+        },
+      },
+      database: testDatabase(),
+      secret: "x".repeat(32),
+    });
+
+  it("trims a populated relation to its select, in blocks and in a global", async () => {
+    const cms = define();
+    const home = await cms.create("pages", { title: "Home", path: "/", body: "Long" });
+    const cta = { blockType: "cta", label: "Go", link: { page: home.id } } as const;
+    const about = await cms.create("pages", { title: "About", path: "/about", blocks: [cta] });
+    await cms.setGlobal("nav", { items: [{ label: "Home", page: home.id }] });
+
+    const page = (await cms.findById("pages", about.id))!;
+    const block = page.blocks![0]!;
+    expect(block).toMatchObject({ label: "Go", link: { page: { title: "Home", path: "/" } } });
+    expect(block.link!.page).toEqual({ id: home.id, title: "Home", path: "/" });
+    expectTypeOf<keyof NonNullable<NonNullable<typeof block.link>["page"]>>().toEqualTypeOf<
+      "id" | "title" | "path"
+    >();
+
+    const nav = await cms.getGlobal("nav");
+    expect(nav.items![0]!.page).toEqual({ id: home.id, path: "/" });
+    expectTypeOf<keyof NonNullable<NonNullable<typeof nav.items>[number]["page"]>>().toEqualTypeOf<
+      "id" | "path"
+    >();
+    expect(await cms.getGlobal("nav", { populate: false })).toMatchObject({
+      items: [{ page: home.id }],
+    });
+  });
+
+  it("gives way to a select that lists the relation's own fields", async () => {
+    const cms = define();
+    const home = await cms.create("pages", { title: "Home", path: "/", body: "Long" });
+    await cms.setGlobal("nav", { items: [{ label: "Home", page: home.id }] });
+    const nav = await cms.getGlobal("nav", {
+      select: { items: { page: { title: true, body: true } } },
+    });
+    expect(nav.items![0]!.page).toEqual({ id: home.id, title: "Home", body: "Long" });
+    expectTypeOf<keyof NonNullable<NonNullable<typeof nav.items>[number]["page"]>>().toEqualTypeOf<
+      "id" | "title" | "body"
+    >();
+    const whole = await cms.getGlobal("nav", { select: { items: true } });
+    expect(whole.items![0]!.page).toEqual({ id: home.id, path: "/" });
+  });
+
+  it("rejects a select path the target does not have", () => {
+    expect(() => define({ titel: true } as never)).toThrow(
+      'relation "pages.blocks[cta].link.page" has an invalid select path "titel"',
+    );
   });
 });
 

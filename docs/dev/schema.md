@@ -59,6 +59,7 @@ Anything the admin evaluates MUST be JSON: conditions, the built-in checks and p
 Types are a big part of the product: reads, populate and select all change the result type.
 
 - Inference lives in type-only files, one per concern: stored data, read results, populate and select, checked references, locale.
+- `Resolve` takes the read's select spec as `Sel`, because a relation's own `select` applies only where `Sel` is not an object at that key. `Selected` then trims by the read's spec. `SelAt` is the type twin of `specAt()` in `content/population/default-select.ts`.
 - Keep recursion guarded for untyped schemas (the admin uses one), or TypeScript fails with "excessively deep" errors.
 - Generic inference skips excess property checks, so option objects need an `Exact` wrapper to reject unknown keys.
 - **After any change to read types or locale types, run both `pnpm typecheck` and the `tsdown` build.** Some mistakes pass one and break the other.

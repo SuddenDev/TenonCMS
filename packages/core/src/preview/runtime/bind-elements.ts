@@ -1,6 +1,6 @@
 import { isObject } from "../../schema/condition.ts";
-import type { Excluded } from "../config/types.ts";
-import { draftKey, getDrafts } from "./store.ts";
+import type { DocumentRef, Excluded } from "../config/types.ts";
+import { draftKey, getDrafts, readDocuments } from "./store.ts";
 
 /**
  * The `data-cms` value that binds an element to a field. `id` is `null` for a global.
@@ -106,11 +106,13 @@ export function pickBound(target: Element, excluded: string | null) {
   return el;
 }
 
-/** The documents and globals bound on the page, once each, in page order. A global has an empty id. */
-export function boundDocuments() {
-  const documents = new Map<string, { collection: string; id: string }>();
-  for (const el of document.querySelectorAll("[data-cms]")) {
-    const { collection, id } = parseBinding(el.getAttribute("data-cms")!);
+/** The documents and globals the page shows, once each: bound ones in page order, then the page's reads. */
+export function pageDocuments() {
+  const bound = [...document.querySelectorAll("[data-cms]")].map((el) =>
+    parseBinding(el.getAttribute("data-cms")!),
+  );
+  const documents = new Map<string, DocumentRef>();
+  for (const { collection, id } of [...bound, ...readDocuments()]) {
     const key = draftKey(collection, id);
     if (!documents.has(key)) documents.set(key, { collection, id });
   }

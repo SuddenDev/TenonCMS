@@ -121,7 +121,7 @@ The second argument is optional. It takes the [settings](#settings) globals `gen
 | Result         | Value                                                                                                                               |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `title`        | `seo.title`, or the page's `title` when empty, then the separator (default `·`) and the site title. Nothing is stored.              |
-| `description`  | `seo.description`, or `undefined`. There is no fallback, so pages do not share one description.                                     |
+| `description`  | The page's `seo.description`, else the site's, else `undefined`.                                                                    |
 | `noindex`      | `true` when the page's or the site's `seo.noindex` is.                                                                              |
 | `canonical`    | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`. |
 | `alternates`   | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                         |
@@ -173,10 +173,10 @@ const trail = breadcrumbs(page); // [{ title: 'About', path: '/about' }, …, { 
 
 Most sites need a title, a URL and SEO defaults. `defineCms()` adds two globals for that, `general` and `seo`, with no config:
 
-| Global    | Fields                                                                                        |
-| --------- | --------------------------------------------------------------------------------------------- |
-| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                         |
-| `seo`     | `separator` (default `·`), `image` (social image), `verification.google` / `.bing`, `noindex` |
+| Global    | Fields                                                                                                                  |
+| --------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                                                   |
+| `seo`     | `separator` (default `·`), `description` (fallback), `image` (social image), `verification.google` / `.bing`, `noindex` |
 
 With `localization` and an entry that has a localized group, array or blocks field, a third global, `translations`, holds the default structure setting of each such entry (see [Localization](./localization.md#same-content-structure-in-all-languages)). `settings: { translations: false }` drops it.
 

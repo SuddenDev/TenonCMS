@@ -26,7 +26,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 
 `reads/read-documents.ts` → `reads/read-results.ts` → `population/populate.ts` → `population/select-fields.ts`
 
-[access/read.ts](../access/read.ts) owns admission and field-query eligibility before loading. `readDocs()` runs `beforeRead`, population, field and collection `afterRead`, media URLs, `alternates` (`reads/alternates.ts`: one batched published read per locale, then `permalinkUrl()`), then `select`. Population replaces relation ids with documents. It loads all targets of one field in one query, and each loaded batch runs its own collection's read hooks in the scope of the outer read. Groups, arrays and blocks pass the plan through and count no hop; the items of every document populate together, an array's with its `fields`, a blocks field's once per block name with that block's sub-plan.
+[access/read.ts](../access/read.ts) owns admission and field-query eligibility before loading. `readDocs()` runs `beforeRead`, population, field and collection `afterRead`, media URLs, `alternates` (`reads/alternates.ts`: one batched published read per locale, then `permalinkUrl()`), then the `select` of relation fields, then the read's `select`. Population replaces relation ids with documents. It loads all targets of one field in one query, and each loaded batch runs its own collection's read hooks in the scope of the outer read. Groups, arrays and blocks pass the plan through and count no hop; the items of every document populate together, an array's with its `fields`, a blocks field's once per block name with that block's sub-plan.
 
 ## Files
 
@@ -52,6 +52,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 | `writes/sync-structure.ts`                            | `setSyncStructure()` and `applySyncStructure()`: switch a document, or every document of a collection, to one shared item structure.       |
 | `population/populate-plan.ts`                         | What a populate option resolves at each key and hop. Groups and lists are always on.                                                       |
 | `population/populate.ts`                              | Batched relation and join reads, with the target's read hooks.                                                                             |
+| `population/default-select.ts`                        | The `select` of relation fields: trims populated documents where the read's `select` has no object for them.                               |
 | `population/select-fields.ts`                         | Projection to the `select` keys. Items keep `id` and `blockType`; blocks by block name.                                                    |
 | `population/validate-select.ts`                       | Checks that `select` fits the fields and what `populate` resolves.                                                                         |
 | `integrity/check-*.ts`                                | Existing ids, file rules and unique values before a save, at positional paths.                                                             |

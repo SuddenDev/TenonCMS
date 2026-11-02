@@ -5,6 +5,19 @@ import { hasSessionHint } from "./site-api.ts";
 let stop: Unsubscribe | undefined;
 
 /**
+ * Whether the page runs in the admin's live preview: its iframe or a preview tab it opened.
+ * @param headers The request's headers during SSR. Only the iframe shows in them (`Sec-Fetch-Dest: iframe` with the
+ * session hint cookie), so a preview tab is `false` until the browser checks `window.name`.
+ */
+export function isLivePreview(headers?: Headers): boolean {
+  if (headers)
+    return (
+      headers.get("sec-fetch-dest") === "iframe" && hasSessionHint(headers.get("cookie") ?? "")
+    );
+  return globalThis.window?.name.startsWith("tenon-preview") ?? false;
+}
+
+/**
  * Starts the preview runtime. The mode comes from `window.name`:
  * - `tenon-preview` (the admin's iframe): live preview.
  * - `tenon-preview-…` (a preview the admin opened in a tab): live preview and the admin bar with an edit switch.

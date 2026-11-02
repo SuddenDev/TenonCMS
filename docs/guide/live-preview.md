@@ -65,7 +65,7 @@ const post = useDraft("posts", data); // Vue: a ref; React: the merged value
 ## Per framework
 
 - **Astro**: the integration injects `preview({ morph: true })` into every page. `tenonCms({ preview: false })` leaves it out. Astro pages render on the server, so while you type only marked elements update. After each draft save, the runtime fetches the page again (with the preview cookie, so it renders the drafts) and morphs `<body>` and the title into it. Prerendered pages fetch their static HTML, so they only get the marked-element updates.
-- **Nuxt**: the module starts the runtime in a client plugin. `useTenon()` merges the unsaved state into the `data` of `find`, `findOne`, `findById` and `getGlobal`. Pages only add `edit()`.
+- **Nuxt**: the module starts the runtime in a plugin. `useTenon()` merges the unsaved state into the `data` of `find`, `findOne`, `findById` and `getGlobal`, and lists every document it read in "On this page", so editors can open them without `edit()`. Pages add `edit()` for outlines and clicks.
 - **TanStack Start and other Vite hosts**: call `preview()` once in the root component, in a `useEffect`, and pass loader data through `useDraft()`:
 
 ```tsx
@@ -84,6 +84,21 @@ The runtime picks its mode from `window.name`:
 | The admin's preview frame        | Applies the unsaved state. No bar.                                                                                                                       |
 | A preview tab the admin opened   | Also shows the admin bar with an "Edit" switch and "Exit preview".                                                                                       |
 | Any other page, signed-in editor | Shows the admin bar. Visitors download nothing extra: the bar loads only when the `tenon-session` cookie is set. Sign-in sets it and sign-out clears it. |
+
+After a link click in the preview, the URL field and `?url=` follow the page. A document that is open switches to the new page's document when the page shows exactly one document of a collection with `permalink` or `preview`.
+
+### Check for the live preview
+
+`isLivePreview()` from `tenoncms/preview` tells whether the page runs in the admin's frame or a preview tab, for example to skip intro animations. In the browser it reads `window.name`. During SSR, pass the request's headers: `isLivePreview(request.headers)`. They show only the admin's frame (`Sec-Fetch-Dest: iframe` with the `tenon-session` cookie), so a preview tab is `false` until the page runs in the browser.
+
+In Nuxt, the auto-imported `useLivePreview()` returns a ref. It holds the server's answer through hydration, then the browser's.
+
+```vue
+<script setup lang="ts">
+const livePreview = useLivePreview();
+</script>
+<template><IntroAnimation v-if="!livePreview" /></template>
+```
 
 ## Admin bar
 

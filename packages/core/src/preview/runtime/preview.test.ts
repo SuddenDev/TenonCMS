@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminBarContext } from "../../admin/index.d.ts";
-import { preview, type Unsubscribe } from "../index.ts";
+import { isLivePreview, preview, type Unsubscribe } from "../index.ts";
 import { builtIns } from "./admin-bar-items.ts";
+import { setReadDocuments } from "./store.ts";
 
 const handle = { update: vi.fn<(ctx: AdminBarContext) => void>(), unmount: vi.fn() };
 const mountAdminBar = vi.fn((_el: ShadowRoot, _ctx: AdminBarContext) => handle);
@@ -170,6 +171,59 @@ describe("preview", () => {
     expect(opener.postMessage.mock.calls[0]![0].documents).toHaveLength(4);
   });
 
+  it("reports the documents the page read, after the bound ones", async () => {
+    window.name = "tenon-preview";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    const read = {};
+    setReadDocuments(read, [
+      { collection: "pages", id: "p1" },
+      { collection: "nav", id: "" },
+    ]);
+    document.body.innerHTML = `<h1 data-cms="pages:p1:title">A</h1>`;
+    stop = preview();
+    await vi.dynamicImportSettled();
+    const hello = { data: { type: "mode", edit: true }, origin: location.origin, source: opener };
+    window.dispatchEvent(new MessageEvent("message", hello as never));
+    expect(opener.postMessage).toHaveBeenCalledWith(
+      {
+        type: "documents",
+        documents: [
+          { collection: "pages", id: "p1" },
+          { collection: "nav", id: "" },
+        ],
+      },
+      location.origin,
+    );
+    setReadDocuments(read, []);
+  });
+
+  it("reports the page's URL again after client navigation", async () => {
+    window.name = "tenon-preview";
+    const opener = { postMessage: vi.fn() };
+    vi.stubGlobal("opener", opener);
+    stop = preview();
+    await vi.dynamicImportSettled();
+    const hello = { data: { type: "mode", edit: true }, origin: location.origin, source: opener };
+    window.dispatchEvent(new MessageEvent("message", hello as never));
+    opener.postMessage.mockClear();
+    history.pushState(null, "", "/blocks");
+    document.body.innerHTML = `<h1>Blocks</h1>`;
+    await vi.waitFor(() =>
+      expect(opener.postMessage).toHaveBeenCalledWith(
+        { type: "url", href: location.href },
+        location.origin,
+      ),
+    );
+    opener.postMessage.mockClear();
+    history.replaceState(null, "", "/about");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(opener.postMessage).toHaveBeenCalledWith(
+      { type: "url", href: location.href },
+      location.origin,
+    );
+  });
+
   it("highlights the elements of a document the admin points at", async () => {
     window.name = "tenon-preview";
     const opener = { postMessage: vi.fn() };
@@ -209,6 +263,24 @@ describe("preview", () => {
     // A comment inside a post opens the post.
     expect(click("p").sent).toEqual({ type: "edit", collection: "posts", id: "1", path: "body" });
     expect(click("footer")).toEqual({ prevented: false, sent: undefined });
+  });
+
+  it("tells whether the page runs in the live preview", () => {
+    expect(isLivePreview()).toBe(false);
+    window.name = "tenon-preview";
+    expect(isLivePreview()).toBe(true);
+    window.name = "tenon-preview-pages:1";
+    expect(isLivePreview()).toBe(true);
+  });
+
+  it("detects the admin's iframe from request headers", () => {
+    const request = (headers: Record<string, string>) => isLivePreview(new Headers(headers));
+    const session = "theme=dark; tenon-session=1";
+    expect(request({ "sec-fetch-dest": "iframe", cookie: session })).toBe(true);
+    expect(request({ "sec-fetch-dest": "iframe" })).toBe(false);
+    expect(request({ "sec-fetch-dest": "document", cookie: session })).toBe(false);
+    window.name = "tenon-preview";
+    expect(request({})).toBe(false);
   });
 
   it("shows no admin bar in the admin's iframe", () => {

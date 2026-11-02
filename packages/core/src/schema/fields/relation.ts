@@ -9,6 +9,11 @@ export type RelationField = Base<unknown, string | string[]> & {
   /** Store an array of ids instead of one id. Not filterable. With `required`, at least one id. */
   many?: boolean;
   /**
+   * The fields a populated document keeps, like a read's `select`, e.g. `{ title: true, path: true }`. It applies
+   * wherever a read's `select` does not list the relation with an object. Ids stay ids.
+   */
+  select?: RelationSelect;
+  /**
    * What happens to this field when the referenced document is deleted:
    * - `'set-null'`: this field becomes `null`; in a `many` relation, the id is removed from the array.
    * - `'restrict'`: the delete fails with 409 and lists the referencing documents. Nothing changes.
@@ -18,6 +23,9 @@ export type RelationField = Base<unknown, string | string[]> & {
    */
   onDelete?: "set-null" | "restrict" | "cascade";
 };
+
+/** Keys a populated document keeps. `true` keeps a value, an object lists keys inside a group or relation. */
+export type RelationSelect = { [key: string]: true | RelationSelect };
 
 /**
  * The validator of a `relation`, `image` or `file` field: one id, or an array of distinct ids with `many`.

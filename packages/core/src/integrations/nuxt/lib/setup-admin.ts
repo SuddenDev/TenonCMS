@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { addServerHandler, addVitePlugin } from "@nuxt/kit";
 import type {} from "@nuxt/nitro-server/augments";
 import type { Nuxt } from "@nuxt/schema";
@@ -18,6 +18,8 @@ export function setupAdmin(nuxt: Nuxt, path: string, runtime: string) {
   // Dev serves the entry through Vite. A build replaces the page once the client manifest exists.
   const assets = nuxt.options.app.baseURL.replace(/\/$/, "") + nuxt.options.app.buildAssetsDir;
   let html = adminHtml(path, [`${assets}@vite/client`, `${assets}@fs${entry}`]);
+  // A linked install lies outside the app's folders, and Vite serves `/@fs` only from allowed ones.
+  nuxt.options.vite.server?.fs?.allow?.push(dirname(entry));
 
   addVitePlugin(
     {

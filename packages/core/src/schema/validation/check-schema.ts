@@ -4,6 +4,7 @@ import { targetOf } from "../traversal/reference-fields.ts";
 import { pathKey, plainPath, relationPaths } from "../traversal/relation-paths.ts";
 import { blocksOf, unseenBlocks } from "../traversal/blocks-of.ts";
 import { placeholders } from "../../preview/templates/placeholders.ts";
+import { badSelectPath, metaKeys } from "../../content/population/validate-select.ts";
 import type { Localization } from "../../cms/config/options.ts";
 import {
   type ArrayField,
@@ -174,6 +175,12 @@ function checkRelations(collections: Collections, { name, fields, global }: Owne
       fail(`${at} is required and cannot use onDelete: 'set-null'`);
     if (global && field.onDelete === "cascade")
       fail(`${at} is in a global and cannot use onDelete: 'cascade'`);
+    if (field.type === "relation" && field.select !== undefined) {
+      const target = collections[to];
+      const meta = metaKeys(target.localized);
+      const error = badSelectPath(collections, target.fields, field.select, Infinity, "", meta);
+      if (error) fail(`${at} has an invalid select path "${error}"`);
+    }
   }
 }
 

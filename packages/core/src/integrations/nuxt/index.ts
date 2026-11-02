@@ -36,6 +36,9 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
     // Nuxt forwards aliases to Nitro and to the generated tsconfig paths.
     nuxt.options.alias["#tenon/config"] = resolve(nuxt.options.rootDir, options.entry!);
     nuxt.options.build.transpile.push(runtime);
+    // A linked install would resolve its own copy of Vue from the tenoncms checkout.
+    const resolveOptions = (nuxt.options.vite.resolve ??= {});
+    resolveOptions.dedupe = [...(resolveOptions.dedupe ?? []), "vue", "vue-router"];
     addServerHandler({ route: `${API_BASE}/**`, handler: `${runtime}/server/handler` });
 
     // The admin page, a second client entry in the host's Vite build.
@@ -48,7 +51,7 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
     );
 
     addImports(
-      ["useTenon", "useLocale", "useAlternates"].map((name) => ({
+      ["useTenon", "useLocale", "useAlternates", "useLivePreview"].map((name) => ({
         name,
         from: `${runtime}/composables`,
       })),
@@ -56,7 +59,7 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
 
     // The preview runtime reads the admin path for the bars' links; `false` renders no admin bar.
     nuxt.options.runtimeConfig.public.tenon = { admin: path ?? false };
-    addPlugin({ src: `${runtime}/plugin.client`, mode: "client" });
+    addPlugin(`${runtime}/plugin`);
 
     // Types `createClient()` from `tenoncms/client` without a type argument.
     addTypeTemplate(

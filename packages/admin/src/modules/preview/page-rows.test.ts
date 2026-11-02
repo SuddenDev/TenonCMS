@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { Fields } from "@/shared/api";
-import { pageRows } from "./page-rows";
+import { pageRows, routedDocument, type PageDocument } from "./page-rows";
 
 const entries: Record<string, { fields: Fields; visualEditing?: boolean }> = {
   "posts:": {
@@ -44,4 +44,14 @@ it("lists the page's documents, then what they point to, each once, without excl
     ["authors:a", 1],
     ["general:", 0],
   ]);
+});
+
+it("finds the one routed document a page shows", () => {
+  const isRouted = (d: PageDocument) => d.collection !== "authors";
+  const page = { collection: "pages", id: "p1" };
+  const author = { collection: "authors", id: "a1" };
+  const menu = { collection: "menu", id: "" };
+  expect(routedDocument([menu, author, page], isRouted)).toEqual(page);
+  expect(routedDocument([page, { collection: "posts", id: "x" }], isRouted)).toBeNull();
+  expect(routedDocument([menu, author], isRouted)).toBeNull();
 });

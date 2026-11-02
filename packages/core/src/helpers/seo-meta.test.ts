@@ -134,9 +134,12 @@ it("seoMeta lists the verification tags", () => {
   expect(seoMeta({}, {}).verification).toEqual([]);
 });
 
-it("seoMeta has no description fallback", () => {
+it("seoMeta falls back to the site's description, not the tagline", () => {
   const general = { title: "Site", tagline: "T" };
   expect(seoMeta({ title: "A" }, { general }).description).toBeUndefined();
+  const seo = { description: "Site" };
+  expect(seoMeta({ title: "A" }, { general, seo }).description).toBe("Site");
+  expect(seoMeta({ title: "A", seo: { description: "Page" } }, { seo }).description).toBe("Page");
 });
 
 it("helpers come from the main and the browser-safe client entry", async () => {

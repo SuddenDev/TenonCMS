@@ -9,6 +9,7 @@ import { type ReadOpts } from "./read-documents.ts";
 import { decorate } from "../../media/images/decorate.ts";
 import { type PopulatePlan, toPopulatePlan } from "../population/populate-plan.ts";
 import { type SelectSpec, pick } from "../population/select-fields.ts";
+import { applyRelationSelects, hasRelationSelects } from "../population/default-select.ts";
 import { badSelectPath, metaKeys } from "../population/validate-select.ts";
 import { populate } from "../population/populate.ts";
 import { addAlternates } from "./alternates.ts";
@@ -17,7 +18,7 @@ import { readDecision } from "../../access/read.ts";
 
 /**
  * Runs `beforeRead` on the loaded documents, then population, then `afterRead`, then media URLs, then `alternates`
- * when asked for and selected, then `select`.
+ * when asked for and selected, then the `select` of relations, then the read's `select`.
  * @returns The documents as the read returns them.
  */
 export async function readDocs(
@@ -56,6 +57,8 @@ export async function readDocs(
   if (alternates && name.kind === "collection" && (!select || select.alternates))
     result = await addAlternates(core, s, name.name, result);
 
+  if (hasRelationSelects(core.schema))
+    result = result.map((d) => applyRelationSelects(collections, fields, d, select ?? true));
   return select ? result.map((d) => pick(collections, fields, d, select)) : result;
 }
 

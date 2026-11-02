@@ -12,10 +12,17 @@ describe("presets", () => {
     expect(fields.favicon.type).toBe("image");
   });
 
-  it("seo has separator, image, verification and noindex", () => {
+  it("seo has separator, description, image, verification and noindex", () => {
     const { fields } = settings().seo;
-    expect(Object.keys(fields)).toEqual(["separator", "image", "verification", "noindex"]);
+    expect(Object.keys(fields)).toEqual([
+      "separator",
+      "description",
+      "image",
+      "verification",
+      "noindex",
+    ]);
     expect(fields.separator).toMatchObject({ type: "text", default: " · " });
+    expect(fields.description.type).toBe("textarea");
     expect(fields.image.type).toBe("image");
     expect(Object.keys(fields.verification.fields)).toEqual(["google", "bing"]);
     expect(fields.noindex.type).toBe("boolean");
@@ -128,7 +135,12 @@ describe("defineCms", () => {
     const cms = defineCms({ ...opts, media: false });
     const { general, seo } = cms.schema.globals!;
     expect(Object.keys(general.fields)).toEqual(["title", "tagline", "url"]);
-    expect(Object.keys(seo.fields)).toEqual(["separator", "verification", "noindex"]);
+    expect(Object.keys(seo.fields)).toEqual([
+      "separator",
+      "description",
+      "verification",
+      "noindex",
+    ]);
     await cms.setGlobal("general", { title: "Site" });
     expect(await cms.getGlobal("general")).toMatchObject({ title: "Site" });
   });

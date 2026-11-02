@@ -19,6 +19,9 @@ export type Preview =
 
 /** Unsaved form state by `<collection>:<id>`. Globals are keyed `<name>:`. */
 export type Drafts = Record<string, Record<string, unknown>>;
+
+/** A document or, with an empty `id`, a global. */
+export type DocumentRef = { collection: string; id: string };
 /** Stops what a call started. */
 export type Unsubscribe = () => void;
 
@@ -40,7 +43,7 @@ export type PreviewMessage =
   | { type: "highlight"; collection: string | null; id: string | null }
   | { type: "edit"; collection: string; id: string; path: string }
   | { type: "url"; href: string }
-  | { type: "documents"; documents: { collection: string; id: string }[] }
+  | { type: "documents"; documents: DocumentRef[] }
   | { type: "saved"; collection: string; id: string; locale?: string };
 
 /** Options of `preview()`. */

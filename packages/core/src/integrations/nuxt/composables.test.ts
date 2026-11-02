@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
   getGlobal: vi.fn(),
   navigateTo: vi.fn(),
+  event: undefined as { headers: Headers } | undefined,
 }));
 const config = { locales: ["en", "de"], defaultLocale: "en" };
 const route = reactive({ path: "/posts/hello" });
@@ -27,9 +28,9 @@ const app = {};
 vi.mock("#app", () => ({
   navigateTo: mocks.navigateTo,
   useNuxtApp: () => app,
-  useRequestEvent: () => undefined,
+  useRequestEvent: () => mocks.event,
+  onNuxtReady: () => {},
   useRoute: () => route,
-  useNuxtData: () => ({ data: ref(config) }),
   useState: (key: string, init: () => unknown) => {
     if (!state.has(key)) state.set(key, ref(init()));
     return state.get(key);
@@ -40,11 +41,18 @@ vi.mock("#app", () => ({
       data.value = await read();
     };
     watch(() => toValue(key), run);
+    // Nuxt 4.6 sets bound `then`, `catch` and `finally` as enumerable own properties.
     const result = { data };
-    return Object.assign(
+    const promise = Object.assign(
       run().then(() => result),
       result,
     );
+    for (const method of ["then", "catch", "finally"] as const)
+      Object.defineProperty(promise, method, {
+        enumerable: true,
+        value: promise[method].bind(promise),
+      });
+    return promise;
   },
 }));
 vi.mock("tenoncms/client", () => ({
@@ -60,13 +68,15 @@ vi.mock("tenoncms/client", () => ({
     getGlobal: mocks.getGlobal,
   }),
 }));
-vi.mock("tenoncms/preview", () => ({
-  getDrafts: () => [],
-  merge: (_collection: string, doc: unknown) => doc,
-  subscribe: () => () => {},
-}));
+vi.mock("tenoncms/preview", async () => {
+  const { getDrafts, setReadDocuments, subscribe } = await import("../../preview/runtime/store.ts");
+  const { merge } = await import("../../preview/runtime/merge-draft.ts");
+  const { isLivePreview } = await import("../../preview/runtime/preview.ts");
+  return { getDrafts, isLivePreview, merge, setReadDocuments, subscribe };
+});
 
-import { useAlternates, useTenon, useLocale } from "./runtime/composables.ts";
+import { readDocuments, setDraft } from "../../preview/runtime/store.ts";
+import { useAlternates, useLivePreview, useTenon, useLocale } from "./runtime/composables.ts";
 
 function setup<T>(fn: () => T): T {
   const scope = effectScope();
@@ -77,6 +87,7 @@ function setup<T>(fn: () => T): T {
 beforeEach(() => {
   route.path = "/posts/hello";
   state.clear();
+  state.set("tenon:localization", ref(config));
   vi.clearAllMocks();
   mocks.find.mockImplementation(async (_collection, options) => [
     { id: options.where?.slug ?? "page", ...options },
@@ -86,6 +97,63 @@ beforeEach(() => {
 });
 afterEach(() => {
   scopes.splice(0).forEach((scope) => scope.stop());
+  vi.unstubAllGlobals();
+  mocks.event = undefined;
+});
+
+it("detects the admin's iframe during SSR", () => {
+  mocks.event = {
+    headers: new Headers({ "sec-fetch-dest": "iframe", cookie: "tenon-session=1" }),
+  };
+  expect(setup(() => useLivePreview()).value).toBe(true);
+  state.clear();
+  mocks.event = { headers: new Headers({ "sec-fetch-dest": "document" }) };
+  expect(setup(() => useLivePreview()).value).toBe(false);
+});
+
+it("shows the admin's draft in an awaited read", async () => {
+  vi.stubGlobal("window", globalThis);
+  // Vue compiles `await` in `<script setup>` to `withAsyncContext()`, which chains through `catch`.
+  const { data } = await setup(() =>
+    useTenon().findOne("posts", { where: { slug: "hello" } }),
+  ).catch((error) => {
+    throw error;
+  });
+  setDraft("posts", "hello", { title: "Draft", locale: "en" });
+  expect(data.value).toMatchObject({ id: "hello", title: "Draft" });
+});
+
+it("registers the documents a page reads until the page is gone", async () => {
+  vi.stubGlobal("window", globalThis);
+  await Promise.all(
+    setup(() => {
+      const cms = useTenon();
+      return [cms.find("pages"), cms.getGlobal("general")];
+    }),
+  );
+  expect(readDocuments()).toEqual([
+    { collection: "pages", id: "page" },
+    { collection: "general", id: "" },
+  ]);
+  scopes.splice(0).forEach((scope) => scope.stop());
+  expect(readDocuments()).toEqual([]);
+});
+
+it("reuses reads on navigation within one locale", async () => {
+  const general = await setup(() => useTenon().getGlobal("general"));
+  route.path = "/about";
+  await nextTick();
+  expect(mocks.getGlobal).toHaveBeenCalledTimes(1);
+  expect(general.data.value).toMatchObject({ locale: "en" });
+});
+
+it("reads without a locale when localization is off", async () => {
+  state.set("tenon:localization", ref(null));
+  const general = await setup(() => useTenon().getGlobal("general"));
+  route.path = "/about";
+  await nextTick();
+  expect(mocks.getGlobal).toHaveBeenCalledTimes(1);
+  expect(mocks.getGlobal).toHaveBeenCalledWith("general", {});
 });
 
 it("updates a reused page's document and alternates in the route's locale", async () => {

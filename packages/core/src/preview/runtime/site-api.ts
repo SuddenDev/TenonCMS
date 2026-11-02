@@ -20,7 +20,8 @@ export const perspective = () =>
   document.cookie.split(";").some((c) => c.trim() === `${COOKIE}=drafts`) ? "drafts" : "published";
 
 /** Whether the session hint cookie is set. It only says that asking for the admin bar is worth a request. */
-export const hasSessionHint = () => new RegExp(`(^|;\\s*)${HINT}=[^;]`).test(document.cookie);
+export const hasSessionHint = (cookie = document.cookie) =>
+  new RegExp(`(^|;\\s*)${HINT}=[^;]`).test(cookie);
 
 /** Removes the session hint, e.g. after the session expired. */
 export const clearSessionHint = () => {

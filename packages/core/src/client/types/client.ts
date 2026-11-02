@@ -7,14 +7,10 @@ import type {
   Checked,
   Data,
   Doc,
-  GlobalLocaleMeta,
   GlobalMeta,
   Locale,
-  Read,
   ReadOptions,
   Schema,
-  SelectOf,
-  PopulateOf,
 } from "../../schema/index.ts";
 import type { Invite, InviteResult } from "../../users/types.ts";
 import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
@@ -34,6 +30,7 @@ import type {
   GlobalFields,
   Globals,
   ReadCollection,
+  ReadGlobal,
   RegisteredCms,
 } from "./schema.ts";
 
@@ -295,11 +292,7 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   >(
     name: K,
     options?: Checked<O, Collections<C>, GlobalFields<C, K>, Depth<C>, false, Locale<C>>,
-  ): Promise<
-    Partial<Read<Collections<C>, GlobalFields<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>> &
-      GlobalMeta<SelectOf<O>> &
-      GlobalLocaleMeta<Globals<C>[K], Locale<C>, SelectOf<O>>
-  >;
+  ): Promise<ReadGlobal<C, K, O>>;
 
   /**
    * Changes the top-level fields in `data`. Fields left out keep their stored values; `null` clears one. Needs a session.

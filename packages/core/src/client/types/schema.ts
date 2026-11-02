@@ -1,9 +1,12 @@
 import type {
   AlternatesOf,
   Fields,
+  GlobalLocaleMeta,
+  GlobalMeta,
   Locale,
   LocaleMeta,
   PopulateOf,
+  Read,
   ReadDoc,
   Schema,
   SelectOf,
@@ -70,3 +73,28 @@ export type ReadCollection<
   SelectOf<O>,
   LocaleMeta<Collections<C>[K], Locale<C>, SelectOf<O>, AlternatesOf<O>>
 >;
+
+export type ReadGlobal<C extends { schema: Schema }, K extends keyof Globals<C>, O> = Partial<
+  Read<Collections<C>, GlobalFields<C, K>, PopulateOf<O, Depth<C>>, SelectOf<O>>
+> &
+  GlobalMeta<SelectOf<O>> &
+  GlobalLocaleMeta<Globals<C>[K], Locale<C>, SelectOf<O>>;
+
+/**
+ * A document of collection `K` as a read with options `O` returns it, `populate` and `select` included.
+ * @example
+ * const options = { where: { path }, populate: true } as const
+ * type Page = DocumentOf<'pages', typeof options>
+ */
+export type DocumentOf<
+  K extends keyof Collections<C> & string,
+  O = {},
+  C extends { schema: Schema } = RegisteredCms,
+> = ReadCollection<C, K, O>;
+
+/** Global `K` as `getGlobal()` with options `O` returns it. */
+export type GlobalOf<
+  K extends keyof Globals<C> & string,
+  O = {},
+  C extends { schema: Schema } = RegisteredCms,
+> = ReadGlobal<C, K, O>;

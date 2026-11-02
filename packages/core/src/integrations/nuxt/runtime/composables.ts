@@ -1,8 +1,8 @@
 import {
   navigateTo,
+  onNuxtReady,
   useAsyncData,
   useNuxtApp,
-  useNuxtData,
   useRequestEvent,
   useRoute,
   useState,
@@ -21,7 +21,7 @@ import {
   type ReadOptions,
   switchTarget,
 } from "tenoncms/client";
-import { getDrafts, merge, subscribe } from "tenoncms/preview";
+import { getDrafts, isLivePreview, merge, setReadDocuments, subscribe } from "tenoncms/preview";
 import {
   computed,
   type MaybeRefOrGetter,
@@ -47,11 +47,7 @@ type Client = ReturnType<typeof createClient<typeof cms>>;
 type Config = Localization<string> | null;
 type Alternates = Record<string, string> | null;
 
-const LOCALIZATION = "tenon:localization";
-
-const localization = (client: Client) => client.localization() as Promise<Config>;
-
-// One client per Nuxt app, so `localization()` is fetched once. During SSR it reads in-process through the request.
+// One client per Nuxt app. During SSR it reads in-process through the request.
 const clients = new WeakMap<object, Client>();
 function useClient(): Client {
   const nuxtApp = useNuxtApp();
@@ -66,16 +62,31 @@ function useClient(): Client {
   return client;
 }
 
-// Merges the admin's unsaved changes into `data` while the page runs in the live preview. `find` gets each document
-// merged. The awaited result gets the same `data`, because Nuxt resolves it to an object of its own.
-function live<R extends PromiseLike<{ data: Ref<unknown> }> & { data: Ref<unknown> }>(
+/** The localization config in the payload. The plugin loads it before the first page renders. */
+const useLocalization = () => useState<Config>("tenon:localization");
+
+/** Loads the localization config once per request, or once in the browser without SSR. */
+export async function loadLocalization() {
+  const config = useLocalization();
+  if (config.value === undefined) config.value = (await useClient().localization()) as Config;
+}
+
+// Merges the admin's unsaved changes into `data` while the page runs in the live preview, and lists the documents
+// in "On this page" while the read lives. `find` gets each document merged. The awaited result gets the same `data`, because Nuxt resolves it to an object of its own. Nuxt also sets
+// `then`, `catch` and `finally` as own properties, bound to its promise. They MUST NOT replace the merged promise's.
+function live<R extends Promise<{ data: Ref<unknown> }> & { data: Ref<unknown> }>(
   collection: string,
   result: R,
 ): R {
   const drafts = shallowRef(getDrafts());
-  // Servers render once and never dispose the scope, so only browsers subscribe.
-  if (globalThis.window) onScopeDispose(subscribe((d) => (drafts.value = d)));
   const source = result.data;
+  // Servers render once and never dispose the scope, so only browsers subscribe.
+  if (globalThis.window) {
+    onScopeDispose(subscribe((d) => (drafts.value = d)));
+    const owner = {};
+    watchEffect(() => setReadDocuments(owner, documentRefs(collection, source.value)));
+    onScopeDispose(() => setReadDocuments(owner, []));
+  }
   const data = computed({
     get: () => {
       const value = source.value;
@@ -85,11 +96,18 @@ function live<R extends PromiseLike<{ data: Ref<unknown> }> & { data: Ref<unknow
     },
     set: (value) => (source.value = value),
   });
+  const { then, catch: _catch, finally: _finally, ...fields } = result;
   return Object.assign(
     Promise.resolve(result).then((r) => ({ ...r, data })),
-    { ...result, data },
+    { ...fields, data },
   ) as unknown as R;
 }
+
+// A global has no `id`, so its key ends empty, as in the preview's drafts.
+const documentRefs = (collection: string, value: unknown) =>
+  (Array.isArray(value) ? value : [value])
+    .filter((doc): doc is { id?: unknown } => !!doc && typeof doc === "object")
+    .map((doc) => ({ collection, id: String(doc.id ?? "") }));
 
 // Reads once per key into Nuxt's payload, with the preview drafts merged in.
 function load<T>(name: string, key: () => string, read: () => Promise<T>) {
@@ -108,19 +126,14 @@ function load<T>(name: string, key: () => string, read: () => Promise<T>) {
 export function useTenon() {
   const client = useClient();
   const route = useRoute();
-  const cached = useNuxtData<Config>(LOCALIZATION).data;
+  const config = useLocalization();
 
-  // The route's locale unless the options set one. The payload has the config after hydration.
-  async function withLocale<O extends object>(options: O): Promise<O> {
-    if ("locale" in options) return options;
-    const path = route.path;
-    const config = cached.value !== undefined ? cached.value : await localization(client);
-    return config ? { ...options, locale: localeFromPath(path, config).locale } : options;
+  // The route's locale unless the options set one. The key holds it, so `/about` and `/de/about` read apart.
+  function withLocale<O extends object>(options: O): O {
+    if ("locale" in options || !config.value) return options;
+    return { ...options, locale: localeFromPath(route.path, config.value).locale };
   }
-  // A read without a `locale` follows the route's prefix, so its key holds the route. Otherwise `/about` and
-  // `/de/about` would share one cached result.
-  const keyOf = (key: string, options: object) =>
-    `${key}:${JSON.stringify(options)}${"locale" in options ? "" : `@${route.path}`}`;
+  const keyOf = (key: string, options: object) => `${key}:${JSON.stringify(withLocale(options))}`;
 
   return {
     find<K extends keyof Collections & string, const O extends FindOptions<typeof cms, K> = {}>(
@@ -131,7 +144,7 @@ export function useTenon() {
       return load(
         collection,
         () => keyOf(collection, toValue(options)),
-        async () => client.find<K, O>(collection, (await withLocale(toValue(options))) as never),
+        async () => client.find<K, O>(collection, withLocale(toValue(options)) as never),
       );
     },
 
@@ -143,8 +156,7 @@ export function useTenon() {
         collection,
         () => keyOf(`${collection}:one`, toValue(options)),
         async () =>
-          (await client.findOne<K, O>(collection, (await withLocale(toValue(options))) as never)) ??
-          null,
+          (await client.findOne<K, O>(collection, withLocale(toValue(options)) as never)) ?? null,
       );
     },
 
@@ -162,11 +174,7 @@ export function useTenon() {
         () => keyOf(`${collection}:${toValue(id)}`, toValue(options)),
         async () => {
           const value = toValue(id);
-          return client.findById<K, O>(
-            collection,
-            value,
-            (await withLocale(toValue(options))) as never,
-          );
+          return client.findById<K, O>(collection, value, withLocale(toValue(options)) as never);
         },
       );
     },
@@ -184,7 +192,7 @@ export function useTenon() {
       return load(
         name,
         () => keyOf(`global:${name}`, toValue(options)),
-        async () => client.getGlobal<K, O>(name, (await withLocale(toValue(options))) as never),
+        async () => client.getGlobal<K, O>(name, withLocale(toValue(options)) as never),
       );
     },
   };
@@ -192,15 +200,13 @@ export function useTenon() {
 
 /**
  * The localization config and the route's locale. Without `localization` in `defineCms()`, `locales` is empty,
- * `locale` and `defaultLocale` are `undefined`, and `localePath()` returns the path. The config loads like any
- * `useAsyncData` call: during SSR in-process, then from the payload.
+ * `locale` and `defaultLocale` are `undefined`, and `localePath()` returns the path.
  * @example
  * const { locale, switchLocale } = useLocale()
  */
 export function useLocale() {
-  const client = useClient();
   const route = useRoute();
-  const { data } = useAsyncData(LOCALIZATION, () => localization(client));
+  const data = useLocalization();
   const alternates = useState<Alternates>("tenon:alternates", () => null);
 
   const config = computed(() => data.value ?? null);
@@ -230,6 +236,19 @@ export function useLocale() {
       return navigateTo(switchLocalePath(locale));
     },
   };
+}
+
+/**
+ * Whether the page runs in the admin's live preview, for example to skip intro animations. During SSR only the admin's
+ * iframe shows; a preview tab turns it `true` after hydration, so the first render matches the server's.
+ * @example
+ * const livePreview = useLivePreview()
+ */
+export function useLivePreview(): Readonly<Ref<boolean>> {
+  const event = useRequestEvent();
+  const state = useState("tenon:live-preview", () => isLivePreview(event?.headers));
+  if (import.meta.client) onNuxtReady(() => (state.value = isLivePreview()));
+  return computed(() => state.value);
 }
 
 /**

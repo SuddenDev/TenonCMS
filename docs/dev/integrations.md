@@ -19,8 +19,11 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 
 ## Nuxt
 
-- A module with a Nitro handler for the API, an admin page served from a Nitro virtual module, a client plugin for the preview runtime and auto-imported composables.
-- `useTenon()` wraps `useAsyncData` around the client. During SSR the client fetches in-process and forwards the request's headers, so drafts work. It merges preview drafts into results, and reads in the route's locale.
+- A module with a Nitro handler for the API, an admin page served from a Nitro virtual module, a plugin and auto-imported composables.
+- The plugin loads the localization config into `useState` before any page reads (in-process during SSR, then from the payload), and starts the preview runtime in the browser.
+- `useTenon()` wraps `useAsyncData` around the client. During SSR the client fetches in-process and forwards the request's headers, so drafts work. It merges preview drafts into results, and reads in the route's locale. The key holds the resolved options, locale included, so navigation within one locale reuses a read.
+- Since Nuxt 4.6, a `useAsyncData` result has `then`, `catch` and `finally` as own properties, bound to Nuxt's promise. `live()` MUST NOT copy them onto its merged promise: Vue's `withAsyncContext()` awaits through `catch`, so a page would get Nuxt's unmerged `data`.
+- The module dedupes `vue` and `vue-router`, and adds the admin entry's folder to `vite.server.fs.allow`. A `link:` install lies outside the app root, so without both it loads a second Vue and a blank admin in dev.
 - Server runtime files MUST import from `h3`, not `#imports`, or the app's typecheck cannot resolve them.
 
 ## Vite hosts (TanStack Start, standalone)

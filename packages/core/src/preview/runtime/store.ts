@@ -1,7 +1,8 @@
-import type { Drafts, Unsubscribe } from "../config/types.ts";
+import type { DocumentRef, Drafts, Unsubscribe } from "../config/types.ts";
 
 let drafts: Drafts = {};
 const listeners = new Set<(drafts: Drafts) => void>();
+const reads = new Map<object, DocumentRef[]>();
 
 /** The key of a document in `Drafts`. A global has an empty `id`. */
 export const draftKey = (collection: string, id: string) => `${collection}:${id}`;
@@ -22,3 +23,15 @@ export function setDraft(collection: string, id: string, data: Record<string, un
   drafts = { ...drafts, [draftKey(collection, id)]: data };
   for (const cb of listeners) cb(drafts);
 }
+
+/**
+ * Registers the documents one read of the page shows, so "On this page" lists them without `edit()` bindings.
+ * `owner` identifies the read. An empty list unregisters it.
+ */
+export function setReadDocuments(owner: object, documents: DocumentRef[]) {
+  if (documents.length) reads.set(owner, documents);
+  else reads.delete(owner);
+}
+
+/** The documents of every registered read, in registration order. */
+export const readDocuments = () => [...reads.values()].flat();

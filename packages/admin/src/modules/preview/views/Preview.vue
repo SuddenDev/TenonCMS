@@ -14,7 +14,7 @@ import { Button } from "@/shared/components/ui/button";
 import { resolveDraft } from "@/modules/preview/draft-documents";
 import PageDocuments from "@/modules/preview/components/PageDocuments.vue";
 import PreviewPane from "@/modules/preview/components/PreviewPane.vue";
-import type { PageDocument } from "@/modules/preview/page-rows";
+import { routedDocument, type PageDocument } from "@/modules/preview/page-rows";
 import {
   excluded,
   type PageMessage,
@@ -71,6 +71,10 @@ const draft = shallowRef<Record<string, unknown>>();
 const frame = ref(0);
 // What the page in the preview reports it shows.
 const onPage = ref<PageDocument[]>([]);
+// Set when the page moves on by itself. The admin's own loads clear `href` first, so they do not count.
+let navigated = false;
+// The document the form followed to. Its page already shows, so its first form state loads no URL.
+let followed = "";
 
 // Switches documents first, so a field with the same path in the old form does not take the focus.
 const send = usePreviewChannel(async (message: PageMessage) => {
@@ -85,12 +89,17 @@ const send = usePreviewChannel(async (message: PageMessage) => {
     broadcast();
     return;
   }
+  // `?url=` follows the page, so a reload of the admin shows it again.
   if (message.type === "url") {
-    href.value = safe(message.href) ?? "";
+    const next = safe(message.href) ?? "";
+    navigated = !!href.value && next !== href.value;
+    href.value = next;
+    if (href.value) await router.replace({ query: { ...route.query, url: href.value } });
     return;
   }
   if (message.type === "documents") {
     onPage.value = message.documents;
+    if (navigated) await follow(message.documents);
     return;
   }
   // Other admin tabs share the channel; only a page's edit click is handled here.
@@ -101,6 +110,21 @@ const send = usePreviewChannel(async (message: PageMessage) => {
   if (message.collection !== name.value || message.id !== id.value) await router.push(to);
   focus.value = message.path;
 });
+// An open document follows the page when it shows exactly one routed document. A page without one keeps waiting,
+// because its documents MAY render after its URL changed.
+async function follow(documents: PageDocument[]) {
+  if (!id.value || !documents.some((d) => d.id && isRouted(d))) return;
+  navigated = false;
+  const next = routedDocument(documents, isRouted);
+  if (!next || (next.collection === name.value && next.id === id.value)) return;
+  followed = `${next.collection}:${next.id}`;
+  await router.push({
+    path: `/presentation/collections/${next.collection}/${next.id}`,
+    query: route.query,
+  });
+}
+const isRouted = (d: PageDocument) => !!schema.value.collections?.[d.collection]?.preview;
+
 // The page learns which entries edit mode leaves alone with every `mode` message.
 const sendMode = () => send({ type: "mode", edit: edit.value, exclude: excluded() });
 watch(edit, sendMode);
@@ -172,7 +196,8 @@ const broadcast = useDebounceFn(async () => {
 function change(data: Record<string, unknown>) {
   const first = !draft.value;
   draft.value = data;
-  if (first && entry.value?.preview) load();
+  if (first && entry.value?.preview && followed !== key.value) load();
+  if (first) followed = "";
   broadcast();
 }
 

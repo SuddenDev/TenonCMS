@@ -38,6 +38,16 @@ export function pageRows(
   return rows;
 }
 
+/**
+ * The one routed document a page shows. The form follows it after navigation in the preview.
+ * @param isRouted Whether a document's entry has a preview URL.
+ * @returns The document, or `null` when the page shows none or several.
+ */
+export function routedDocument(documents: PageDocument[], isRouted: (d: PageDocument) => boolean) {
+  const routed = documents.filter((d) => d.id && isRouted(d));
+  return routed.length === 1 ? routed[0]! : null;
+}
+
 // Relation ids at the top level and in groups. The media library has no presentation route.
 function refsOf(fields: Fields, value: Record<string, any> | null | undefined): PageDocument[] {
   return Object.entries(fields).flatMap(([k, f]): PageDocument[] => {

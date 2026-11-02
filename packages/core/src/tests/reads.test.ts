@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it } from "vitest";
+import type { DocumentOf, GlobalOf } from "../client/index.ts";
 import { defineCms } from "../index.ts";
 import { seo } from "../presets/index.ts";
 import { libsqlDialect } from "../db/index.ts";
@@ -296,4 +297,15 @@ describe("database", () => {
     await expect(cms.find("posts")).rejects.toThrow("connect failed");
     expect(await cms.find("posts")).toEqual([]);
   });
+});
+
+it("DocumentOf and GlobalOf type a read like the client returns it", async () => {
+  await cms.create("posts", { title: "A" });
+  const options = { where: { title: "A" }, select: { title: true } } as const;
+  const post = await client.findOne("posts", options);
+  expectTypeOf(post!).toEqualTypeOf<DocumentOf<"posts", typeof options, Env["cms"]>>();
+  expectTypeOf(post!).not.toEqualTypeOf<DocumentOf<"posts", {}, Env["cms"]>>();
+  const general = await client.getGlobal("general");
+  expectTypeOf(general).toEqualTypeOf<GlobalOf<"general", {}, Env["cms"]>>();
+  expect(post).toMatchObject({ title: "A" });
 });

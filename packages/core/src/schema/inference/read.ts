@@ -32,70 +32,83 @@ export type Next<Spec> = Spec extends true ? false : Spec extends number ? Prev[
 /** Whether `Spec` leaves a relation as ids. */
 export type Off<Spec> = Spec extends false | 0 | undefined ? true : false;
 
+/**
+ * The select spec for `Key`: `true` when `Sel` selects everything or does not list `Key`. Only an object turns off
+ * a relation's own `select`; the read's `Selected` drops unlisted keys anyway.
+ */
+type SelAt<Sel, Key> = [Sel] extends [true] ? true : Key extends keyof Sel ? Sel[Key] : true;
+
 /** Join keys a read leaves out: every join, unless a populate object names it. */
 type UnpopulatedJoins<F, Spec> = Exclude<JoinKey<F>, Spec extends object ? keyof Spec : never>;
 
 /** Documents of `Collection` with relations resolved as `Spec` says. */
-type Target<Collections, Collection, Spec> = Collection extends keyof Collections
-  ? Simplify<Resolve<Collections, FieldsOf<Collections, Collection>, Spec> & Meta>
+type Target<Collections, Collection, Spec, Sel> = Collection extends keyof Collections
+  ? Simplify<Resolve<Collections, FieldsOf<Collections, Collection>, Spec, Sel> & Meta>
   : never;
-type Targets<Collections, Collection, Spec, Relation> = Relation extends { many: true }
-  ? Target<Collections, Collection, Spec>[]
-  : Target<Collections, Collection, Spec>;
+type Targets<Collections, Collection, Spec, Sel, Relation> = Relation extends { many: true }
+  ? Target<Collections, Collection, Spec, Sel>[]
+  : Target<Collections, Collection, Spec, Sel>;
 
-type GroupValue<Collections, Group extends Fields, Spec> = Resolve<
+type GroupValue<Collections, Group extends Fields, Spec, Sel> = Resolve<
   Collections,
   Group,
-  Spec extends true ? 1 : Spec
+  Spec extends true ? 1 : Spec,
+  Sel
 >;
 /** Array items read like a group, and every item has its `id`. */
-type ArrayValue<Collections, Item extends Fields, Spec> = Simplify<
-  { id: string } & GroupValue<Collections, Item, Spec>
+type ArrayValue<Collections, Item extends Fields, Spec, Sel> = Simplify<
+  { id: string } & GroupValue<Collections, Item, Spec, Sel>
 >[];
 /** Each block reads like a group with the spec of its block name. A number or `true` passes to every block. */
-type BlocksValue<Collections, Blocks extends Record<string, { fields: Fields }>, Spec> = {
+type BlocksValue<Collections, Blocks extends Record<string, { fields: Fields }>, Spec, Sel> = {
   [K in keyof Blocks & string]: Simplify<
     { id: string; blockType: K } & GroupValue<
       Collections,
       Blocks[K]["fields"],
-      Sub<Spec extends true ? 1 : Spec, K>
+      Sub<Spec extends true ? 1 : Spec, K>,
+      SelAt<Sel, K>
     >
   >;
 }[keyof Blocks & string][];
-type RelationValue<Collections, Relation, Spec> = Relation extends {
+/** A relation with its own `select` keeps only those fields, unless the read selects inside it with an object. */
+type RelationValue<Collections, Relation, Spec, Sel> = Relation extends {
   collection: infer Collection;
 }
   ? Off<Spec> extends true
     ? Ids<Relation>
-    : Targets<Collections, Collection, Next<Spec>, Relation>
+    : [Sel] extends [true]
+      ? Relation extends { select: infer Own extends object }
+        ? Selected<Targets<Collections, Collection, Next<Spec>, Own, Relation>, Own>
+        : Targets<Collections, Collection, Next<Spec>, true, Relation>
+      : Targets<Collections, Collection, Next<Spec>, Sel, Relation>
   : never;
 type MediaFieldValue<MediaField, Spec> =
   Off<Spec> extends true
     ? Ids<MediaField>
     : MediaValue<MediaField, MediaField extends { type: "image" } ? Image : File>;
-type JoinValue<Collections, Join, Spec> = Join extends { collection: infer Collection }
-  ? Target<Collections, Collection, Next<Spec>>[]
+type JoinValue<Collections, Join, Spec, Sel> = Join extends { collection: infer Collection }
+  ? Target<Collections, Collection, Next<Spec>, Sel>[]
   : never;
 
-/** The value of one field in a read, using the populate spec for that field. */
-type FieldReadValue<Collections, FieldType, Spec> = FieldType extends {
+/** The value of one field in a read, using the populate spec and the select spec for that field. */
+type FieldReadValue<Collections, FieldType, Spec, Sel> = FieldType extends {
   type: "group";
   fields: infer Group extends Fields;
 }
-  ? GroupValue<Collections, Group, Spec>
+  ? GroupValue<Collections, Group, Spec, Sel>
   : FieldType extends { type: "array"; fields: infer Item extends Fields }
-    ? ArrayValue<Collections, Item, Spec>
+    ? ArrayValue<Collections, Item, Spec, Sel>
     : FieldType extends {
           type: "blocks";
           blocks: infer Blocks extends Record<string, { fields: Fields }>;
         }
-      ? BlocksValue<Collections, Blocks, Spec>
+      ? BlocksValue<Collections, Blocks, Spec, Sel>
       : FieldType extends { type: "relation" }
-        ? RelationValue<Collections, FieldType, Spec>
+        ? RelationValue<Collections, FieldType, Spec, Sel>
         : FieldType extends { type: "image" | "file" }
           ? MediaFieldValue<FieldType, Spec>
           : FieldType extends { type: "join" }
-            ? JoinValue<Collections, FieldType, Spec>
+            ? JoinValue<Collections, FieldType, Spec, Sel>
             : FieldType extends { type: "link" }
               ? Off<Spec> extends true
                 ? LinkValue
@@ -104,33 +117,37 @@ type FieldReadValue<Collections, FieldType, Spec> = FieldType extends {
                 ? FieldValue<FieldType>
                 : never;
 
-type OptionalReadFields<Collections, F extends Fields, Spec> = {
+type OptionalReadFields<Collections, F extends Fields, Spec, Sel> = {
   [K in Exclude<keyof F, RequiredKey<F> | JoinKey<F>>]?: FieldReadValue<
     Collections,
     F[K],
-    Sub<Spec, K>
+    Sub<Spec, K>,
+    SelAt<Sel, K>
   > | null;
 };
-type RequiredReadFields<Collections, F extends Fields, Spec> = {
+type RequiredReadFields<Collections, F extends Fields, Spec, Sel> = {
   [K in Exclude<RequiredKey<F> | JoinKey<F>, UnpopulatedJoins<F, Spec>>]: FieldReadValue<
     Collections,
     F[K],
-    Sub<Spec, K>
+    Sub<Spec, K>,
+    SelAt<Sel, K>
   >;
 };
 
 /**
- * Data of `F` as a read returns it. Unnamed joins are absent; named joins are required.
+ * Data of `F` as a read returns it. Unnamed joins are absent; named joins are required. `Sel` is the read's select
+ * spec, which decides where a relation's own `select` applies.
  * It MUST NOT be wrapped in `Simplify`: a callback on a read result (`docs.map((doc) => …)`) makes TypeScript
  * instantiate the type again, and a `Simplify` at every level hits TS2589 below a group, array or blocks field.
  * The types that wrap it simplify instead.
  */
-export type Resolve<Collections, F extends Fields, Spec> = OptionalReadFields<
+export type Resolve<Collections, F extends Fields, Spec, Sel = true> = OptionalReadFields<
   Collections,
   F,
-  Spec
+  Spec,
+  Sel
 > &
-  RequiredReadFields<Collections, F, Spec>;
+  RequiredReadFields<Collections, F, Spec, Sel>;
 
 /** An untyped schema (the admin's) reads plain records. The recursive types would not terminate. */
 export type Wide<Collections> = string extends keyof Collections ? true : false;
@@ -139,7 +156,7 @@ export type Wide<Collections> = string extends keyof Collections ? true : false;
 export type Read<Collections, F extends Fields, PopulateSpec, SelectSpec = true> =
   Wide<Collections> extends true
     ? Record<string, any>
-    : Selected<Resolve<Collections, F, PopulateSpec>, SelectSpec>;
+    : Selected<Resolve<Collections, F, PopulateSpec, SelectSpec>, SelectSpec>;
 
 /** `id` is always selected. Other metadata MUST be named in the select spec. */
 type SelectedMeta<SelectSpec> = [SelectSpec] extends [true]

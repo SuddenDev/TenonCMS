@@ -57,6 +57,13 @@ export function settings() {
             de: "Text zwischen dem Seitentitel und dem Titel der Website.",
           },
         },
+        description: {
+          type: "textarea",
+          description: {
+            en: "Fallback description for pages without their own.",
+            de: "Standardbeschreibung für Seiten ohne eigene.",
+          },
+        },
         image: {
           type: "image",
           description: {

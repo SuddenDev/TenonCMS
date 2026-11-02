@@ -43,6 +43,7 @@ const page = await cms.findOne("pages", {
 - `id` always comes back, at every level that holds documents. `createdAt` and `updatedAt` come back only when listed. `select: {}` returns only `id`.
 - A join still comes back only when `populate` names it. `private` fields stay hidden without a session; selecting one is not an error.
 - Hooks see full documents. `select` runs after `afterRead` and before `afterOperation`.
+- A relation field MAY have a `select` of its own. It trims populated documents unless the read selects inside that relation with an object. See [Relations](./relations.md#keep-a-related-document-small).
 - Result types contain only the selected fields. An unknown key is a type error, and a 400 over HTTP (`Invalid select: parent.nope`).
 
 Relations are explained in [Relations](./relations.md).
@@ -108,3 +109,14 @@ The Astro and Nuxt adapters register your `cms` type, so `createClient()` needs 
 ```
 
 `createClient<typeof otherCms>()` overrides the registered type.
+
+`DocumentOf` and `GlobalOf` type a document as a read with the same options returns it, `populate` and `select` included. They use the registered `cms`; a third type argument overrides it.
+
+```ts
+import type { DocumentOf, GlobalOf } from "tenoncms/client";
+
+const options = { where: { path: "/" }, select: { title: true, blocks: true } } as const;
+type Page = DocumentOf<"pages", typeof options>;
+type Block = NonNullable<Page["blocks"]>[number];
+type Nav = GlobalOf<"navigation">;
+```

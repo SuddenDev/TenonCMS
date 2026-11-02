@@ -3,11 +3,11 @@ import type { PreviewMessage, Unsubscribe } from "../config/types.ts";
 import { isPreviewMessage } from "./message.ts";
 import { startAdminBar } from "./admin-bar.ts";
 import {
-  boundDocuments,
   excludedSelector,
   highlight,
   parseBinding,
   patch,
+  pageDocuments,
   patchAll,
   pickBound,
 } from "./bind-elements.ts";
@@ -96,6 +96,7 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
     if (event.key === "Escape" && html.hasAttribute("data-cms-edit")) setEditMode(false);
   };
   window.addEventListener("keydown", onKey);
+  window.addEventListener("popstate", channel.report);
   observer.observe(html, { childList: true, subtree: true, characterData: true });
   document.addEventListener("click", onClick, true);
   window.addEventListener("message", onMessage);
@@ -105,6 +106,7 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
     if (!active) return;
     active = false;
     window.removeEventListener("keydown", onKey);
+    window.removeEventListener("popstate", channel.report);
     window.removeEventListener("message", onMessage);
     observer.disconnect();
     style.remove();
@@ -125,15 +127,22 @@ const openChannel = (admin: string | false) => {
   const host = window.parent !== window ? window.parent : window.opener;
   const origin = new URL(admin || "/", location.href).origin;
   let connected = false;
+  let href = "";
   let reported = "";
 
   const post = (message: PreviewMessage) => connected && host?.postMessage(message, origin);
 
-  // Tells the admin which documents the page shows, whenever that changes.
+  // Tells the admin the page's URL and the documents it shows, whenever they change. Client-side navigation fires
+  // no `ready`, so the URL is checked on every DOM change and `popstate`.
   const report = () => {
-    const documents = boundDocuments();
+    if (!connected) return;
+    if (location.href !== href) {
+      href = location.href;
+      post({ type: "url", href });
+    }
+    const documents = pageDocuments();
     const key = JSON.stringify(documents);
-    if (!connected || key === reported) return;
+    if (key === reported) return;
     reported = key;
     post({ type: "documents", documents });
   };
@@ -143,7 +152,6 @@ const openChannel = (admin: string | false) => {
     if (!host || source !== host || from !== origin) return false;
     if (!connected) {
       connected = true;
-      post({ type: "url", href: location.href });
       report();
     }
     return true;

@@ -43,6 +43,23 @@ cms.find("authors", { populate: { posts: true } }); // join
 - Result types follow the options. Invalid `populate` keys are type errors.
 - One query runs per relation or join field per hop.
 
+### Keep a related document small
+
+`select` on a relation field lists the fields a populated document keeps. It works like a read's [`select`](./reading.md#pick-fields-with-select), and `id` always stays.
+
+```ts
+link: {
+  type: "group",
+  fields: { page: { type: "relation", collection: "pages", select: { title: true, path: true } } },
+}
+// A read with populate: link.page is { id, title, path }, also inside blocks and globals.
+```
+
+- It applies wherever a read's `select` does not list the relation with an object: without a `select`, under a group or block selected with `true`, and for `page: true`.
+- To get other fields, select inside the relation: `select: { link: { page: { body: true } } }`.
+- Ids stay ids. A path that the target does not have fails at startup.
+- Result types follow it.
+
 Set the defaults with `defineCms({ populate: { depth: 2, maxDepth: 5 } })`. `depth` applies to `populate: true` (default 2). `maxDepth` limits HTTP requests (default 5). The local API has no limit.
 
 Over HTTP: `?populate=false`, `?populate=author.avatar,tags`, `?depth=3`. The client turns a `populate` object into these paths. Unknown paths, fields that cannot populate, and more hops than `maxDepth` return 400 with the path in the message (`Invalid populate: author.nope`, `Invalid depth: 9`).
