@@ -9,6 +9,7 @@ import { updateEndpoint } from "./update.endpoint.ts";
 import { publishEndpoint } from "./publish.endpoint.ts";
 import { discardEndpoint } from "./discard.endpoint.ts";
 import { copyLocaleEndpoint } from "./copy-locale.endpoint.ts";
+import { syncStructureEndpoint } from "./sync-structure.endpoint.ts";
 import { removeLocaleEndpoint } from "./remove-locale.endpoint.ts";
 import { deleteEndpoint } from "./delete.endpoint.ts";
 
@@ -22,6 +23,7 @@ export function collectionsRoutes(core: Core) {
       .route("/", publishEndpoint(core))
       .route("/", discardEndpoint(core))
       .route("/", copyLocaleEndpoint(core))
+      .route("/", syncStructureEndpoint(core))
       .route("/", removeLocaleEndpoint(core))
       .route("/", deleteEndpoint(core)),
     previews: new Hono<Env>().route("/", previewUrlEndpoint(core)),

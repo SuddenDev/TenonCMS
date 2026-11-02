@@ -40,7 +40,13 @@ export async function resolveLinkTargets(core: Core, scope: Inner, references: L
     const drafts = scope.perspective === "drafts";
     const access = await readDecision(core, scope, collectionTarget(collection));
     if (access === false) continue;
-    const loaded = await loadByIds(db, collection, [...ids], drafts, locOf(core, scope, entry));
+    const loaded = await loadByIds(
+      db,
+      collection,
+      [...ids],
+      drafts,
+      await locOf(core, scope, collectionTarget(collection)),
+    );
     const docs = admittedRows(access, loaded);
 
     const before = await beforeRead(core, scope, collectionTarget(collection), docs, "read");

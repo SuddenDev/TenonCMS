@@ -32,7 +32,7 @@ export type ReadHooks = {
   /** Loads targets in the drafts perspective. */
   drafts: boolean;
   /** How a localized target collection reads, in the locale of the outer read. */
-  loc?(collection: string): Loc | undefined;
+  loc?(collection: string): Promise<Loc | undefined>;
   /** The read rule of the target collection: `false` drops every target, a `Where` the targets outside it. */
   access(collection: string): Promise<boolean | Where>;
   before(collection: string, docs: Docs): Promise<Docs>;
@@ -99,7 +99,7 @@ async function resolveRef(ctx: Hop, docs: Docs, key: string, field: RefField) {
   const found = await hop(
     ctx,
     to,
-    await loadByIds(ctx.db, to, ids, ctx.read.drafts, ctx.read.loc?.(to)),
+    await loadByIds(ctx.db, to, ids, ctx.read.drafts, await ctx.read.loc?.(to)),
   );
 
   const { media } = ctx.read;
@@ -121,7 +121,7 @@ async function resolveJoin(ctx: Hop, docs: Docs, key: string, field: JoinField) 
   const source = relationPaths(target).find((r) => plainPath(r.path) === field.on)!.field;
 
   const ids = docs.map((d) => d.id);
-  const loc = ctx.read.loc?.(field.collection);
+  const loc = await ctx.read.loc?.(field.collection);
   const rows = await joinedDocs(
     ctx.db,
     field.collection,

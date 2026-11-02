@@ -21,6 +21,12 @@ export type Collection<F extends Fields = Fields> = Layout & {
   preview?: Preview;
   /** Enable localization for this collection. Default `false`. Fields can be overriden with `localized: false` to selecitvly disable localization. */
   localized?: boolean;
+  /**
+   * Whether the items of groups, arrays and blocks have the same structure in every locale: which items exist, their
+   * order, nesting and block type. Values stay per locale. This is the starting default; editors switch it per
+   * document, admins per entry in the `translations` settings. Needs `localized`. Default `true`.
+   */
+  syncStructure?: boolean;
   /** Documents keep a draft next to the published data, saved with `{ draft: true }` and published with `publish()`. Default `true`. */
   drafts?: boolean;
   /**

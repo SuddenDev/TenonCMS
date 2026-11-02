@@ -18,6 +18,11 @@ import { setGlobalLocal } from "../../globals/operations/local/set.local.ts";
 import { publishGlobalLocal } from "../../globals/operations/local/publish.local.ts";
 import { discardGlobalLocal } from "../../globals/operations/local/discard.local.ts";
 import { copyGlobalLocaleLocal } from "../../globals/operations/local/copy-locale.local.ts";
+import { setGlobalSyncStructureLocal } from "../../globals/operations/local/sync-structure.local.ts";
+import {
+  applySyncStructureLocal,
+  setSyncStructureLocal,
+} from "../../collections/operations/local/sync-structure.local.ts";
 import { removeGlobalLocaleLocal } from "../../globals/operations/local/remove-locale.local.ts";
 
 /**
@@ -40,6 +45,8 @@ export function createLocalApi(core: Core, scope: Scope): LocalApi {
     discard: trackWrite(scope, discardLocal(core, scope)),
     copyLocale: trackWrite(scope, copyLocaleLocal(core, scope)),
     removeLocale: trackWrite(scope, removeLocaleLocal(core, scope)),
+    setSyncStructure: trackWrite(scope, setSyncStructureLocal(core, scope)),
+    applySyncStructure: trackWrite(scope, applySyncStructureLocal(core, scope)),
     delete: trackWrite(scope, deleteLocal(core, scope)),
     getGlobal: getGlobalLocal(core, scope),
     setGlobal: trackWrite(scope, setGlobalLocal(core, scope)),
@@ -47,6 +54,7 @@ export function createLocalApi(core: Core, scope: Scope): LocalApi {
     discardGlobal: trackWrite(scope, discardGlobalLocal(core, scope)),
     copyGlobalLocale: trackWrite(scope, copyGlobalLocaleLocal(core, scope)),
     removeGlobalLocale: trackWrite(scope, removeGlobalLocaleLocal(core, scope)),
+    setGlobalSyncStructure: trackWrite(scope, setGlobalSyncStructureLocal(core, scope)),
     withDrafts: () => core.localApi({ ...scope, perspective: "drafts" }),
     media: core.media && mediaApi(core, scope),
   };

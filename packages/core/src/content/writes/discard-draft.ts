@@ -9,7 +9,6 @@ import { discardGlobalDraft } from "../../db/queries/drafts/discard-global-draft
 import { loadGlobal } from "../../db/queries/globals/load-global.query.ts";
 import { loadDoc } from "../../db/queries/documents/load-document.query.ts";
 import { discardDraft } from "../../db/queries/drafts/discard-draft.query.ts";
-import { target } from "../targets.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { discardLocalized } from "./discard-locale.ts";
 import { guard } from "../../access/rule.ts";
@@ -21,7 +20,7 @@ import { guard } from "../../access/rule.ts";
  * @returns The published document after discarding the draft, or `undefined` if it was deleted or missing.
  * @throws {ForbiddenError} When the `update` rule denies.
  */
-export const discard = (
+export const discard = async (
   core: Core,
   scope: Scope,
   name: ContentTarget,
@@ -29,7 +28,7 @@ export const discard = (
   all = false,
   options: DeleteOptions = {},
 ) => {
-  const loc = locOf(core, { ...scope, fallback: false }, target(core, name));
+  const loc = await locOf(core, { ...scope, fallback: false }, name);
 
   if (name.kind === "global")
     return runOperation(core, scope, "setGlobal", name, { global: name.name }, async (s) => {

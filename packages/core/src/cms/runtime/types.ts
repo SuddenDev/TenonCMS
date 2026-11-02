@@ -46,6 +46,8 @@ export type Core = {
   emailTemplates?: EmailTemplates;
   /** The built-in roles, then the host's. */
   roles: Role[];
+  /** Whether the built-in `translations` global holds the default sync state of each entry. */
+  translations: boolean;
 
   /**
    * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the

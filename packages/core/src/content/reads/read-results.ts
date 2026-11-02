@@ -41,7 +41,7 @@ export async function readDocs(
     richtext: (values) => resolveRichtext(core, s, values),
     links: (values) => resolveLinks(core, s, values),
     drafts,
-    loc: (collection) => locOf(core, s, collections[collection]),
+    loc: (collection) => locOf(core, s, collectionTarget(collection)),
     access: (collection) => readDecision(core, s, collectionTarget(collection)),
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
     before: (collection, docs) => beforeRead(core, s, collectionTarget(collection), docs, "read"),

@@ -13,11 +13,13 @@ type Meta = Pick<Row, "data" | "updated_at" | "published_at" | "has_draft"> &
 function localized(row: Meta, loc: Loc) {
   const parse = (data: string | null | undefined) => (data == null ? null : JSON.parse(data));
   const own = row.r_data != null || !loc.fallback ? "r" : "d";
+  const base = parse(row.d_data);
   const merged = mergeLocale(
     loc.keys,
     JSON.parse(row.data),
     parse(row.r_data),
-    loc.fallback ? parse(row.d_data) : null,
+    loc.fallback ? base : null,
+    { fields: loc.structure, syncDefault: loc.syncDefault, base },
   );
   return {
     data: merged,

@@ -147,11 +147,11 @@ The preset does not set `localized`. The global does.
 
 |                     | `localized: true`       | not localized           |
 | ------------------- | ----------------------- | ----------------------- |
-| Tree                | one per locale          | one, shared             |
+| Tree                | one, shared by default  | one, shared             |
 | Internal link paths | per locale              | per locale              |
 | Empty label         | target title per locale | target title per locale |
 | Typed label         | per locale              | the same everywhere     |
 
 - A locale without its own menu reads the default locale's with `fallback`. `copyGlobalLocale` copies a menu to a new locale.
 - A target without a version in the read's locale resolves to the default locale's with `fallback`. Without it, the link is broken and `menuItems()` leaves it out.
-- A shared tree with translated labels is not possible yet.
+- A localized menu keeps one tree in every locale by default, with labels per locale: an item added in one language shows in all of them. Keep it that way for most sites. `syncStructure: false` on the global, or **Separate per language** in its "…" menu, gives each locale its own tree (see [Localization](./localization.md#same-content-structure-in-all-languages)).

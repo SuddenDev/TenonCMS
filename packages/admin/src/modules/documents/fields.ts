@@ -46,6 +46,13 @@ export type Owner = { collection: string; id?: string } | { global: string };
 export const ownerKey: InjectionKey<Readonly<Ref<Owner>>> = Symbol("owner");
 
 /**
+ * The structure state of the form's document. `synced`: one structure in every language. `untranslated`: ids of saved items
+ * without a value of their own in the active language.
+ */
+export type StructureState = { synced: boolean; untranslated: Set<string> };
+export const structureKey: InjectionKey<Readonly<Ref<StructureState>>> = Symbol("structure");
+
+/**
  * Shapes form data for the inputs and for the payload.
  * - Groups always render as objects, so their inputs have a model to bind to.
  * - On save, an optional group with only empty values becomes null, so its required children do not apply.

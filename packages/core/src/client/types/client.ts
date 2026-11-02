@@ -19,6 +19,11 @@ import type {
 import type { Invite, InviteResult } from "../../users/types.ts";
 import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
 import type { Lock } from "../../locks/types.ts";
+import type {
+  AppliedStructure,
+  StructureCounts,
+  SyncChoice,
+} from "../../content/writes/sync-structure.ts";
 import type { Version, VersionWithData } from "../../versions/types.ts";
 import type { MediaClient } from "./media.ts";
 import type { FindOptions } from "./options.ts";
@@ -193,6 +198,36 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   ): Promise<Doc<CollectionFields<C, K>>>;
 
   /**
+   * Sets whether a document uses one item structure in every locale: `true` shares the structure of `locale` (default: the
+   * default locale), `false` gives each locale its own again, `"default"` follows the collection. A draft when the
+   * collection has drafts. Needs a session and `update` on the document.
+   * `POST /_tenon/collections/:collection/:id/structure`
+   */
+  setSyncStructure<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    sync: SyncChoice,
+    options?: { locale?: Locale<C>; dryRun?: false },
+  ): Promise<Doc<CollectionFields<C, K>>>;
+  /** Writes nothing. Returns per locale with a row the items that disappear and the items that show fallback values. */
+  setSyncStructure<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    sync: SyncChoice,
+    options: { locale?: Locale<C>; dryRun: true },
+  ): Promise<StructureCounts>;
+
+  /**
+   * Makes every document of a collection follow it. Needs `update` on every document; one denied document fails the
+   * whole call with no writes. `dryRun` writes nothing and returns the counts per locale.
+   * `POST /_tenon/collections/:collection/structure/apply`
+   */
+  applySyncStructure(
+    collection: keyof Collections<C> & string,
+    options?: { dryRun?: boolean },
+  ): Promise<AppliedStructure>;
+
+  /**
    * Claims or renews the caller's edit lock on a document. A lock someone else holds stays theirs and the answer
    * names them, unless `takeover` is set. A lock lasts `LOCK_TTL` without a renewal. Needs a session and the right to
    * update; an API key MAY NOT lock.
@@ -322,6 +357,21 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     name: K,
     locale: Locale<C>,
   ): Promise<Partial<Data<GlobalFields<C, K>>>>;
+
+  /**
+   * Sets whether a global uses one item structure in every locale, like {@link Client.setSyncStructure}.
+   * `POST /_tenon/globals/:name/structure`
+   */
+  setGlobalSyncStructure<K extends keyof Globals<C> & string>(
+    name: K,
+    sync: SyncChoice,
+    options?: { locale?: Locale<C>; dryRun?: false },
+  ): Promise<Partial<Data<GlobalFields<C, K>>>>;
+  setGlobalSyncStructure<K extends keyof Globals<C> & string>(
+    name: K,
+    sync: SyncChoice,
+    options: { locale?: Locale<C>; dryRun: true },
+  ): Promise<StructureCounts>;
 
   /**
    * Claims or renews the caller's edit lock on a global, like {@link Client.lock}.

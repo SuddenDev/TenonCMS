@@ -59,6 +59,11 @@ export type SettingsOptions = {
   general?: Global | false;
   /** Search and social defaults. `false` drops it, a `Global` replaces it. Stored as `seo`. */
   seo?: Global | false;
+  /**
+   * Whether new documents of each localized entry with lists use one structure in every locale. Added with
+   * `localization` when such an entry exists. `false` drops it, so the `syncStructure` of the code applies.
+   */
+  translations?: false;
 };
 
 type Defaults = ReturnType<typeof settings>;

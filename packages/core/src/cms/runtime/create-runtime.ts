@@ -6,6 +6,7 @@ import { createAuth } from "../../auth/create-auth.ts";
 import { createDb, type DatabaseOptions } from "../../db/create-db.ts";
 import { migrate } from "../../db/migrations/migrate.ts";
 import { syncLocalized } from "../../db/migrations/sync-localized.ts";
+import type { Fields } from "../../schema/index.ts";
 
 type Session = {
   getSession(context: { headers: Headers }): Promise<{ user: User } | null>;
@@ -17,7 +18,7 @@ type Session = {
  * @param secret The secret of better-auth, checked when auth is first used
  * @param host The host's better-auth options
  * @param localized The localized keys of every `collection:<name>` / `global:<name>` (`null` when not localized) and the
- * default locale. After the migrations, the stored state is synced to them.
+ * default locale, with the fields of each entry. After the migrations, the stored state is synced to them.
  * @param coreAuth Email delivery, the default app name and the roles.
  * @returns `db()` connects and migrates on its first call. `auth()` creates better-auth on its first call.
  * `getSession()` reads the session of a request's headers. `getApiKey()` verifies an API key.
@@ -26,7 +27,11 @@ export function createRuntime<A extends AuthOptions>(
   database: DatabaseOptions,
   secret: string,
   host: A,
-  localized: { current: Record<string, string[] | null>; defaultLocale: string },
+  localized: {
+    current: Record<string, string[] | null>;
+    defaultLocale: string;
+    fields: Record<string, Fields>;
+  },
   coreAuth?: CoreAuth,
 ) {
   // The same promise serves every call, so the database opens and migrates once. A failed attempt is dropped, so the
@@ -39,7 +44,7 @@ export function createRuntime<A extends AuthOptions>(
       const db = createDb(database);
       const options = authOptions(db, secret, host, coreAuth);
       await migrate(db, options);
-      await syncLocalized(db, localized.current, localized.defaultLocale);
+      await syncLocalized(db, localized.current, localized.defaultLocale, localized.fields);
       return { db, options };
     })().catch((error: unknown) => {
       connection = undefined;

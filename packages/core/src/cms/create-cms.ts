@@ -110,7 +110,7 @@ export function defineCms<
   /* ── Schema creation + validation ────────────────────────────────────────────────────── */
 
   const pluginsSchema = mergePlugins(plugins, own);
-  const settingsSchema = createSiteSettings(
+  const { schema: settingsSchema, translations } = createSiteSettings(
     pluginsSchema,
     settingsOption,
     !!mediaOptions,
@@ -154,6 +154,7 @@ export function defineCms<
       entries.map(([id, e]) => [id, e.localized ? localizedKeys(e) : null]),
     ),
     defaultLocale: localization?.defaultLocale ?? "",
+    fields: Object.fromEntries(entries.map(([id, e]) => [id, e.fields])),
   };
 
   // email service
@@ -192,6 +193,7 @@ export function defineCms<
       email,
       emailTemplates: emailOptions && { ...emailTemplates, ...emailOptions.templates },
       roles,
+      translations,
       localApi: (scope) => createLocalApi(core, scope),
       media,
       admin: adminRuntime,

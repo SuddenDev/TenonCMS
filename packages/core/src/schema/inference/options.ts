@@ -109,7 +109,14 @@ export type Select<
       hasDraft?: true;
     } & ([L] extends [never]
       ? {}
-      : { locale?: true; locales?: true; sharedDraft?: true; alternates?: true })
+      : {
+          locale?: true;
+          locales?: true;
+          sharedDraft?: true;
+          syncStructure?: true;
+          syncStructureDefault?: true;
+          alternates?: true;
+        })
   : {});
 
 /** {@link Select}, or a plain record for an untyped schema. */

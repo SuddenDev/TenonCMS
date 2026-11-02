@@ -345,7 +345,7 @@ describe("onDelete inside array items", () => {
     const cms = defineCms({
       collections: {
         pages: { fields: { title: { type: "text" } } },
-        menus: { localized: true, fields: { links: link("set-null") } },
+        menus: { localized: true, syncStructure: false, fields: { links: link("set-null") } },
       },
       localization: { locales: ["en", "de"], defaultLocale: "en" },
       database: testDatabase(),

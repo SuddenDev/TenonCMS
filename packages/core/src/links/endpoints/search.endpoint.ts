@@ -42,7 +42,7 @@ export function linkSearchEndpoint(core: Core) {
         access: typeof access === "object" ? access : undefined,
         limit: 20,
         drafts: perspective === "drafts",
-        loc: locOf(core, scope, entry),
+        loc: await locOf(core, scope, collectionTarget(name)),
         search: { key, query },
       });
 

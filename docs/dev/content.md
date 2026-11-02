@@ -70,3 +70,12 @@ At each hook stage the order is: field hooks, then the collection or global, the
 - `updatedAt` of a localized read is the later of the shared row and the requested locale's row (`map-document.ts`, and `load-locale-doc.query.ts` on the write side). A locale-only draft does not touch the shared row, so the shared row alone would miss it.
 - Copy, remove and discard-by-locale are their own operations. The default locale and the last remaining locale cannot be removed.
 - When the config changes which fields are localized, the first database use moves stored values between the shared and locale rows. See [gotchas](gotchas.md#localization).
+
+### Shared structures
+
+- Structure fields are the localized top-level groups, arrays and blocks that hold a list (`structureFields()`). `Loc.structure` carries them, and `Loc.syncDefault` the default state from the `translations` global, else `syncStructure` in code. `locOf()` reads that global, so it is async.
+- A document is synced when its shared row's `syncStructure` says so, else by `syncDefault`.
+- **Merge** (`mergeLocale()`): a synced list takes its items from the shared structure, else from the default locale's list for a document that has none stored yet. A separate list takes the row's own list, else the shared structure for a row that still holds values by id. Values fill by item id, field by field: the row, then the fallback row, then `null`. A separate row that holds values by id falls back to the default locale even without `fallback`, so it keeps what it showed when it was switched off.
+- **Split** (`splitLocale()`): a synced write stores the structure (`id`, `blockType`, nested lists) in the shared row and the values by item id in the locale row. Values of removed items leave only the written row. A separate write stores full lists, and `persistLocalized()` keeps the shared structure while another row still holds values by id. Shared drafts compare key order free, so an unchanged structure creates none.
+- **Switch** (`writes/sync-structure.ts`): one write of the shared row, a draft when the entry has drafts. Turning on stores the structure of the scope's locale (the default locale's for a list it has none of). `applySyncStructure()` guards every document before the first write.
+- **Integrity**: SQL path scans cannot see values by id, so owners with structure fields use the text search, and `withLists()` turns a matching row into full lists before the walk. Effects and `breakLinks()` save that full-list form back, which reads accept.

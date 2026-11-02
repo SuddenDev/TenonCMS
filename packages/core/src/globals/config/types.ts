@@ -19,6 +19,12 @@ export type Global<F extends Fields = Fields> = Layout & {
   preview?: Preview;
   /** Enable localization for this global. Default `false`. Fields can be overriden with `localized: false` to selecitvly disable localization. */
   localized?: boolean;
+  /**
+   * Whether the items of groups, arrays and blocks have the same structure in every locale: which items exist, their
+   * order, nesting and block type. Values stay per locale. This is the starting default; editors switch it per
+   * document, admins per entry in the `translations` settings. Needs `localized`. Default `true`.
+   */
+  syncStructure?: boolean;
   /** The global keeps a draft next to the published data, saved with `{ draft: true }` and published with `publishGlobal()`. Default `true`. */
   drafts?: boolean;
   /**

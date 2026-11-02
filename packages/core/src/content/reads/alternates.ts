@@ -35,7 +35,7 @@ export async function addAlternates(
       s.transaction,
       s.context,
     );
-    const loc = locOf(core, scope, entry);
+    const loc = await locOf(core, scope, collectionTarget(collection));
     const found = await afterRead(
       core,
       scope,

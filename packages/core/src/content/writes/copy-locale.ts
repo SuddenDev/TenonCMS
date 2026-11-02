@@ -26,7 +26,7 @@ export async function copyLocalized(
   await guard(core, s, name, "update", { id });
   const entry = target(core, name);
   const to = s.locale;
-  const loc = locOf(core, { ...s, fallback: false }, entry);
+  const loc = await locOf(core, { ...s, fallback: false }, name);
   if (!loc || !to) throw new ValidationError({ "": `"${name.name}" is not localized` });
   if (!loc.locales.includes(from)) throw new ValidationError({ from: "Unknown locale" });
   if (from === to) throw new ValidationError({ from: "Source and target locale are equal" });

@@ -1,6 +1,7 @@
 import type { RichtextDocument } from "../richtext/config/types.ts";
 import type { LinkReference } from "../links/config/types.ts";
 import type { ConflictOptions, DeleteOptions } from "../errors.ts";
+import type { SyncChoice, SyncStructureOptions } from "../content/writes/sync-structure.ts";
 import type { Schema } from "../schema/index.ts";
 import { API_KEY_HEADER } from "./constants.ts";
 import { createRequest } from "./create-request.ts";
@@ -92,6 +93,16 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     removeLocale: (name: string, id: string, locale: string) =>
       request("DELETE", `${doc(name, id)}/locales/${enc(locale)}`),
 
+    setSyncStructure: (
+      name: string,
+      id: string,
+      sync: SyncChoice,
+      options: SyncStructureOptions = {},
+    ) => request("POST", `${doc(name, id)}/structure`, { sync, ...options }),
+
+    applySyncStructure: (name: string, { dryRun }: { dryRun?: boolean } = {}) =>
+      request("POST", `${collection(name)}/structure/apply`, { dryRun }),
+
     lock: (name: string, id: string, { takeover = false } = {}) =>
       request("POST", `${doc(name, id)}/lock`, { takeover }),
 
@@ -131,6 +142,9 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
 
     removeGlobalLocale: (name: string, locale: string) =>
       request("DELETE", `${global(name)}/locales/${enc(locale)}`),
+
+    setGlobalSyncStructure: (name: string, sync: SyncChoice, options: SyncStructureOptions = {}) =>
+      request("POST", `${global(name)}/structure`, { sync, ...options }),
 
     lockGlobal: (name: string, { takeover = false } = {}) =>
       request("POST", `${global(name)}/lock`, { takeover }),

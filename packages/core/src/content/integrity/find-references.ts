@@ -1,5 +1,5 @@
 import { type Database } from "../../db/types.ts";
-import { type Fields, type RefField, type Schema } from "../../schema/index.ts";
+import { type Field, type Fields, type RefField, type Schema } from "../../schema/index.ts";
 import { type Step, relationPaths } from "../../schema/traversal/relation-paths.ts";
 import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
 import { nestsItself } from "../../schema/traversal/blocks-of.ts";
@@ -14,7 +14,8 @@ import {
   containsText,
   holdsAt,
 } from "../../db/queries/document-sql.ts";
-import { localizedKeys } from "../../schema/traversal/localized-fields.ts";
+import { structureFields, localizedKeys } from "../../schema/traversal/localized-fields.ts";
+import { withLists } from "../reads/merge-locale.ts";
 import { type Kysely, sql } from "kysely";
 
 export type Ref = {
@@ -60,19 +61,29 @@ export async function references(
 ) {
   const refs: Ref[] = [];
   const parsed = new Map<string, Record<string, any>>();
-  const add = async (scan: Scan, at: Omit<Ref, "data" | "path" | "field">, json: string) => {
+  // A locale row that holds values by id is read with full lists, so paths are positional.
+  const add = async (
+    scan: Scan,
+    at: Omit<Ref, "data" | "path" | "field">,
+    json: string,
+    shared?: string,
+  ) => {
     const key = row(at as Ref);
-    const data = parsed.get(key) ?? parsed.set(key, JSON.parse(json)).get(key)!;
+    const parse = () =>
+      shared && scan.structure
+        ? withLists(scan.structure, JSON.parse(shared), JSON.parse(json))
+        : JSON.parse(json);
+    const data = parsed.get(key) ?? parsed.set(key, parse()).get(key)!;
     for (const found of await scan.found(data)) refs.push({ ...at, ...found, data });
   };
 
   for (const [name, c] of Object.entries(schema.collections ?? {}))
-    for (const scan of scansOf(db, c.fields, localizedKeys(c), collection, id)) {
+    for (const scan of scansOf(db, c, collection, id)) {
       if (scan.localized)
         for (const r of await referencingLocales(db, DOCUMENT_LOCALES, name, scan.holds)) {
           const at = { collection: name, id: r.owner, locale: r.locale };
-          if (r.inData) await add(scan, at, r.data);
-          if (r.inDraft) await add(scan, { ...at, draft: true }, r.draft!);
+          if (r.inData) await add(scan, at, r.data, r.shared.data);
+          if (r.inDraft) await add(scan, { ...at, draft: true }, r.draft!, r.shared.pending);
         }
       if (scan.shared)
         for (const r of await referencingDocs(db, name, scan.holds))
@@ -80,12 +91,12 @@ export async function references(
     }
 
   for (const [name, g] of Object.entries(schema.globals ?? {}))
-    for (const scan of scansOf(db, g.fields, localizedKeys(g), collection, id)) {
+    for (const scan of scansOf(db, g, collection, id)) {
       if (scan.localized)
         for (const r of await referencingLocales(db, GLOBAL_LOCALES, name, scan.holds)) {
           const at = { global: name, locale: r.locale };
-          if (r.inData) await add(scan, at, r.data);
-          if (r.inDraft) await add(scan, { ...at, draft: true }, r.draft!);
+          if (r.inData) await add(scan, at, r.data, r.shared.data);
+          if (r.inDraft) await add(scan, { ...at, draft: true }, r.draft!, r.shared.pending);
         }
       if (scan.shared) {
         const json = await referencingGlobal(db, name, scan.holds);
@@ -103,28 +114,34 @@ type Scan = {
   localized: boolean;
   /** Whether the shared row is searched. */
   shared: boolean;
+  /** The structure fields of a text search, whose locale rows MAY hold values by id. */
+  structure?: Record<string, Field>;
   found(data: Record<string, any>): Promise<Pick<Ref, "path" | "field">[]>;
 };
 
 /**
  * The searches for references to `id` in one owner: one per relation field to `collection`. Where a block contains
- * itself, no list of paths reaches every item. One search then finds the rows whose JSON contains the id, and a walk
- * over each row finds the fields that hold it, with positional paths.
+ * itself, no list of paths reaches every item, and locale rows that hold values by id have no list to scan. One search
+ * then finds the rows whose JSON contains the id, and a walk over each row finds the fields that hold it, with
+ * positional paths.
  */
 function scansOf(
   db: Kysely<Database>,
-  fields: Fields,
-  keys: readonly string[],
+  entry: { localized?: boolean; fields: Fields },
   collection: string,
   id: string,
 ): Scan[] {
-  if (nestsItself(fields)) {
+  const { fields } = entry;
+  const keys = localizedKeys(entry);
+  const structure = structureFields(entry);
+  if (nestsItself(fields) || Object.keys(structure).length) {
     const quoted = JSON.stringify(id);
     return [
       {
         holds: (column) => containsText(db, sql.ref(column), quoted),
         localized: keys.length > 0,
         shared: true,
+        structure,
         found: (data) => referencesIn(fields, data, collection, id),
       },
     ];

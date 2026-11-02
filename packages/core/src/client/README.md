@@ -45,6 +45,7 @@ A part upload retries a network error, a 5xx, a 408 and a 429 3 times with backo
 - Reads take `locale`, `fallback` and `alternates`, sent as `?locale=`, `?fallback=` and `?alternates=`.
 - Writes, drafts and `publish()` take `{ locale }`. Saves, draft saves and publishes also take `{ updatedAt }` (`?updatedAt=`): a newer stored version answers 409. `discard()` and `discardGlobal()` take `{ locale }` or `{ all: true }` (`?all=true`).
 - `copyLocale(name, id, { from, to })` and `removeLocale(name, id, locale)` call `/collections/:name/:id/locales/…`; `copyGlobalLocale()` and `removeGlobalLocale()` call `/globals/:name/locales/…`.
+- `setSyncStructure(name, id, sync, { locale, dryRun })` posts to `/collections/:name/:id/structure`, `applySyncStructure(name, { dryRun })` to `/collections/:name/structure/apply`, and `setGlobalSyncStructure()` to `/globals/:name/structure`.
 - `previewUrl()` and `previewGlobalUrl()` take `{ locale }` as the third argument.
 - `localization()` fetches the public `GET /localization` once and keeps the promise per client; a failed request is not kept. The result is the normalized config (`locales`, `defaultLocale`, `fallback`, `routing`), or `null` without `localization`.
 - `LocaleMeta` types `locale`, `locales`, `sharedDraft` and, with `alternates: true`, `alternates` only for collections with a literal `localized: true`. Globals get `locale`, `locales` and `sharedDraft`.

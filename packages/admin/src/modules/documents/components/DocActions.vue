@@ -20,6 +20,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -27,22 +29,31 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { type localeStatus, localeDialog } from "@/modules/documents/locale-status";
+import { structureDialog, type StructureMenu } from "@/modules/documents/sync-structure";
+import type {
+  StructureCounts,
+  SyncChoice,
+} from "../../../../../core/src/content/writes/sync-structure";
 
 // The "…" menu of a document or global. Every language action asks first and then emits.
 // `history`: offers the version history. `languages`: the states from `localeStatus()`; without them the language
 // group is hidden. `locale`: the active language.
+// `structure`: offers the Structure submenu. `dryRun` gives the counts of a switch to one structure before it asks.
 const props = defineProps<{
   history?: boolean;
   languages?: ReturnType<typeof localeStatus>;
   locale?: string;
   defaultLocale?: string;
   busy?: boolean;
+  structure?: StructureMenu;
+  dryRun?: (sync: SyncChoice) => Promise<StructureCounts>;
 }>();
 const emit = defineEmits<{
   history: [];
   copy: [from: string, to: string];
   remove: [locale: string];
   discardAll: [];
+  structure: [sync: SyncChoice];
 }>();
 
 const i18n = useI18n();
@@ -51,7 +62,8 @@ const { t } = i18n;
 type Pending =
   | { kind: "copy"; from: string; to: string }
   | { kind: "remove"; locale: string }
-  | { kind: "discard" };
+  | { kind: "discard" }
+  | { kind: "structure"; sync: SyncChoice; counts: StructureCounts };
 
 const states = computed(() => props.languages?.states ?? []);
 const others = computed(() => states.value.filter((s) => s.locale !== props.locale));
@@ -65,6 +77,8 @@ const text = computed(() => {
   if (!p) return undefined;
   if (p.kind === "copy") return localeDialog({ ...p, exists: exists(p.to) }, i18n);
   if (p.kind === "remove") return localeDialog(p, i18n);
+  if (p.kind === "structure")
+    return { ...structureDialog(p.counts, props.locale!, i18n), destructive: false };
   const { shared, locales } = props.languages!.discardAll;
   return localeDialog({ kind: "discard", shared, locales }, i18n);
 });
@@ -78,7 +92,18 @@ function confirm() {
   const p = pending.value!;
   if (p.kind === "copy") emit("copy", p.from, p.to);
   else if (p.kind === "remove") emit("remove", p.locale);
+  else if (p.kind === "structure") emit("structure", p.sync);
   else emit("discardAll");
+}
+
+const structureValue = computed(() =>
+  props.structure?.followsDefault ? "default" : props.structure?.synced ? "same" : "separate",
+);
+// Turning one structure on changes what other languages show, so it asks with the counts first.
+async function chooseStructure(sync: SyncChoice) {
+  const next = sync === "default" ? props.structure!.defaultOn : sync;
+  if (!next || props.structure!.synced || !props.dryRun) return emit("structure", sync);
+  ask({ kind: "structure", sync, counts: await props.dryRun(sync) });
 }
 </script>
 
@@ -124,6 +149,26 @@ function confirm() {
             >
               {{ localeLabel(s.locale) }}
             </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub v-if="structure">
+          <DropdownMenuSubTrigger>{{ t("structure.menu") }}</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup :model-value="structureValue">
+              <DropdownMenuRadioItem value="same" @select="chooseStructure(true)">
+                {{ t("structure.same") }}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="separate" @select="chooseStructure(false)">
+                {{ t("structure.separate") }}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="default" @select="chooseStructure('default')">
+                {{
+                  t("structure.default", {
+                    state: t(structure.defaultOn ? "structure.on" : "structure.off"),
+                  })
+                }}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <template v-if="locale !== defaultLocale && exists(locale!)">

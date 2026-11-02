@@ -28,7 +28,7 @@ export async function read(core: Core, s: Inner, collection: string, options: Re
     ...options,
     access: access === true ? undefined : access,
     drafts,
-    loc: locOf(core, s, entry),
+    loc: await locOf(core, s, name),
   });
   return readDocs(core, s, name, docs, plan, select, options.alternates);
 }

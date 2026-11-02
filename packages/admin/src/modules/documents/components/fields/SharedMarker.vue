@@ -3,6 +3,8 @@ import { useI18n } from "vue-i18n";
 import Icon from "@/shared/components/Icon.vue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
+// `label`: the tooltip. Default: the field is the same in all languages.
+defineProps<{ label?: string }>();
 const { t } = useI18n();
 </script>
 
@@ -14,7 +16,7 @@ const { t } = useI18n();
       </span>
     </TooltipTrigger>
     <TooltipContent align="center">
-      {{ t("documents.shared") }}
+      {{ label ?? t("documents.shared") }}
     </TooltipContent>
   </Tooltip>
 </template>

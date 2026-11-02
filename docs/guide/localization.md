@@ -86,6 +86,44 @@ await cms.removeGlobalLocale("general", "de");
 
 References that point to a document are found in locale rows too, so `onDelete` (`restrict`, `set-null`, `cascade`) and media usage see every locale.
 
+## Same content structure in all languages
+
+A localized group, array or blocks field keeps one content structure for every language by default: which items exist, their order, their nesting and their block type. Values inside the items stay per language.
+
+```ts
+defineCollection({ localized: true, syncStructure: false, fields }); // each language has its own lists
+```
+
+- An editor who adds, moves or removes a block in German changes the structure in English too. English shows the new block with fallback values until someone translates it.
+- `syncStructure` is the starting default (`true`). It needs `localized`, and `syncStructure` is a reserved field name.
+- Only top-level fields that are localized take part. A field with `localized: false` is shared as a whole anyway. A group with no list inside has no structure.
+- A missing value falls back field by field to the default language (with `fallback`), then `null`.
+- Reads add `syncStructure` (whether the document shares its structure now) and `syncStructureDefault` (whether it follows its collection).
+
+Switch one document, or make every document follow its collection:
+
+```ts
+await cms.setSyncStructure("pages", id, true, { locale: "de" }); // German's structure becomes the shared one
+await cms.setSyncStructure("pages", id, false); // each language keeps what it shows now
+await cms.setSyncStructure("pages", id, "default"); // follow the collection
+await cms.setGlobalSyncStructure("mainMenu", true);
+await cms.setSyncStructure("pages", id, true, { locale: "de", dryRun: true }); // { en: { removed: 2, added: 1 }, de: … }
+await cms.applySyncStructure("pages", { dryRun: true }); // { documents: 12, locales: { … } }
+// HTTP: POST /collections/:name/:id/structure { sync, locale, dryRun }
+//       POST /globals/:name/structure { sync, locale, dryRun }
+//       POST /collections/:name/structure/apply { dryRun }
+```
+
+- **On**: the structure of `locale` (default: the default locale) becomes the shared one. Items only another language had disappear from view; switching off before that language saves again brings them back.
+- **Off**: each language keeps showing what it showed, fallback values included, and saves its own lists from then on.
+- A switch is one write of the shared fields: a draft when the entry has drafts, published with the next publish of any language. It needs `update` on the document.
+- `dryRun` writes nothing. `removed` counts items that disappear, `added` items that show fallback values.
+- `applySyncStructure` needs `update` on every document. One denied document fails the whole call with no writes.
+
+With drafts, a structure change is a shared change. Publishing English can therefore make a structure change live in German.
+
+The admin's Settings page has a **Translations** page with one switch per entry: the default for documents that follow it. Documents that follow it change with it; **Apply to all…** makes every document of a collection follow it. `settings: { translations: false }` drops the page, and `syncStructure` in the code applies.
+
 ## Changing the config later
 
 `localized` options and `defaultLocale` MAY change. On the first database access, the CMS compares the localized fields with the last run and moves the values: shared to the default locale's row, or back.
@@ -94,6 +132,7 @@ References that point to a document are found in locale rows too, so `onDelete` 
 - Each move is logged, for example `moved posts.title to locale rows (12 documents)`.
 - A changed `defaultLocale` moves nothing. It logs a warning with the number of documents that have no row in it.
 - A locale removed from `locales` keeps its rows. Reads ignore them.
+- A list that leaves the locale rows (`localized: false`) gets the default language's merged list, structure and values.
 
 ## URLs, `hreflang` and the language switch
 
@@ -142,6 +181,7 @@ When `localization` is set, the top bar has a language menu next to the perspect
 - The document header shows the active language's state (Published, Draft, Not translated) and a row of language codes with status dots. A click switches the language.
 - The "…" menu has "Copy from…", "Copy to…", "Remove translation" and "Discard all changes". Each asks first.
 - Lists show the active language with fallback and mark rows that have no translation.
+- The "…" menu has a **Sync Content Structure** submenu: Same in all languages, Separate per language, or the collection default. Turning one structure on shows what changes in each language first. While a document shares its structure, its lists carry a "Content structure shared with all languages" marker, items without a value in the active language show **Not translated**, and removing an item asks first, because it goes in every language.
 - Live preview opens the page of the active language. The admin bar's Edit link on a site page carries the page's `<html lang>`.
 
 ## Site strings

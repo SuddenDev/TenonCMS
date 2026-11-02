@@ -7,6 +7,7 @@ import { setEndpoint } from "./set.endpoint.ts";
 import { publishEndpoint } from "./publish.endpoint.ts";
 import { discardEndpoint } from "./discard.endpoint.ts";
 import { copyLocaleEndpoint } from "./copy-locale.endpoint.ts";
+import { syncStructureEndpoint } from "./sync-structure.endpoint.ts";
 import { removeLocaleEndpoint } from "./remove-locale.endpoint.ts";
 
 /** Public reads, writes behind the access rules, and protected preview URLs. */
@@ -18,6 +19,7 @@ export function globalsRoutes(core: Core) {
       .route("/", publishEndpoint(core))
       .route("/", discardEndpoint(core))
       .route("/", copyLocaleEndpoint(core))
+      .route("/", syncStructureEndpoint(core))
       .route("/", removeLocaleEndpoint(core)),
     previews: new Hono<Env>().route("/", previewUrlEndpoint(core)),
   };

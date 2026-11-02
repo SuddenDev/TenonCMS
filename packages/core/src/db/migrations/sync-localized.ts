@@ -1,6 +1,8 @@
 import { consola } from "consola";
 import { type Kysely, type Transaction, sql } from "kysely";
 import { type Database } from "../types.ts";
+import type { Field, Fields } from "../../schema/index.ts";
+import { withLists } from "../../content/reads/merge-locale.ts";
 
 type Obj = Record<string, unknown>;
 type Version = { data: Obj; draft: Obj | null };
@@ -21,6 +23,15 @@ const tables = {
 
 const parse = (s: string | null) => (s === null ? null : (JSON.parse(s) as Obj));
 const text = (o: Obj | null) => (o === null ? null : JSON.stringify(o));
+
+// A key that leaves the locale rows takes its merged list where the row holds values by item id.
+function withSharedLists(fields: Fields, keys: string[], shared: Version, local: Version) {
+  const lists = Object.fromEntries(
+    keys.filter((k) => Object.hasOwn(fields, k)).map((k) => [k, fields[k]] as const),
+  ) as Record<string, Field>;
+  local.data = withLists(lists, shared.data, local.data);
+  if (local.draft) local.draft = withLists(lists, shared.draft ?? shared.data, local.draft);
+}
 
 // Moves `keys` between the two versions, drafts included. A draft is the full pending version.
 function shift(from: Version, to: Version, keys: string[]) {
@@ -50,6 +61,7 @@ async function move(
   keys: string[],
   toLocale: boolean,
   locale: string,
+  fields?: Fields,
 ) {
   const t = tables[kind];
   const owners = await sql<{
@@ -75,6 +87,7 @@ async function move(
     const local: Version = row
       ? { data: JSON.parse(row.data), draft: parse(row.draft) }
       : { data: {}, draft: null };
+    if (!toLocale && fields) withSharedLists(fields, keys, shared, local);
     const moved = toLocale ? shift(shared, local, keys) : shift(local, shared, keys);
     for (const k of moved) counts.set(k, counts.get(k)! + 1);
     await sql`UPDATE ${sql.table(t.rows)} SET data = ${text(shared.data)}, draft = ${text(shared.draft)}
@@ -118,11 +131,14 @@ function split(id: string): [Kind, string] {
  * The first run, with an empty state, records only. Other locales keep their rows.
  * A changed `defaultLocale` moves nothing and warns about documents without a row in it.
  * @param current `collection:<name>` / `global:<name>` to the top-level localized keys, or `null` when not localized.
+ * @param fields The fields of each entry, by the same ids. A list that leaves the locale rows of a synced document is
+ * merged with its shared structure first.
  */
 export async function syncLocalized(
   db: Kysely<Database>,
   current: Record<string, string[] | null>,
   defaultLocale: string,
+  fields: Record<string, Fields> = {},
 ) {
   const stored = await db.selectFrom("cms_schema_state").selectAll().execute();
   const prev = new Map<string, string[] | null>();
@@ -145,7 +161,7 @@ export async function syncLocalized(
           [before.filter((k) => !after.includes(k)), false],
         ] as const) {
           if (!list.length) continue;
-          const counts = await move(trx, kind, name, list, toLocale, defaultLocale);
+          const counts = await move(trx, kind, name, list, toLocale, defaultLocale, fields[id]);
           for (const [k, n] of counts)
             if (n)
               messages.push(

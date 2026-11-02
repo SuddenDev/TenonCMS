@@ -185,3 +185,13 @@ it("warns with a count when the default locale changes", async () => {
   await syncLocalized(db, { "collection:posts": ["title"] }, "de");
   expect(logged()).not.toContain("defaultLocale");
 });
+
+it("moves the merged list of a synced field back into the shared row", async () => {
+  const db = await tmpDb();
+  const fields = { content: { type: "array", fields: { label: { type: "text" } } } } as const;
+  await doc(db, "a", { content: [{ id: "i1" }], syncStructure: true });
+  await putLocale(db, "a", "en", { content: { i1: { label: "Hi" } } });
+  await syncLocalized(db, { "collection:posts": ["content"] }, "en");
+  await syncLocalized(db, { "collection:posts": [] }, "en", { "collection:posts": fields });
+  expect((await row(db, "a")).data.content).toEqual([{ id: "i1", label: "Hi" }]);
+});

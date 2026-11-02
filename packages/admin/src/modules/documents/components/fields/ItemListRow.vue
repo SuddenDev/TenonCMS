@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, inject, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { Field } from "@/shared/api";
 import { itemFields } from "../../../../../../core/src/schema/traversal/item-fields";
-import { active } from "@/modules/documents/fields";
+import { active, structureKey } from "@/modules/documents/fields";
 import { blockOf, itemTitle, type Item, nestedLists } from "@/modules/documents/items";
 import { injectItemTree, useItemNames } from "@/modules/documents/composables/useItemTree";
 import Icon from "@/shared/components/Icon.vue";
@@ -56,6 +56,8 @@ const tree = injectItemTree();
 const { targetName } = useItemNames();
 const nested = computed(() => nestedLists(props.field, props.item, props.path).length > 0);
 const outline = ref(false);
+const structure = inject(structureKey, undefined);
+const untranslated = computed(() => !!structure?.value.untranslated.has(props.item.id));
 
 // Computed only once the "Move to" menu renders.
 const targets = computed(() =>
@@ -84,7 +86,14 @@ const targets = computed(() =>
         />
         <Icon v-if="block?.icon" :name="block!.icon!" />
         <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span class="truncate">{{ title || label }}</span>
+          <span class="flex min-w-0 items-center gap-1.5">
+            <span class="truncate">{{ title || label }}</span>
+            <span
+              v-if="untranslated"
+              class="bg-muted text-muted-foreground shrink-0 rounded-sm px-1 text-xs font-normal"
+              >{{ t("common.notTranslated") }}</span
+            >
+          </span>
           <span v-if="title" class="text-muted-foreground truncate text-xs">{{ label }}</span>
         </span>
       </CollapsibleTrigger>

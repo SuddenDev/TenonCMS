@@ -19,7 +19,7 @@ export async function readGlobal(core: Core, s: Inner, name: string, options: Re
   const entry = core.schema.globals[name];
   enforce(s, await readDecision(core, s, globalTarget(name)));
   const { plan, select } = readPlan(core, entry.fields, options, globalMetaKeys(entry.localized));
-  const loc = locOf(core, s, entry);
+  const loc = await locOf(core, s, globalTarget(name));
 
   const stored = await loadGlobal(
     await databaseForScope(core, s),
@@ -27,7 +27,16 @@ export async function readGlobal(core: Core, s: Inner, name: string, options: Re
     s.perspective === "drafts",
     loc,
   );
-  const data = stored ?? { publishedAt: null, hasDraft: false, ...(loc && localeMeta(loc, null)) };
+  const data = stored ?? {
+    publishedAt: null,
+    hasDraft: false,
+    ...(loc && localeMeta(loc, null)),
+    ...(loc &&
+      Object.keys(loc.structure).length && {
+        syncStructure: loc.syncDefault,
+        syncStructureDefault: true,
+      }),
+  };
 
   return (await readDocs(core, s, globalTarget(name), [data], plan, select))[0];
 }

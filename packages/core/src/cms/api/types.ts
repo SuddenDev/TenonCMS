@@ -1,6 +1,11 @@
 import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { EmailApi } from "../../email/types.ts";
 import type {
+  AppliedStructure,
+  StructureCounts,
+  SyncChoice,
+} from "../../content/writes/sync-structure.ts";
+import type {
   AlternatesOf,
   Checked,
   Data,
@@ -190,6 +195,36 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
     locale: L,
   ): Promise<CollectionDoc<T, K> | undefined>;
 
+  /**
+   * Sets whether a document uses one item structure in every locale. `true` makes the structure of `locale` (default: the
+   * default locale) the shared one, `false` gives each locale its own again, and `"default"` follows the collection.
+   * It is a draft when the collection has drafts. Throws a `ValidationError` for a collection without a localized
+   * group, array or blocks field. Returns `undefined` if the document does not exist.
+   */
+  setSyncStructure<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+    sync: SyncChoice,
+    options?: { locale?: L; dryRun?: false },
+  ): Promise<CollectionDoc<T, K> | undefined>;
+  /** Writes nothing. Returns per locale with a row the items that disappear and the items that show fallback values. */
+  setSyncStructure<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+    sync: SyncChoice,
+    options: { locale?: L; dryRun: true },
+  ): Promise<StructureCounts>;
+
+  /**
+   * Makes every document of a collection follow it, with the default locale's structure where that turns sharing on. Needs
+   * `update` on every document: one denied document fails the whole call with no writes. `dryRun` writes nothing and
+   * returns the counts per locale.
+   */
+  applySyncStructure(
+    collection: keyof Collections<T> & string,
+    options?: { dryRun?: boolean },
+  ): Promise<AppliedStructure>;
+
   /** Deletes a document and applies `onDelete` to every reference to it, in one transaction. */
   delete(
     collection: keyof Collections<T> & string,
@@ -239,6 +274,18 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
     name: K,
     locale: L,
   ): Promise<GlobalData<T, K>>;
+
+  /** Sets whether a global uses one item structure in every locale, like {@link Api.setSyncStructure}. */
+  setGlobalSyncStructure<K extends keyof Globals<T> & string>(
+    name: K,
+    sync: SyncChoice,
+    options?: { locale?: L; dryRun?: false },
+  ): Promise<GlobalData<T, K>>;
+  setGlobalSyncStructure<K extends keyof Globals<T> & string>(
+    name: K,
+    sync: SyncChoice,
+    options: { locale?: L; dryRun: true },
+  ): Promise<StructureCounts>;
 
   /**
    * Returns a copy of this API whose reads use the drafts perspective: they see documents that were never published,

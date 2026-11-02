@@ -48,10 +48,15 @@ export async function loadLocaleDoc(
     db,
   );
   const own = rows.find((r) => r.locale === loc.locale);
+  const base = rows.find((r) => r.locale === loc.defaultLocale);
   const state = await loadSharedState(db, target, global ? target.name : id);
 
   return {
-    ...mergeLocale(loc.keys, shared, own && JSON.parse(own.data), null),
+    ...mergeLocale(loc.keys, shared, own && JSON.parse(own.data), null, {
+      fields: loc.structure,
+      syncDefault: loc.syncDefault,
+      base: base && JSON.parse(base.data),
+    }),
     updatedAt: new Date(Math.max(Date.parse(shared.updatedAt), own?.updated_at ?? 0)).toISOString(),
     publishedAt: own?.published_at == null ? null : new Date(own.published_at).toISOString(),
     hasDraft: Boolean(own?.has_draft),

@@ -27,7 +27,7 @@ export async function removeLocalized(
   id: string | undefined,
 ) {
   const entry = target(core, name);
-  const loc = locOf(core, { ...s, fallback: false }, entry);
+  const loc = await locOf(core, { ...s, fallback: false }, name);
   if (!loc) throw new ValidationError({ "": `"${name.name}" is not localized` });
   if (loc.locale === loc.defaultLocale)
     throw new ValidationError({ locale: "The default locale cannot be removed" });

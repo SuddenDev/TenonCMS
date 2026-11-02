@@ -109,7 +109,7 @@ export async function guard(
   const decision = await permit(core, s, name, op, extra);
   if (decision === true || !extra.id) return enforce(s, decision);
 
-  const loc = locOf(core, s, target(core, name));
+  const loc = await locOf(core, s, name);
   const doc = await loadDoc(await databaseForScope(core, s), name.name, extra.id, true, loc);
   if (doc) enforce(s, decision, doc);
 }

@@ -178,6 +178,8 @@ Most sites need a title, a URL and SEO defaults. `defineCms()` adds two globals 
 | `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                         |
 | `seo`     | `separator` (default `·`), `image` (social image), `verification.google` / `.bing`, `noindex` |
 
+With `localization` and an entry that has a localized group, array or blocks field, a third global, `translations`, holds the default structure setting of each such entry (see [Localization](./localization.md#same-content-structure-in-all-languages)). `settings: { translations: false }` drops it.
+
 They appear on the admin's Settings page, not as menu entries, and read like any global: `await cms.getGlobal("general")`. An unsaved global reads as `{}`, so handle a missing `title`. Without [media](./media.md), `favicon` and `image` are left out.
 
 The `settings` option drops or replaces them:

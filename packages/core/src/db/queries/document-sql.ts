@@ -1,5 +1,6 @@
 import { type Database, type Row } from "../types.ts";
 import type { Each, Step } from "../../schema/traversal/relation-paths.ts";
+import type { Field } from "../../schema/index.ts";
 import {
   type Kysely,
   PostgresAdapter,
@@ -27,6 +28,10 @@ export type Loc = {
   keys: readonly string[];
   /** Every configured locale, in order. */
   locales: readonly string[];
+  /** The localized top-level fields that hold lists, by key. Their structure MAY be shared, see `mergeLocale()`. */
+  structure: Record<string, Field>;
+  /** Whether a document without its own `syncStructure` uses one structure in every locale. */
+  syncDefault: boolean;
 };
 
 /** The locale table of documents or globals, with the column that holds the owner's key. */

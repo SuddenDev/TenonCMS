@@ -57,7 +57,7 @@ export async function writeDocument(core: Core, scope: Inner, request: WriteRequ
   const { target: name, operation, id, mode = "save" } = request;
   const entry = target(core, name);
   const database = await databaseForScope(core, scope);
-  const locale = locOf(core, { ...scope, fallback: false }, entry);
+  const locale = await locOf(core, { ...scope, fallback: false }, name);
   const accessOperation = operation === "create" ? "create" : "update";
   if (mode !== "deletion-effect") {
     await guard(core, scope, name, accessOperation, { id, data: request.input });
@@ -115,4 +115,11 @@ async function loadSource(
 }
 
 // Read metadata is reserved only on localized targets.
-const withoutLocaleMeta = ({ locale, locales, sharedDraft, ...data }: Record<string, any>) => data;
+const withoutLocaleMeta = ({
+  locale,
+  locales,
+  sharedDraft,
+  syncStructure,
+  syncStructureDefault,
+  ...data
+}: Record<string, any>) => data;

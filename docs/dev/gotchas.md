@@ -106,6 +106,8 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - Removing a localized field from the schema moves its stored values from the default locale's row into the shared row, and a pending locale draft becomes a shared draft. Temporary demo fields leave data behind this way.
 - Astro's static routes match unprefixed URLs only. With `routing`, every route outside the catch-all needs a prefixed variant.
 - `useAlternates()` clears the shared alternates on dispose only when they still hold its own value, because the next page sets its alternates before the old page is disposed.
+- A locale row MAY hold a full list or values by item id for the same field, until that locale saves again. Code that reads locale rows directly MUST go through `mergeLocale()` or `withLists()`, never walk the raw JSON as lists.
+- `syncStructure` defaults to `true`, so existing localized documents with lists show the default locale's structure in every locale as soon as the feature runs. Their rows convert on their next save. Tests that expect a list per locale need `syncStructure: false`.
 
 ## Admin UI and admin bar
 

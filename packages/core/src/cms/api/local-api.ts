@@ -1,6 +1,12 @@
 import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { EmailApi } from "../../email/types.ts";
 import type { MediaApi } from "../../schema/hooks/media.ts";
+import type {
+  AppliedStructure,
+  StructureCounts,
+  SyncChoice,
+  SyncStructureOptions,
+} from "../../content/writes/sync-structure.ts";
 
 type Options = {
   where?: Record<string, unknown>;
@@ -57,6 +63,15 @@ export type LocalApi = {
   ): Promise<Row | undefined>;
   /** Deletes the translation of one locale. The default locale and the last locale row stay. */
   removeLocale(collection: string, id: string, locale: string): Promise<Row | undefined>;
+  /** Sets whether a document uses one structure in every locale. With `dryRun`, returns the counts per locale. */
+  setSyncStructure(
+    collection: string,
+    id: string,
+    sync: SyncChoice,
+    options?: SyncStructureOptions,
+  ): Promise<Row | StructureCounts | undefined>;
+  /** Makes every document of a collection follow it. */
+  applySyncStructure(collection: string, options?: { dryRun?: boolean }): Promise<AppliedStructure>;
   /**
    * The `alternates` of the document whose `permalink` is `url`, or `null` when no document has it. `url` is a public
    * path with the locale prefix of `routing`; its locale is read from the prefix, or from `options.locale`. Only a
@@ -73,6 +88,11 @@ export type LocalApi = {
   discardGlobal(name: string, options?: DiscardOptions): Promise<Row>;
   copyGlobalLocale(name: string, locales: { from: string; to: string }): Promise<Row>;
   removeGlobalLocale(name: string, locale: string): Promise<Row>;
+  setGlobalSyncStructure(
+    name: string,
+    sync: SyncChoice,
+    options?: SyncStructureOptions,
+  ): Promise<Row | StructureCounts | undefined>;
   /** Returns a copy of this API whose reads use the drafts perspective: unpublished documents and pending drafts. */
   withDrafts(): LocalApi;
   /** The media library. Missing without `defineCms({ media })`. */

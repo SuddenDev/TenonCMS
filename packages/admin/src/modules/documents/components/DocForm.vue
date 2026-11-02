@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { DeletionCancelled } from "@/shared/linked-deletion";
-import { computed, ref, watch } from "vue";
+import { computed, provide, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { CmsError, type Data, type Field, type Fields, type Layout } from "@/shared/api";
 import { onLocaleFlush } from "@/shared/composables/useLocale";
-import { active, normalize } from "@/modules/documents/fields";
+import { active, structureKey, normalize } from "@/modules/documents/fields";
+import { untranslatedIds } from "@/modules/documents/sync-structure";
 import { ago } from "@/shared/utils";
 import { Button } from "@/shared/components/ui/button";
 import FieldInput from "./FieldInput.vue";
@@ -73,6 +74,17 @@ if (drafts)
     return !autosave.pending.value;
   });
 const shared = (f: Field) => !!props.localized && f.localized === false;
+// Lists of a synced document share their items with every language.
+provide(
+  structureKey,
+  computed(() => {
+    const synced = !!props.localized && current.value.syncStructure === true;
+    return {
+      synced,
+      untranslated: synced ? untranslatedIds(props.fields, current.value) : new Set<string>(),
+    };
+  }),
+);
 const inherited = (f: Field) =>
   props.localized && f.localized !== false ? props.defaults : undefined;
 // The saved document MAY differ from the input, e.g. when hooks change it, so the form shows what was stored.

@@ -7,7 +7,14 @@ import { type SelectSpec } from "./select-fields.ts";
 type Collections = Record<string, Collection>;
 
 const META = ["id", "createdAt", "updatedAt", "createdBy", "updatedBy", "publishedAt", "hasDraft"];
-const LOCALE_META = ["locale", "locales", "sharedDraft", "alternates"];
+const LOCALE_META = [
+  "locale",
+  "locales",
+  "sharedDraft",
+  "syncStructure",
+  "syncStructureDefault",
+  "alternates",
+];
 
 /**
  * The meta keys a document of a collection has. A localized collection adds the locale keys.
@@ -17,11 +24,11 @@ export const metaKeys = (localized?: boolean): readonly string[] =>
   localized ? [...META, ...LOCALE_META] : META;
 
 /**
- * The meta keys of a global: none, except `locale`, `locales` and `sharedDraft` on a localized one.
+ * The meta keys of a global: none, except the locale keys on a localized one.
  * @returns The keys that `select` MAY name next to the fields, or `false` for none.
  */
 export const globalMetaKeys = (localized?: boolean): readonly string[] | false =>
-  localized ? ["locale", "locales", "sharedDraft"] : false;
+  localized ? ["locale", "locales", "sharedDraft", "syncStructure", "syncStructureDefault"] : false;
 
 /**
  * Checks `select` against `fields` and the populate `plan`, with the same resolution rules as `populate()`.

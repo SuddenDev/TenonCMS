@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject } from "vue";
+import { structureKey } from "@/modules/documents/fields";
 import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import { schema } from "@/shared/api";
@@ -32,6 +33,8 @@ const links = injectLinks();
 const { treeItemName, itemName } = useItemNames();
 const row = computed(() => treeRow(props.item, props.field, links.resolve));
 const title = computed(() => row.value.title || treeItemName(props.field, props.item, props.index));
+const structure = inject(structureKey, undefined);
+const untranslated = computed(() => !!structure?.value.untranslated.has(props.item.id));
 const expanded = computed(() => tree.open.has(props.item.id));
 const collection = computed(() => {
   const name = row.value.collection;
@@ -85,6 +88,9 @@ function toggle() {
         <span class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
           <span class="truncate">{{ row.line ?? itemName(field, item, index) }}</span>
           <span v-if="collection" class="bg-muted shrink-0 rounded-sm px-1">{{ collection }}</span>
+          <span v-if="untranslated" class="bg-muted shrink-0 rounded-sm px-1">{{
+            t("common.notTranslated")
+          }}</span>
         </span>
       </span>
     </Button>

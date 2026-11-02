@@ -1,7 +1,7 @@
 import { breakLinks } from "../../links/integrity/break-links.ts";
 import type { DeleteOptions } from "../../errors.ts";
 import { type Core, type Inner } from "../../cms/runtime/types.ts";
-import { collectionTarget, target, targetKey } from "../targets.ts";
+import { collectionTarget, targetKey } from "../targets.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { hookArgs } from "../lifecycle/hook-args.ts";
@@ -33,7 +33,7 @@ export async function remove(
   const decision = await permit(core, s, collectionTarget(collection), "delete", { id });
 
   // A delete removes the row whether it was published or not.
-  const loc = locOf(core, s, target(core, collectionTarget(collection)));
+  const loc = await locOf(core, s, collectionTarget(collection));
   const doc = await loadDoc(db, collection, id, true, loc);
   if (!doc) return;
   enforce(s, decision, doc);

@@ -207,6 +207,7 @@ describe("array in a localized entry", () => {
       collections: {
         menus: {
           localized: true,
+          syncStructure: false,
           fields: {
             links: { type: "array", fields: { label: { type: "text" } } },
             shared: { type: "array", localized: false, fields: { label: { type: "text" } } },

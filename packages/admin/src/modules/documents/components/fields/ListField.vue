@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject } from "vue";
+import { useI18n } from "vue-i18n";
+import { structureKey } from "@/modules/documents/fields";
 import { text } from "@/shared/i18n";
 import type { FieldProps } from "./types";
 import ItemList from "./ItemList.vue";
@@ -9,8 +11,14 @@ import { FieldSet, FieldLegend, FieldDescription } from "@/shared/components/ui/
 
 const props = defineProps<FieldProps<"array" | "blocks">>();
 const model = defineModel<any>();
+const { t } = useI18n();
 const path = computed(() => props.path ?? props.name);
 const required = computed(() => props.field.required && !props.loose);
+const structure = inject(structureKey, undefined);
+// Lists inside items follow their item, so only the outer lists show the hint.
+const sharedStructure = computed(
+  () => !!structure?.value.synced && !path.value.split(".").some((s) => /^\d+$/.test(s)),
+);
 </script>
 
 <template>
@@ -19,6 +27,7 @@ const required = computed(() => props.field.required && !props.loose);
       {{ text(field.labels?.plural) ?? text(field.label) ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
+      <SharedMarker v-else-if="sharedStructure" :label="t('structure.shared')" />
     </FieldLegend>
     <FieldDescription v-if="field.description" class="-mt-1">{{
       text(field.description)

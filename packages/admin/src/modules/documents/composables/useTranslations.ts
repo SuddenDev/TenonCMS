@@ -1,6 +1,8 @@
 import { withLinkedDeletion } from "@/shared/linked-deletion";
 import { computed, ref } from "vue";
-import { client } from "@/shared/api";
+import { client, schema } from "@/shared/api";
+import { hasStructure, type StructureMenu } from "@/modules/documents/sync-structure";
+import type { SyncChoice } from "../../../../../core/src/content/writes/sync-structure";
 import { useLocale } from "@/shared/composables/useLocale";
 import { usePerspective } from "@/shared/composables/usePerspective";
 import { type LocaleRow, localeStatus } from "@/modules/documents/locale-status";
@@ -95,6 +97,50 @@ export function useTranslations(
       ? client.removeGlobalLocale(t.global, l)
       : client.removeLocale(t.collection, t.id, l);
   };
+  // The default of the entry, from the `translations` setting, for documents that do not follow it yet.
+  const setting = ref<Record<string, unknown>>({});
+  const name = () => {
+    const t = target();
+    return t && ("global" in t ? t.global : t.collection);
+  };
+  /** The Structure submenu state, or `undefined` for an entry without lists or a document without a structure state. */
+  const structure = computed((): StructureMenu | undefined => {
+    const e = entry();
+    const d = doc();
+    if (
+      !localized.value ||
+      !e ||
+      !hasStructure(e as never) ||
+      typeof d?.syncStructure !== "boolean"
+    )
+      return undefined;
+    const followsDefault = d.syncStructureDefault === true;
+    const stored = setting.value[name() ?? ""];
+    const fallback =
+      typeof stored === "boolean"
+        ? stored
+        : ((e as { syncStructure?: boolean }).syncStructure ?? true);
+    return {
+      synced: d.syncStructure,
+      followsDefault,
+      defaultOn: followsDefault ? d.syncStructure : fallback,
+    };
+  });
+  if (schema.value.globals?.translations)
+    client.getGlobal("translations", { populate: false }).then(
+      (g) => (setting.value = g as Record<string, unknown>),
+      () => {},
+    );
+
+  /** Switches the structure from the active language. With `dryRun`, returns the counts per language. */
+  const setStructure = (sync: SyncChoice, dryRun = false) => {
+    const t = target()!;
+    const options = { locale: active.value, dryRun } as never;
+    return "global" in t
+      ? client.setGlobalSyncStructure(t.global, sync, options)
+      : client.setSyncStructure(t.collection, t.id, sync, options);
+  };
+
   /** Drops the shared draft and every language's draft. A document that was never published is deleted: `null`. */
   const discardAll = async () => {
     const t = target()!;
@@ -119,5 +165,7 @@ export function useTranslations(
     copy,
     remove,
     discardAll,
+    structure,
+    setStructure,
   };
 }

@@ -29,6 +29,7 @@ type Owner = Layout & {
   name: string;
   fields: Fields;
   localized?: boolean;
+  syncStructure?: boolean;
   preview?: Preview;
   permalink?: Preview;
   global: boolean;
@@ -88,6 +89,7 @@ function owners(schema: Schema): Owner[] {
       name,
       fields: c.fields,
       localized: c.localized,
+      syncStructure: c.syncStructure,
       preview: c.preview,
       permalink: c.permalink,
       tabs: c.tabs,
@@ -98,6 +100,7 @@ function owners(schema: Schema): Owner[] {
       name,
       fields: g.fields,
       localized: g.localized,
+      syncStructure: g.syncStructure,
       preview: g.preview,
       permalink: g.permalink,
       tabs: g.tabs,
@@ -121,8 +124,16 @@ function checkLocalization(localization?: Localization) {
 }
 
 // `localized` needs the `localization` option. A field sets it only at the top level of a localized entry,
-// never inside a group, an array item or a block item.
-function checkLocalized({ name, fields, localized, global }: Owner, enabled: boolean) {
+// never inside a group, an array item or a block item. `syncStructure` needs `localized` and is no field name.
+function checkLocalized(
+  { name, fields, localized, global, syncStructure }: Owner,
+  enabled: boolean,
+) {
+  const kind = global ? "global" : "collection";
+  if (syncStructure !== undefined && !localized)
+    fail(`${kind} "${name}" sets syncStructure but is not localized`);
+  for (const key of ["syncStructure", "syncStructureDefault"])
+    if (Object.hasOwn(fields, key)) fail(`field "${name}.${key}" is a reserved field name`);
   if (localized && !enabled)
     fail(
       `${global ? "global" : "collection"} "${name}" is localized but the \`localization\` option is missing`,

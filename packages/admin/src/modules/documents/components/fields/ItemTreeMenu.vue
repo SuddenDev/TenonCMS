@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject } from "vue";
+import { structureKey } from "@/modules/documents/fields";
 import { useI18n } from "vue-i18n";
 import { type Item, type ListField, nestedLists, treeRow } from "@/modules/documents/items";
 import {
@@ -50,6 +51,11 @@ const targetName = (target: MoveTarget) => {
 };
 const addChild = (list: { path: string; field: ListField }) =>
   tree.add(list.path, list.field, props.item);
+const structure = inject(structureKey, undefined);
+function remove() {
+  if (structure?.value.synced && !confirm(t("structure.removeEverywhere"))) return;
+  tree.remove(props.path);
+}
 </script>
 
 <template>
@@ -110,7 +116,7 @@ const addChild = (list: { path: string; field: ListField }) =>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSeparator />
-      <DropdownMenuItem variant="destructive" @select="tree.remove(path)">
+      <DropdownMenuItem variant="destructive" @select="remove">
         <Icon name="trash" />{{ t("common.delete") }}
       </DropdownMenuItem>
     </DropdownMenuContent>

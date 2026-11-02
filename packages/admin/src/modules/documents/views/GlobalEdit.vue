@@ -9,9 +9,11 @@ import { can } from "@/shared/access";
 import { ownerKey } from "@/modules/documents/fields";
 import DocForm from "@/modules/documents/components/DocForm.vue";
 import DocActions from "@/modules/documents/components/DocActions.vue";
+import ApplyStructure from "@/modules/documents/components/ApplyStructure.vue";
 import VersionHistory from "@/modules/documents/components/VersionHistory.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { useTranslations } from "@/modules/documents/composables/useTranslations";
+import type { SyncChoice } from "../../../../../core/src/content/writes/sync-structure";
 import { useLock } from "@/modules/documents/composables/useLock";
 import LockNotice from "@/modules/documents/components/LockNotice.vue";
 import { Icon, Pane, useLocale, usePerspective } from "@/shared";
@@ -159,6 +161,12 @@ const removeLocale = (l: string) =>
     locale.value = defaultLocale.value;
   });
 
+const setStructure = (sync: SyncChoice) =>
+  translate(async () => {
+    await tr.setStructure(sync);
+    await load();
+  });
+
 const discardAll = () =>
   translate(async () => {
     await tr.discardAll();
@@ -204,6 +212,9 @@ const discardAll = () =>
         @copy="copy"
         @remove="removeLocale"
         @discard-all="discardAll"
+        :structure="readOnly ? undefined : tr.structure.value"
+        :dry-run="(sync) => tr.setStructure(sync, true) as never"
+        @structure="setStructure"
       />
       <slot name="actions" />
     </template>
@@ -247,12 +258,18 @@ const discardAll = () =>
         :doc="doc"
         :inert="readOnly"
         global
+        :is-new="!doc.updatedAt || name === 'translations'"
         :localized="tr.localized.value"
         :defaults="tr.defaults.value"
         :missing="languages?.active === 'missing'"
         v-bind="drafts ? { saveDraft, publish, discard } : { save }"
         :reload="load"
         @change="emit('change', $event)"
+      />
+      <ApplyStructure
+        v-if="name === 'translations' && editable"
+        :names="Object.keys(global.fields)"
+        @applied="emit('saved')"
       />
     </div>
   </Pane>

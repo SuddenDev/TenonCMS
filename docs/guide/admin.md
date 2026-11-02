@@ -211,6 +211,10 @@ export const mountStats: Mount<PageContext> = (el, ctx) => {
 
 Keys are dotted paths, `{name}` fills a parameter, and a missing key falls back to English, then to the key. `translate(text, locale)` resolves one `{ en, de }` value. The bundled redirects and example plugins use both.
 
+## Translations
+
+With `localization`, the document "…" menu has a **Sync Content Structure** submenu for entries with lists, and Settings has a **Translations** page with one switch per entry and an **Apply to all…** button per collection. See [Localization](./localization.md#same-content-structure-in-all-languages).
+
 ## Serve the admin elsewhere
 
 Pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `tenonAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.

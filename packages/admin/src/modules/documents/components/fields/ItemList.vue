@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import type { Field } from "@/shared/api";
 import { blocksOf } from "../../../../../../core/src/schema/traversal/blocks-of";
-import { focusKey } from "@/modules/documents/fields";
+import { focusKey, structureKey } from "@/modules/documents/fields";
 import { duplicateItem, type Item, moveItem, newItem } from "@/modules/documents/items";
 import {
   useItemNames,
@@ -92,7 +92,9 @@ function duplicate(i: number) {
   model.value = [...model.value.slice(0, i + 1), copy, ...model.value.slice(i + 1)];
   open.add(copy.id);
 }
+const structure = inject(structureKey, undefined);
 function remove(i: number) {
+  if (structure?.value.synced && !confirm(t("structure.removeEverywhere"))) return;
   open.delete(model.value[i].id);
   model.value = model.value.filter((_, j) => j !== i);
 }

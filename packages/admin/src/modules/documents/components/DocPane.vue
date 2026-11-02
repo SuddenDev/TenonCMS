@@ -21,6 +21,7 @@ import DocActions from "@/modules/documents/components/DocActions.vue";
 import VersionHistory from "@/modules/documents/components/VersionHistory.vue";
 import StatusBadges from "@/modules/documents/components/StatusBadges.vue";
 import { useTranslations } from "@/modules/documents/composables/useTranslations";
+import type { SyncChoice } from "../../../../../core/src/content/writes/sync-structure";
 import { useLock } from "@/modules/documents/composables/useLock";
 import LockNotice from "@/modules/documents/components/LockNotice.vue";
 import { Pane, Icon, useLocale, usePerspective } from "@/shared";
@@ -267,6 +268,12 @@ const removeLocale = (l: string) =>
     locale.value = defaultLocale.value;
   });
 
+const setStructure = (sync: SyncChoice) =>
+  translate(async () => {
+    await tr.setStructure(sync);
+    await load();
+  });
+
 const discardAll = () =>
   translate(async () => {
     if ((await tr.discardAll()) === null) emit("deleted");
@@ -330,6 +337,9 @@ async function remove() {
         @copy="copy"
         @remove="removeLocale"
         @discard-all="discardAll"
+        :structure="readOnly ? undefined : tr.structure.value"
+        :dry-run="(sync) => tr.setStructure(sync, true) as never"
+        @structure="setStructure"
       />
       <PaneExpandButton :expanded="expanded" @toggle="toggleExpand" />
       <slot name="actions" />
