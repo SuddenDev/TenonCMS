@@ -88,6 +88,20 @@ curl -s -o /dev/null -w '%{http_code}\n' -b $J -X DELETE -H "origin: http://$B" 
 
 Expect `200`; the menu with `"href":"/about","title":"About"` on the page link; `[{"href":"/about","title":"About"}]`; the link in the header HTML; then `409` (`LINKED_CONTENT`). In the admin, Settings › Main menu shows the tree: drag a row onto another, open its sheet, and check that the preview follows the edit.
 
+## Nuxt production build
+
+Dev does not bundle core, so some breaks only show in `nuxt build`. The example renders no rich text, so add a throwaway page that does, build, and parse every server chunk.
+
+```sh
+cd examples/nuxt
+printf '%s\n' '<script setup lang="ts">' 'import { Richtext } from "tenoncms/richtext/vue";' '</script>' \
+  '<template><Richtext :content="null" /></template>' > app/pages/smoke.vue
+npx nuxt build && for f in .output/server/chunks/**/*.mjs; do node --check "$f" || echo "$f"; done
+rm app/pages/smoke.vue
+```
+
+Expect no output from the loop. Then start the build on another port and its own `DATABASE_URL`, and run the curl calls above. Expect the same codes, and 200 for `/smoke`.
+
 ## Postgres
 
 PGlite runs the integration suite already. This checks `postgres()` and the `pg` pool against a real server, in a throwaway container.

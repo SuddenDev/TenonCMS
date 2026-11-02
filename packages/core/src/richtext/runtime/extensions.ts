@@ -67,23 +67,25 @@ export function richtextExtensions(
   extra: Record<string, Extensions> = {},
 ): Extensions {
   const on = (name: string) => !allowed || allowed.includes(name);
-  const starter: Record<string, false> = {};
-
-  for (const key of [
-    "heading",
-    "bold",
-    "italic",
-    "underline",
-    "strike",
-    "code",
-    "codeBlock",
-    "bulletList",
-    "orderedList",
-    "blockquote",
-    "horizontalRule",
-    "link",
-  ])
-    if (!on(key)) starter[key] = false;
+  // A filter, not a loop with an `if`: Nitro's Rolldown build folds that `if` and leaves a `for` without a body.
+  const starter: Record<string, false> = Object.fromEntries(
+    [
+      "heading",
+      "bold",
+      "italic",
+      "underline",
+      "strike",
+      "code",
+      "codeBlock",
+      "bulletList",
+      "orderedList",
+      "blockquote",
+      "horizontalRule",
+      "link",
+    ]
+      .filter((key) => !on(key))
+      .map((key) => [key, false]),
+  );
 
   if (!on("bulletList") && !on("orderedList")) starter.listItem = false;
 

@@ -7,6 +7,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 **Bundling and native code**
 
 - Nitro rewrites `typeof window` to `"undefined"` as plain text, even inside strings. Keep browser-only code out of server bundles.
+- Nitro's Rolldown build of a Nuxt app's SSR chunk can drop the body of a brace-less `for (…) if (…) x;` once it inlines a constant and folds the `if`. The chunk then fails to parse (`Unexpected token 'const'`). Braces do not help, because core's tsdown build strips them. Avoid a loop whose only statement is an `if` that can fold, in code that pages import (`filter()` first).
 - libsql loads its native binary (`@libsql/<platform>`) with a dynamic require, on import of the Node entry. The dialect imports it only for file URLs; remote URLs use `@libsql/client/web`.
   - If Vite bundles core, the binding breaks. That is why the Astro adapter and `tenonAdmin()` set core external in builds. Dev does not bundle, so core stays internal there.
   - Nitro 2 (Nuxt) does not trace the binary, so the Nuxt module adds it by hand. Nitro 3 (TanStack Start) traces it on its own.
