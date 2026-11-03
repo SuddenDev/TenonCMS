@@ -1,6 +1,6 @@
 # Customize the admin
 
-Everything the admin needs from your project sits in one `admin` object in `tenon.config.ts`: branding, custom fields, pages and the admin bar. Write it inline, or put it in a module and import it. Code that runs in the browser loads through `clientRef()`.
+Everything the admin needs from your project sits in one `admin` object in `tenon.config.ts`: branding, custom fields, pages and the admin bar. Write it inline, or put it in a module and import it. Import browser exports from `.client.ts` modules, or use an explicit `clientRef()`.
 
 ```ts
 // admin.ts
@@ -46,7 +46,55 @@ export default defineCms({ /* … */ admin });
 
 ## Server and browser
 
-Only `load` functions run on the server. Everything the browser runs is a `clientRef()` to an export in a module of its own.
+Only `load` functions run on the server. Browser implementations live in their own modules. The adapter turns typed imports from `.client.ts` into references; `clientRef()` remains available for explicit references.
+
+### Typed browser imports
+
+```ts
+// admin/stats.client.ts
+import { renderVue, type PageContext } from "tenoncms/admin/vue";
+import Stats from "./Stats.vue";
+
+export const mountStats = renderVue<PageContext>(Stats);
+
+// tenon.config.ts
+import { mountStats } from "./admin/stats.client";
+
+export default defineCms({
+  /* other options */
+  admin: { pages: { stats: { title: "Statistics", mount: mountStats } } },
+});
+```
+
+Use the same imports for custom field mounts, page headers, admin bar callbacks and rich text browser extensions. React components use `renderReact()` from `tenoncms/admin/react`. Components still use the existing mount/update/unmount contract. The host needs its framework compiler for local `.vue` or JSX source.
+
+A `.client.ts` module is a browser entry. Its imports and closures behave like normal JavaScript in the browser. In the server build, its runtime exports become references; the module and its dependencies do not execute there. Only register those imports in browser options: do not call them, read their properties or use their constants on the server. Put shared values in ordinary modules instead. Named and default exports, aliases and static re-exports work. CommonJS browser entries are not supported.
+
+Ordinary `.ts` modules can be shared. `.server.ts` modules MUST NOT enter the browser graph, including through shared helpers or dynamic imports resolved by the bundler. The integration rejects these imports, Node built-ins and known server-only Tenon entries. Type-only imports are erased and allowed. Keep secrets in `.server.ts` modules; this check cannot detect private strings in otherwise browser-compatible modules. Avoid runtime-computed import paths that the bundler cannot analyze.
+
+The conventions also cover `.client.js`, `.client.mjs`, `.client.mts` and JSX/TSX, and the matching `.server` suffixes. The filename does not auto-register or execute a module. Import it from the static configuration graph to register its exports. Restart the dev server after adding references or exports; edits to existing browser implementations use the host's HMR.
+
+Astro, Nuxt and `tenonAdmin()` install the build integration. Plain Node scripts and tests do not transform imports automatically. Untransformed functions in browser registrations or descriptions fail at CMS startup; use `clientRef()` there, or run the config through the build integration.
+
+### Reactive field descriptions
+
+```ts
+// collections/products.client.ts
+import type { FieldDescription } from "tenoncms/admin";
+
+const limit = 1000;
+export const priceDescription: FieldDescription<number | null | undefined> = ({ value }) =>
+  (value ?? 0) > limit ? "Needs approval" : "Gross price";
+
+// collections/products.ts
+import { priceDescription } from "./products.client";
+
+export const products = defineCollection({
+  fields: { price: { type: "number", description: priceDescription } },
+});
+```
+
+Descriptions receive the current unsaved `value`, root document `data`, containing group/item `siblings`, field `path` and admin UI `locale`. Return text (including a language map), or `null`/`undefined` to hide it. The callback MUST be synchronous. It is evaluated reactively as its inputs change and needs no server request. Load or callback failures show an error beside the field. Static descriptions keep working.
 
 **`load` functions**
 

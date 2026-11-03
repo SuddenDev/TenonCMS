@@ -1,3 +1,4 @@
+import { titleDescription } from "./posts.client";
 import { defineCollection } from "tenoncms";
 
 export const posts = defineCollection({
@@ -5,7 +6,7 @@ export const posts = defineCollection({
   titleField: "title",
   permalink: "/posts/{slug}",
   fields: {
-    title: { type: "text", required: true },
+    title: { type: "text", required: true, description: titleDescription },
     slug: { type: "text", required: true },
     publishedAt: { type: "date", label: "Published at" },
     category: { type: "select", options: ["news", "guide"] },

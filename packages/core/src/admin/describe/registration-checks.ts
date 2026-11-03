@@ -35,7 +35,10 @@ export function isObject(value: unknown): value is Record<string, any> {
  * @throws If `value` is anything else.
  */
 export function requireRef(value: unknown, path: string, source: string) {
-  if (!isRef(value)) throw new Error(`tenoncms: ${path} in ${source} MUST use clientRef()`);
+  if (!isRef(value))
+    throw new Error(
+      `tenoncms: ${path} in ${source} MUST use clientRef() or an imported .client export transformed by the Tenon build integration`,
+    );
   return value;
 }
 

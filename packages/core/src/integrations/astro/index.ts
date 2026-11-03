@@ -1,6 +1,7 @@
 import type { AstroIntegration } from "astro";
 import { fileURLToPath } from "node:url";
 import { API_BASE } from "../../client/index.ts";
+import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
 import { adminPath } from "../admin/path.ts";
@@ -75,7 +76,7 @@ export default function tenonCms({
 
         updateConfig({
           vite: {
-            plugins: [clientReferences(entry)],
+            plugins: [clientModules(), clientReferences(entry)],
             resolve: { alias: { "#tenon/config": entryPath } },
             define: faviconDefine(fileURLToPath(config.publicDir)),
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.

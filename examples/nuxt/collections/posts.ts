@@ -1,3 +1,4 @@
+import { titleDescription } from "./posts.client";
 import { defineCollection, ValidationError } from "tenoncms";
 
 export const posts = defineCollection({
@@ -7,6 +8,7 @@ export const posts = defineCollection({
   permalink: "/posts/{slug}",
   fields: {
     title: {
+      description: titleDescription,
       type: "text",
       required: true,
       placeholder: "Title",

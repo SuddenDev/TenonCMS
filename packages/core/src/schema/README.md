@@ -1,5 +1,6 @@
 # Schema
 
+Field descriptions may reference browser callbacks. `checkFields()` rejects untransformed functions; `/schema` preserves reference objects. The admin evaluates them with unsaved value, root data, siblings, path and UI locale.
 `date` fields store ISO calendar dates; `datetime` fields store UTC ISO timestamps. The admin edits timestamps in the browser’s local timezone.
 
 The content contracts: field options and validators, hook contracts, the types that reads and writes infer, the startup checks and the per-write field processing. Collection and global definitions live in [collections](../collections/README.md) and [globals](../globals/README.md); this module composes their types and processes their fields. The write and read pipelines that call into it live in [content](../content/README.md).

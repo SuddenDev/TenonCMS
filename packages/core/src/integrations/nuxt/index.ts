@@ -11,6 +11,7 @@ import {
 import type {} from "@nuxt/nitro-server/augments";
 import type { NuxtModule } from "@nuxt/schema";
 import { API_BASE } from "../../client/index.ts";
+import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { adminPath } from "../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
@@ -47,6 +48,9 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
 
     // `#tenon/client-registry`: the browser modules that `clientRef()` calls name.
     addVitePlugin(
+      clientModules({ root: nuxt.options.rootDir }) as Parameters<typeof addVitePlugin>[0],
+    );
+    addVitePlugin(
       clientReferences(options.entry!, nuxt.options.rootDir) as Parameters<typeof addVitePlugin>[0],
     );
 
@@ -71,6 +75,13 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
     );
 
     nuxt.hook("nitro:config", (config) => {
+      config.rollupConfig ??= {};
+      config.rollupConfig.plugins = [
+        clientModules({ root: nuxt.options.rootDir, server: true }) as NonNullable<
+          typeof config.rollupConfig.plugins
+        >[number],
+        ...(config.rollupConfig.plugins ?? []),
+      ];
       config.externals ??= {};
       config.externals.traceInclude = [
         ...(config.externals.traceInclude ?? []),

@@ -33,7 +33,7 @@ const invalid = computed(() => (message.value ? true : undefined));
       <FieldLabel :for="id"
         >{{ text(field.label) ?? name }}<SharedMarker v-if="shared"
       /></FieldLabel>
-      <FieldDescription v-if="field.description">{{ text(field.description) }}</FieldDescription>
+      <FieldDescription v-if="description">{{ text(description) }}</FieldDescription>
       <FieldError v-if="message">{{ message }}</FieldError>
     </FieldContent>
   </FieldBox>

@@ -158,7 +158,16 @@ describe("errors", () => {
     const nav = { display: "settings", group: "Blog", icon: "newspaper", order: 5 } as const;
     const inst = defineCms({
       collections: {
-        posts: { description: "All posts", nav, fields: { title: { type: "text" } } },
+        posts: {
+          description: "All posts",
+          nav,
+          fields: {
+            title: {
+              type: "text",
+              description: { clientRef: "./posts.client.ts#titleDescription" },
+            },
+          },
+        },
       },
       globals: { footer: { description: "Footer", nav, fields: { text: { type: "text" } } } },
       database: testDatabase(),
@@ -170,6 +179,9 @@ describe("errors", () => {
     const res = await s.fetch(`${origin}/_tenon/schema`);
     const body = await res.json();
     expect(body.collections.posts).toMatchObject({ description: "All posts", nav });
+    expect(body.collections.posts.fields.title.description).toEqual({
+      clientRef: "./posts.client.ts#titleDescription",
+    });
     expect(body.globals.footer).toMatchObject({ description: "Footer", nav });
   });
 

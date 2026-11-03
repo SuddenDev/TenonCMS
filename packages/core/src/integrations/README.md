@@ -1,5 +1,6 @@
 # integrations
 
+`client-modules.ts` owns the environment boundary. Its server loader emits one reference per runtime export of a `.client` entry, using root-relative module IDs; published plugin builds map those IDs to public package exports. Its browser resolver rejects server-only dependencies. `client-module.ts` reads export names without executing modules. `collectClientRefs()` stops at `.client` boundaries and registers their exports, retaining admin-bar reachability for the CSS check. The existing registry and lazy mount lifecycle handle both typed imports and explicit references.
 Framework adapters, frontend components and preview helpers live here, grouped by framework. Shared rich-text rendering and preview runtime logic stay in their feature modules. Admin mounting helpers stay in `admin/vue/` and `admin/react/`.
 
 Framework integrations:

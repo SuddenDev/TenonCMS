@@ -79,12 +79,14 @@ describe("example", () => {
 
   it("mounts the field and pages with the chosen renderer", () => {
     const { fields, pages } = ExamplePlugin({ renderer: "vue" }).admin!;
-    expect(fields!.rating.mount.clientRef).toBe(
-      "tenoncms/plugins/example/admin/vue#mountRatingField",
-    );
-    expect(pages!["quote-stats"].mount.clientRef).toBe(
-      "tenoncms/plugins/example/admin/vue#mountStats",
-    );
-    expect(pages!.quote.mount.clientRef).toBe("tenoncms/plugins/example/admin/vue#mountQuote");
+    expect(fields!.rating.mount).toEqual({
+      clientRef: "tenoncms/plugins/example/admin/vue#mountRatingField",
+    });
+    expect(pages!["quote-stats"].mount).toEqual({
+      clientRef: "tenoncms/plugins/example/admin/vue#mountStats",
+    });
+    expect(pages!.quote.mount).toEqual({
+      clientRef: "tenoncms/plugins/example/admin/vue#mountQuote",
+    });
   });
 });

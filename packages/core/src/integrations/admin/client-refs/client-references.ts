@@ -5,7 +5,7 @@ import { collectClientRefs } from "./collect-client-refs.ts";
 import type { ClientRef, Resolver } from "./types.ts";
 
 const REGISTRY = "#tenon/client-registry";
-const VIRTUAL = "\0tenon-client-registry";
+export const REGISTRY_ID = "\0tenon-client-registry";
 
 /**
  * Vite plugin that serves `#tenon/client-registry` to every framework adapter. The module maps each
@@ -22,9 +22,9 @@ export function clientReferences(entry = "./tenon.config.ts", projectRoot?: stri
       root = projectRoot ?? options.root;
       config = resolve(root, entry);
     },
-    resolveId: (id) => (id === REGISTRY ? VIRTUAL : undefined),
+    resolveId: (id) => (id === REGISTRY ? REGISTRY_ID : undefined),
     async load(id) {
-      if (id !== VIRTUAL) return;
+      if (id !== REGISTRY_ID) return;
       const resolver: Resolver = async (source, importer) =>
         (await this.resolve(source, importer, { skipSelf: true }))?.id ?? null;
 

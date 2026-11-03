@@ -57,13 +57,17 @@ export function mergeAdmin(plugins: readonly Plugin[], host: AdminOptions = {}):
       if (Object.hasOwn(richtext, name) || (RICHTEXT_FEATURES as readonly string[]).includes(name))
         throw new Error(`tenoncms: duplicate rich text feature "${name}"`);
 
-      requireRef(registration.client, `admin.richtext.extensions.${name}.client`, source);
+      const client = requireRef(
+        registration.client,
+        `admin.richtext.extensions.${name}.client`,
+        source,
+      );
       if (!registration.schema)
         throw new Error(`tenoncms: rich text feature "${name}" needs a schema`);
 
       richtext[name] = registration;
       descriptor.richtext ??= { extensions: {} };
-      descriptor.richtext.extensions[name] = { client: registration.client };
+      descriptor.richtext.extensions[name] = { client };
     }
 
     addEntries("fields", descriptor.fields, fieldLoaders, admin.fields, describeField, source);

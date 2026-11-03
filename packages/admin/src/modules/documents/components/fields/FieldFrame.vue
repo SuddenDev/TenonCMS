@@ -53,9 +53,7 @@ const attrs = computed(() => {
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
     </component>
-    <FieldDescription v-if="field.description" class="-mt-1">{{
-      text(field.description)
-    }}</FieldDescription>
+    <FieldDescription v-if="description" class="-mt-1">{{ text(description) }}</FieldDescription>
     <slot :id="id" :attrs="attrs" :required="required" :invalid="invalid" />
     <FieldError v-if="message">{{ message }}</FieldError>
   </Field>

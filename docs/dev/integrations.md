@@ -1,5 +1,6 @@
 # Framework integrations
 
+`clientModules()` runs before other loaders. In server environments it serves `.client` modules as reference exports without evaluating their browser dependencies. In browser environments its resolver rejects `.server` files, Node built-ins and known server-only Tenon entries. It checks only imports of modules the browser environment transforms, so Vite's dependency scan and the registry crawl, which read server files without transforming them, pass. Vite dev also adds the crawl's watched files as imports of the registry, so imports from the registry are skipped; `load()` still rejects a server-only module there. Nuxt also installs this plugin with `server: true` in Nitro’s Rollup config; Vite hosts use the environment consumer.
 Code: `packages/core/src/integrations/` (see its README). User docs: [framework setup](../guide/frameworks.md).
 
 ## Shared approach

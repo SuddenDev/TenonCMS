@@ -138,24 +138,19 @@ describe("admin registration types", () => {
     expect(true).toBe(true);
   });
 
-  it("rejects inline browser code", () => {
+  it("accepts typed browser imports at the source boundary", () => {
     void (() =>
       defineCms({
         ...base,
         admin: {
-          // @ts-expect-error a mount MUST be a clientRef()
           fields: { color: { mount: () => () => {} } },
           pages: {
-            // @ts-expect-error a mount MUST be a clientRef()
             a: { mount: () => () => {} },
-            // @ts-expect-error pageHeader MUST be a clientRef()
             b: { mount: ref, pageHeader: () => "" },
           },
           adminBar: {
             items: {
-              // @ts-expect-error onClick MUST be a clientRef()
               a: { label: "A", onClick: () => {} },
-              // @ts-expect-error mount MUST be a clientRef()
               b: { label: "B", mount: () => () => {} },
             },
           },

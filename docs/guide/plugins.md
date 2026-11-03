@@ -149,3 +149,21 @@ What every published plugin MUST get right:
 - **Build the types.** `definePlugin()` keeps the literal collection and global names, so a host gets `cms.find('quotes')` typed. If the declaration build fails with a missing type, the type is missing from core's public exports.
 
 Before you publish, run `npm pack`, install the tarball in one of the examples and start its dev server once. A wrong `exports` entry, a bundled copy of `tenoncms` or CSS in the bar's graph all show up there.
+
+## Typed imports in published plugins
+
+Local source plugins can import `.client.ts` exports just like the host config. A published plugin MUST compile its server and browser entries separately. The server build uses `clientModules()` from `tenoncms/vite` with `server: true` and a mapping from source files to public browser package exports:
+
+```ts
+import { clientModules } from "tenoncms/vite";
+
+const serverPlugin = clientModules({
+  root: import.meta.dirname,
+  server: true,
+  references: { "./src/stats.client.ts": "cms-plugin-quotes/admin" },
+});
+```
+
+Add `serverPlugin` to the server Rollup/Rolldown build's `plugins`. Keep `tenoncms/admin` external. It emits literal `clientRef("cms-plugin-quotes/admin#exportName")` calls, which host adapters already discover. Map every browser entry reached by the server build; relative references would otherwise point into the consuming app.
+
+Build `src/stats.client.ts` as the browser entry behind the package's `./admin` export. Use `clientModules({ server: false })` in that build to check imports. Include the renderer and framework compiler as described above; compile Vue/JSX before publishing. Never use `server: true` in the browser build. Ship declarations for both entries. Explicit `clientRef()` calls remain the simplest option for plugins that do not use this build step.

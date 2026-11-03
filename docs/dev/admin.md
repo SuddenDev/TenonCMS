@@ -1,5 +1,6 @@
 # Admin
 
+Typed imports from `.client` modules are also accepted in browser registration types. The build replaces their exports with `ClientRef` objects, so runtime descriptors and the mount contract stay unchanged. Field descriptions use `FieldDescription` and `useFieldDescription()` in the document module; it loads a reference once, evaluates against unsaved form data, and ignores stale loads after disposal or reference changes.
 Two parts: the **contract** in core (`packages/core/src/admin/`) and the **app** (`packages/admin/`). User docs: [customize the admin](../guide/admin.md).
 
 ## The idea

@@ -29,9 +29,7 @@ const sharedStructure = computed(
       <SharedMarker v-if="shared" />
       <SharedMarker v-else-if="sharedStructure" :label="t('structure.shared')" />
     </FieldLegend>
-    <FieldDescription v-if="field.description" class="-mt-1">{{
-      text(field.description)
-    }}</FieldDescription>
+    <FieldDescription v-if="description" class="-mt-1">{{ text(description) }}</FieldDescription>
     <component
       :is="field.appearance === 'tree' ? ItemTree : ItemList"
       v-model="model"

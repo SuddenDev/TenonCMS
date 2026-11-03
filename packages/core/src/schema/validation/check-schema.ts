@@ -22,6 +22,7 @@ import {
 import { dataSchema } from "./build-data-schema.ts";
 import { checkLayout } from "./check-layout.ts";
 import { optionValue } from "../fields/select.ts";
+import { isRef, isText } from "../../admin/describe/registration-checks.ts";
 
 type Collections = Record<string, Collection>;
 
@@ -236,6 +237,15 @@ function checkFields(
 ) {
   for (const [key, f] of Object.entries(fields)) {
     const at = `${where}.${key}`;
+    if (
+      f.description !== undefined &&
+      f.description !== "" &&
+      !isText(f.description) &&
+      !isRef(f.description)
+    )
+      fail(
+        `${at}.description MUST be text, clientRef(), or a transformed .client export. Enable the Tenon build integration`,
+      );
     if (
       "unique" in f &&
       f.unique &&

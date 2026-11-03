@@ -1,5 +1,6 @@
 # Examples
 
+The Astro kitchen-sink price uses `kitchen-sink.client.ts` for reactive help. Nuxt, TanStack Start and standalone posts use `posts.client.ts` for title help, exercising typed references in each adapter.
 Every example has its instance in `tenon.config.ts` at the project root and its collections in `collections/`. Each registers `ExamplePlugin()`: Astro and standalone use the plain DOM renderer, Nuxt Vue and TanStack Start React. All use the pages preset, and the site examples have a catch-all route that reads a page by `path` and renders `seoMeta()`.
 
 | Example                   | What it shows                                                                                                                                                                                                                                                                                                                |

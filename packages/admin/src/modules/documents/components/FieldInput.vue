@@ -8,6 +8,9 @@ import {
   useTemplateRef,
   watch,
 } from "vue";
+import { useFieldDescription } from "@/modules/documents/useFieldDescription";
+import { registryKey } from "@/shared/options";
+import { useAdminLocale } from "@/shared/i18n";
 import { focusKey } from "@/modules/documents/fields";
 import { can } from "@/shared/access";
 import type { FieldProps } from "./fields/types";
@@ -30,6 +33,19 @@ import CustomField from "./fields/CustomField.vue";
 const props = defineProps<FieldProps>();
 const model = defineModel<any>();
 const path = computed(() => props.path ?? props.name);
+const { locale } = useAdminLocale();
+const readable = computed(() => can(props.field, "read"));
+const description = useFieldDescription(
+  () => (readable.value ? props.field.description : undefined),
+  () => ({
+    value: model.value,
+    data: props.root,
+    siblings: props.siblings.data,
+    path: path.value,
+    locale: locale.value,
+  }),
+  inject(registryKey, {}),
+);
 const fields: Record<string, Component> = {
   text: TextField,
   textarea: TextareaField,
@@ -50,7 +66,6 @@ const fields: Record<string, Component> = {
 };
 const renderer = computed(() => fields[props.field.type] ?? CustomField);
 // A field the user MAY NOT read is hidden. One they MAY NOT write shows disabled, like `readOnly`.
-const readable = computed(() => can(props.field, "read"));
 const field = computed(() =>
   can(props.field, props.isNew ? "create" : "update")
     ? props.field
@@ -85,7 +100,11 @@ watch(
     ref="box"
     v-bind="props"
     :field="field"
+    :description="description.text"
     v-model="model"
     :path="path"
   />
+  <p v-if="description.error" role="alert" class="text-destructive text-sm">
+    {{ description.error.message }}
+  </p>
 </template>

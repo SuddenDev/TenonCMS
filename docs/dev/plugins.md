@@ -1,5 +1,6 @@
 # Plugins
 
+Published plugins may author typed `.client` imports and use the exported `clientModules({ server: true, references })` build plugin to emit literal references to public package exports. Server and browser entries MUST be built separately, and `tenoncms/admin` MUST remain external in the server build. See the guide’s typed-import packaging example.
 Code: `packages/core/src/plugins/` for the contract, `packages/plugins/` for the bundled plugins.
 
 ## The contract

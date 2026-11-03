@@ -107,7 +107,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | `hidden`                            | all                                                                                             | The admin does not show the input                      |
 | `hooks`                             | all but `join`                                                                                  | See [Hooks](./hooks.md)                                |
 
-The admin receives the schema as JSON, so functions never reach the browser:
+The admin receives the schema as JSON. Browser field descriptions can use [typed `.client.ts` imports](admin.md#reactive-field-descriptions), which the build replaces with references. Other function behavior follows these rules:
 
 - `required`, `condition`, the built-in checks and a plain `default` work in the admin and on the server.
 - `validate`, a function `default` and hooks run on the server only. Their messages reach the admin as field errors.

@@ -1,4 +1,4 @@
-import type { Text } from "../../admin/index.d.ts";
+import type { Text, BrowserValue, FieldDescription } from "../../admin/index.d.ts";
 import type { FieldAccess } from "../../access/types.ts";
 import type { Condition } from "../condition.ts";
 import type { FieldHooks, Fn, HookArgs, Validate } from "../hooks/index.ts";
@@ -9,7 +9,7 @@ export type Common = Placement & {
   /** Label in the admin. Defaults to the field key. */
   label?: Text;
   /** Help text below the input in the admin. */
-  description?: Text;
+  description?: Text | BrowserValue<FieldDescription>;
   /** Admin only: the input is not shown. The value still loads, saves and validates as usual. Default `false`. */
   hidden?: boolean;
   /**

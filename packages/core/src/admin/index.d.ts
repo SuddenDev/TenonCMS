@@ -248,6 +248,23 @@ export type AdminBarPosition =
  */
 export type ClientRef<T = unknown> = { readonly clientRef: string; readonly __type?: T };
 
+/** A browser export imported from a `.client` module, or an explicit reference. */
+export type BrowserValue<T> = T | ClientRef<T>;
+
+/** Current unsaved field data. `siblings` belongs to the containing group or list item. */
+export type FieldDescriptionContext<V = any> = {
+  value: V;
+  data: Record<string, unknown>;
+  siblings: Record<string, unknown>;
+  path: string;
+  locale: AdminLocale;
+};
+
+/** Synchronous browser help text. Return null or undefined to hide it. */
+export type FieldDescription<V = any> = (
+  ctx: FieldDescriptionContext<V>,
+) => Text | null | undefined;
+
 /**
  * Names a browser export. Relative paths resolve from the project root, `#name` picks an export (default
  * `default`), and a package specifier resolves through its exports.
@@ -303,7 +320,7 @@ export type BarItemLoadContext = LoadContext & {
  */
 export type FieldRegistration<D = any> = {
   /** Renders the input. Runs in the browser. */
-  mount: ClientRef<Mount<FieldContext<D>>>;
+  mount: BrowserValue<Mount<FieldContext<D>>>;
   /**
    * Runs on the server when the field mounts and when its owner changes. Not when its value changes.
    * Returns JSON, which the field gets as `ctx.data`.
@@ -346,9 +363,9 @@ export type PageRegistration<D = any> = {
    * @example
    * pageHeader: clientRef('./src/admin/reports.ts#header')
    */
-  pageHeader?: boolean | Crumb[] | ClientRef<PageHeader<D>>;
+  pageHeader?: boolean | Crumb[] | BrowserValue<PageHeader<D>>;
   /** Renders the page. Runs in the browser. */
-  mount: ClientRef<Mount<PageContext<D>>>;
+  mount: BrowserValue<Mount<PageContext<D>>>;
   /**
    * Runs on the server when the page opens and when its params or query change. Returns JSON, which the page
    * and its `pageHeader` get as `ctx.data`.
@@ -398,7 +415,7 @@ type NativeItem<Children> = BarItemBase & {
 type ClickItem<D> = BarItemBase & {
   label: Text;
   /** Runs in the browser on click, with the latest item context. */
-  onClick: ClientRef<(ctx: AdminBarItemContext<D>) => void>;
+  onClick: BrowserValue<(ctx: AdminBarItemContext<D>) => void>;
   href?: never;
   children?: never;
   mount?: never;
@@ -410,7 +427,7 @@ type ClickItem<D> = BarItemBase & {
 type MountItem<D> = BarItemBase & {
   label: Text;
   /** Renders the item into the bar. Runs in the browser. */
-  mount: ClientRef<Mount<AdminBarItemContext<D>>>;
+  mount: BrowserValue<Mount<AdminBarItemContext<D>>>;
   href?: never;
   onClick?: never;
   children?: never;

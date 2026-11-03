@@ -27,6 +27,27 @@ describe("defineCms checks", () => {
       });
   const g = { type: "group", fields: { t: { type: "text" } } } as const;
 
+  it("rejects a description function without the client build transform", () => {
+    expect(
+      define({ c: { fields: { price: { type: "number", description: () => "Price" } } } }),
+    ).toThrow(/c.price.description.*\.client/);
+  });
+
+  it("accepts a reference-backed field description", () => {
+    expect(
+      define({
+        c: {
+          fields: {
+            price: {
+              type: "number",
+              description: { clientRef: "./price.client.ts#description" },
+            },
+          },
+        },
+      }),
+    ).not.toThrow();
+  });
+
   it("throws for a condition on an unknown field", () => {
     expect(define({ c: { fields: { a: { type: "text", condition: { nope: 1 } } } } })).toThrow(
       /"c.a" names unknown field "nope"/,

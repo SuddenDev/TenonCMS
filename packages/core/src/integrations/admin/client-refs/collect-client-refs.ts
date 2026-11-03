@@ -3,8 +3,10 @@ import { describeModule, isScript, parseModule } from "./module-syntax.ts";
 import { resolveImport } from "./resolve-import.ts";
 import { scanExport, scanModule } from "./scan-refs.ts";
 import type { ClientRef, Program, Resolver } from "./types.ts";
+import { clientModuleExports, clientModuleId, isClientModule } from "./client-module.ts";
 
 type Crawl = {
+  root: string;
   resolver: Resolver;
   onVisit?: (file: string) => void;
   refs: Record<string, ClientRef>;
@@ -30,6 +32,7 @@ export async function collectClientRefs(
   onVisit?: (file: string) => void,
 ) {
   const crawl: Crawl = {
+    root,
     resolver,
     onVisit,
     refs: Object.create(null),
@@ -48,6 +51,16 @@ async function visit(crawl: Crawl, file: string, siteExport?: string) {
   if (crawl.seen.has(key) || !isScript(file)) return;
   crawl.seen.add(key);
   crawl.onVisit?.(file);
+
+  if (isClientModule(file)) {
+    const names = await clientModuleExports(file, crawl.resolver);
+    for (const name of names) {
+      const ref = `${clientModuleId(crawl.root, file)}#${name}`;
+      const site = siteExport === name || crawl.refs[ref]?.site;
+      crawl.refs[ref] = { file, export: name, ...(site ? { site: true } : {}) };
+    }
+    return;
+  }
 
   const ast = await parse(crawl, file);
   const info = describeModule(ast);
@@ -81,6 +94,7 @@ function parse(crawl: Crawl, file: string) {
 // Fills `file` and `export` of every reference found. `id#name` loads `name`, the default export without it.
 async function resolveFiles(refs: Record<string, ClientRef>, root: string, resolver: Resolver) {
   for (const specifier of Object.keys(refs)) {
+    if (refs[specifier].file) continue;
     const [id, exported = "default"] = specifier.split("#");
     const file = await resolver(id, resolve(root, "tenon.config.ts"));
     if (!file) throw new Error(`tenoncms: cannot resolve clientRef("${specifier}") from ${root}`);

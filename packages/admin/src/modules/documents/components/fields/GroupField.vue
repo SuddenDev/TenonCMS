@@ -25,9 +25,7 @@ const required = computed(() => props.field.required && !props.loose);
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
     </FieldLegend>
-    <FieldDescription v-if="field.description" class="-mt-1">{{
-      text(field.description)
-    }}</FieldDescription>
+    <FieldDescription v-if="description" class="-mt-1">{{ text(description) }}</FieldDescription>
     <FieldLayout
       :fields="field.fields"
       :layout="field"

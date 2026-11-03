@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ViteDevServer } from "vite";
 import { adminChunk, adminInput } from "../admin/build.ts";
+import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
 import { adminHtml } from "../admin/html.ts";
@@ -41,6 +42,7 @@ export function tenonAdmin({
   let server: ViteDevServer | undefined;
   let html = "";
   return [
+    clientModules(),
     clientReferences(configEntry),
     {
       name: "tenoncms:admin",
@@ -88,3 +90,5 @@ export function tenonAdmin({
     },
   ];
 }
+
+export { clientModules, type ClientModulesOptions } from "../admin/client-refs/client-modules.ts";

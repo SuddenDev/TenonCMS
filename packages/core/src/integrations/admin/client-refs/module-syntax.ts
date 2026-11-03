@@ -118,8 +118,7 @@ function readExport(info: ModuleInfo, node: AstNode) {
   const { declaration } = node;
   if (declaration?.type === "VariableDeclaration") {
     for (const declarator of declaration.declarations)
-      if (declarator.id.type === "Identifier")
-        info.exports.set(declarator.id.name, declarator.init);
+      for (const name of bindingNames(declarator.id)) info.exports.set(name, declarator.init);
   } else if (declaration && "id" in declaration && declaration.id) {
     info.exports.set(nameOf(declaration.id), declaration);
   }
@@ -137,9 +136,22 @@ function readExport(info: ModuleInfo, node: AstNode) {
 function readDeclarations(declarations: Map<string, AstNode>, node: AstNode) {
   if (!node || typeof node !== "object") return;
 
-  if (node.type === "VariableDeclarator" && node.id.type === "Identifier")
-    declarations.set(node.id.name, node.init);
+  if (node.type === "VariableDeclarator")
+    for (const name of bindingNames(node.id)) declarations.set(name, node.init);
   if (node.type === "FunctionDeclaration" && node.id) declarations.set(node.id.name, node);
 
   eachChild(node, (child) => readDeclarations(declarations, child));
+}
+
+function bindingNames(node: AstNode): string[] {
+  if (!node) return [];
+  if (node.type === "Identifier") return [node.name];
+  if (node.type === "RestElement") return bindingNames(node.argument);
+  if (node.type === "AssignmentPattern") return bindingNames(node.left);
+  if (node.type === "ArrayPattern") return node.elements.flatMap(bindingNames);
+  if (node.type === "ObjectPattern")
+    return node.properties.flatMap((property: AstNode) =>
+      bindingNames(property.type === "RestElement" ? property.argument : property.value),
+    );
+  return [];
 }

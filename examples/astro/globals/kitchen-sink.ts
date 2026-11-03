@@ -1,3 +1,4 @@
+import { priceDescription } from "./kitchen-sink.client";
 import { defineGlobal } from "tenoncms";
 
 // Every field type and layout option once. A global MUST NOT hold a join or a `unique` field:
@@ -172,6 +173,7 @@ export const kitchenSink = defineGlobal({
     // Numbers and dates
     quantity: { type: "number", tab: "numbers", min: 0, max: 100, width: "1/3" },
     price: {
+      description: priceDescription,
       type: "number",
       tab: "numbers",
       min: 0,

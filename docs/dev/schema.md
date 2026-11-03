@@ -1,5 +1,6 @@
 # Schema, validation and types
 
+Field `description` accepts text or a browser callback/reference. Startup rejects untransformed callbacks with guidance to use a `.client` module and the build integration. References remain JSON in `/schema`; the admin evaluates them against current form values.
 Code: `packages/core/src/schema/` (see its README).
 
 ## Definitions are plain objects
