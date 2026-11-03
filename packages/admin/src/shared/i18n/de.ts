@@ -596,6 +596,10 @@ export default {
     reload: "Neu laden",
     url: "URL",
   },
+  slug: {
+    changeParent: "Übergeordnete Seite ändern",
+    topLevel: "Oberste Ebene",
+  },
   seo: {
     checks: "{n}/{max} Prüfungen bestanden",
     missing: "Fehlt",

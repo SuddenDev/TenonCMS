@@ -573,6 +573,10 @@ export default {
     reload: "Reload",
     url: "URL",
   },
+  slug: {
+    changeParent: "Change parent page",
+    topLevel: "Top level",
+  },
   seo: {
     checks: "{n}/{max} checks are passing",
     missing: "Missing",

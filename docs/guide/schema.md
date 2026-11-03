@@ -184,8 +184,8 @@ slug: { type: 'slug', from: 'title', unique: true }
 ```
 
 - A value MUST match `[a-z0-9]+(-[a-z0-9]+)*`. Server and admin both check it. Like other fields, it is optional unless `required: true`.
-- `from` names a sibling field. The server fills an empty slug from it on every write, before `beforeValidate`. On a new document the admin fills it while you type, until you edit the slug yourself. A saved slug never changes on its own, so URLs stay stable.
-- `parent` names a sibling `relation`. The admin then shows the parent's path before the input, like `/about/` [team]. `path` names the parent's field to show (default `'path'`). See [Pages and SEO](./pages-and-seo.md).
+- `from` names a sibling field. The server fills an empty slug from it on every write, before `beforeValidate`. On a new document the admin fills it while you type, until you edit the slug yourself. A saved slug never changes on its own, so URLs stay stable. Pasted text is slugified, like `Über uns!` to `uber-uns`.
+- `parent` names a sibling `relation`. The admin then shows the parent's path before the input, like `/about/` [team]. The prefix is a button: it opens a searchable list of the related collection and writes the choice to the relation field. The list leaves out the page itself and its descendants, and the prefix is disabled when the relation is `readOnly`. `path` names the parent's field to show (default `'path'`). Hide the relation with `hidden: true` if the slug is its only editor. See [Pages and SEO](./pages-and-seo.md).
 - `unique: true` fits flat collections such as blog posts. Page trees use the `uniquePath` hook instead, because the same slug may repeat under different parents.
 
 ## Dates

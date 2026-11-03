@@ -13,7 +13,11 @@ export type SlugField = Base & {
    * from it while the editor types, until the slug is edited. A saved slug never changes on its own, so URLs stay stable.
    */
   from?: string;
-  /** A sibling `relation` field. The admin shows the selected parent's `path` value before the input, e.g. `/about/`. Without a parent, `/`. */
+  /**
+   * A sibling `relation` field. The admin shows the selected parent's `path` value before the input, e.g. `/about/`.
+   * That prefix is a picker: it lists the related collection without the document itself and its descendants, and
+   * writes the choice to the relation field. Without a parent, the prefix is `/`.
+   */
   parent?: string;
   /** The field of the parent document that the admin shows as the prefix. Default `'path'`. */
   path?: string;
