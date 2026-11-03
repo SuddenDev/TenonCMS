@@ -41,6 +41,8 @@ export type Placement = {
   tab?: string | readonly string[];
   /** The box of the nearest `fieldsets` that holds this field. Its fields MUST share their tabs. */
   fieldset?: string;
+  /** A line across the row above the field, to structure a long form. A text adds a heading above the line. */
+  separator?: true | Text;
   /** The share of the row the field takes. Fields next to each other fill a row; in a narrow form every field takes the full width. Default `'full'`. */
   width?: "1/4" | "1/3" | "1/2" | "2/3" | "3/4" | "full";
 };

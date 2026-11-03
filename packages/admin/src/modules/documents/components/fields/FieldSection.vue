@@ -4,6 +4,7 @@ import type { Field, Layout } from "@/shared/api";
 import { text } from "@/shared/i18n";
 import type { Section } from "@/modules/documents/layout";
 import Icon from "@/shared/components/Icon.vue";
+import FieldSeparator from "./FieldSeparator.vue";
 import { FieldSet, FieldDescription } from "@/shared/components/ui/field";
 import {
   Collapsible,
@@ -72,14 +73,12 @@ const widths: Record<string, string> = {
       <CollapsibleContent class="border-border border-t px-4 py-3">
         <div class="@container">
           <div class="grid grid-cols-12 gap-x-6 gap-y-8">
-            <div
-              v-for="[name, field] in fields"
-              :key="name"
-              class="col-span-12 min-w-0"
-              :class="widths[field.width ?? 'full']"
-            >
-              <slot name="field" v-bind="{ name, field }" />
-            </div>
+            <template v-for="[name, field] in fields" :key="name">
+              <FieldSeparator v-if="field.separator" :separator="field.separator" />
+              <div class="col-span-12 min-w-0" :class="widths[field.width ?? 'full']">
+                <slot name="field" v-bind="{ name, field }" />
+              </div>
+            </template>
           </div>
         </div>
       </CollapsibleContent>
@@ -87,14 +86,12 @@ const widths: Record<string, string> = {
   </Collapsible>
   <div v-else class="@container">
     <div class="grid grid-cols-12 gap-x-6 gap-y-8">
-      <div
-        v-for="[name, field] in fields"
-        :key="name"
-        class="col-span-12 min-w-0"
-        :class="widths[field.width ?? 'full']"
-      >
-        <slot name="field" v-bind="{ name, field }" />
-      </div>
+      <template v-for="[name, field] in fields" :key="name">
+        <FieldSeparator v-if="field.separator" :separator="field.separator" />
+        <div class="col-span-12 min-w-0" :class="widths[field.width ?? 'full']">
+          <slot name="field" v-bind="{ name, field }" />
+        </div>
+      </template>
     </div>
   </div>
 </template>

@@ -7,7 +7,7 @@ Code: `packages/core/src/schema/` (see its README).
 
 - A field, collection or global is a plain object. Helpers such as `defineCollection()` only keep the literal types.
 - Admin-only options (`label`, `description`, `nav`, `visualEditing`, `readOnly`, `hidden`, `layout`) change nothing on the server.
-- Layout options (tabs, fieldsets, widths) are only read by the admin. A startup check makes sure they name real tabs and fieldsets.
+- Layout options (tabs, fieldsets, widths, separators) are only read by the admin. A startup check makes sure they name real tabs and fieldsets.
 
 ## Two kinds of validation
 
