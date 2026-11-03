@@ -22,6 +22,7 @@ Browser entry points MUST NOT import the server resolver, zod or the CMS runtime
 - It tells the admin the page's URL and which documents it shows (so "On this page" works), again after every DOM change and `popstate`, because client-side navigation sends no new `ready`. The admin writes the URL to `?url=`. It highlights bound elements on request.
 - Unsaved edits arrive as `draft` messages. They apply to bound elements immediately. With the `morph` option, pages that render on the server refresh after each save: the runtime fetches the page again with the preview cookie and morphs the DOM. `morph` is off by default; the Astro adapter turns it on.
 - A draft only applies to data of the same locale (or no locale).
+- After a save, the admin asks for the saved document's preview URL. When it differs from the page that shows (a changed slug or parent), the iframe navigates there. Otherwise the page refetches what it shows. The reload button also uses the saved document, because the form MAY still hold the old values.
 - The admin sends image, file and relation fields as documents, not ids. `patch()` ignores an object without `data-cms-attr`, so text bound to a relation keeps the page's value.
 - `merge` of a draft into a document is recursive. Items in lists match by `id`. A relation whose ids did not change keeps its populated value.
 - Collections and globals with `visualEditing: false` are never offered for picking; live drafts still apply.

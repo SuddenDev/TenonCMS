@@ -49,7 +49,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   close: [];
   deleted: [];
-  saved: [];
+  saved: [doc?: Record<string, unknown>];
   change: [data: Record<string, unknown>];
 }>();
 // `doc` is the latest saved document. `initial` is what the form shows; a draft save leaves it, so typing goes on.
@@ -172,7 +172,7 @@ async function restoreVersion(version: string) {
   history.value = false;
   await load();
   reload();
-  emit("saved");
+  emit("saved", doc.value ?? undefined);
 }
 
 // A write sends the `updatedAt` it builds on, so a newer save of someone else answers 409.
@@ -186,12 +186,12 @@ async function save(data: Data<Fields>) {
     const created = await client.create(props.name, data, tr.write());
 
     reload();
-    emit("saved");
+    emit("saved", created);
     await router.replace(`${CONTENT}/collections/${props.name}/${created.id}`);
   } else {
     show(await client.update(props.name, docId.value, data, saveOptions()));
     reload();
-    emit("saved");
+    emit("saved", doc.value ?? undefined);
   }
 }
 
@@ -213,14 +213,14 @@ async function saveDraft(data: Data<Fields>) {
   // The first save of a language creates its row.
   if (first) tr.refresh();
   reload();
-  emit("saved");
+  emit("saved", doc.value ?? undefined);
 }
 
 async function publish() {
   show(await client.publish(props.name, docId.value, saveOptions()));
   tr.refresh();
   reload();
-  emit("saved");
+  emit("saved", doc.value ?? undefined);
 }
 
 // A document that was never published is deleted.
@@ -230,12 +230,15 @@ async function discard() {
   );
 
   reload();
-  emit("saved");
 
   if (kept) {
     show(kept);
     tr.refresh();
-  } else emit("deleted");
+    emit("saved", doc.value ?? undefined);
+  } else {
+    emit("saved");
+    emit("deleted");
+  }
 }
 
 // A language action saves the pending edit first, so no autosave lands after it.
@@ -246,7 +249,7 @@ async function translate(action: () => Promise<void>) {
     await flush();
     await action();
     reload();
-    emit("saved");
+    emit("saved", doc.value ?? undefined);
   } catch (e) {
     if (e instanceof DeletionCancelled) return;
 

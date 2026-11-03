@@ -68,6 +68,8 @@ const edit = ref(true);
 const href = ref("");
 const url = ref<string | null>();
 const draft = shallowRef<Record<string, unknown>>();
+// The latest saved document. The form MAY hold older values than a save returns, e.g. a `path` after a slug change.
+const stored = shallowRef<Record<string, unknown>>();
 const frame = ref(0);
 // What the page in the preview reports it shows.
 const onPage = ref<PageDocument[]>([]);
@@ -139,7 +141,7 @@ function previewUrl(data: Record<string, unknown>): Promise<string | null> {
 // A failed request shows the same "no preview" state as a `null` URL.
 async function load() {
   const at = scope.value;
-  const data = draft.value ?? {};
+  const data = stored.value ?? draft.value ?? {};
   url.value = undefined;
   href.value = "";
   const next = await previewUrl(data).catch(() => null);
@@ -149,10 +151,14 @@ async function load() {
 // Back on the list, the page stays where it is.
 watch(key, () => {
   draft.value = undefined;
+  stored.value = undefined;
   send({ type: "highlight", collection: null, id: null });
 });
 // The form of the new language loads its own URL with its first state.
-watch(active, () => (draft.value = undefined));
+watch(active, () => {
+  draft.value = undefined;
+  stored.value = undefined;
+});
 
 // The `?url=` page shows first, else the site root. Only a page of the site MAY load, so a link cannot frame another one.
 const start = typeof route.query.url === "string" ? safe(route.query.url) : null;
@@ -163,6 +169,17 @@ function navigate(value: string) {
   url.value = safe(value);
   href.value = "";
   frame.value++;
+}
+
+// A save that changes the document's URL moves the page there. Otherwise the page refetches what it shows.
+// The page MAY show the URL in another spelling or have followed the document already, so both URLs count.
+async function savedMain(doc?: Record<string, unknown>) {
+  stored.value = doc;
+  const at = scope.value;
+  const next = entry.value?.preview && doc ? safe(await previewUrl(doc).catch(() => null)) : null;
+  if (at !== scope.value) return;
+  if (next && next !== url.value && next !== href.value) navigate(next);
+  else saved(name.value, id.value);
 }
 
 // Image, file and relation fields go out as their documents, read like a page reads them, in the target's language.
@@ -238,7 +255,7 @@ function close() {
       handle="left"
       :grow="false"
       @change="change"
-      @saved="saved(name, id)"
+      @saved="savedMain"
       @deleted="router.push('/presentation')"
     >
       <template #actions>
