@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { CmsError } from "../client/index.ts";
 import { defineCms, menuItems } from "../index.ts";
-import { menu, nestedPaths, page, seo, strings } from "../presets/index.ts";
+import {
+  menu,
+  menuPreset,
+  nestedPaths,
+  page,
+  pagesPreset,
+  seo,
+  strings,
+  stringsPreset,
+} from "../presets/index.ts";
 import { admin, fresh, origin, setup, status, type Env, testDatabase, testDb } from "./setup.ts";
 
 let cms: Env["cms"];
@@ -530,5 +539,90 @@ describe("menu preset", () => {
   it("rejects a block named like a preset block", () => {
     // @ts-expect-error `link` is the preset's block
     menu({ blocks: { link: { fields: {} } } });
+  });
+});
+
+describe("presets option", () => {
+  const secret = "x".repeat(32);
+  let upper: string[];
+  const make = () =>
+    defineCms({
+      presets: [
+        pagesPreset({
+          seo: true,
+          fields: { body: { type: "textarea" } },
+          hooks: {
+            beforeChange: {
+              track: ({ data }) => {
+                upper.push(data.title);
+                return data;
+              },
+            },
+          },
+        }),
+        stringsPreset({ readMore: "Read more" }),
+        menuPreset({ name: "mainMenu", depth: -1 }),
+        menuPreset({ name: "footerMenu", depth: -1 }),
+      ],
+      localization: { locales: ["en"], defaultLocale: "en" },
+      database: testDatabase(),
+      secret,
+    });
+  beforeEach(() => {
+    upper = [];
+  });
+
+  it("adds the collections, globals and blocks of each preset", async () => {
+    const cms = make();
+    const about = await cms.create("pages", { title: "About", slug: "about", body: "Hi" });
+    const team = await cms.create("pages", { title: "Team", slug: "team", parent: about.id });
+    await cms.setGlobal("footerMenu", { items: [{ blockType: "link", link: { href: "/a" } }] });
+
+    expect((await cms.findById("pages", team.id))?.path).toBe("/about/team");
+    expect(upper).toEqual(["About", "Team"]);
+    expect(Object.keys(cms.schema.collections?.pages.fields ?? {})).toEqual([
+      "title",
+      "slug",
+      "parent",
+      "path",
+      "seo",
+      "body",
+    ]);
+    expect((await cms.getGlobal("strings")).readMore).toBe("Read more");
+    expect(menuItems((await cms.getGlobal("footerMenu")).items)).toMatchObject([{ href: "/a" }]);
+    about.body satisfies string | null | undefined;
+    // @ts-expect-error a preset name stays literal, so other names are type errors
+    await cms.getGlobal("nope").catch(() => {});
+  });
+
+  it("points `parent` at the preset's collection name", () => {
+    const cms = defineCms({
+      presets: [pagesPreset({ name: "docs" })],
+      database: testDatabase(),
+      secret,
+    });
+
+    expect(cms.schema.collections?.docs.fields.parent).toMatchObject({ collection: "docs" });
+  });
+
+  it("throws on a name the host or another preset uses", () => {
+    expect(() =>
+      defineCms({
+        collections: { pages: { fields: {} } },
+        presets: [pagesPreset()],
+        database: testDatabase(),
+        secret,
+      }),
+    ).toThrow('duplicate collection "pages"');
+    expect(() =>
+      defineCms({
+        presets: [
+          menuPreset({ depth: -1 }),
+          menuPreset({ name: "other", depth: -1, blocks: { cta: { fields: {} } } }),
+        ],
+        database: testDatabase(),
+        secret,
+      }),
+    ).toThrow('duplicate block "menuLink"');
   });
 });

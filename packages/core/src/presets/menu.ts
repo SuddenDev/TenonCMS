@@ -1,5 +1,5 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
-import type { Block, BlocksField, Fields } from "../schema/index.ts";
+import type { Block, BlocksField, Fields, Global, GlobalHooks } from "../schema/index.ts";
 
 type MenuBlockName<K> = `menu${Capitalize<K & string>}`;
 
@@ -121,4 +121,46 @@ function omitChildren({ children, ...fields }: Fields): Fields {
 
 function menuBlockName<K extends string>(key: K): MenuBlockName<K> {
   return `menu${key.charAt(0).toUpperCase()}${key.slice(1)}` as MenuBlockName<K>;
+}
+
+type MenuPresetOptions<N, B, D, F> = Omit<Global, "fields" | "hooks"> & {
+  /** The global name. Default `'menu'`. */
+  name?: N;
+  /** See `menu()`. */
+  depth?: D;
+  /** See `menu()`. */
+  blocks?: B;
+  /** More fields, after `items`. */
+  fields?: F;
+  hooks?: GlobalHooks<Fields>;
+};
+
+/**
+ * A menu global for `defineCms({ presets })`: `menu()` with its shared blocks, on the Settings page. Other global
+ * options pass through. Two unlimited menus share `menuLink` and `menuHeading`.
+ */
+export function menuPreset<
+  const N extends string = "menu",
+  const B extends MenuBlocks = {},
+  const D extends number = 0,
+  const F extends Fields = {},
+  const T extends MenuPresetOptions<N, B, D, F> = {},
+>(options: T & MenuPresetOptions<N, B, D, F> = {} as T) {
+  const { name = "menu", depth, blocks, fields, ...global } = options;
+  const { blocks: shared, fields: items } = menu<B, D>({ depth, blocks });
+
+  type MenuGlobal = Omit<T, "name" | "depth" | "blocks" | "fields"> & {
+    fields: Menu<B, D>["fields"] & F;
+  };
+  return {
+    globals: {
+      [name]: {
+        label: { en: "Menu", de: "Menü" },
+        nav: { display: "settings", icon: "menu" },
+        ...global,
+        fields: { ...items, ...fields },
+      },
+    } as { [K in NoInfer<N>]: MenuGlobal },
+    blocks: shared as Menu<B, D>["blocks"],
+  };
 }

@@ -69,3 +69,16 @@ export function strings<const D extends Record<string, StringEntry>>(entries: D)
     fields,
   } as const satisfies Global;
 }
+
+/**
+ * `strings(entries)` as a global for `defineCms({ presets })`.
+ * @param options.name The global name. Default `'strings'`.
+ */
+export function stringsPreset<
+  const D extends Record<string, StringEntry>,
+  const N extends string = "strings",
+>(entries: D, { name = "strings" as N }: { name?: N } = {}) {
+  return {
+    globals: { [name]: strings(entries) } as { [K in NoInfer<N>]: ReturnType<typeof strings<D>> },
+  };
+}

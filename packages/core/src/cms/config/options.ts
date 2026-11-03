@@ -30,13 +30,21 @@ type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) exten
 ) => void
   ? I
   : never;
-// `unknown` without plugins, so `C & PluginCollections<[]>` is `C`.
-export type PluginCollections<PL extends readonly Plugin[]> = UnionToIntersection<
-  NonNullable<PL[number]["collections"]>
+/** Ready-made entries for `defineCms({ presets })`, such as `pagesPreset()` from `tenoncms/presets`. */
+export type Preset = {
+  collections?: Record<string, Collection>;
+  globals?: Record<string, Global>;
+  blocks?: Record<string, Block>;
+};
+
+// Distributes over the items, so an item without the key adds nothing. `unknown` for an empty list, so
+// `C & PluginCollections<[]>` is `C`.
+type PartOf<L extends readonly Preset[], K extends keyof Preset> = UnionToIntersection<
+  L[number] extends infer E ? (E extends { [P in K]?: infer X } ? NonNullable<X> : never) : never
 >;
-export type PluginGlobals<PL extends readonly Plugin[]> = UnionToIntersection<
-  NonNullable<PL[number]["globals"]>
->;
+export type PluginCollections<PL extends readonly Preset[]> = PartOf<PL, "collections">;
+export type PluginGlobals<PL extends readonly Preset[]> = PartOf<PL, "globals">;
+export type PresetBlocks<PR extends readonly Preset[]> = PartOf<PR, "blocks">;
 
 // The `media` collection and `cms.media` exist unless `media: false`.
 // Not distributive, and `M = never` (options cast `as never`) counts as no media: otherwise TS2589.
@@ -122,16 +130,32 @@ export type CmsOptions<
   S extends false | SettingsOptions | undefined = undefined,
   L extends string = string,
   B extends Record<string, Block> = {},
+  PR extends readonly Preset[] = [],
 > = {
   /**
    * Blocks that `blocks` fields name instead of defining them: `blocks: { section: "section" }`. A shared block MAY
    * name itself in its own fields, so its items nest to any depth.
    */
-  blocks?: B & NoInfer<CheckSharedBlocks<B, C & PluginCollections<PL>>> & Record<string, Block>;
+  blocks?: B &
+    NoInfer<CheckSharedBlocks<B, C & PluginCollections<PL> & PluginCollections<PR>>> &
+    Record<string, Block>;
   // The plain `Record` gives inline hooks a contextual type. Without it, their arguments are implicit `any`.
   collections?: C &
-    NoInfer<CheckRefs<C, C & PluginCollections<PL>, B> & Record<string, Collection>>;
-  globals?: G & NoInfer<CheckRefs<G, C & PluginCollections<PL>, B> & Record<string, Global>>;
+    NoInfer<
+      CheckRefs<C, C & PluginCollections<PL> & PluginCollections<PR>, B & PresetBlocks<PR>> &
+        Record<string, Collection>
+    >;
+  globals?: G &
+    NoInfer<
+      CheckRefs<G, C & PluginCollections<PL> & PluginCollections<PR>, B & PresetBlocks<PR>> &
+        Record<string, Global>
+    >;
+  /**
+   * Ready-made collections, globals and blocks, like `[pagesPreset(), stringsPreset({ readMore: "Read more" })]`
+   * from `tenoncms/presets`. They merge like the host's own. A name used twice throws, except a block that is
+   * defined the same way.
+   */
+  presets?: PR;
   /**
    * Branding, custom fields, custom pages and the admin bar. Inline or imported from your own module; check an
    * extracted object with `satisfies AdminOptions` from `tenoncms/admin`. Plugins add their own.

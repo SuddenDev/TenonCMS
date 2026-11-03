@@ -2,6 +2,37 @@
 
 `tenoncms/presets` gives you pages with nested URLs and SEO fields. Each preset is a function that returns plain field objects and named hook records. You spread them into your own collection, so you see what you get and can omit, override and add fields and hooks.
 
+## Presets in one line
+
+`defineCms({ presets })` adds a whole collection or global, so you skip the spreading below:
+
+```ts
+import { menuPreset, pagesPreset, stringsPreset } from "tenoncms/presets";
+
+defineCms({
+  presets: [
+    pagesPreset({ seo: true, localized: true, fields: { body: { type: "textarea" } } }),
+    stringsPreset({ readMore: "Read more" }),
+    menuPreset({ name: "mainMenu", depth: -1 }),
+  ],
+});
+```
+
+| Preset                   | Adds                                                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `pagesPreset(options)`   | Collection `pages`: `page()` with its hooks and `permalink`, `titleField: "title"`, and `seo()` with `seo: true` |
+| `stringsPreset(entries)` | Global `strings` from [`strings()`](./localization.md#site-strings)                                              |
+| `menuPreset(options)`    | Global `menu` from [`menu()`](./menus.md) on the Settings page, and its shared blocks                            |
+
+- `name` sets the collection or global name. `pagesPreset({ name: "docs" })` also points `parent` at `docs`.
+- `fields` come after the preset's fields. A key of the preset replaces its field.
+- `hooks` of `pagesPreset` merge stage by stage. A hook with the name of a preset hook replaces it.
+- Every other option is a collection or global option and wins over the preset's, like `label` or `localized`.
+- Presets merge like your own entries. A name the host, a plugin or another preset uses throws. A block defined the same way is shared, so two unlimited menus with the same `blocks` work.
+- `seo: true` has an image field, so it needs [media](./media.md).
+
+To leave out a preset field or hook, use the fragments below.
+
 ## The page preset
 
 ```ts

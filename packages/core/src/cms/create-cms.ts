@@ -19,10 +19,13 @@ import type {
   PluginCollections,
   PluginGlobals,
   PopulateOptions,
+  Preset,
+  PresetBlocks,
   SettingsGlobals,
   SettingsOptions,
 } from "./config/options.ts";
 import { mergePlugins } from "./config/merge-plugins.ts";
+import { mergePresets } from "./config/merge-presets.ts";
 import { createSiteSettings } from "./config/site-settings.ts";
 import { checkSchema } from "../schema/validation/check-schema.ts";
 import { linkBlocks } from "../schema/config/link-blocks.ts";
@@ -63,6 +66,7 @@ export function defineCms<
   const S extends SettingsOptions | false | undefined = undefined,
   const L extends string = never,
   const B extends Record<string, Block> = {},
+  const PR extends readonly Preset[] = [],
 >({
   database,
   secret,
@@ -71,6 +75,7 @@ export function defineCms<
   populate: populateOptions = {} as P,
   hooks: rootHooks = {},
   plugins = [] as unknown as PL,
+  presets = [] as unknown as PR,
   media: mediaOption,
   settings: settingsOption,
   localization: localizationOption,
@@ -78,10 +83,16 @@ export function defineCms<
   admin,
   roles: roleOptions,
   ...own
-}: CmsOptions<C, G, A, P, PL, M, S, L, B>) {
+}: CmsOptions<C, G, A, P, PL, M, S, L, B, PR>) {
   type T = {
-    collections?: LinkedOwners<C & PluginCollections<PL> & MediaCollections<M>, B>;
-    globals?: LinkedOwners<G & PluginGlobals<PL> & SettingsGlobals<S>, B>;
+    collections?: LinkedOwners<
+      C & PluginCollections<PR> & PluginCollections<PL> & MediaCollections<M>,
+      B & PresetBlocks<PR>
+    >;
+    globals?: LinkedOwners<
+      G & PluginGlobals<PR> & PluginGlobals<PL> & SettingsGlobals<S>,
+      B & PresetBlocks<PR>
+    >;
   };
   type D = DefaultDepth<P>;
 
@@ -109,7 +120,7 @@ export function defineCms<
 
   /* ── Schema creation + validation ────────────────────────────────────────────────────── */
 
-  const pluginsSchema = mergePlugins(plugins, own);
+  const pluginsSchema = mergePlugins(plugins, mergePresets(presets, own));
   const { schema: settingsSchema, translations } = createSiteSettings(
     pluginsSchema,
     settingsOption,

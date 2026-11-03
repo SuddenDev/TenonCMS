@@ -204,6 +204,8 @@ const text = await cms.getGlobal("strings", { locale, fallback: false });
 text.readMore; // the stored text, else the code default of `locale`
 ```
 
+`presets: [stringsPreset({ ... })]` adds the same global without naming it. See [Presets in one line](./pages-and-seo.md#presets-in-one-line).
+
 - A default is one text for every locale, or one per locale. A locale without an entry gets the first one.
 - `{ label, default }` sets the field label in the admin. Without it, the label is the key. In this form, no locale MAY be named `default`.
 - Read with `fallback: false`. Otherwise a text stored in the default locale wins over another locale's code default.
