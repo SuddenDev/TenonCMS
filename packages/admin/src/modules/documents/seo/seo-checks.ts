@@ -1,7 +1,10 @@
-/** Recommended lengths in characters, as Payload's SEO plugin uses them. */
+/**
+ * Recommended lengths in characters. Google cuts titles at about 600px (about 60 characters) and descriptions at about
+ * 160 characters on desktop and 120 on mobile.
+ */
 export const SEO_LENGTHS = {
-  title: { min: 50, max: 60 },
-  description: { min: 100, max: 150 },
+  title: { min: 30, max: 60 },
+  description: { min: 120, max: 160 },
 } as const;
 
 type Limits = { min: number; max: number };

@@ -1,10 +1,17 @@
 import { expect, it } from "vitest";
 import { SEO_LENGTHS, lengthHint, passingChecks } from "./seo-checks";
 
-const title = SEO_LENGTHS.title;
+const title = { min: 50, max: 60 };
 const text = (n: number) => "x".repeat(n);
 
-it("lengthHint follows Payload's thresholds", () => {
+it("recommends Google's display lengths", () => {
+  expect(SEO_LENGTHS).toEqual({
+    title: { min: 30, max: 60 },
+    description: { min: 120, max: 160 },
+  });
+});
+
+it("lengthHint rates a length against its limits", () => {
   expect(lengthHint("", title)).toEqual({ status: "missing", progress: 0, rest: "toGo", n: 50 });
   expect(lengthHint(text(45), title)).toEqual({
     status: "short",

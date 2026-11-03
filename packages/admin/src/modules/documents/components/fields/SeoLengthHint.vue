@@ -19,9 +19,9 @@ const tone = computed(
     ({
       missing: "text-destructive [&_[data-slot=progress-indicator]]:bg-destructive",
       long: "text-destructive [&_[data-slot=progress-indicator]]:bg-destructive",
-      short: "text-muted-foreground [&_[data-slot=progress-indicator]]:bg-muted-foreground",
-      almost: "text-muted-foreground [&_[data-slot=progress-indicator]]:bg-muted-foreground",
-      good: "text-primary",
+      short: "text-warning [&_[data-slot=progress-indicator]]:bg-warning",
+      almost: "text-warning [&_[data-slot=progress-indicator]]:bg-warning",
+      good: "text-success [&_[data-slot=progress-indicator]]:bg-success",
     })[hint.value.status],
 );
 </script>
