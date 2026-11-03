@@ -45,9 +45,15 @@ function Page() {
   return (
     <main>
       <h1 data-cms={edit("pages", page.id, "title")}>{page.title}</h1>
-      <p data-cms={edit("pages", page.id, "body")} style={{ whiteSpace: "pre-wrap" }}>
-        {page.body}
-      </p>
+      {page.content?.map((item, i) => (
+        <p
+          key={item.id}
+          data-cms={edit("pages", page.id, `content.${i}.body`)}
+          style={{ whiteSpace: "pre-wrap" }}
+        >
+          {item.body}
+        </p>
+      ))}
     </main>
   );
 }

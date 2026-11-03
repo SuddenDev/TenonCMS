@@ -54,6 +54,13 @@ useHead(() => ({
   <AppHeader />
   <main v-if="page">
     <h1 :data-cms="edit('pages', page.id, 'title')">{{ page.title }}</h1>
-    <p :data-cms="edit('pages', page.id, 'body')" style="white-space: pre-wrap">{{ page.body }}</p>
+    <p
+      v-for="(item, i) in page.content"
+      :key="item.id"
+      :data-cms="edit('pages', page.id, `content.${i}.body`)"
+      style="white-space: pre-wrap"
+    >
+      {{ item.body }}
+    </p>
   </main>
 </template>

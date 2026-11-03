@@ -5,10 +5,9 @@ import { libsql } from "tenoncms/libsql";
 import { smtp } from "tenoncms/email/smtp";
 import { ExamplePlugin } from "tenoncms/plugins/example";
 import { RedirectsPlugin } from "tenoncms/plugins/redirects";
-import { menu, strings } from "tenoncms/presets";
+import { menu, pagesPreset, strings } from "tenoncms/presets";
 import { authors } from "./collections/authors";
 import { comments } from "./collections/comments";
-import { pages } from "./collections/pages";
 import { posts } from "./collections/posts";
 import { kitchenSink } from "./globals/kitchen-sink";
 
@@ -49,7 +48,8 @@ export default defineCms({
       },
     },
   },
-  collections: { posts, authors, comments, pages },
+  collections: { posts, authors, comments },
+  presets: [pagesPreset({ seo: true, localized: true, blocks: ["hero", "text", "section"] })],
   globals: {
     kitchenSink,
     mainMenu: defineGlobal({

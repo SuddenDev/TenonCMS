@@ -37,20 +37,6 @@ const meta = seoMeta(page, { general, seo });
   <body>
     <Header alternates={page.alternates} />
     <h1 data-cms={edit("pages", page.id, "title")}>{page.title}</h1>
-    {page.hero && (
-      <img
-        src={page.hero.src}
-        srcset={page.hero.srcset}
-        sizes="(min-width: 720px) 720px, 100vw"
-        width={page.hero.width}
-        height={page.hero.height}
-        alt={page.hero.alt ?? ""}
-        style="max-width: 100%; height: auto"
-      />
-    )}
-    <p style="white-space: pre-wrap" data-cms={edit("pages", page.id, "body")}>
-      {page.body}
-    </p>
     {page.content && <Blocks id={page.id} path="content" items={page.content} />}
   </body>
 </html>
