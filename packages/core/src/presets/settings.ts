@@ -98,6 +98,7 @@ export function settings() {
         },
         noindex: {
           type: "boolean",
+          appearance: "switch",
           label: { en: "Hide from search engines", de: "Vor Suchmaschinen verbergen" },
           description: {
             en: "Ask search engines not to index any page.",

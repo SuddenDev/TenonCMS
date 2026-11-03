@@ -99,12 +99,14 @@ Each database has its own entry and driver, so you install only the one you use:
 | `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                  |
 | `itemLabels`                        | `array`, `blocks`                                                                               | `{ singular, plural, title }` item labels in the admin |
 | `appearance`                        | `array`, `blocks`                                                                               | `"tree"`: edit the items as a tree in the admin        |
+| `appearance`                        | `group`                                                                                         | `"plain"`: show the fields without box and heading     |
 | `validate`                          | all but `join`                                                                                  | Your own check, on the server                          |
 | `condition`                         | all                                                                                             | The field applies only when this matches               |
 | `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value               |
 | `private`                           | all                                                                                             | Keep the value out of public HTTP reads                |
 | `readOnly`                          | all but `join`                                                                                  | The admin shows the input disabled                     |
 | `hidden`                            | all                                                                                             | The admin does not show the input                      |
+| `separator`                         | all                                                                                             | A line above the field; a text adds a heading below it |
 | `hooks`                             | all but `join`                                                                                  | See [Hooks](./hooks.md)                                |
 
 The admin receives the schema as JSON. Browser field descriptions can use [typed `.client.ts` imports](admin.md#reactive-field-descriptions), which the build replaces with references. Other function behavior follows these rules:

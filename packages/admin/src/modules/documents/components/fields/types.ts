@@ -14,4 +14,6 @@ export type FieldProps<T extends Field["type"] = Field["type"]> = {
   errors?: Record<string, string>;
   shared?: boolean;
   placeholders?: Record<string, unknown>;
+  /** Muted text right after a text field's value, like the rest of a title template. */
+  suffix?: string;
 };

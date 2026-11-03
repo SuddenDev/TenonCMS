@@ -14,6 +14,7 @@ import SeoLengthHint from "./SeoLengthHint.vue";
 import SeoPreview from "./SeoPreview.vue";
 import SharedMarker from "./SharedMarker.vue";
 import { FieldSet, FieldLegend, FieldDescription, FieldError } from "@/shared/components/ui/field";
+import { Separator } from "@/shared/components/ui/separator";
 
 const props = defineProps<FieldProps<"group">>();
 const model = defineModel<any>();
@@ -50,9 +51,16 @@ const placeholders = computed(() => {
 <template>
   <FieldSet
     :disabled="field.readOnly"
-    class="border-border min-w-0 gap-6 rounded-lg border px-4 pt-4 pb-5"
+    :class="[
+      'min-w-0 gap-6',
+      field.appearance !== 'plain' && 'border-border rounded-lg border px-4 pt-4 pb-5',
+    ]"
   >
-    <FieldLegend variant="label" class="mb-0 w-auto px-2">
+    <!-- A plain group keeps its heading for screen readers. -->
+    <FieldLegend
+      variant="label"
+      :class="field.appearance === 'plain' ? 'sr-only' : 'mb-0 w-auto px-2'"
+    >
       {{ text(field.label) ?? name }}
       <span v-if="required" class="text-destructive" aria-hidden="true">*</span>
       <SharedMarker v-if="shared" />
@@ -62,6 +70,13 @@ const placeholders = computed(() => {
       <Icon :name="seo.passing.value === 3 ? 'circle-check' : 'circle-alert'" class="size-4" />
       {{ t("seo.checks", { n: seo.passing.value, max: 3 }) }}
     </p>
+    <Separator v-if="seo" />
+    <SeoPreview
+      v-if="seo"
+      :url="seo.url.value"
+      :title="seo.meta.value.title"
+      :description="seo.meta.value.description"
+    />
     <FieldLayout
       :fields="field.fields"
       :layout="field"
@@ -81,22 +96,17 @@ const placeholders = computed(() => {
           :path="`${path}.${key}`"
           :errors="errors"
           :placeholders="placeholders"
+          :suffix="seo && key === 'title' ? seo.suffix.value : undefined"
         />
         <SeoLengthHint
           v-if="seo && hinted(key)"
           :text="seo.meta.value[key] ?? ''"
           :limits="SEO_LENGTHS[key]"
           :disabled="!editable(child)"
-          @generate="model[key] = seo.defaults.value[key] ?? ''"
+          @generate="model[key] = seo.generated.value[key] ?? ''"
         />
       </template>
     </FieldLayout>
-    <SeoPreview
-      v-if="seo"
-      :url="seo.url.value"
-      :title="seo.meta.value.title"
-      :description="seo.meta.value.description"
-    />
     <FieldError v-if="message">{{ message }}</FieldError>
   </FieldSet>
 </template>

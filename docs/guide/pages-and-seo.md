@@ -149,15 +149,15 @@ const { title, description, noindex, canonical, alternates, image, verification 
 
 The second argument is optional. It takes the [settings](#settings) globals `general` and `seo`.
 
-| Result         | Value                                                                                                                                                                 |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`        | The page's `seo.title`, else the collection's template, else the site's, else `{title} · {site.title}`, with [placeholders](#placeholders) filled. Nothing is stored. |
-| `description`  | The page's `seo.description`, else the collection's template, else the site's, with placeholders filled. `undefined` when empty.                                      |
-| `noindex`      | `true` when the page's or the site's `seo.noindex` is.                                                                                                                |
-| `canonical`    | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`.                                   |
-| `alternates`   | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                                                           |
-| `image`        | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.                                      |
-| `verification` | `{ name, content }` meta tags for the filled `google` and `bing` codes.                                                                                               |
+| Result         | Value                                                                                                                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | The collection's template, else the site's, else `{title} · {site.title}`, with [placeholders](#placeholders) filled. The page's `seo.title` fills `{title}`, or is the whole title with `seo.fullTitle`. |
+| `description`  | The page's `seo.description`, else the collection's template, else the site's, with placeholders filled. `undefined` when empty.                                                                          |
+| `noindex`      | `true` when the page's or the site's `seo.noindex` is.                                                                                                                                                    |
+| `canonical`    | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`.                                                                       |
+| `alternates`   | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                                                                                               |
+| `image`        | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.                                                                          |
+| `verification` | `{ name, content }` meta tags for the filled `google` and `bing` codes.                                                                                                                                   |
 
 ### Placeholders
 
@@ -169,7 +169,7 @@ Titles and descriptions are templates, on the page and in the `seo` settings. Th
 | `{site.title}`, `{site.tagline}` | The `general` settings                                                                          |
 
 - A missing value is empty. Separators at the start and end then go, so `{title} · {site.title}` without a site title gives `About`.
-- A page's own `seo.title` is the whole title. Nothing is appended to it.
+- A page's own `seo.title` fills `{title}` in the template, so `Buy watches` gives `Buy watches · Acme`. Turn on **Use as the full title** (`seo.fullTitle`) to use it as is. The switch shows once the title has text.
 - A placeholder for a field the document does not have is empty, like `{excerpt}` on a page.
 
 ### Templates per collection
@@ -218,10 +218,11 @@ hooks: {
 
 `seo()` sets `editor: "seo"` on its group. The admin then shows, like Payload's SEO plugin:
 
-- "2/3 checks are passing" above the fields: the title has 50–60 characters, the description 100–150, and the page or the site has an image.
+- "2/3 checks are passing" above the fields: the title has 30–60 characters, the description 120–160 (what Google shows on desktop and mobile), and the page or the site has an image.
 - A length hint under the title and the description: "Too short", "Almost there", "Good" or "Too long", with the characters left. It counts what the site renders, so placeholders and the site default count.
-- An **Auto-generate** button there, which copies the filled site default into the field to edit it. An empty field shows that default as its placeholder.
-- A search preview below: the page URL (the site `url` plus the permalink), the title and the description.
+- An **Auto-generate** button there, which copies the filled default into the field to edit it. For the title that is the part that fills `{title}`, unless it is the full title. An empty field shows the whole rendered default as its placeholder, template included, like `About · Acme`.
+- The rest of the title template as muted text right after the typed SEO title, like `Buy watches · Acme`, so the count makes sense. It hides with **Use as the full title**.
+- A search preview at the top, below the checks: the page URL (the site `url` plus the permalink), the title and the description.
 
 The editor reads the `general` and `seo` globals of the content language and the collection's templates, and uses `seoMeta()`, so the preview is what the site renders. The lengths are fixed.
 

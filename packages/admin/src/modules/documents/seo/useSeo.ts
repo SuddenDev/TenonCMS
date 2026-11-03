@@ -38,7 +38,22 @@ export function useSeo(
 
   const site = computed(() => ({ ...settings.value, templates: templates() }));
   const meta = computed(() => seoMeta({ ...root(), seo: group() }, site.value));
+  // What the site renders without own values. Empty fields show it, so the template is visible.
   const defaults = computed(() => seoMeta({ ...root(), seo: {} }, site.value));
+  // What Auto-generate copies. An own title fills `{title}` of the template unless it is the full title, so it is
+  // that part alone.
+  const generated = computed(() => {
+    if (group().fullTitle) return defaults.value;
+    const part = seoMeta({ ...root(), seo: { title: "{title}", fullTitle: true } }, site.value);
+    return { ...defaults.value, title: part.title };
+  });
+  // The rest of the rendered title after the own title, e.g. ` · Acme`. Empty when the template puts text before it.
+  const suffix = computed(() => {
+    const own = group().title;
+    if (typeof own !== "string" || !own || group().fullTitle) return "";
+    const part = seoMeta({ ...root(), seo: { title: own, fullTitle: true } }, site.value).title;
+    return meta.value.title.startsWith(part) ? meta.value.title.slice(part.length) : "";
+  });
   const passing = computed(() =>
     passingChecks({
       title: meta.value.title,
@@ -78,7 +93,7 @@ export function useSeo(
     return path ? new URL(path, base).href : base;
   }
 
-  return { meta, defaults, passing, url };
+  return { meta, defaults, generated, suffix, passing, url };
 }
 
 /** A settings global in the content locale. A dropped or failing global reads as empty, so defaults apply. */

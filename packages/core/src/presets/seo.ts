@@ -22,10 +22,29 @@ export function seo<const T extends SeoTemplates = {}>(templates: T = {} as T) {
         templates,
         fields: {
           title: { type: "text", description: placeholders },
+          fullTitle: {
+            type: "boolean",
+            appearance: "switch",
+            label: { en: "Use as the full title", de: "Als vollständigen Titel verwenden" },
+            description: {
+              en: "Off: the title fills {title} in the title template, like {title} · {site.title}. On: it shows as is.",
+              de: "Aus: Der Titel füllt {title} in der Titelvorlage, z. B. {title} · {site.title}. An: Er erscheint unverändert.",
+            },
+            condition: { title: { exists: true } },
+          },
           description: { type: "textarea", description: placeholders },
-          image: { type: "image" },
+          image: {
+            type: "image",
+            separator: { en: "Social", de: "Social Media" },
+            label: { en: "Share image", de: "Vorschaubild zum Teilen" },
+            description: {
+              en: "Shows when the page is shared, e.g. on LinkedIn, Facebook or in messengers. Recommended size: 1200×630. Empty uses the site's image.",
+              de: "Erscheint, wenn die Seite geteilt wird, z. B. auf LinkedIn, Facebook oder in Messengern. Empfohlene Größe: 1200×630. Leer nutzt das Bild der Website.",
+            },
+          },
           noindex: {
             type: "boolean",
+            appearance: "switch",
             label: { en: "Hide from search engines", de: "Vor Suchmaschinen verbergen" },
           },
         },

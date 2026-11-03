@@ -12,6 +12,8 @@ type SeoDoc = Record<string, unknown> & {
   alternates?: Record<string, string> | null;
   seo?: {
     title?: string | null;
+    /** `true`: `title` is the whole title. Otherwise it fills `{title}` in the title template. */
+    fullTitle?: boolean | null;
     description?: string | null;
     noindex?: boolean | null;
     image?: Image;
@@ -72,8 +74,9 @@ function urlOf(image: Image) {
  *
  * `title` and `description` are templates. `{dot.path}` reads a field of the document, `{site.title}` and
  * `{site.tagline}` read the `general` global. A missing value is empty.
- * - `title`: the document's `seo.title`, else `templates.title` of its collection, else the site's `seo.title`, else
- *   {@link DEFAULT_SEO_TITLE}.
+ * - `title`: the template is `templates.title` of the collection, else the site's `seo.title`, else
+ *   {@link DEFAULT_SEO_TITLE}. The document's own `seo.title` fills its `{title}`. With `seo.fullTitle`, the own title
+ *   is the whole title.
  * - `description`: the document's `seo.description`, else `templates.description`, else the site's. `undefined` when
  *   it fills to nothing.
  * - `noindex`: `true` when the document's or the site's `seo.noindex` is `true`.
@@ -86,7 +89,12 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
   const { general, seo, templates } = settings;
   const base = general?.url || undefined;
   const context = { ...doc, site: general ?? {} };
-  const title = doc.seo?.title || templates?.title || seo?.title || DEFAULT_SEO_TITLE;
+  const own = doc.seo?.title;
+  const template = templates?.title || seo?.title || DEFAULT_SEO_TITLE;
+  const title =
+    own && doc.seo?.fullTitle
+      ? fillTemplate(own, context)
+      : fillTemplate(template, own ? { ...context, title: fillTemplate(own, context) } : context);
   const description = doc.seo?.description || templates?.description || seo?.description;
   const image = urlOf(doc.seo?.image) ?? urlOf(seo?.image);
   const path = typeof doc.path === "string" && doc.path ? doc.path : undefined;
@@ -95,13 +103,13 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
     hreflang,
     href: base && href.startsWith("/") ? join(base, href) : href,
   }));
-  const own = alternates.find((a) => a.hreflang === doc.locale)?.href;
+  const localUrl = alternates.find((a) => a.hreflang === doc.locale)?.href;
 
   return {
-    title: fillTemplate(title, context),
+    title,
     description: (description && fillTemplate(description, context)) || undefined,
     noindex: doc.seo?.noindex === true || seo?.noindex === true,
-    canonical: own ?? (base && path ? join(base, path) : undefined),
+    canonical: localUrl ?? (base && path ? join(base, path) : undefined),
     alternates,
     image: image && absolute(image, base),
     verification: [

@@ -51,12 +51,42 @@ it("seoMeta takes the title template of the site", () => {
   expect(seoMeta({ title: "Hello" }, { general, seo: { title: "" } }).title).toBe("Hello · Site");
 });
 
-it("seoMeta uses the page's own title as the whole title, with placeholders", () => {
+it("seoMeta puts the page's own title into the title template", () => {
   const general = { title: "Site" };
-  expect(seoMeta({ title: "Hello", seo: { title: "Custom" } }, { general }).title).toBe("Custom");
+  expect(seoMeta({ title: "Hello", seo: { title: "Custom" } }, { general }).title).toBe(
+    "Custom · Site",
+  );
+  expect(seoMeta({ title: "Hello", seo: { title: "{title} sale" } }, { general }).title).toBe(
+    "Hello sale · Site",
+  );
   expect(
-    seoMeta({ title: "Hello", seo: { title: "{title}  sale | {site.title}" } }, { general }).title,
+    seoMeta(
+      { title: "Hello", seo: { title: "Custom" } },
+      { general, seo: { title: "{site.title}: {title}" } },
+    ).title,
+  ).toBe("Site: Custom");
+  expect(
+    seoMeta(
+      { title: "Hello", seo: { title: "Custom" } },
+      { general, templates: { title: "{title} – Blog" } },
+    ).title,
+  ).toBe("Custom – Blog");
+});
+
+it("seoMeta uses the page's own title as the whole title with `fullTitle`", () => {
+  const general = { title: "Site" };
+  expect(
+    seoMeta({ title: "Hello", seo: { title: "Custom", fullTitle: true } }, { general }).title,
+  ).toBe("Custom");
+  expect(
+    seoMeta(
+      { title: "Hello", seo: { title: "{title}  sale | {site.title}", fullTitle: true } },
+      { general },
+    ).title,
   ).toBe("Hello sale | Site");
+  expect(seoMeta({ title: "Hello", seo: { fullTitle: true } }, { general }).title).toBe(
+    "Hello · Site",
+  );
 });
 
 it("seoMeta prefers the collection's templates to the site's", () => {
@@ -68,7 +98,7 @@ it("seoMeta prefers the collection's templates to the site's", () => {
     description: "About A",
   });
   expect(seoMeta({ title: "A", seo: { title: "Own" } }, { general, seo, templates }).title).toBe(
-    "Own",
+    "Own – Blog · Site",
   );
   expect(seoMeta({ title: "A" }, { general, seo, templates: {} })).toMatchObject({
     title: "A | Site",

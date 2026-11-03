@@ -10,6 +10,8 @@ export type GroupField = Base<Record<string, unknown>> &
     type: "group";
     /** The nested fields. Groups MAY contain groups. */
     fields: Fields;
+    /** Admin only: `'plain'` shows the fields without the box and heading, e.g. when a tab already names the group. */
+    appearance?: "plain";
     /**
      * Admin only: a built-in editor around the fields. `'seo'` adds length hints, Auto-generate buttons, checks and a
      * search preview. The group MUST have the fields of `seo()`. Set by `seo()`.
