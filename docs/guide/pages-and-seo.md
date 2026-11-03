@@ -11,20 +11,26 @@ import { menuPreset, pagesPreset, stringsPreset } from "tenoncms/presets";
 
 defineCms({
   presets: [
-    pagesPreset({ seo: true, localized: true, fields: { body: { type: "textarea" } } }),
+    pagesPreset({
+      seo: true,
+      localized: true,
+      blocks: { text: { label: "Text", fields: { body: { type: "textarea" } } } },
+    }),
     stringsPreset({ readMore: "Read more" }),
     menuPreset({ name: "mainMenu", depth: -1 }),
   ],
 });
 ```
 
-| Preset                   | Adds                                                                                                             |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `pagesPreset(options)`   | Collection `pages`: `page()` with its hooks and `permalink`, `titleField: "title"`, and `seo()` with `seo: true` |
-| `stringsPreset(entries)` | Global `strings` from [`strings()`](./localization.md#site-strings)                                              |
-| `menuPreset(options)`    | Global `menu` from [`menu()`](./menus.md) on the Settings page, and its shared blocks                            |
+| Preset                   | Adds                                                                                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `pagesPreset(options)`   | Collection `pages`: `page()` with its hooks and `permalink`, `titleField: "title"`, `content` with `blocks`, and `seo()` with `seo: true` |
+| `stringsPreset(entries)` | Global `strings` from [`strings()`](./localization.md#site-strings)                                                                       |
+| `menuPreset(options)`    | Global `menu` from [`menu()`](./menus.md) on the Settings page, and its shared blocks                                                     |
 
 - `name` sets the collection or global name. `pagesPreset({ name: "docs" })` also points `parent` at `docs`.
+- `blocks` adds a `content` field of type `blocks` after the page fields. It takes the `blocks` of a `blocks` field: block objects, or names of [shared blocks](./schema.md). Without it, there is no `content` field.
+- `seo: true` splits the form into two tabs, Content and SEO. The page fields, `content` and your `fields` go to Content unless they name another `tab`, and the `seo` group goes to SEO with `appearance: "plain"`, so the tab shows its fields without a box. Your `tabs` option merges over the preset's. Without `seo`, there are no tabs.
 - `fields` come after the preset's fields. A key of the preset replaces its field.
 - `hooks` of `pagesPreset` merge stage by stage. A hook with the name of a preset hook replaces it.
 - Every other option is a collection or global option and wins over the preset's, like `label` or `localized`.
@@ -50,6 +56,8 @@ export const pages = defineCollection({
 });
 ```
 
+`page()` sets no `tab`, because a collection without `tabs` fails the startup layout check. Add `tab` yourself when you add `tabs`.
+
 `page()` takes one option, `collection`: the collection the pages live in, which `parent` points to. Default `'pages'`.
 
 `page().fields`:
@@ -58,10 +66,12 @@ export const pages = defineCollection({
 | -------- | --------------------------------------------------------------------------------- |
 | `title`  | `{ type: 'text', required: true }`                                                |
 | `slug`   | `{ type: 'slug', from: 'title', parent: 'parent', path: 'path', required: true }` |
-| `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict' }`                 |
-| `path`   | `{ type: 'text', readOnly: true }`                                                |
+| `parent` | `{ type: 'relation', collection: 'pages', onDelete: 'restrict', hidden: true }`   |
+| `path`   | `{ type: 'text', readOnly: true, hidden: true }`                                  |
 
-`seo().fields` is one optional group `seo` with `title`, `description`, `image` (the social image) and `noindex`. Without [media](./media.md), leave `image` out.
+`parent` and `path` are hidden. The editor picks the parent in the slug: the prefix before the input shows the parent's path, like `/about/`, and a click opens a searchable list of pages ("Top level" first). A page cannot move below itself or its descendants. The picker writes the same value as the `parent` field.
+
+`seo().fields` is one optional group `seo` with `title`, `fullTitle` (a switch: use the title as is, not in the template), `description`, `image` (the share image) and `noindex` (a switch). Without [media](./media.md), leave `image` out.
 
 Paths are stored, so reads never compute them:
 

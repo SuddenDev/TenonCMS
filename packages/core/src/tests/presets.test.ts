@@ -11,6 +11,7 @@ import {
   strings,
   stringsPreset,
 } from "../presets/index.ts";
+import type { Collection } from "../schema/index.ts";
 import { admin, fresh, origin, setup, status, type Env, testDatabase, testDb } from "./setup.ts";
 
 let cms: Env["cms"];
@@ -601,11 +602,92 @@ describe("presets option", () => {
       "seo",
       "body",
     ]);
+    expect(cms.schema.collections?.pages.fields.parent).toMatchObject({ hidden: true });
+    expect(cms.schema.collections?.pages.fields.path).toMatchObject({ hidden: true });
     expect((await cms.getGlobal("strings")).readMore).toBe("Read more");
     expect(menuItems((await cms.getGlobal("footerMenu")).items)).toMatchObject([{ href: "/a" }]);
     about.body satisfies string | null | undefined;
     // @ts-expect-error a preset name stays literal, so other names are type errors
     await cms.getGlobal("nope").catch(() => {});
+  });
+
+  describe("pagesPreset layout", () => {
+    const build = (options: Parameters<typeof pagesPreset>[0] = {}) =>
+      defineCms({ presets: [pagesPreset(options)], database: testDatabase(), secret }).schema
+        .collections?.pages as unknown as Collection;
+
+    it("adds a content blocks field only with `blocks`", () => {
+      expect(build().fields).not.toHaveProperty("content");
+      expect(
+        build({ blocks: { text: { fields: { body: { type: "textarea" } } } } }).fields.content,
+      ).toMatchObject({
+        type: "blocks",
+        blocks: { text: { fields: { body: { type: "textarea" } } } },
+      });
+    });
+
+    it("splits content and SEO into tabs with `seo: true`", () => {
+      const pages = build({
+        seo: true,
+        blocks: { text: { fields: { body: { type: "textarea" } } } },
+        fields: { summary: { type: "text" }, note: { type: "text", tab: "seo" } },
+      });
+
+      expect(Object.keys(pages.tabs ?? {})).toEqual(["content", "seo"]);
+      const tabs = Object.fromEntries(
+        Object.entries(pages.fields ?? {}).map(([k, f]) => [k, f.tab]),
+      );
+      expect(tabs).toEqual({
+        title: "content",
+        slug: "content",
+        parent: "content",
+        path: "content",
+        seo: "seo",
+        content: "content",
+        summary: "content",
+        note: "seo",
+      });
+    });
+
+    it("shows the SEO group without its box in the SEO tab", () => {
+      expect(build({ seo: true }).fields.seo).toMatchObject({ appearance: "plain" });
+      expect(build({ seo: true, tabs: { seo: { label: "Search" } } }).fields.seo).toMatchObject({
+        appearance: "plain",
+      });
+    });
+
+    it("lets the host tabs merge over the preset's", () => {
+      const pages = build({ seo: true, tabs: { seo: { label: "Search" }, extra: {} } });
+
+      expect(pages.tabs?.seo).toEqual({ label: "Search" });
+      expect(Object.keys(pages.tabs ?? {})).toEqual(["content", "seo", "extra"]);
+    });
+
+    it("has no tabs without `seo`", () => {
+      const pages = build();
+
+      expect(pages.tabs).toBeUndefined();
+      expect(pages.fields.title.tab).toBeUndefined();
+    });
+
+    it("reads `content` only when `blocks` is given", async () => {
+      const withBlocks = defineCms({
+        presets: [pagesPreset({ blocks: { text: { fields: { body: { type: "textarea" } } } } })],
+        database: testDatabase(),
+        secret,
+      });
+      const without = defineCms({
+        presets: [pagesPreset()],
+        database: testDatabase(),
+        secret,
+      });
+      const a = await withBlocks.create("pages", { title: "A", slug: "a" });
+      const b = await without.create("pages", { title: "B", slug: "b" });
+
+      a.content satisfies unknown[] | null | undefined;
+      // @ts-expect-error `content` exists only with `blocks`
+      b.content;
+    });
   });
 
   it("points `parent` at the preset's collection name", () => {
