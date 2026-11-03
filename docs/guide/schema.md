@@ -104,6 +104,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value               |
 | `private`                           | all                                                                                             | Keep the value out of public HTTP reads                |
 | `readOnly`                          | all but `join`                                                                                  | The admin shows the input disabled                     |
+| `hidden`                            | all                                                                                             | The admin does not show the input                      |
 | `hooks`                             | all but `join`                                                                                  | See [Hooks](./hooks.md)                                |
 
 The admin receives the schema as JSON, so functions never reach the browser:
@@ -169,6 +170,8 @@ color: { type: 'text', condition: { '/settings.mode': 'advanced' } },
 - A filter on a private field without a session returns 400.
 - The rule also applies to populated and joined documents, by the rules of their own collection. On a group it covers the whole group.
 - Client types make `private` fields optional.
+
+`hidden` only changes the admin: the input is not shown, but the value loads, saves and validates as usual. Use it for a value that a hook or code owns.
 
 `readOnly` only changes the admin: the input is disabled, and on a group every input inside. The local API, HTTP and hooks can still write the value. A hook that owns the value MUST overwrite it, like the page preset's `path` hook.
 

@@ -10,6 +10,8 @@ export type Common = Placement & {
   label?: Text;
   /** Help text below the input in the admin. */
   description?: Text;
+  /** Admin only: the input is not shown. The value still loads, saves and validates as usual. Default `false`. */
+  hidden?: boolean;
   /**
    * The field applies only when this matches the document. Otherwise the admin hides it and saves it as `null`,
    * and the server skips `required`, the built-in checks and `validate`. The type check still runs. See {@link Condition}.

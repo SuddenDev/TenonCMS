@@ -10,7 +10,7 @@ import Icon from "@/shared/components/Icon.vue";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 
 // Places fields by the `tabs` and `fieldsets` of their owner and their own `width`. The caller renders each field.
-// `show`: whether a field applies now. `path`: dot path of the owner in `errors` and `focusKey`, empty at the top.
+// `show`: whether a field applies now. A field with `hidden` never renders. `path`: dot path of the owner in `errors` and `focusKey`, empty at the top.
 // `split`: groups and lists occupy their own section at the top level.
 const props = withDefaults(
   defineProps<{
@@ -30,7 +30,8 @@ const { t } = useI18n();
 
 const arranged = computed(() => arrange(props.fields, props.layout, props.split));
 const prefix = computed(() => (props.path ? `${props.path}.` : ""));
-const visible = (section: Section) => section.fields.filter(([n, f]) => props.show(n, f));
+const visible = (section: Section) =>
+  section.fields.filter(([n, f]) => props.show(n, f) && !f.hidden);
 const holds = (sections: Section[], name: string) =>
   sections.some((s) => s.fields.some(([n]) => n === name));
 
