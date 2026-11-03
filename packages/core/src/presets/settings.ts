@@ -1,4 +1,5 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
+import { DEFAULT_SEO_TITLE } from "../helpers/seo-meta.ts";
 import type { Global } from "../schema/index.ts";
 
 /**
@@ -49,19 +50,19 @@ export function settings() {
       },
       nav: { display: "settings", icon: "search", order: 2 },
       fields: {
-        separator: {
+        title: {
           type: "text",
-          default: " · ",
+          placeholder: DEFAULT_SEO_TITLE,
           description: {
-            en: "Text between the page title and the site title.",
-            de: "Text zwischen dem Seitentitel und dem Titel der Website.",
+            en: "Title of pages without their own. {title} is the page title, {site.title} and {site.tagline} come from General, and {field} reads any field of the page.",
+            de: "Titel für Seiten ohne eigenen. {title} ist der Seitentitel, {site.title} und {site.tagline} kommen aus Allgemein, und {feld} liest ein beliebiges Feld der Seite.",
           },
         },
         description: {
           type: "textarea",
           description: {
-            en: "Fallback description for pages without their own.",
-            de: "Standardbeschreibung für Seiten ohne eigene.",
+            en: "Description of pages without their own. Takes the same placeholders as the title, like {excerpt}.",
+            de: "Beschreibung für Seiten ohne eigene. Nimmt dieselben Platzhalter wie der Titel, etwa {excerpt}.",
           },
         },
         image: {

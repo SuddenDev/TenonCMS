@@ -149,15 +149,81 @@ const { title, description, noindex, canonical, alternates, image, verification 
 
 The second argument is optional. It takes the [settings](#settings) globals `general` and `seo`.
 
-| Result         | Value                                                                                                                               |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `title`        | `seo.title`, or the page's `title` when empty, then the separator (default `·`) and the site title. Nothing is stored.              |
-| `description`  | The page's `seo.description`, else the site's, else `undefined`.                                                                    |
-| `noindex`      | `true` when the page's or the site's `seo.noindex` is.                                                                              |
-| `canonical`    | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`. |
-| `alternates`   | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                         |
-| `image`        | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.    |
-| `verification` | `{ name, content }` meta tags for the filled `google` and `bing` codes.                                                             |
+| Result         | Value                                                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`        | The page's `seo.title`, else the collection's template, else the site's, else `{title} · {site.title}`, with [placeholders](#placeholders) filled. Nothing is stored. |
+| `description`  | The page's `seo.description`, else the collection's template, else the site's, with placeholders filled. `undefined` when empty.                                      |
+| `noindex`      | `true` when the page's or the site's `seo.noindex` is.                                                                                                                |
+| `canonical`    | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`.                                   |
+| `alternates`   | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                                                           |
+| `image`        | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.                                      |
+| `verification` | `{ name, content }` meta tags for the filled `google` and `bing` codes.                                                                                               |
+
+### Placeholders
+
+Titles and descriptions are templates, on the page and in the `seo` settings. They are filled when `seoMeta()` runs, so a page follows changes to its title or to the site settings.
+
+| Placeholder                      | Value                                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `{title}`, `{excerpt}`, `{…}`    | A field of the document. Dots walk into groups and populated relations, like `{category.title}` |
+| `{site.title}`, `{site.tagline}` | The `general` settings                                                                          |
+
+- A missing value is empty. Separators at the start and end then go, so `{title} · {site.title}` without a site title gives `About`.
+- A page's own `seo.title` is the whole title. Nothing is appended to it.
+- A placeholder for a field the document does not have is empty, like `{excerpt}` on a page.
+
+### Templates per collection
+
+`seo()` takes templates for the documents of one collection. They win over the site's templates, so posts can read differently from pages:
+
+```ts
+// collections/posts.ts
+export const posts = defineCollection({
+  fields: {
+    title: { type: "text", required: true },
+    excerpt: { type: "textarea" },
+    ...seo({ title: "{title} – Blog · {site.title}", description: "{excerpt}" }).fields,
+  },
+});
+
+// The post route
+const meta = seoMeta(post, { general, seo, templates: posts.fields.seo.templates });
+```
+
+- The order is the document's own value, then the collection's template, then the site's, then `{title} · {site.title}`.
+- The admin reads the templates from the schema. `seoMeta()` runs on your site, so pass them as `templates`, or the site falls back to the site's templates.
+
+#### Logic in a hook
+
+Templates are text, so the admin and the site fill them the same way. For logic a placeholder cannot express, fill the field in a `beforeChange` hook:
+
+```ts
+// collections/posts.ts
+hooks: {
+  beforeChange: {
+    // Fills an empty SEO description from the body. An editor's own text stays.
+    seoDescription: ({ data }) =>
+      data.seo?.description || !data.body
+        ? data
+        : { ...data, seo: { ...data.seo, description: excerpt(data.body, 150) } },
+  },
+},
+```
+
+- The value is stored like an editor's text, so every reader gets it and `seoMeta()` needs nothing. The hook runs on the server and MAY read other documents with `cms`.
+- It is a snapshot: once it is in the form, it does not follow later edits of the body. Clear the field to fill it again.
+- The admin's hints and preview see it only after a save. With drafts, the form keeps showing the empty field until the document opens again.
+
+### The SEO editor
+
+`seo()` sets `editor: "seo"` on its group. The admin then shows, like Payload's SEO plugin:
+
+- "2/3 checks are passing" above the fields: the title has 50–60 characters, the description 100–150, and the page or the site has an image.
+- A length hint under the title and the description: "Too short", "Almost there", "Good" or "Too long", with the characters left. It counts what the site renders, so placeholders and the site default count.
+- An **Auto-generate** button there, which copies the filled site default into the field to edit it. An empty field shows that default as its placeholder.
+- A search preview below: the page URL (the site `url` plus the permalink), the title and the description.
+
+The editor reads the `general` and `seo` globals of the content language and the collection's templates, and uses `seoMeta()`, so the preview is what the site renders. The lengths are fixed.
 
 `seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `tenoncms`. In browser code, import them from `tenoncms/client`, which pulls no server code.
 
@@ -204,10 +270,10 @@ const trail = breadcrumbs(page); // [{ title: 'About', path: '/about' }, …, { 
 
 Most sites need a title, a URL and SEO defaults. `defineCms()` adds two globals for that, `general` and `seo`, with no config:
 
-| Global    | Fields                                                                                                                  |
-| --------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                                                   |
-| `seo`     | `separator` (default `·`), `description` (fallback), `image` (social image), `verification.google` / `.bing`, `noindex` |
+| Global    | Fields                                                                                                                                              |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                                                                               |
+| `seo`     | `title` (template, empty is `{title} · {site.title}`), `description` (template), `image` (social image), `verification.google` / `.bing`, `noindex` |
 
 With `localization` and an entry that has a localized group, array or blocks field, a third global, `translations`, holds the default structure setting of each such entry (see [Localization](./localization.md#same-content-structure-in-all-languages)). `settings: { translations: false }` drops it.
 

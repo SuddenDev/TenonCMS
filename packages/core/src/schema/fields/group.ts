@@ -1,3 +1,4 @@
+import type { SeoTemplates } from "../../helpers/seo-meta.ts";
 import type { Base } from "./common.ts";
 import type { Fields } from "./index.ts";
 import type { Layout } from "./layout.ts";
@@ -9,4 +10,11 @@ export type GroupField = Base<Record<string, unknown>> &
     type: "group";
     /** The nested fields. Groups MAY contain groups. */
     fields: Fields;
+    /**
+     * Admin only: a built-in editor around the fields. `'seo'` adds length hints, Auto-generate buttons, checks and a
+     * search preview. The group MUST have the fields of `seo()`. Set by `seo()`.
+     */
+    editor?: "seo";
+    /** Admin only, with `editor: 'seo'`: the collection's title and description templates, for hints and the preview. */
+    templates?: SeoTemplates;
   };

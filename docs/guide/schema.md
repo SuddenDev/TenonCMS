@@ -212,6 +212,7 @@ seo: {
 - Inner `required` fields apply only when the group is present.
 - The admin saves an optional group that holds only empty values as `null`.
 - Filters (`where`, query strings) accept top-level fields only, not groups or their inner fields.
+- `editor: "seo"` shows the admin's SEO editor around the fields of [`seo()`](./pages-and-seo.md#the-seo-editor). It is set by `seo()`.
 
 ## Links
 

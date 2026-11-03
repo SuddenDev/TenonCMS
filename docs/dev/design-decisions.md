@@ -18,7 +18,7 @@ The choices that shape the rest of the code, and why.
 - **Writes run in one transaction** with their hooks, deletion effects and nested calls. Nested calls MUST go through the hook's `cms`.
 - **Options the admin evaluates MUST be JSON.** Conditions, built-in checks and plain defaults run in both places. `validate`, function defaults and hooks run on the server only.
 - **Tiptap on the server too.** The server checks and renders rich text with the same Tiptap and ProseMirror schema as the editor, so both always agree. Its size (about 960 KiB raw) is accepted; a lighter server-only path is not an option.
-- **Presets are data, not features.** Page paths are stored and filtered like any field, with no special "find by path". The SEO title fallback is computed at render time and never stored.
+- **Presets are data, not features.** Page paths are stored and filtered like any field, with no special "find by path". SEO titles and descriptions are templates filled at render time and never stored. The admin's Auto-generate copies a filled default into the field only when the editor asks.
 
 ## Structure
 

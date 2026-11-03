@@ -1,4 +1,5 @@
 import { defineCollection, ValidationError } from "tenoncms";
+import { seo } from "tenoncms/presets";
 
 export const posts = defineCollection({
   label: "Posts",
@@ -39,9 +40,15 @@ export const posts = defineCollection({
     },
     hero: { type: "image", localized: false, folder: "posts", image: { sizes: [480, 960, 1440] } },
     body: { type: "textarea" },
+    ...seo({ title: "{title} – Blog · {site.title}" }).fields,
   },
   hooks: {
     beforeChange: {
+      // Fills an empty SEO description from the body. An editor's own text stays.
+      seoDescription: ({ data }) =>
+        data.seo?.description || !data.body
+          ? data
+          : { ...data, seo: { ...data.seo, description: excerpt(data.body, 150) } },
       featuredNeedsAuthor: ({ data }) => {
         if (data.featured && !data.author)
           throw new ValidationError({ author: "Featured posts need an author" });
@@ -49,3 +56,9 @@ export const posts = defineCollection({
     },
   },
 });
+
+/** The start of `text` with collapsed whitespace, cut at a word within `max` characters. */
+function excerpt(text: string, max: number) {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length <= max ? flat : `${flat.slice(0, max).replace(/\s+\S*$/, "")}…`;
+}

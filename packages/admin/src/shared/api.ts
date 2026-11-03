@@ -5,6 +5,7 @@ import type { Schema } from "../../../core/src/schema";
 import type { Role } from "../../../core/src/users/roles";
 
 export { SLUG_PATTERN, slugify } from "../../../core/src/helpers/slugify";
+export { seoMeta } from "../../../core/src/helpers/seo-meta";
 export { CmsError, LOCK_TTL } from "../../../core/src/client";
 export type {
   Lock,

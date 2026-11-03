@@ -20,7 +20,7 @@ Construction happens in this order:
 | Name      | Type       | Configuration option                    | Default                                 | Description                                                                                      |
 | --------- | ---------- | --------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `general` | Global     | `settings.general`: `Global` or `false` | Enabled                                 | Site title, tagline, URL and favicon.                                                            |
-| `seo`     | Global     | `settings.seo`: `Global` or `false`     | Enabled                                 | Title separator, social image, verification codes and indexing preference.                       |
+| `seo`     | Global     | `settings.seo`: `Global` or `false`     | Enabled                                 | Title and description templates, social image, verification and indexing preference.             |
 | `media`   | Collection | `media`: `MediaOptions` or `boolean`    | Enabled on Node.js; disabled on Workers | Uploads and file metadata. Defaults to `./.uploads` storage and IPX image processing on Node.js. |
 
 `settings: false` disables both settings globals. A `Global` replaces the corresponding [preset](../presets/settings.ts) from `settings()`; duplicate global names throw. Without media, the presets omit `favicon` and `image`. With `localization`, the default globals are localized; a replacement is taken as is.

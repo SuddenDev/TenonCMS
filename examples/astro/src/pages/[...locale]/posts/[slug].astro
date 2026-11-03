@@ -2,6 +2,7 @@
 import { seoMeta, ValidationError } from "tenoncms";
 import { edit } from "tenoncms/preview";
 import Header from "../../../components/Header.astro";
+import { posts } from "../../../../collections/posts";
 
 export const prerender = false;
 
@@ -14,9 +15,16 @@ const post =
     ? await cms.findOne("posts", { where: { slug }, locale, alternates: true })
     : undefined;
 if (!post) return new Response("Not found", { status: 404 });
-const general = await cms.getGlobal("general", { locale });
-const text = await cms.getGlobal("strings", { locale, fallback: false });
-const meta = seoMeta(post, { general });
+const [general, seo, text] = await Promise.all([
+  cms.getGlobal("general", { locale }),
+  cms.getGlobal("seo", { locale }),
+  cms.getGlobal("strings", { locale, fallback: false }),
+]);
+const meta = seoMeta(post, {
+  general,
+  seo,
+  templates: posts.fields.seo.templates,
+});
 
 // The access rules of `comments` let anyone create one. It waits for approval, so the page redirects to a note.
 let input = { name: "", body: "" };
@@ -38,10 +46,14 @@ const comments = await cms.find("comments", { where: { post: post.id }, populate
 <html lang={locale}>
   <head>
     <meta charset="utf-8" />
-    <title>{post.title}</title>
+    <title>{meta.title}</title>
+    {meta.description && <meta name="description" content={meta.description} />}
+    {meta.noindex && <meta name="robots" content="noindex" />}
+    {meta.canonical && <link rel="canonical" href={meta.canonical} />}
     {meta.alternates.map((a) => (
       <link rel="alternate" hreflang={a.hreflang} href={a.href} />
     ))}
+    {meta.image && <meta property="og:image" content={meta.image} />}
   </head>
   <body>
     <Header alternates={post.alternates} />

@@ -207,6 +207,19 @@ describe("page preset", () => {
     expect((await cms.findById("pages", p.id))?.seo).toEqual({ description: "D" });
   });
 
+  it("sends the seo editor option to the admin", async () => {
+    expect(seo().fields.seo.editor).toBe("seo");
+    const res = await client.request<any>("/schema");
+    expect(res.collections.pages.fields.seo.editor).toBe("seo");
+  });
+
+  it("keeps the templates of seo() on the group, typed", () => {
+    const { seo: group } = seo({ title: "{title} – Blog" }).fields;
+    expect(group.templates).toEqual({ title: "{title} – Blog" });
+    group.templates.title satisfies "{title} – Blog";
+    expect(seo().fields.seo.templates).toEqual({});
+  });
+
   it("reads a page by path over HTTP", async () => {
     const { team } = await tree();
     const res = await fetch(`${origin}/_tenon/collections/pages?path=/about/team`);

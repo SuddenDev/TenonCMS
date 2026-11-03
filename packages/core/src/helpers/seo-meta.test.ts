@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { seoMeta } from "./seo-meta.ts";
+import { DEFAULT_SEO_TITLE, seoMeta } from "./seo-meta.ts";
 
 it("seoMeta falls back to the title", () => {
   expect(seoMeta({ title: "About", seo: null })).toEqual({
@@ -32,18 +32,59 @@ it("seoMeta falls back to the title", () => {
   expect(seoMeta({ title: "About", seo: { title: "Custom" } }).title).toBe("Custom");
 });
 
-it("seoMeta appends the site title", () => {
+it("seoMeta builds the title from the default template", () => {
   const general = { title: "Site" };
+  expect(DEFAULT_SEO_TITLE).toBe("{title} · {site.title}");
   expect(seoMeta({ title: "Hello" }, { general }).title).toBe("Hello · Site");
-  expect(seoMeta({ title: "Hello" }, { general, seo: { separator: " | " } }).title).toBe(
-    "Hello | Site",
-  );
-  expect(seoMeta({ title: "Hello", seo: { title: "Custom" } }, { general }).title).toBe(
-    "Custom · Site",
-  );
   expect(seoMeta({ title: "Hello" }, { general: {} }).title).toBe("Hello");
   expect(seoMeta({ title: "Hello" }, { general: { title: "" } }).title).toBe("Hello");
   expect(seoMeta({ title: "Hello" }, { general: null, seo: null }).title).toBe("Hello");
+});
+
+it("seoMeta takes the title template of the site", () => {
+  const general = { title: "Site", tagline: "Fast" };
+  const seo = { title: "{title} | {site.title} – {site.tagline}" };
+  expect(seoMeta({ title: "Hello" }, { general, seo }).title).toBe("Hello | Site – Fast");
+  expect(seoMeta({ title: "Hello" }, { general: { title: "Site" }, seo }).title).toBe(
+    "Hello | Site",
+  );
+  expect(seoMeta({ title: "Hello" }, { general, seo: { title: "" } }).title).toBe("Hello · Site");
+});
+
+it("seoMeta uses the page's own title as the whole title, with placeholders", () => {
+  const general = { title: "Site" };
+  expect(seoMeta({ title: "Hello", seo: { title: "Custom" } }, { general }).title).toBe("Custom");
+  expect(
+    seoMeta({ title: "Hello", seo: { title: "{title}  sale | {site.title}" } }, { general }).title,
+  ).toBe("Hello sale | Site");
+});
+
+it("seoMeta prefers the collection's templates to the site's", () => {
+  const general = { title: "Site" };
+  const templates = { title: "{title} – Blog · {site.title}", description: "About {title}" };
+  const seo = { title: "{title} | {site.title}", description: "Site text" };
+  expect(seoMeta({ title: "A" }, { general, seo, templates })).toMatchObject({
+    title: "A – Blog · Site",
+    description: "About A",
+  });
+  expect(seoMeta({ title: "A", seo: { title: "Own" } }, { general, seo, templates }).title).toBe(
+    "Own",
+  );
+  expect(seoMeta({ title: "A" }, { general, seo, templates: {} })).toMatchObject({
+    title: "A | Site",
+    description: "Site text",
+  });
+  expect(seoMeta({ title: "A" }, { general, templates: null }).title).toBe("A · Site");
+});
+
+it("seoMeta fills placeholders from any field, nested ones included", () => {
+  const doc = { title: "A", excerpt: "Short", category: { title: "News" }, views: 3 };
+  const seo = { title: "{category.title}: {title} ({views})", description: "{excerpt}" };
+  expect(seoMeta(doc, { seo })).toMatchObject({ title: "News: A (3)", description: "Short" });
+  expect(seoMeta({ title: "A", category: "id1" }, { seo }).title).toBe("A ()");
+  expect(
+    seoMeta({ title: "A" }, { seo: { description: "{excerpt}" } }).description,
+  ).toBeUndefined();
 });
 
 it("seoMeta sets noindex from the page or the site", () => {
