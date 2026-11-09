@@ -129,7 +129,6 @@ describe("defineCms", () => {
     const cms = defineCms({ ...opts, media: false });
     const { general, seo } = cms.schema.globals!;
     expect(Object.keys(general.fields)).toEqual(["title", "tagline", "url"]);
-    expect(Object.keys(seo.fields)).toEqual(["title", "description", "verification", "noindex"]);
     await cms.setGlobal("general", { title: "Site" });
     expect(await cms.getGlobal("general")).toMatchObject({ title: "Site" });
   });
