@@ -11,6 +11,8 @@ Every setup does the same three things: send `/_tenon/*` to the CMS, serve the a
 
 To serve the admin under another path, pass `admin: '/cms'` to the Astro integration or the Nuxt module. Pass `admin: false` to ship no admin at all.
 
+The CMS also serves `/sitemap.xml` and `/robots.txt` (see [Pages and SEO](pages-and-seo.md#sitemap-and-robotstxt)). Astro and Nuxt mount them, unless your project serves the path itself. `sitemap: false` and `robots: false` skip them. Other hosts send both paths to `cms.fetch(request)`.
+
 ## Astro
 
 ```ts
@@ -124,11 +126,11 @@ export default defineNuxtConfig({
 
 `tenon.config.ts` can call `useRuntimeConfig()` for the secret and the database URL.
 
-The module auto-imports `useTenon()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results. `useLocale()`, `useAlternates()` ([Localization](localization.md)) and `useLivePreview()` ([Live preview](live-preview.md#check-for-the-live-preview)) are auto-imported too.
+The module auto-imports `useTenon()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results. `useTenonSeo()` ([Pages and SEO](pages-and-seo.md#in-nuxt)), `useLocale()`, `useAlternates()` ([Localization](localization.md)), `useLivePreview()` ([Live preview](live-preview.md#check-for-the-live-preview)) and `useBlockEdit()` are auto-imported too, and so are the components `TenonLink`, `TenonBlocks` and `TenonRichtext` ([Vue components](components.md)).
 
 - During SSR it calls the CMS in-process. On client-side navigation it fetches the public read API.
 - Read options and document ids accept refs or getters. Use a getter for route-dependent filters, so reused pages update on navigation. The route's locale updates automatically.
-- Keep `seoMeta()` in a computed and pass getters to `useHead()` or `useSeoMeta()`, so the head follows the document.
+- `useTenonSeo(page)` fills the head from the document. With `seoMeta()` yourself, keep it in a computed and pass getters to `useHead()` or `useSeoMeta()`, so the head follows the document.
 
 ```vue
 <script setup lang="ts">
@@ -183,6 +185,15 @@ export const Route = createFileRoute("/admin/$")({
 });
 ```
 
+Two more routes serve the sitemap and `robots.txt`. The brackets escape the dot:
+
+```ts
+// src/routes/sitemap[.]xml.ts, and the same for robots[.]txt.ts with "/robots.txt"
+export const Route = createFileRoute("/sitemap.xml")({
+  server: { handlers: { GET: ({ request }) => cms.fetch(request) } },
+});
+```
+
 Loaders run on the client and the server, so read content in a server function:
 
 ```tsx
@@ -198,7 +209,7 @@ export const Route = createFileRoute("/")({ loader: () => getPosts(), component:
 
 ## Any other framework
 
-Send `/_tenon/*` to `cms.fetch(request)`.
+Send `/_tenon/*`, `/sitemap.xml` and `/robots.txt` to `cms.fetch(request)`.
 
 - **With Vite**: use `tenonAdmin()` as in TanStack Start, and return `#tenon/admin-html` for `/admin` and `/admin/*`.
 - **Without Vite**: serve a page of its own with an empty element, and mount the admin into it:

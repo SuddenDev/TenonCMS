@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import {
+  addComponent,
   addImports,
   addPlugin,
   addServerHandler,
@@ -7,6 +8,7 @@ import {
   addVitePlugin,
   createResolver,
   defineNuxtModule,
+  hasNuxtModule,
 } from "@nuxt/kit";
 import type {} from "@nuxt/nitro-server/augments";
 import type { NuxtModule } from "@nuxt/schema";
@@ -17,11 +19,13 @@ import { adminPath } from "../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
 import { setupAdmin } from "./lib/setup-admin.ts";
 import { libsqlBinaries } from "./lib/libsql.ts";
+import { siteRoutes } from "../admin/seo-routes.ts";
 
 export type { AdapterOptions as Options };
 
 /**
- * Nuxt module for tenoncms. Mounts `/_tenon`, serves the admin page, adds `useTenon()` and the preview
+ * Nuxt module for tenoncms. Mounts `/_tenon`, `/sitemap.xml` and `/robots.txt`, serves the admin page, adds
+ * `useTenon()`, `useTenonSeo()`, the components `TenonLink`, `TenonBlocks` and `TenonRichtext`, and the preview
  * runtime. Options go under `tenonCms` in `nuxt.config.ts`.
  * @example
  * // nuxt.config.ts
@@ -42,6 +46,18 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
     resolveOptions.dedupe = [...(resolveOptions.dedupe ?? []), "vue", "vue-router"];
     addServerHandler({ route: `${API_BASE}/**`, handler: `${runtime}/server/handler` });
 
+    // Nitro registers module handlers after the host's `server/routes`, so the same route here would win. The
+    // host's own route, `public/` file or SEO module wins instead.
+    const routes = siteRoutes(
+      {
+        sitemap: options.sitemap !== false && !hasNuxtModule("@nuxtjs/sitemap", nuxt),
+        robots: options.robots !== false && !hasNuxtModule("@nuxtjs/robots", nuxt),
+      },
+      resolve(nuxt.options.rootDir, nuxt.options.dir.public),
+      [resolve(nuxt.options.serverDir, "routes")],
+    );
+    for (const route of routes) addServerHandler({ route, handler: `${runtime}/server/handler` });
+
     // The admin page, a second client entry in the host's Vite build.
     const path = adminPath(options.admin);
     if (path) setupAdmin(nuxt, path, runtime);
@@ -54,12 +70,18 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
       clientReferences(options.entry!, nuxt.options.rootDir) as Parameters<typeof addVitePlugin>[0],
     );
 
-    addImports(
-      ["useTenon", "useLocale", "useAlternates", "useLivePreview"].map((name) => ({
-        name,
-        from: `${runtime}/composables`,
-      })),
-    );
+    addImports([
+      ...["useTenon", "useTenonSeo", "useLocale", "useAlternates", "useLivePreview"].map(
+        (name) => ({
+          name,
+          from: `${runtime}/composables`,
+        }),
+      ),
+      { name: "useBlockEdit", from: "tenoncms/vue" },
+    ]);
+    addComponent({ name: "TenonLink", filePath: `${runtime}/components/link` });
+    for (const name of ["Blocks", "Richtext"])
+      addComponent({ name: `Tenon${name}`, export: name, filePath: "tenoncms/vue" });
 
     // The preview runtime reads the admin path for the bars' links; `false` renders no admin bar.
     nuxt.options.runtimeConfig.public.tenon = { admin: path ?? false };

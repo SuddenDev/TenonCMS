@@ -107,6 +107,7 @@ export type Select<
       updatedBy?: true;
       publishedAt?: true;
       hasDraft?: true;
+      permalink?: true;
     } & ([L] extends [never]
       ? {}
       : {
@@ -173,6 +174,8 @@ export type ReadOptions<
   fallback?: boolean;
   /** Adds `alternates` to documents of localized collections with a `permalink`: the URL of each published locale, and `"x-default"`. Costs one read per locale. */
   alternates?: boolean;
+  /** Adds `permalink` to documents: the public URL in the read's locale, `null` without one. Collections only. */
+  permalink?: boolean;
 };
 
 /** Checks the `populate` and `select` literals at every level. */

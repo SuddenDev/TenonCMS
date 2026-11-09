@@ -7,6 +7,7 @@ import type {
 } from "../../content/writes/sync-structure.ts";
 import type {
   AlternatesOf,
+  PermalinkMeta,
   Checked,
   Data,
   Doc,
@@ -59,7 +60,7 @@ type ReadCollection<
   Collections<T>[K]["fields"],
   PopulateOf<O, D>,
   SelectOf<O>,
-  LocaleMeta<Collections<T>[K], L, SelectOf<O>, AlternatesOf<O>>
+  LocaleMeta<Collections<T>[K], L, SelectOf<O>, AlternatesOf<O>> & PermalinkMeta<O, SelectOf<O>>
 >;
 type ReadGlobal<
   T extends Schema,

@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from "./routes/__root";
 import { Route as IndexRouteImport } from "./routes/index";
 import { Route as SplatRouteImport } from "./routes/$";
+import { Route as RobotsDottxtRouteImport } from "./routes/robots[.]txt";
+import { Route as SitemapDotxmlRouteImport } from "./routes/sitemap[.]xml";
 import { Route as TenonSplatRouteImport } from "./routes/[_]tenon.$";
 import { Route as AdminSplatRouteImport } from "./routes/admin.$";
 import { Route as PostsSlugRouteImport } from "./routes/posts/$slug";
@@ -23,6 +25,16 @@ const IndexRoute = IndexRouteImport.update({
 const SplatRoute = SplatRouteImport.update({
   id: "/$",
   path: "/$",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: "/robots.txt",
+  path: "/robots.txt",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: "/sitemap.xml",
+  path: "/sitemap.xml",
   getParentRoute: () => rootRouteImport,
 } as any);
 const TenonSplatRoute = TenonSplatRouteImport.update({
@@ -44,6 +56,8 @@ const PostsSlugRoute = PostsSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "/$": typeof SplatRoute;
+  "/robots.txt": typeof RobotsDottxtRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
   "/_tenon/$": typeof TenonSplatRoute;
   "/admin/$": typeof AdminSplatRoute;
   "/posts/$slug": typeof PostsSlugRoute;
@@ -51,6 +65,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/$": typeof SplatRoute;
+  "/robots.txt": typeof RobotsDottxtRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
   "/_tenon/$": typeof TenonSplatRoute;
   "/admin/$": typeof AdminSplatRoute;
   "/posts/$slug": typeof PostsSlugRoute;
@@ -59,21 +75,40 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/": typeof IndexRoute;
   "/$": typeof SplatRoute;
+  "/robots.txt": typeof RobotsDottxtRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
   "/_tenon/$": typeof TenonSplatRoute;
   "/admin/$": typeof AdminSplatRoute;
   "/posts/$slug": typeof PostsSlugRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/$" | "/_tenon/$" | "/admin/$" | "/posts/$slug";
+  fullPaths:
+    | "/"
+    | "/$"
+    | "/robots.txt"
+    | "/sitemap.xml"
+    | "/_tenon/$"
+    | "/admin/$"
+    | "/posts/$slug";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/$" | "/_tenon/$" | "/admin/$" | "/posts/$slug";
-  id: "__root__" | "/" | "/$" | "/_tenon/$" | "/admin/$" | "/posts/$slug";
+  to: "/" | "/$" | "/robots.txt" | "/sitemap.xml" | "/_tenon/$" | "/admin/$" | "/posts/$slug";
+  id:
+    | "__root__"
+    | "/"
+    | "/$"
+    | "/robots.txt"
+    | "/sitemap.xml"
+    | "/_tenon/$"
+    | "/admin/$"
+    | "/posts/$slug";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   SplatRoute: typeof SplatRoute;
+  RobotsDottxtRoute: typeof RobotsDottxtRoute;
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute;
   TenonSplatRoute: typeof TenonSplatRoute;
   AdminSplatRoute: typeof AdminSplatRoute;
   PostsSlugRoute: typeof PostsSlugRoute;
@@ -93,6 +128,20 @@ declare module "@tanstack/react-router" {
       path: "/$";
       fullPath: "/$";
       preLoaderRoute: typeof SplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/robots.txt": {
+      id: "/robots.txt";
+      path: "/robots.txt";
+      fullPath: "/robots.txt";
+      preLoaderRoute: typeof RobotsDottxtRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/sitemap.xml": {
+      id: "/sitemap.xml";
+      path: "/sitemap.xml";
+      fullPath: "/sitemap.xml";
+      preLoaderRoute: typeof SitemapDotxmlRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/_tenon/$": {
@@ -122,6 +171,8 @@ declare module "@tanstack/react-router" {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TenonSplatRoute: TenonSplatRoute,
   AdminSplatRoute: AdminSplatRoute,
   PostsSlugRoute: PostsSlugRoute,

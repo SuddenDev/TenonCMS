@@ -20,6 +20,8 @@ type Options = {
   fallback?: boolean;
   /** Adds `alternates`, the URL of each published locale. */
   alternates?: boolean;
+  /** Adds `permalink`, the public URL in the read's locale. */
+  permalink?: boolean;
 };
 /** Options of `publish` and `publishGlobal`. */
 type PublishOptions = { locale?: string } & ConflictOptions;

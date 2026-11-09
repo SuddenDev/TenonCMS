@@ -52,11 +52,11 @@ import Richtext from "tenoncms/richtext/astro";
 
 ```vue
 <script setup lang="ts">
-import { Richtext } from "tenoncms/richtext/vue";
+import { Richtext } from "tenoncms/vue"; // in Nuxt: <TenonRichtext>, auto-imported
 </script>
 
 <template>
-  <Richtext :content="post.body" class="prose" />
+  <Richtext :content="post.body" class="prose" as="article" />
 </template>
 ```
 
@@ -68,6 +68,7 @@ import { Richtext } from "tenoncms/richtext/react";
 
 - `content` can be `null` or `undefined`. Pass populated content to get current link and image URLs; the components fetch nothing.
 - `extensions` adds renderers for custom features, keyed by feature name.
+- Vue: `as` sets the element (default `div`); `asChild` renders into the element in its slot. See [Vue components](./components.md).
 - `renderRichtext(content, extensions?)` from `tenoncms/richtext` returns the same HTML for any other template. It escapes text, checks URLs, and rejects unsupported content instead of dropping it.
 
 ## Add features from a plugin

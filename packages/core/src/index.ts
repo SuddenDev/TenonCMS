@@ -81,12 +81,18 @@ export {
   localizePath,
   type MenuItem,
   menuItems,
+  type RobotsRule,
+  robotsTxt,
   SLUG_PATTERN,
+  type SeoTemplates,
   seoMeta,
+  type SitemapEntry,
+  sitemapXml,
   slugify,
   switchTarget,
 } from "./helpers/index.ts";
 
+export type { RobotsOptions, SitemapOptions } from "./seo/config/types.ts";
 export type { RichtextDocument, RichtextNode, RichtextReference } from "./richtext/config/types.ts";
 export type {
   LinkRead,

@@ -41,6 +41,7 @@ import { createEmail } from "../email/create-email.ts";
 import { emailTemplates } from "../email/templates.ts";
 import { normalizeRoles } from "../users/roles.ts";
 import { checkAccess } from "../access/check-access.ts";
+import { sitemapEntries } from "../seo/sitemap-entries.ts";
 
 /**
  * Creates a CMS instance.
@@ -82,6 +83,8 @@ export function defineCms<
   site,
   admin,
   roles: roleOptions,
+  sitemap = {},
+  robots = {},
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S, L, B, PR>) {
   type T = {
@@ -205,6 +208,8 @@ export function defineCms<
       emailTemplates: emailOptions && { ...emailTemplates, ...emailOptions.templates },
       roles,
       translations,
+      sitemap,
+      robots,
       localApi: (scope) => createLocalApi(core, scope),
       media,
       admin: adminRuntime,
@@ -248,7 +253,13 @@ export function defineCms<
         return createInstance(bound, await caller(core, request), false) as S;
       },
 
-      /** Handles `/_tenon` requests. Mount it in any framework that speaks Request/Response. */
+      /**
+       * The entries of `/sitemap.xml`, absolute against the site URL (the `general` settings' `url`, then `site`).
+       * Render them with `sitemapXml()` in a route of your own.
+       */
+      sitemap: () => sitemapEntries(core, { site }),
+
+      /** Handles `/_tenon`, `/sitemap.xml` and `/robots.txt`. Mount it in any framework that speaks Request/Response. */
       fetch(request: Request): Promise<Response> {
         return app.fetch(request) as Promise<Response>;
       },

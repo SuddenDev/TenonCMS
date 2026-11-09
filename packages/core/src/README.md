@@ -26,8 +26,9 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `plugins/`      | Extension contracts, schema merging and named route mounting.     | [README](plugins/README.md)                 |
 | `presets/`      | Ready-made fields, hooks and settings.                            | [README](presets/README.md)                 |
 | `helpers/`      | Import-free render helpers.                                       | [README](helpers/README.md)                 |
+| `seo/`          | `/sitemap.xml`, `/robots.txt` and `cms.sitemap()`.                | [README](seo/README.md)                     |
 | `admin/`        | Page/build glue and public UI extension contracts.                | [README](admin/README.md)                   |
-| `integrations/` | Framework adapters, rich-text components and preview helpers.     | [README](integrations/README.md)            |
+| `integrations/` | Framework adapters, Vue components and preview helpers.           | [README](integrations/README.md)            |
 | `tests/`        | Behavior tests against a real in-memory CMS.                      | [README](tests/README.md)                   |
 
 `index.ts` lists the public root exports. `errors.ts` remains import-free for browser consumers. Internal implementations import their owning leaf modules. Feature definitions belong to `config/`; Hono routes to `endpoints/`; use cases to `operations/`; scoped collection/global methods to `operations/local/`.

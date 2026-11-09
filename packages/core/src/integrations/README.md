@@ -20,12 +20,13 @@ Runtime adapter:
 
 - `tenoncms/cloudflare`: runs the CMS inside a SQLite-backed Durable Object. `durableObject()` is the config's `database`. `tenonObject(cms)` returns the object class. `createObjectClient(request, stub)` is the HTTP client for code outside the object. The Astro integration switches to it with `@astrojs/cloudflare`. Each object gets its own copy of the instance through `withDatabase()` (`src/cms/`), bound to its storage by `durableObjectDialect()` (`src/db/adapters/`). The config's own instance keeps its schema and `localization`, but every database call throws.
 
-Each integration points `#tenon/config` at the host's `tenon.config.ts`, mounts `/_tenon` (`cms.fetch`, see `src/http/`), serves the admin page (`src/admin/`) and starts the preview runtime (`src/preview/`).
+Each integration points `#tenon/config` at the host's `tenon.config.ts`, mounts `/_tenon` (`cms.fetch`, see `src/http/`), serves the admin page (`src/admin/`) and starts the preview runtime (`src/preview/`). Astro and Nuxt also mount `/sitemap.xml` and `/robots.txt` on the same handler, except a path that `siteRoutes()` finds served by the host (see `src/seo/`).
 `tenoncms/vite` only serves the admin; the host mounts the API itself. (see the tanstack start example)
 
 ## Frontend helpers
 
 - `tenoncms/richtext/astro`: `astro/Richtext.astro`.
+- `tenoncms/vue`: `vue/index.ts`, the Vue components `Link`, `Blocks` (with `useBlockEdit()`) and `Richtext`. They take `as` and `asChild` through `vue/primitive.ts`, like reka-ui. Nuxt registers them as `TenonLink` (`nuxt/runtime/components/link.ts`, with `NuxtLink` as `as`), `TenonBlocks` and `TenonRichtext`.
 - `tenoncms/richtext/vue` and `tenoncms/richtext/react`: `vue/richtext.ts` and `react/richtext.ts`. Vue also covers Nuxt.
 - `tenoncms/preview/vue` and `tenoncms/preview/react`: `vue/preview.ts` and `react/preview.ts`, exporting `useDraft()`.
 
@@ -70,39 +71,45 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 
 ## Files
 
-| Path                                       | Responsibility                                                                                                                                        |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `admin/types.ts`                           | `AdminOption` and `AdapterOptions`. `tenoncms/nuxt` exports the latter as `Options`.                                                                  |
-| `admin/path.ts`                            | `adminPath()`: validates the `admin` option.                                                                                                          |
-| `admin/client-refs/client-references.ts`   | `clientReferences()`: the Vite plugin that serves `#tenon/client-registry`.                                                                           |
-| `admin/client-refs/collect-client-refs.ts` | `collectClientRefs()`: walks the static import graph of `tenon.config.ts` and resolves every `clientRef()` specifier to a file.                       |
-| `admin/client-refs/scan-refs.ts`           | `scanModule()` and `scanExport()`: find the `clientRef()` calls of one module and mark the ones `adminBar` reaches.                                   |
-| `admin/client-refs/module-syntax.ts`       | `parseModule()` and `describeModule()`: parse a script or Vue file and read its imports, exports and declarations.                                    |
-| `admin/client-refs/resolve-import.ts`      | `resolveImport()`: skips Node built-ins and the package's own entries.                                                                                |
-| `admin/client-refs/check-site-styles.ts`   | `checkSiteStyles()`: rejects CSS and Vue `<style>` blocks in the admin bar's graph.                                                                   |
-| `admin/client-refs/types.ts`               | `Resolver`, `ClientRef`, `Binding` and the AST aliases.                                                                                               |
-| `admin/client-refs/test-project.ts`        | Test helper: a temporary project and a relative-import resolver.                                                                                      |
-| `admin/build.ts`                           | `adminInput()` and `adminChunk`: the admin's client input.                                                                                            |
-| `admin/favicon.ts`                         | `findFavicon()` and `faviconDefine()`: the host favicon as a Vite define.                                                                             |
-| `admin/html.ts`                            | `adminHtml()`: the standalone admin page.                                                                                                             |
-| `astro/index.ts`                           | `tenonCms()`: routes, aliases, middleware, preview script and injected types.                                                                         |
-| `astro/route.ts`                           | The `/_tenon` route.                                                                                                                                  |
-| `astro/middleware.ts`                      | Sets `Astro.locals.tenon` to the instance of the request's user, and `locals.locale` and `locals.path` (the path without the locale prefix).          |
-| `astro/admin.astro`                        | The admin page.                                                                                                                                       |
-| `astro/cloudflare/route.ts`                | With `@astrojs/cloudflare`: passes `/_tenon` to the CMS object.                                                                                       |
-| `astro/cloudflare/middleware.ts`           | With `@astrojs/cloudflare`: sets `Astro.locals.tenon` to the client over the CMS object, and `locale` and `path`.                                     |
-| `cloudflare/index.ts`                      | `durableObject()` and `tenonObject()`: the CMS inside a Durable Object.                                                                               |
-| `libsql/index.ts`                          | `libsql()`: the `database` on a SQLite file, `:memory:` or Turso.                                                                                     |
-| `sqlite/index.ts`                          | `sqlite()`: the `database` on `node:sqlite`, a SQLite file or `:memory:`.                                                                             |
-| `postgres/index.ts`                        | `postgres()`: the `database` on a Postgres server.                                                                                                    |
-| `pglite/index.ts`                          | `pglite()`: the `database` on PGlite.                                                                                                                 |
-| `cloudflare/object-client.ts`              | `createObjectClient()`: the client over the object's stub, with the request's origin and cookie.                                                      |
-| `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                                        |
-| `nuxt/runtime/composables.ts`              | `useTenon()`: the client's read methods in `useAsyncData`, in the route's locale, with preview drafts merged in. `useLocale()` and `useAlternates()`. |
-| `nuxt/runtime/plugin.client.ts`            | Starts the preview runtime.                                                                                                                           |
-| `nuxt/runtime/server/handler.ts`           | The `/_tenon` handler.                                                                                                                                |
-| `nuxt/runtime/server/admin.ts`             | Serves the admin page from `#tenon/admin-html`.                                                                                                       |
-| `vite/index.ts`                            | `tenonAdmin()`: the admin entry and `#tenon/admin-html` for frameworks without an adapter.                                                            |
+| Path                                       | Responsibility                                                                                                                                                         |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin/types.ts`                           | `AdminOption` and `AdapterOptions`. `tenoncms/nuxt` exports the latter as `Options`.                                                                                   |
+| `admin/path.ts`                            | `adminPath()`: validates the `admin` option.                                                                                                                           |
+| `admin/client-refs/client-references.ts`   | `clientReferences()`: the Vite plugin that serves `#tenon/client-registry`.                                                                                            |
+| `admin/client-refs/collect-client-refs.ts` | `collectClientRefs()`: walks the static import graph of `tenon.config.ts` and resolves every `clientRef()` specifier to a file.                                        |
+| `admin/client-refs/scan-refs.ts`           | `scanModule()` and `scanExport()`: find the `clientRef()` calls of one module and mark the ones `adminBar` reaches.                                                    |
+| `admin/client-refs/module-syntax.ts`       | `parseModule()` and `describeModule()`: parse a script or Vue file and read its imports, exports and declarations.                                                     |
+| `admin/client-refs/resolve-import.ts`      | `resolveImport()`: skips Node built-ins and the package's own entries.                                                                                                 |
+| `admin/client-refs/check-site-styles.ts`   | `checkSiteStyles()`: rejects CSS and Vue `<style>` blocks in the admin bar's graph.                                                                                    |
+| `admin/client-refs/types.ts`               | `Resolver`, `ClientRef`, `Binding` and the AST aliases.                                                                                                                |
+| `admin/client-refs/test-project.ts`        | Test helper: a temporary project and a relative-import resolver.                                                                                                       |
+| `admin/build.ts`                           | `adminInput()` and `adminChunk`: the admin's client input.                                                                                                             |
+| `admin/favicon.ts`                         | `findFavicon()` and `faviconDefine()`: the host favicon as a Vite define.                                                                                              |
+| `admin/html.ts`                            | `adminHtml()`: the standalone admin page, with `noindex`.                                                                                                              |
+| `admin/seo-routes.ts`                      | `siteRoutes()`: `/sitemap.xml` and `/robots.txt`, minus those turned off or served by a host file in `public/` or a route folder.                                      |
+| `astro/index.ts`                           | `tenonCms()`: routes, aliases, middleware, preview script and injected types.                                                                                          |
+| `astro/route.ts`                           | The `/_tenon` route.                                                                                                                                                   |
+| `astro/middleware.ts`                      | Sets `Astro.locals.tenon` to the instance of the request's user, and `locals.locale` and `locals.path` (the path without the locale prefix).                           |
+| `astro/admin.astro`                        | The admin page.                                                                                                                                                        |
+| `astro/cloudflare/route.ts`                | With `@astrojs/cloudflare`: passes `/_tenon` to the CMS object.                                                                                                        |
+| `astro/cloudflare/middleware.ts`           | With `@astrojs/cloudflare`: sets `Astro.locals.tenon` to the client over the CMS object, and `locale` and `path`.                                                      |
+| `cloudflare/index.ts`                      | `durableObject()` and `tenonObject()`: the CMS inside a Durable Object.                                                                                                |
+| `libsql/index.ts`                          | `libsql()`: the `database` on a SQLite file, `:memory:` or Turso.                                                                                                      |
+| `sqlite/index.ts`                          | `sqlite()`: the `database` on `node:sqlite`, a SQLite file or `:memory:`.                                                                                              |
+| `postgres/index.ts`                        | `postgres()`: the `database` on a Postgres server.                                                                                                                     |
+| `pglite/index.ts`                          | `pglite()`: the `database` on PGlite.                                                                                                                                  |
+| `cloudflare/object-client.ts`              | `createObjectClient()`: the client over the object's stub, with the request's origin and cookie.                                                                       |
+| `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                                                         |
+| `nuxt/runtime/composables.ts`              | `useTenon()`: the client's read methods in `useAsyncData`, in the route's locale, with preview drafts merged in. `useLocale()`, `useAlternates()` and `useTenonSeo()`. |
+| `nuxt/runtime/components/link.ts`          | `TenonLink`: `Link` with `NuxtLink` as `as`.                                                                                                                           |
+| `vue/index.ts`                             | `tenoncms/vue`: `Link`, `Blocks`, `useBlockEdit()` and `Richtext`.                                                                                                     |
+| `vue/primitive.ts`                         | `primitiveProps` and `renderPrimitive()`: `as` and `asChild`.                                                                                                          |
+| `vue/link.ts`                              | `Link`: a populated `link` field. A component `as` gets internal paths as `to`.                                                                                        |
+| `vue/blocks.ts`                            | `Blocks` and `useBlockEdit()`: a component per `blockType`, and `data-cms` values by block index.                                                                      |
+| `nuxt/runtime/plugin.client.ts`            | Starts the preview runtime.                                                                                                                                            |
+| `nuxt/runtime/server/handler.ts`           | The `/_tenon` handler.                                                                                                                                                 |
+| `nuxt/runtime/server/admin.ts`             | Serves the admin page from `#tenon/admin-html`.                                                                                                                        |
+| `vite/index.ts`                            | `tenonAdmin()`: the admin entry and `#tenon/admin-html` for frameworks without an adapter.                                                                             |
 
 Files the host compiles (`route.ts`, `middleware.ts`, `astro/cloudflare/`, `admin.astro`, `nuxt/runtime/`) ship as `.ts` source in `dist/`. Server runtime files MUST import from `h3`, not `#imports`. The admin path MUST NOT be `/` or sit under `API_BASE`. Builds keep core external in SSR, because bundling it breaks libsql's native binding; Nitro 2 also needs the libsql binaries in `traceInclude`.
 

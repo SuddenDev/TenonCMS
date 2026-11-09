@@ -16,7 +16,7 @@ export function findEndpoint(core: Core) {
 
   return new Hono<Env>().get("/collections/:name", async (c) => {
     const { name, fields } = collectionOf(collections, c.req.param("name"));
-    const { limit, populate, depth, select, locale, fallback, alternates, ...query } =
+    const { limit, populate, depth, select, locale, fallback, alternates, permalink, ...query } =
       c.req.query();
 
     const where = whereFromQuery(fields, query);
@@ -36,6 +36,7 @@ export function findEndpoint(core: Core) {
         locale,
         fallback,
         alternates,
+        permalink,
       },
       metaKeys(collections[name].localized),
     );

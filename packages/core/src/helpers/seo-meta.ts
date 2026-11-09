@@ -7,6 +7,8 @@ type Image = unknown;
 type SeoDoc = Record<string, unknown> & {
   title?: unknown;
   path?: unknown;
+  /** The `permalink` of a read with `permalink: true`. Wins over `path`. */
+  permalink?: string | null;
   locale?: unknown;
   /** The `alternates` metadata of a read with `alternates: true`. */
   alternates?: Record<string, string> | null;
@@ -80,7 +82,7 @@ function urlOf(image: Image) {
  * - `description`: the document's `seo.description`, else `templates.description`, else the site's. `undefined` when
  *   it fills to nothing.
  * - `noindex`: `true` when the document's or the site's `seo.noindex` is `true`.
- * - `canonical`: the URL of the document's own locale in `alternates`, else `general.url` joined with the document's `path`. `undefined` unless one of them exists.
+ * - `canonical`: the URL of the document's own locale in `alternates`, else `general.url` joined with the document's `permalink`, else its `path`. `undefined` unless one of them exists.
  * - `alternates`: `{ hreflang, href }[]` for the `<link rel="alternate">` tags, from `doc.alternates` (`x-default` included). Absolute against `general.url` when it is set. Empty without `doc.alternates`.
  * - `image`: URL of the document's `seo.image`, else of the site's. Absolute against `general.url` when it is set. Only a populated media document counts; an id string is ignored.
  * - `verification`: `{ name, content }` meta tags for the filled `seo.verification` fields.
@@ -97,7 +99,7 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
       : fillTemplate(template, own ? { ...context, title: fillTemplate(own, context) } : context);
   const description = doc.seo?.description || templates?.description || seo?.description;
   const image = urlOf(doc.seo?.image) ?? urlOf(seo?.image);
-  const path = typeof doc.path === "string" && doc.path ? doc.path : undefined;
+  const path = doc.permalink || (typeof doc.path === "string" && doc.path ? doc.path : undefined);
   const { google, bing } = seo?.verification ?? {};
   const alternates = Object.entries(doc.alternates ?? {}).map(([hreflang, href]) => ({
     hreflang,

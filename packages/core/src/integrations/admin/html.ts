@@ -10,6 +10,7 @@ export function adminHtml(base: string, scripts: string[], css: string[] = []) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
     <title>Tenon - Admin</title>
     ${head}
   </head>

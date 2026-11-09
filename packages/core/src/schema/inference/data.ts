@@ -88,6 +88,15 @@ export type GlobalMeta<S = true> = [S] extends [true]
     }
   : {};
 
+/** `permalink` of a read with the `permalink` option. A `select` keeps it only when it lists it. */
+export type PermalinkMeta<Options, SelectSpec> = Options extends { permalink: true }
+  ? [SelectSpec] extends [true]
+    ? { permalink: string | null }
+    : SelectSpec extends { permalink: true }
+      ? { permalink: string | null }
+      : {}
+  : {};
+
 /** A populated `file` field: a document of the media library. */
 export type File = Meta & {
   /** URL of the original. Computed on read. */

@@ -27,18 +27,18 @@ withCms → plugins' publicMiddleware → auth/* or open routes
 
 ## Files
 
-| Path                                | Responsibility                                                                                                    |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `index.ts`                          | Exports `createApp()`.                                                                                            |
-| `app.ts`                            | `createApp()`: mounts open, content and protected routes in order.                                                |
-| `errors.ts`                         | `notFound()` and `handleError()`, which hides unexpected messages.                                                |
-| `parse-body.ts`                     | `parseBody()`: JSON bodies; malformed JSON reads as `undefined`.                                                  |
-| `middleware/types.ts`               | `Env`: the Hono context variables `cms`, `user` and `perspective`.                                                |
-| `middleware/with-cms.middleware.ts` | `withCms()`: binds the userless local API.                                                                        |
-| `query/read-options.ts`             | `readOptions()`: `populate`, `depth`, `select`, `locale`, `fallback` and `alternates`, or a 400 message.          |
-| `query/parse-populate.ts`           | `parsePopulate()`: checks paths and hops against the schema. Groups, arrays, blocks and block names count no hop. |
-| `query/parse-select.ts`             | `parseSelect()`: the selection tree; `badSelectPath()` checks its keys.                                           |
-| `query/path-tree.ts`                | `treeOf()`: dot paths to a null-prototype tree.                                                                   |
-| `query/where-from-query.ts`         | `whereFromQuery()`: query keys to typed equality filters.                                                         |
+| Path                                | Responsibility                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `index.ts`                          | Exports `createApp()`.                                                                                             |
+| `app.ts`                            | `createApp()`: mounts `/sitemap.xml` and `/robots.txt` (`seo/`), then open, content and protected routes in order. |
+| `errors.ts`                         | `notFound()` and `handleError()`, which hides unexpected messages.                                                 |
+| `parse-body.ts`                     | `parseBody()`: JSON bodies; malformed JSON reads as `undefined`.                                                   |
+| `middleware/types.ts`               | `Env`: the Hono context variables `cms`, `user` and `perspective`.                                                 |
+| `middleware/with-cms.middleware.ts` | `withCms()`: binds the userless local API.                                                                         |
+| `query/read-options.ts`             | `readOptions()`: `populate`, `depth`, `select`, `locale`, `fallback`, `alternates` and `permalink`, or a 400.      |
+| `query/parse-populate.ts`           | `parsePopulate()`: checks paths and hops against the schema. Groups, arrays, blocks and block names count no hop.  |
+| `query/parse-select.ts`             | `parseSelect()`: the selection tree; `badSelectPath()` checks its keys.                                            |
+| `query/path-tree.ts`                | `treeOf()`: dot paths to a null-prototype tree.                                                                    |
+| `query/where-from-query.ts`         | `whereFromQuery()`: query keys to typed equality filters.                                                          |
 
 Reads are public unless a read rule says otherwise; the preview cookie reads drafts only with a valid session. Content writes MUST stay behind CSRF and run their access rules; every other write MUST stay behind the session check. HTTP scopes never set `overrideAccess`. Query trees MUST use null-prototype nodes, so a `__proto__` segment cannot pollute `Object.prototype`. Media parses its own bodies and keeps `{}` for malformed JSON.

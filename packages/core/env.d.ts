@@ -24,6 +24,10 @@ declare module "#app" {
   export * from "nuxt/app";
 }
 
+declare module "#components" {
+  export const NuxtLink: import("vue").Component;
+}
+
 declare namespace App {
   interface Locals {
     tenon: typeof import("#tenon/config").default;

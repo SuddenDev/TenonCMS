@@ -13,6 +13,21 @@ await cms.findById("posts", id);
 await cms.getGlobal("general"); // a default settings global, see Pages and SEO
 ```
 
+## Public URLs with `permalink`
+
+`permalink: true` adds `permalink` to each document: its public URL from the collection's [`permalink`](./live-preview.md#1-say-where-a-document-lives), in the read's locale and with the locale prefix of `routing`.
+
+```ts
+const posts = await cms.find("posts", { permalink: true });
+// [{ id: "…", title: "Hello", permalink: "/posts/hello" }, …]
+// HTTP: GET /_tenon/collections/posts?permalink=true
+```
+
+- It is `null` for a collection without a `permalink`, or when a placeholder has no value.
+- `select` keeps it only when it lists it: `select: { title: true, permalink: true }`.
+- A template with a relation hop, like `/{category.slug}/{slug}`, costs one read per document.
+- `alternates: true` adds the URLs of all locales instead (see [Localization](./localization.md)).
+
 ## Pick fields with `select`
 
 Reads return whole documents unless `select` lists the fields you need. `populate` decides which relations are resolved. `select` decides what comes back:

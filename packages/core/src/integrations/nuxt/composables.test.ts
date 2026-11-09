@@ -11,12 +11,15 @@ import {
   type Ref,
 } from "vue";
 import { localeFromPath, localizePath, switchTarget } from "../../helpers/locale-path.ts";
+import { seoMeta } from "../../helpers/seo-meta.ts";
 
 const mocks = vi.hoisted(() => ({
   find: vi.fn(),
   findById: vi.fn(),
   getGlobal: vi.fn(),
   navigateTo: vi.fn(),
+  useSeoMeta: vi.fn(),
+  useHead: vi.fn(),
   event: undefined as { headers: Headers } | undefined,
 }));
 const config = { locales: ["en", "de"], defaultLocale: "en" };
@@ -27,6 +30,8 @@ const app = {};
 
 vi.mock("#app", () => ({
   navigateTo: mocks.navigateTo,
+  useSeoMeta: mocks.useSeoMeta,
+  useHead: mocks.useHead,
   useNuxtApp: () => app,
   useRequestEvent: () => mocks.event,
   onNuxtReady: () => {},
@@ -56,6 +61,7 @@ vi.mock("#app", () => ({
   },
 }));
 vi.mock("tenoncms/client", () => ({
+  seoMeta,
   localeFromPath,
   localizePath,
   switchTarget,
@@ -76,7 +82,13 @@ vi.mock("tenoncms/preview", async () => {
 });
 
 import { readDocuments, setDraft } from "../../preview/runtime/store.ts";
-import { useAlternates, useLivePreview, useTenon, useLocale } from "./runtime/composables.ts";
+import {
+  useAlternates,
+  useLivePreview,
+  useTenon,
+  useTenonSeo,
+  useLocale,
+} from "./runtime/composables.ts";
 
 function setup<T>(fn: () => T): T {
   const scope = effectScope();
@@ -218,4 +230,33 @@ it("shares reactive translation links and keeps a new page's registration when t
   scopes.at(-1)!.stop();
   locale.switchLocale("de");
   expect(mocks.navigateTo).toHaveBeenLastCalledWith("/de");
+});
+
+it("puts the page's SEO tags and translations into the head", async () => {
+  mocks.getGlobal.mockImplementation(async (name: string) =>
+    name === "general" ? { title: "Acme", url: "https://a.co" } : { noindex: false },
+  );
+  const alternates = { en: "/posts/hello", de: "/de/posts/hallo", "x-default": "/posts/hello" };
+  const page = ref({ title: "Hello", path: "/posts/hello", locale: "en", alternates });
+
+  const meta = await setup(() => useTenonSeo(page));
+  expect(meta.value.title).toBe("Hello · Acme");
+
+  const tags = mocks.useSeoMeta.mock.calls[0]![0];
+  expect([tags.title(), tags.ogUrl(), tags.ogSiteName(), tags.robots()]).toEqual([
+    "Hello · Acme",
+    "https://a.co/posts/hello",
+    "Acme",
+    undefined,
+  ]);
+  expect(mocks.useHead.mock.calls[0]![0]().link).toEqual([
+    { rel: "canonical", href: "https://a.co/posts/hello" },
+    { rel: "alternate", hreflang: "en", href: "https://a.co/posts/hello" },
+    { rel: "alternate", hreflang: "de", href: "https://a.co/de/posts/hallo" },
+    { rel: "alternate", hreflang: "x-default", href: "https://a.co/posts/hello" },
+  ]);
+  expect(state.get("tenon:alternates")?.value).toEqual(alternates);
+
+  page.value = { ...page.value, seo: { noindex: true } } as never;
+  expect(tags.robots()).toBe("noindex, nofollow");
 });

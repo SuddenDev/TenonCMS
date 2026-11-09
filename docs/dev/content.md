@@ -39,7 +39,7 @@ At each hook stage the order is: field hooks, then the collection or global, the
 3. `beforeRead`, on the loaded documents
 4. Populate relations
 5. `afterRead`, then removal of fields the caller cannot read
-6. Media URLs, `alternates`, then the `select` of relation fields, then the read's `select`, then `afterOperation`
+6. Media URLs, `alternates`, `permalink`, then the `select` of relation fields, then the read's `select`, then `afterOperation`
 
 `select` runs after `afterRead`, so hooks always see full documents. The database still loads whole rows.
 

@@ -11,6 +11,14 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 - Core must stay external in server builds. libsql loads a native binary with a dynamic require, which a bundler breaks. In dev it stays internal so Vite reloads it. Cloudflare builds bundle it: Workers have no native binaries.
 - Types are added by augmenting the app's types with the config type, so the client and `Astro.locals` are typed.
 
+## Site routes and components
+
+- `cms.fetch` also answers `/sitemap.xml` and `/robots.txt` (`src/seo/`). Astro and Nuxt mount both paths on the `/_tenon` handler.
+- The host's own route MUST win. Astro gives an injected route and a project route of the same pattern equal priority, and Nitro registers module handlers after the host's `server/routes`, so the later one wins. Neither can be fixed by order, so `siteRoutes()` checks the files at setup: `public/<name>`, and `<name>`, `<name>.*` or a `<name>/` folder in `src/pages/` (Astro) or `server/routes/` (Nuxt). Nuxt also skips a path when `@nuxtjs/sitemap` or `@nuxtjs/robots` is installed. The adapter options `sitemap: false` and `robots: false` skip a path explicitly. A host file added later needs a restart.
+- Vite hosts without an adapter add the two routes themselves; the standalone example sends every other path to `cms.fetch`.
+- The admin page sends `<meta name="robots" content="noindex, nofollow">`, because `robots.txt` does not name the admin path.
+- `tenoncms/vue` (`src/integrations/vue/`) holds the Vue components. They follow reka-ui's `as` / `asChild`. `inheritAttrs: false` lets `renderPrimitive()` put attributes on the rendered element or merge them into the slot's child. Nuxt registers them with a `Tenon` prefix through `addComponent()`; `TenonLink` is a runtime wrapper whose `as` defaults to `NuxtLink`.
+
 ## Astro
 
 - Injects the API route, the admin route and a middleware that puts a session-bound `cms` on `locals`. That is why the admin preview renders drafts. Prerendered pages get the plain instance.

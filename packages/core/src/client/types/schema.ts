@@ -1,5 +1,6 @@
 import type {
   AlternatesOf,
+  PermalinkMeta,
   Fields,
   GlobalLocaleMeta,
   GlobalMeta,
@@ -71,7 +72,8 @@ export type ReadCollection<
   CollectionFields<C, K>,
   PopulateOf<O, Depth<C>>,
   SelectOf<O>,
-  LocaleMeta<Collections<C>[K], Locale<C>, SelectOf<O>, AlternatesOf<O>>
+  LocaleMeta<Collections<C>[K], Locale<C>, SelectOf<O>, AlternatesOf<O>> &
+    PermalinkMeta<O, SelectOf<O>>
 >;
 
 export type ReadGlobal<C extends { schema: Schema }, K extends keyof Globals<C>, O> = Partial<

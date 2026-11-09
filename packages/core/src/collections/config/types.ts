@@ -17,6 +17,8 @@ export type Collection<F extends Fields = Fields> = Layout & {
   titleField?: string;
   /** Template / link structure of the document's public URL. The host's routes MUST serve it. Used to generate alternative language urls and as default for the admin preview option {@link Preview} */
   permalink?: Preview;
+  /** Whether `/sitemap.xml` lists the documents. Needs a `permalink`. Default `true`. */
+  sitemap?: boolean;
   /** The page of a document in the admin's live preview. Defaults to `permalink`. See {@link Preview}. */
   preview?: Preview;
   /** Enable localization for this collection. Default `false`. Fields can be overriden with `localized: false` to selecitvly disable localization. */

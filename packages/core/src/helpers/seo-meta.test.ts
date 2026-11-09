@@ -135,6 +135,16 @@ it("seoMeta builds the canonical URL", () => {
   expect(seoMeta({}, { general: { url: "https://a.b" } }).canonical).toBeUndefined();
 });
 
+it("seoMeta prefers the permalink of a read with `permalink: true` over `path`", () => {
+  const general = { url: "https://a.b" };
+  expect(seoMeta({ path: "/hallo", permalink: "/de/hallo" }, { general }).canonical).toBe(
+    "https://a.b/de/hallo",
+  );
+  expect(seoMeta({ path: "/about", permalink: null }, { general }).canonical).toBe(
+    "https://a.b/about",
+  );
+});
+
 it("seoMeta lists the alternates as hreflang links", () => {
   const alternates = { en: "/posts/a", de: "/de/posts/b", "x-default": "/posts/a" };
   const general = { url: "https://a.b/" };

@@ -31,13 +31,15 @@ import { loadEndpoint } from "../admin/endpoints/load.endpoint.ts";
 import { noStore } from "./middleware/no-store.middleware.ts";
 import { handleError } from "./errors.ts";
 import { withPermissions } from "../access/permissions.ts";
+import { seoRoutes } from "../seo/endpoints/routes.ts";
 
 /**
  * Builds the Hono app behind `cms.fetch`. Open routes mount first and look up no caller. Then `optionalSession` looks
  * up the caller once for everything below it: content reads, then content writes (collections, globals, media) after
  * the plugins' `middleware`, both behind their access rules, and last the routes that need a session. Media routes
  * mount at `/media` when the `media` option is set. `site` goes out in `/schema` for the admin's preview.
- * @returns The app, with every route under `API_BASE`.
+ * `/sitemap.xml` and `/robots.txt` sit at the root, outside `API_BASE`.
+ * @returns The app.
  */
 export function createApp(core: Core, site?: string) {
   const { plugins } = core;
@@ -117,5 +119,10 @@ export function createApp(core: Core, site?: string) {
   api.use(session, apiKeyReach());
   api.route("/", signedIn);
 
-  return api;
+  const app = new Hono<Env>();
+  app.onError(handleError);
+  app.notFound((c) => c.json({ message: "Not Found" }, 404));
+  app.route("/", seoRoutes(core, site));
+  app.route("/", api);
+  return app;
 }

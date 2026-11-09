@@ -3,8 +3,10 @@ import {
   onNuxtReady,
   useAsyncData,
   useNuxtApp,
+  useHead,
   useRequestEvent,
   useRoute,
+  useSeoMeta,
   useState,
 } from "#app";
 import type cms from "#tenon/config";
@@ -19,6 +21,8 @@ import {
   type Locale,
   type Localization,
   type ReadOptions,
+  type SeoTemplates,
+  seoMeta,
   switchTarget,
 } from "tenoncms/client";
 import { getDrafts, isLivePreview, merge, setReadDocuments, subscribe } from "tenoncms/preview";
@@ -265,4 +269,60 @@ export function useAlternates(source: () => Alternates | undefined) {
   onScopeDispose(() => {
     if (toRaw(alternates.value) === toRaw(mine)) alternates.value = null;
   });
+}
+
+/**
+ * Puts the `<head>` tags of `seoMeta()` on the page: title, description, Open Graph, robots, canonical, `hreflang`
+ * links and verification. Reads the `general` and `seo` settings and registers the page's alternates for
+ * `switchLocale()`. Read the page with `alternates: true` for `hreflang` links; outside the pages preset, with
+ * `permalink: true` for its canonical URL. Pass the collection's `templates` of `seo()` to use them.
+ * @returns The reactive `seoMeta()` result, once the settings are read.
+ * @example
+ * const { data: page } = await useTenon().findOne('pages', { where: { path }, alternates: true })
+ * await useTenonSeo(page)
+ */
+export function useTenonSeo(
+  page: MaybeRefOrGetter<Record<string, any> | null | undefined>,
+  options: { templates?: SeoTemplates | null } = {},
+) {
+  // The settings globals MAY be off, so the read is untyped. A missing one reads as an error, and its tags fall back.
+  const read = useTenon().getGlobal as unknown as (name: string) => Promise<unknown> & {
+    data: Ref<Record<string, any> | null | undefined>;
+  };
+  const general = read("general");
+  const seo = read("seo");
+  const meta = computed(() =>
+    seoMeta(toValue(page) ?? {}, {
+      general: general.data.value,
+      seo: seo.data.value,
+      templates: options.templates,
+    }),
+  );
+
+  useAlternates(() => toValue(page)?.alternates);
+  useSeoMeta({
+    title: () => meta.value.title,
+    description: () => meta.value.description,
+    ogTitle: () => meta.value.title,
+    ogDescription: () => meta.value.description,
+    ogImage: () => meta.value.image,
+    ogUrl: () => meta.value.canonical,
+    ogType: "website",
+    ogSiteName: () => general.data.value?.title || undefined,
+    twitterCard: () => (meta.value.image ? "summary_large_image" : "summary"),
+    robots: () => (meta.value.noindex ? "noindex, nofollow" : undefined),
+  });
+  useHead(() => ({
+    link: [
+      ...(meta.value.canonical ? [{ rel: "canonical" as const, href: meta.value.canonical }] : []),
+      ...meta.value.alternates.map(({ hreflang, href }) => ({
+        rel: "alternate" as const,
+        hreflang,
+        href,
+      })),
+    ],
+    meta: meta.value.verification,
+  }));
+
+  return Promise.all([general, seo]).then(() => meta);
 }

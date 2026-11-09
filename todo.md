@@ -38,17 +38,80 @@ Each new query is one more to port, and the test app should run on a real deploy
 
 - [x] Fix TS2589: a `relation` inside `blocks` makes `find()` on that collection too deep to type. Found by the spike.
 - [ ] Frontend components for Nuxt, Astro and React: image (`srcset` is computed already), rich text renderer, maybe a blocks renderer. Build one framework first, then port.
+  - [x] Vue: `tenoncms/vue` with `Link`, `Blocks` (`useBlockEdit()`) and `Richtext`, with `as` / `asChild` like reka-ui primitives.
+  - [x] Nuxt: auto-imported as `TenonLink` (over `NuxtLink`), `TenonBlocks` and `TenonRichtext`, plus `useTenonSeo()`.
+  - [ ] Image component.
+  - [ ] Astro and React ports.
 - [ ] Search: in the admin first (`LIKE` on title fields), later FTS5 / `tsvector` and a shared function. Depends on the database work.
 - [ ] Jobs and cron: one protected `POST /jobs/run`, triggered per platform (Cloudflare Cron Triggers, Vercel Cron, an interval on Node).
 - [ ] Scheduled publishing, on top of jobs.
 - [ ] Webhooks and cache invalidation: rebuild prerendered pages or purge the CDN on publish.
-- [ ] Sitemap and robots helper, from `permalink` and `alternates`.
-- [ ] Mobile: the admin works well on phones.
+- [x] Sitemap and robots helper, from `permalink` and `alternates`: `/sitemap.xml` and `/robots.txt` with no config, `sitemap.entries` and `robots.rules` to extend, `cms.sitemap()`, `sitemapXml()` and `robotsTxt()`. A host route wins. The `permalink: true` read option.
+  - [ ] Sitemap index files past 50,000 URLs.
+  - [ ] Globals with a `permalink` in the sitemap (add them with `sitemap.entries` for now).
+- [ ] Mobile: the admin works well on phones. Start with the content list, which is not usable there yet.
 - [ ] Smaller optimizations.
 
-## 4. Publishing
+## 4. Found in the test app (before the demos)
 
-- [ ] Export and import: backups, moving between databases, seeding.
+From building the House of Cacao site.
+
+### Bugs
+
+- [ ] Link buttons vanish in the live preview, with a hydration mismatch (`rendered on server: a.link, expected on client: Symbol(v-cmt)`).
+  - Cause: a read populates a link field to `{ href, title, target }`, but the draft holds the stored `{ reference: { collection, id } }`. `mergeValue` merges per key of the draft, so the merged link has no `href`.
+  - Fix: keep the populated value while the draft's reference equals the current one (keep `reference` in the populated shape so the merge can compare), or resolve link drafts in the preview runtime.
+- [ ] Bound text inside blocks does not update live. Clicking `data-cms="pages:<id>:content.0.headline"` opens the right field, but typing does not patch the text.
+  - Cause: `valueAt` in the preview runtime steps only into plain objects (`isObject` rejects arrays), so a path through a `blocks` or `array` field resolves to `undefined`.
+  - Fix: let `valueAt` index arrays by number.
+- [ ] Clicking a bound item inside a block does not expand and scroll to its field. It sometimes expands offscreen. Once the block is open, scrolling works.
+- [ ] Missing config fails only on request, not at startup. With plain `node .output/server/index.mjs` (no `.env`), the site renders, but the admin gets `500` on `/_tenon/auth/get-session` and `401` on `/_tenon/schema`, because `secret` is `''` and is checked lazily.
+  - Fix: validate all required config (`secret`, `database`, media storage) at startup and exit with one error that lists every missing or invalid value.
+- [ ] Deleting a document that is still referenced fails, even after the confirm dialog. It SHOULD apply the configured `onDelete` rule (for example, clear the reference), then delete.
+- [ ] The CMS overflows inside the admin. Find out why.
+- [ ] HMR: changes sometimes do not show right away. Find out when and why.
+
+### Admin
+
+- [ ] Search in the blocks modal.
+- [ ] Media modal: view sizes (grid and list), and multi-select with Shift and Cmd/Ctrl.
+- [ ] Cmd/Ctrl+S shows a toast: "Tenon saves your changes automatically".
+- [ ] Duplicate a collection item, from the list and from the "…" menu.
+- [ ] Blocks and array tree: put "expand all / collapse all" on the same line as the label.
+- [ ] Hide the Astro and Nuxt devtools inside the admin and the live preview, if possible.
+- [ ] Admin option for the logo parts: choose which one shows where (for example the icon in the header, the full logo in the admin).
+
+### Fields
+
+- [ ] Size field: a number with a unit (`px`, `vh`, …).
+- [ ] Textarea: a `rows` option, and keep empty lines.
+- [ ] Rich text:
+  - [ ] Extend Tiptap from the config (extensions, toolbar).
+  - [ ] Blocks or classes inside rich text.
+  - [ ] A smaller default toolbar.
+  - [ ] Maybe a font selector.
+- [ ] Tracking: make Google Analytics, Tag Manager, Facebook Pixel and similar easy to set up, maybe as a field type.
+
+### Presets
+
+- [ ] Navigation menu preset:
+  - [ ] The label comes after the link.
+  - [ ] A "new tab" option.
+  - [ ] Link to a file: a button after the link input, or a "File…" option in the combobox that opens the media modal.
+- [ ] Pages preset: a better default icon.
+
+### Types
+
+- [ ] Export a type for blocks, like the one for field types.
+- [ ] Generate most of the host's content types (`app/types/cms.ts` in the test app) from the schema.
+
+### Tests
+
+- [ ] `settings.test.ts` expects the old order of the `seo` settings fields (since `f71730b`).
+
+## 5. Publishing
+
+- [ ] Export and import: backups of all data (collections, globals, media, config), moving between databases, seeding.
 - [ ] Field renames: a small content migration (`renameField`), because a renamed field orphans its stored JSON.
 - [ ] OpenAPI spec, generated from the zod schemas and `/schema`. Generated SDKs (hey-api) build on it for consumers without TypeScript; TypeScript hosts keep `createClient()`.
 - [ ] CLI for starters (`create-tenon`): framework, database, deploy target, sample content. Needs export and import.

@@ -7,6 +7,7 @@ import type { Plugin } from "../../plugins/index.ts";
 import type { settings } from "../../presets/settings.ts";
 import type { RoleOptions } from "../../users/roles.ts";
 import type { DatabaseOptions } from "../../db/create-db.ts";
+import type { RobotsOptions, SitemapOptions } from "../../seo/config/types.ts";
 import type {
   Block,
   CheckRefs,
@@ -206,4 +207,11 @@ export type CmsOptions<
    * Defaults to the admin's own origin. Live preview on another origin needs the site to run `preview()` too.
    */
   site?: string;
+  /**
+   * `/sitemap.xml`: the published documents of every collection with a `permalink`. `entries` merges your own
+   * routes. `false` turns it off. A collection opts out with `sitemap: false`.
+   */
+  sitemap?: SitemapOptions | false;
+  /** `/robots.txt`: allows the site and points to the sitemap. `rules` changes the groups. `false` turns it off. */
+  robots?: RobotsOptions | false;
 };

@@ -5,6 +5,7 @@ export default defineConfig({
     "src/index.ts",
     "src/richtext/index.ts",
     "src/integrations/vue/richtext.ts",
+    "src/integrations/vue/index.ts",
     "src/integrations/react/richtext.ts",
     "src/client/index.ts",
     "src/integrations/astro/index.ts",

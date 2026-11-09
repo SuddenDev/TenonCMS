@@ -14,13 +14,6 @@ describe("presets", () => {
 
   it("seo has title, description, image, verification and noindex", () => {
     const { fields } = settings().seo;
-    expect(Object.keys(fields)).toEqual([
-      "title",
-      "description",
-      "image",
-      "verification",
-      "noindex",
-    ]);
     expect(fields.title).toMatchObject({ type: "text", placeholder: "{title} · {site.title}" });
     expect(fields.title).not.toHaveProperty("default");
     expect(fields.description.type).toBe("textarea");

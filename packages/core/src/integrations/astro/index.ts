@@ -6,6 +6,7 @@ import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
 import { adminPath } from "../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
+import { siteRoutes } from "../admin/seo-routes.ts";
 
 /** Options of the Astro integration. */
 export type Options = AdapterOptions & {
@@ -31,6 +32,8 @@ export default function tenonCms({
   entry = "./tenon.config.ts",
   admin = true,
   preview = true,
+  sitemap,
+  robots,
 }: Options = {}): AstroIntegration {
   let entryPath: string;
   let cloudflare = false;
@@ -54,6 +57,18 @@ export default function tenonCms({
           entrypoint: new URL(`${runtime}route.ts`, import.meta.url),
           prerender: false,
         });
+
+        // The host's own `src/pages/sitemap.xml.ts` or `public/robots.txt` wins: Astro gives routes of the same
+        // pattern equal priority.
+        const pages = fileURLToPath(new URL("./pages/", config.srcDir));
+        for (const pattern of siteRoutes({ sitemap, robots }, fileURLToPath(config.publicDir), [
+          pages,
+        ]))
+          injectRoute({
+            pattern,
+            entrypoint: new URL(`${runtime}route.ts`, import.meta.url),
+            prerender: false,
+          });
 
         const path = adminPath(admin);
         if (path) {

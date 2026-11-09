@@ -162,6 +162,10 @@
       "default": "./dist/richtext/index.mjs"
     },
     "./richtext/astro": "./dist/integrations/astro/Richtext.astro",
+    "./vue": {
+      "types": "./dist/integrations/vue/index.d.mts",
+      "default": "./dist/integrations/vue/index.mjs"
+    },
     "./richtext/vue": {
       "types": "./dist/integrations/vue/richtext.d.mts",
       "default": "./dist/integrations/vue/richtext.mjs"

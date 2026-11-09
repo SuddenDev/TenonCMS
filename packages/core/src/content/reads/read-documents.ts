@@ -30,5 +30,5 @@ export async function read(core: Core, s: Inner, collection: string, options: Re
     drafts,
     loc: await locOf(core, s, name),
   });
-  return readDocs(core, s, name, docs, plan, select, options.alternates);
+  return readDocs(core, s, name, docs, plan, select, options);
 }

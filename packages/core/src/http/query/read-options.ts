@@ -11,6 +11,7 @@ type ReadOpts = {
   locale?: string;
   fallback?: boolean;
   alternates?: boolean;
+  permalink?: boolean;
 };
 
 // `?name=true|false` as a boolean. `undefined` when missing; `null` for any other value.
@@ -20,7 +21,8 @@ function flag(value: string | undefined) {
 }
 
 /**
- * Parses `?populate=`, `?depth=`, `?select=`, `?locale=`, `?fallback=` and `?alternates=` into the options of a local read.
+ * Parses `?populate=`, `?depth=`, `?select=`, `?locale=`, `?fallback=`, `?alternates=` and `?permalink=` into the options
+ * of a local read.
  * `meta` lists the meta keys of the target, `false` for globals, which have no `id`, `createdAt` or `updatedAt`.
  * @returns The read options, or the message of a 400.
  */
@@ -35,6 +37,7 @@ export function readOptions(
     locale?: string;
     fallback?: string;
     alternates?: string;
+    permalink?: string;
   },
   meta: readonly string[] | false = metaKeys(),
 ): ReadOpts | string {
@@ -45,11 +48,14 @@ export function readOptions(
   if (fallback === null) return "Invalid fallback";
   const alternates = flag(query.alternates);
   if (alternates === null) return "Invalid alternates";
+  const permalink = flag(query.permalink);
+  if (permalink === null) return "Invalid permalink";
   const read: ReadOpts = {
     ...(typeof plan === "number" ? { depth: plan } : { populate: plan }),
     ...(query.locale !== undefined && { locale: query.locale }),
     ...(fallback !== undefined && { fallback }),
     ...(alternates !== undefined && { alternates }),
+    ...(permalink !== undefined && { permalink }),
   };
   if (query.select === undefined) return read;
 

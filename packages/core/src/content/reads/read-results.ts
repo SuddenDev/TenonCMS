@@ -13,12 +13,13 @@ import { applyRelationSelects, hasRelationSelects } from "../population/default-
 import { badSelectPath, metaKeys } from "../population/validate-select.ts";
 import { populate } from "../population/populate.ts";
 import { addAlternates } from "./alternates.ts";
+import { addPermalinks } from "./permalinks.ts";
 import { locOf } from "./loc-of.ts";
 import { readDecision } from "../../access/read.ts";
 
 /**
  * Runs `beforeRead` on the loaded documents, then population, then `afterRead`, then media URLs, then `alternates`
- * when asked for and selected, then the `select` of relations, then the read's `select`.
+ * and `permalink` when asked for and selected, then the `select` of relations, then the read's `select`.
  * @returns The documents as the read returns them.
  */
 export async function readDocs(
@@ -28,7 +29,7 @@ export async function readDocs(
   docs: Record<string, any>[],
   plan: PopulatePlan,
   select: SelectSpec | undefined,
-  alternates = false,
+  { alternates = false, permalink = false }: { alternates?: boolean; permalink?: boolean } = {},
 ) {
   const { collections } = core.schema;
   const { fields } = target(core, name);
@@ -56,6 +57,8 @@ export async function readDocs(
   if (media && isMedia(name)) result = result.map((d) => decorate(media, d));
   if (alternates && name.kind === "collection" && (!select || select.alternates))
     result = await addAlternates(core, s, name.name, result);
+  if (permalink && name.kind === "collection" && (!select || select.permalink))
+    result = await addPermalinks(core, s, name.name, result);
 
   if (hasRelationSelects(core.schema))
     result = result.map((d) => applyRelationSelects(collections, fields, d, select ?? true));

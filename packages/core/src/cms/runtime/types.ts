@@ -11,6 +11,7 @@ import type { BetterAuthOptions } from "better-auth";
 import type { Database } from "../../db/types.ts";
 import type { Kysely } from "kysely";
 import type { TransactionLifetime } from "./transaction.ts";
+import type { RobotsOptions, SitemapOptions } from "../../seo/config/types.ts";
 
 /**
  * The internal context of one `defineCms()` instance. It is not public.
@@ -48,6 +49,10 @@ export type Core = {
   roles: Role[];
   /** Whether the built-in `translations` global holds the default sync state of each entry. */
   translations: boolean;
+  /** The `sitemap` option, `{}` by default. `false` turns `/sitemap.xml` off. */
+  sitemap: SitemapOptions | false;
+  /** The `robots` option, `{}` by default. `false` turns `/robots.txt` off. */
+  robots: RobotsOptions | false;
 
   /**
    * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the

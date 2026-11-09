@@ -11,7 +11,7 @@ Browser entry points MUST NOT import the server resolver, zod or the CMS runtime
 
 ## URLs
 
-- `preview` defaults to `permalink`. Only `permalink` feeds `alternates`.
+- `preview` defaults to `permalink`. Only `permalink` feeds `alternates`, the `permalink` read option and the sitemap.
 - With localization routing on, a `permalink` result gets the locale prefix; an explicit `preview` does not. With routing off, `{locale}` in a template is filled in.
 - A placeholder naming an unknown field throws at startup.
 

@@ -238,6 +238,90 @@ The editor reads the `general` and `seo` globals of the content language and the
 
 `seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `tenoncms`. In browser code, import them from `tenoncms/client`, which pulls no server code.
 
+### In Nuxt
+
+`useTenonSeo(page)` puts all of these into the head: title, description, Open Graph, `robots`, the canonical link, the `hreflang` links and the verification tags. It reads the `general` and `seo` settings itself and registers the page's alternates for the [locale switch](./localization.md).
+
+```vue
+<script setup lang="ts">
+const { data: page } = await useTenon().findOne(
+  "pages",
+  () =>
+    ({
+      where: { path: path.value },
+      alternates: true,
+      populate: { seo: { image: true } },
+    }) as const,
+);
+await useTenonSeo(page); // for posts: useTenonSeo(post, { templates: posts.fields.seo.templates })
+</script>
+```
+
+- Read with `alternates: true` for the `hreflang` links.
+- A collection without a `path` field gets its canonical URL from `permalink: true` on the read (see [Reading](./reading.md#public-urls-with-permalink)).
+
+## Sitemap and robots.txt
+
+The CMS serves `/sitemap.xml` and `/robots.txt` with no config. The Astro and Nuxt adapters mount both routes. On TanStack Start and other Vite hosts, send both paths to `cms.fetch(request)` like `/_tenon` (see [Framework setup](./frameworks.md)).
+
+`/sitemap.xml` lists every published document of each collection with a `permalink`:
+
+- With `localization`, each locale is its own `<url>`, with `hreflang` links to the other locales and `x-default`.
+- `lastmod` is the document's `updatedAt`.
+- Left out: drafts that were never published, documents with `seo.noindex`, collections whose read rule denies visitors, and collections with `sitemap: false`.
+- Everything is left out while the site's `seo.noindex` setting is on.
+- URLs are absolute. The base is the `url` of the `general` settings, else the `site` option, else the request's origin. Set `general.url` behind a proxy, so the URLs use the public host.
+
+`/robots.txt` allows the whole site except the API (`/_tenon/`). Media under `/_tenon/media/` stays allowed. It points to the sitemap. With the site's `seo.noindex` on, it disallows everything. The admin page sends `noindex` itself.
+
+### Add your own routes
+
+`sitemap.entries` gets the generated entries and returns the final list. Relative URLs become absolute.
+
+```ts
+defineCms({
+  sitemap: {
+    entries: async ({ cms, entries }) => [
+      ...entries,
+      { url: "/contact" },
+      ...(await cms.find("products")).map((p) => ({ url: `/shop/${p.sku}`, lastmod: p.updatedAt })),
+    ],
+  },
+  robots: {
+    rules: ({ rules }) => [...rules, { userAgent: "GPTBot", disallow: ["/"] }],
+  },
+});
+```
+
+- An entry is `{ url, lastmod?, alternates? }`. `alternates` maps `hreflang` codes to URLs.
+- `cms` reads as a visitor: published content within the access rules.
+- `sitemap: false` and `robots: false` turn the routes off. `sitemap: false` on a collection leaves its documents out.
+
+### Your own route wins
+
+A route of your own for `/sitemap.xml` or `/robots.txt` replaces the built-in one. The adapter does not mount its route when the path is already served:
+
+- a file in `public/`, like `public/robots.txt`
+- a route file: `src/pages/sitemap.xml.ts` in Astro, `server/routes/sitemap.xml.ts` in Nuxt
+- in Nuxt, the `@nuxtjs/sitemap` or `@nuxtjs/robots` module
+
+A route you add later needs a dev server restart. The adapter options `sitemap: false` and `robots: false` skip the routes explicitly.
+
+To build on the generated entries in your own route, use `cms.sitemap()` and `sitemapXml()`:
+
+```ts
+// src/pages/sitemap.xml.ts (Astro)
+import { sitemapXml } from "tenoncms";
+import cms from "../../tenon.config";
+
+export const GET = async () =>
+  new Response(sitemapXml([...(await cms.sitemap()), { url: "https://example.com/extra" }]), {
+    headers: { "content-type": "application/xml" },
+  });
+```
+
+`cms.sitemap()` returns what `/sitemap.xml` lists, `sitemap.entries` included. Its URLs are absolute when `general.url` or `site` is set. `sitemapXml()` writes URLs as given, so pass absolute ones. `robotsTxt({ rules, sitemaps })` renders a `robots.txt` the same way.
+
 ## Breadcrumbs
 
 `breadcrumbs()` builds the trail from a page read with its parents resolved. Read only what the trail needs with [`select`](./reading.md):

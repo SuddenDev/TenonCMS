@@ -51,6 +51,7 @@ Server code   ---------> scoped local API ---^
 | `preview/`                     | Live preview runtime, preview URLs, the site's admin bar           |
 | `plugins/`                     | The plugin contract                                                |
 | `presets/`, `helpers/`         | Ready-made fields and hooks; small helpers such as `seoMeta()`     |
+| `seo/`                         | `/sitemap.xml`, `/robots.txt` and `cms.sitemap()`                  |
 | `admin/`                       | The contract between core and the admin app                        |
 | `integrations/`                | Astro, Nuxt, Vite and Cloudflare adapters                          |
 | `tests/`                       | The integration suite                                              |

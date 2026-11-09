@@ -34,11 +34,12 @@ Building or changing tenoncms itself? See the [developer docs](../dev/README.md)
 
 **Build the site**
 
-| Guide                             | What it covers                                                 |
-| --------------------------------- | -------------------------------------------------------------- |
-| [Pages and SEO](pages-and-seo.md) | Nested page paths, `seoMeta()`, `breadcrumbs()`, site settings |
-| [Menus](menus.md)                 | The `menu` preset, the tree editor, `menuItems()`              |
-| [Live preview](live-preview.md)   | `permalink`, `edit()`, the visual editor, the admin bar        |
+| Guide                             | What it covers                                                  |
+| --------------------------------- | --------------------------------------------------------------- |
+| [Pages and SEO](pages-and-seo.md) | Nested page paths, `seoMeta()`, sitemap, `robots.txt`, settings |
+| [Vue components](components.md)   | `Link`, `Blocks`, `Richtext` and their Nuxt versions            |
+| [Menus](menus.md)                 | The `menu` preset, the tree editor, `menuItems()`               |
+| [Live preview](live-preview.md)   | `permalink`, `edit()`, the visual editor, the admin bar         |
 
 **Run it**
 

@@ -15,8 +15,13 @@ export {
   localizePath,
   type MenuItem,
   menuItems,
+  type RobotsRule,
+  robotsTxt,
   SLUG_PATTERN,
+  type SeoTemplates,
   seoMeta,
+  type SitemapEntry,
+  sitemapXml,
   slugify,
   switchTarget,
 } from "../helpers/index.ts";

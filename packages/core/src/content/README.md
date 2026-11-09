@@ -26,7 +26,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 
 `reads/read-documents.ts` → `reads/read-results.ts` → `population/populate.ts` → `population/select-fields.ts`
 
-[access/read.ts](../access/read.ts) owns admission and field-query eligibility before loading. `readDocs()` runs `beforeRead`, population, field and collection `afterRead`, media URLs, `alternates` (`reads/alternates.ts`: one batched published read per locale, then `permalinkUrl()`), then the `select` of relation fields, then the read's `select`. Population replaces relation ids with documents. It loads all targets of one field in one query, and each loaded batch runs its own collection's read hooks in the scope of the outer read. Groups, arrays and blocks pass the plan through and count no hop; the items of every document populate together, an array's with its `fields`, a blocks field's once per block name with that block's sub-plan.
+[access/read.ts](../access/read.ts) owns admission and field-query eligibility before loading. `readDocs()` runs `beforeRead`, population, field and collection `afterRead`, media URLs, `alternates` (`reads/alternates.ts`: one batched published read per locale, then `permalinkUrl()`), `permalink` (`reads/permalinks.ts`: `permalinkUrl()` in the read's locale), then the `select` of relation fields, then the read's `select`. Population replaces relation ids with documents. It loads all targets of one field in one query, and each loaded batch runs its own collection's read hooks in the scope of the outer read. Groups, arrays and blocks pass the plan through and count no hop; the items of every document populate together, an array's with its `fields`, a blocks field's once per block name with that block's sub-plan.
 
 ## Files
 
@@ -42,6 +42,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 | `reads/loc-of.ts`                                     | `locOf()`: the locale descriptor (`Loc`) of a read, with structure fields and their default sync state, or `undefined` when not localized. |
 | `reads/merge-locale.ts`                               | `mergeLocale()`: shared fields plus the locale row, then the default row, then `null`; lists from the shared structure when synced.        |
 | `reads/alternates.ts`                                 | `addAlternates()`: the `alternates` metadata, one batched published read per locale.                                                       |
+| `reads/permalinks.ts`                                 | `addPermalinks()`: the `permalink` metadata, the public URL in the read's locale, `null` without one.                                      |
 | `collections/operations/local/alternates-at.local.ts` | `alternatesAt(url)`: matches a URL against the `permalink` templates (top-level fields only), reads that document with `alternates`.       |
 | `writes/`                                             | The write pipeline, publish, discard and delete. `prepare-data.ts` prepares; `persist-document.ts` saves.                                  |
 | `writes/split-locale.ts`                              | `splitLocale()`: written data to shared and localized keys; a synced list to its structure and values by item id.                          |
