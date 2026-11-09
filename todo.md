@@ -37,18 +37,17 @@ Each new query is one more to port, and the test app should run on a real deploy
 ## 3. Driven by the test app
 
 - [x] Fix TS2589: a `relation` inside `blocks` makes `find()` on that collection too deep to type. Found by the spike.
-- [ ] Frontend components for Nuxt, Astro and React: image (`srcset` is computed already), rich text renderer, maybe a blocks renderer. Build one framework first, then port.
-  - [x] Vue: `tenoncms/vue` with `Link`, `Blocks` (`useBlockEdit()`) and `Richtext`, with `as` / `asChild` like reka-ui primitives.
+- [x] Frontend components for Nuxt, Astro and React: image (`srcset` is computed already), rich text renderer, maybe a blocks renderer. Build one framework first, then port.
+  - [x] Vue: `tenoncms/vue` with `Link`, `Blocks` (`useBlockEdit()`) and `Richtext`, with `as` / `asChild`.
   - [x] Nuxt: auto-imported as `TenonLink` (over `NuxtLink`), `TenonBlocks` and `TenonRichtext`, plus `useTenonSeo()`.
-  - [ ] Image component.
-  - [ ] Astro and React ports.
+  - [x] Image component: `Image` in all three, `TenonImage` in Nuxt.
+  - [x] Astro and React ports: `tenoncms/astro/components` and `tenoncms/react`. The shared helpers are `tenoncms/components`.
+  - [x] `Picture` (art direction) in all three, and `Seo` for Astro and React on `seoHead()`, which `useTenonSeo()` uses too.
 - [ ] Search: in the admin first (`LIKE` on title fields), later FTS5 / `tsvector` and a shared function. Depends on the database work.
 - [ ] Jobs and cron: one protected `POST /jobs/run`, triggered per platform (Cloudflare Cron Triggers, Vercel Cron, an interval on Node).
 - [ ] Scheduled publishing, on top of jobs.
 - [ ] Webhooks and cache invalidation: rebuild prerendered pages or purge the CDN on publish.
 - [x] Sitemap and robots helper, from `permalink` and `alternates`: `/sitemap.xml` and `/robots.txt` with no config, `sitemap.entries` and `robots.rules` to extend, `cms.sitemap()`, `sitemapXml()` and `robotsTxt()`. A host route wins. The `permalink: true` read option.
-  - [ ] Sitemap index files past 50,000 URLs.
-  - [ ] Globals with a `permalink` in the sitemap (add them with `sitemap.entries` for now).
 - [ ] Mobile: the admin works well on phones. Start with the content list, which is not usable there yet.
 - [ ] Smaller optimizations.
 
@@ -104,10 +103,6 @@ From building the House of Cacao site.
 
 - [ ] Export a type for blocks, like the one for field types.
 - [ ] Generate most of the host's content types (`app/types/cms.ts` in the test app) from the schema.
-
-### Tests
-
-- [ ] `settings.test.ts` expects the old order of the `seo` settings fields (since `f71730b`).
 
 ## 5. Publishing
 

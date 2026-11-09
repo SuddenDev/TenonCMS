@@ -25,7 +25,7 @@ export type { AdapterOptions as Options };
 
 /**
  * Nuxt module for tenoncms. Mounts `/_tenon`, `/sitemap.xml` and `/robots.txt`, serves the admin page, adds
- * `useTenon()`, `useTenonSeo()`, the components `TenonLink`, `TenonBlocks` and `TenonRichtext`, and the preview
+ * `useTenon()`, `useTenonSeo()`, the components `TenonLink`, `TenonBlocks`, `TenonImage`, `TenonPicture` and `TenonRichtext`, and the preview
  * runtime. Options go under `tenonCms` in `nuxt.config.ts`.
  * @example
  * // nuxt.config.ts
@@ -80,7 +80,7 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
       { name: "useBlockEdit", from: "tenoncms/vue" },
     ]);
     addComponent({ name: "TenonLink", filePath: `${runtime}/components/link` });
-    for (const name of ["Blocks", "Richtext"])
+    for (const name of ["Blocks", "Image", "Picture", "Richtext"])
       addComponent({ name: `Tenon${name}`, export: name, filePath: "tenoncms/vue" });
 
     // The preview runtime reads the admin path for the bars' links; `false` renders no admin bar.

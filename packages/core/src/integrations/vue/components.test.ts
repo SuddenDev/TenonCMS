@@ -1,7 +1,7 @@
 import { createSSRApp, defineComponent, h, type Component, type PropType } from "vue";
 import { renderToString } from "vue/server-renderer";
 import { describe, expect, it } from "vitest";
-import { Blocks, Link, Richtext, useBlockEdit } from "./index.ts";
+import { Blocks, Image, Link, Picture, Richtext, useBlockEdit } from "./index.ts";
 import type { RichtextDocument } from "../../richtext/config/types.ts";
 
 const html = (render: () => ReturnType<typeof h>) =>
@@ -76,6 +76,60 @@ describe("Blocks", () => {
     expect(await html(() => h(Blocks, { blocks, components: { hero: Hero }, edit }))).toBe(
       '<div><h1 data-cms="pages:p1:content.0.title">Hi</h1></div>',
     );
+  });
+
+  it("renders the blocks into its child with asChild", async () => {
+    expect(
+      await html(() =>
+        h(Blocks, { blocks, components: { hero: Hero }, asChild: true }, () =>
+          h("section", { class: "s" }),
+        ),
+      ),
+    ).toBe('<section class="s"><h1>Hi</h1></section>');
+  });
+});
+
+describe("Image", () => {
+  const image = { src: "/a.webp", srcset: "/a-320.webp 320w", width: 800, height: 600, alt: "Sea" };
+
+  it("renders an img with srcset, dimensions and lazy loading", async () => {
+    expect(await html(() => h(Image, { image, sizes: "50vw" }))).toBe(
+      '<img src="/a.webp" srcset="/a-320.webp 320w" width="800" height="600" alt="Sea" loading="lazy" decoding="async" sizes="50vw">',
+    );
+  });
+
+  it("drops an empty srcset, defaults alt and binds the preview attributes", async () => {
+    const svg = { src: "/a.svg", srcset: "", width: 10, height: 10, alt: null };
+    expect(
+      await html(() => h(Image, { image: svg, loading: "eager", "data-cms": "posts:1:hero" })),
+    ).toBe(
+      '<img src="/a.svg" width="10" height="10" alt loading="eager" decoding="async" data-cms-attr="src,srcset,alt" data-cms="posts:1:hero">',
+    );
+  });
+
+  it("renders nothing without an image", async () => {
+    expect(await html(() => h(Image, { image: null }))).toBe("<!---->");
+  });
+});
+
+describe("Picture", () => {
+  const image = { src: "/a.webp", srcset: "/a-640.webp 640w", width: 800, height: 600, alt: "Sea" };
+  const tall = { src: "/b.webp", srcset: "/b-320.webp 320w", width: 300, height: 600 };
+  const svg = { src: "/c.svg", srcset: "", width: 10, height: 10 };
+
+  it("renders a source per image before the img, with the img's sizes", async () => {
+    const sources = [
+      { media: "(max-width: 600px)", image: tall },
+      { media: "print", image: svg, sizes: "10px" },
+      { media: "(min-width: 2000px)", image: null },
+    ];
+    expect(await html(() => h(Picture, { image, sources, sizes: "100vw", class: "i" }))).toBe(
+      '<picture><source srcset="/b-320.webp 320w" sizes="100vw" width="300" height="600" media="(max-width: 600px)"><source srcset="/c.svg" sizes="10px" width="10" height="10" media="print"><img src="/a.webp" srcset="/a-640.webp 640w" width="800" height="600" alt="Sea" loading="lazy" decoding="async" sizes="100vw" class="i"></picture>',
+    );
+  });
+
+  it("renders nothing without its main image", async () => {
+    expect(await html(() => h(Picture, { image: null, sources: [{ image }] }))).toBe("<!---->");
   });
 });
 

@@ -165,7 +165,7 @@ Working:
 - Schema-in-code collections and globals with inferred types, relations, lists and blocks (nested and shared)
 - Hooks, validation, conditions, drafts and publishing, per-locale content
 - Page and SEO preset, `/sitemap.xml` and `/robots.txt` with no config, live preview and an admin bar on the site
-- Vue components (`Link`, `Blocks`, `Richtext`), auto-imported in Nuxt with `useTenonSeo()`
+- Components for Vue, React and Astro (`Image`, `Picture`, `Link`, `Blocks`, `Richtext`, `Seo`), auto-imported in Nuxt with `useTenonSeo()`
 - Rich text: Tiptap JSON with internal links and images, and Astro, Vue and React renderers
 - Media library: uploads to disk or S3/R2, responsive images
 - Admin in English and German, with custom fields, pages and bar items

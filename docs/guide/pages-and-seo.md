@@ -141,7 +141,7 @@ Each example has a catch-all route that does this. Static routes win over it, so
 
 ## SEO tags
 
-Build `<head>` with `seoMeta()`:
+The quickest way is a component: `useTenonSeo(page)` in Nuxt, `<Seo page={page} />` in Astro and React 19 ([Components](./components.md#seo)). They render the tags of `seoHead()` below. For your own templates, build `<head>` with `seoMeta()`:
 
 ```ts
 import { seoMeta } from "tenoncms";
@@ -236,11 +236,26 @@ hooks: {
 
 The editor reads the `general` and `seo` globals of the content language and the collection's templates, and uses `seoMeta()`, so the preview is what the site renders. The lengths are fixed.
 
-`seoMeta()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `tenoncms`. In browser code, import them from `tenoncms/client`, which pulls no server code.
+### As tags
+
+`seoHead(doc, settings?)` takes the same arguments and returns the tags: `{ title, meta, links }`. `meta` has `description`, Open Graph (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name` from the `general` title), `twitter:card`, `robots` (`noindex, nofollow`) and the verification tags. `links` has the canonical and `hreflang` links. Tags without a value are left out.
+
+TanStack Router's `head()` takes them as they are:
+
+```tsx
+import { seoHead } from "tenoncms/client";
+
+head: ({ loaderData }) => {
+  const { title, meta, links } = seoHead(loaderData.page, loaderData);
+  return { meta: [{ title }, ...meta], links };
+},
+```
+
+`seoMeta()`, `seoHead()`, `breadcrumbs()`, `slugify()` and `SLUG_PATTERN` come from `tenoncms`. In browser code, import them from `tenoncms/client`, which pulls no server code.
 
 ### In Nuxt
 
-`useTenonSeo(page)` puts all of these into the head: title, description, Open Graph, `robots`, the canonical link, the `hreflang` links and the verification tags. It reads the `general` and `seo` settings itself and registers the page's alternates for the [locale switch](./localization.md).
+`useTenonSeo(page)` puts the tags of `seoHead()` into the head: title, description, Open Graph, `robots`, the canonical link, the `hreflang` links and the verification tags. It reads the `general` and `seo` settings itself and registers the page's alternates for the [locale switch](./localization.md).
 
 ```vue
 <script setup lang="ts">

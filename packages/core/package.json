@@ -161,7 +161,12 @@
       "types": "./dist/richtext/index.d.mts",
       "default": "./dist/richtext/index.mjs"
     },
-    "./richtext/astro": "./dist/integrations/astro/Richtext.astro",
+    "./richtext/astro": "./dist/integrations/astro/components/Richtext.astro",
+    "./astro/components": "./dist/integrations/astro/components/index.ts",
+    "./components": {
+      "types": "./dist/integrations/components.d.mts",
+      "default": "./dist/integrations/components.mjs"
+    },
     "./vue": {
       "types": "./dist/integrations/vue/index.d.mts",
       "default": "./dist/integrations/vue/index.mjs"
@@ -169,6 +174,10 @@
     "./richtext/vue": {
       "types": "./dist/integrations/vue/richtext.d.mts",
       "default": "./dist/integrations/vue/richtext.mjs"
+    },
+    "./react": {
+      "types": "./dist/integrations/react/index.d.mts",
+      "default": "./dist/integrations/react/index.mjs"
     },
     "./richtext/react": {
       "types": "./dist/integrations/react/richtext.d.mts",

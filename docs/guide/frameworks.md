@@ -126,7 +126,7 @@ export default defineNuxtConfig({
 
 `tenon.config.ts` can call `useRuntimeConfig()` for the secret and the database URL.
 
-The module auto-imports `useTenon()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results. `useTenonSeo()` ([Pages and SEO](pages-and-seo.md#in-nuxt)), `useLocale()`, `useAlternates()` ([Localization](localization.md)), `useLivePreview()` ([Live preview](live-preview.md#check-for-the-live-preview)) and `useBlockEdit()` are auto-imported too, and so are the components `TenonLink`, `TenonBlocks` and `TenonRichtext` ([Vue components](components.md)).
+The module auto-imports `useTenon()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results. `useTenonSeo()` ([Pages and SEO](pages-and-seo.md#in-nuxt)), `useLocale()`, `useAlternates()` ([Localization](localization.md)), `useLivePreview()` ([Live preview](live-preview.md#check-for-the-live-preview)) and `useBlockEdit()` are auto-imported too, and so are the components `TenonImage`, `TenonPicture`, `TenonLink`, `TenonBlocks` and `TenonRichtext` ([Components](components.md)).
 
 - During SSR it calls the CMS in-process. On client-side navigation it fetches the public read API.
 - Read options and document ids accept refs or getters. Use a getter for route-dependent filters, so reused pages update on navigation. The route's locale updates automatically.

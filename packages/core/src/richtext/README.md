@@ -69,11 +69,11 @@ The server schema stays on the server; `/schema` sends only the browser referenc
 
 ## Rendering
 
-The frontend components render Tiptap JSON in an unstyled `<div>`, both on the server and in the browser. They accept `content` (including `null` or `undefined`), optional `extensions` keyed by feature, and normal wrapper attributes. Vue also covers Nuxt. No editor is mounted and no admin typography is included.
+The frontend components render Tiptap JSON in an unstyled `<div>` (or the `as` element), both on the server and in the browser. They accept `content` (including `null` or `undefined`), optional `extensions` keyed by feature, and normal wrapper attributes. Vue also covers Nuxt. No editor is mounted and no admin typography is included.
 
 ```astro
 ---
-import Richtext from 'tenoncms/richtext/astro';
+import { Richtext } from 'tenoncms/astro/components';
 ---
 <Richtext content={post.body} class="prose" />
 ```

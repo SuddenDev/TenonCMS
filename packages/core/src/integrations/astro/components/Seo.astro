@@ -1,0 +1,39 @@
+---
+import { seoHead, type SeoTemplates } from "tenoncms/client";
+
+type Settings = NonNullable<Parameters<typeof seoHead>[1]>;
+type Props = {
+  page: Parameters<typeof seoHead>[0] | null | undefined;
+  /** The `general` settings. Read in the request's locale when left out. */
+  general?: Settings["general"];
+  /** The `seo` settings. Read in the request's locale when left out. */
+  seo?: Settings["seo"];
+  templates?: SeoTemplates | null;
+};
+const { page, templates } = Astro.props;
+
+// The settings globals MAY be off. A missing one reads as `null`, and its tags fall back.
+const { tenon, locale } = Astro.locals;
+const read = async (name: string) => {
+  try {
+    return await (tenon.getGlobal as (name: string, options: object) => Promise<any>)(name, {
+      locale,
+    });
+  } catch {
+    return null;
+  }
+};
+const [general, seo] = await Promise.all([
+  Astro.props.general === undefined ? read("general") : Astro.props.general,
+  Astro.props.seo === undefined ? read("seo") : Astro.props.seo,
+]);
+const head = seoHead(page ?? {}, { general, seo, templates });
+---
+
+<title>{head.title}</title>
+{head.meta.map((tag) => (
+  <meta {...tag} />
+))}
+{head.links.map((link) => (
+  <link {...link} />
+))}

@@ -7,13 +7,12 @@ import {
   type PropType,
   provide,
 } from "vue";
-import { edit } from "../../preview/runtime/bind-elements.ts";
+import { type BlocksEdit, editBlock } from "../../preview/runtime/bind-elements.ts";
 import { primitiveProps, renderPrimitive } from "./primitive.ts";
 
 type Block = { id?: string; blockType: string };
 
-/** Where a blocks field lives, for the admin's click-to-edit. `id` is `null` for a global. */
-export type BlocksEdit = { collection: string; id: string | null; path: string };
+export type { BlocksEdit } from "../../preview/runtime/bind-elements.ts";
 
 const editKey: InjectionKey<(block: { id?: string }, path?: string) => string | undefined> =
   Symbol("tenon-blocks");
@@ -34,13 +33,7 @@ export const Blocks = defineComponent({
     ...primitiveProps,
   },
   setup(props, { attrs, slots }) {
-    // The admin addresses blocks by index. Drafts replace block objects, so the index comes from the id.
-    provide(editKey, (block, path) => {
-      const index = props.blocks?.findIndex((b) => b === block || (!!b.id && b.id === block.id));
-      if (!props.edit || index === undefined || index < 0) return undefined;
-      const at = `${props.edit.path}.${index}`;
-      return edit(props.edit.collection, props.edit.id, path ? `${at}.${path}` : at);
-    });
+    provide(editKey, (block, path) => editBlock(props.edit, props.blocks, block, path));
 
     return () =>
       renderPrimitive(

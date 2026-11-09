@@ -1,0 +1,20 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { type Image, type PictureSource, pictureAttrs } from "tenoncms/components";
+
+type Props = Omit<HTMLAttributes<"img">, "src" | "srcset"> & {
+  image?: Partial<Image> | null;
+  sources?: readonly PictureSource[];
+};
+const { image, sources, ...attrs } = Astro.props;
+const own = pictureAttrs(image, sources, attrs);
+---
+
+{own && (
+  <picture>
+    {own.sources.map((source) => (
+      <source {...source} />
+    ))}
+    <img {...own.img} />
+  </picture>
+)}

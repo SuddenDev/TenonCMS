@@ -1,5 +1,6 @@
 ---
-import { seoMeta, ValidationError } from "tenoncms";
+import { ValidationError } from "tenoncms";
+import { Image, Seo } from "tenoncms/astro/components";
 import { edit } from "tenoncms/preview";
 import Header from "../../../components/Header.astro";
 import { posts } from "../../../../collections/posts";
@@ -20,11 +21,6 @@ const [general, seo, text] = await Promise.all([
   cms.getGlobal("seo", { locale }),
   cms.getGlobal("strings", { locale, fallback: false }),
 ]);
-const meta = seoMeta(post, {
-  general,
-  seo,
-  templates: posts.fields.seo.templates,
-});
 
 // The access rules of `comments` let anyone create one. It waits for approval, so the page redirects to a note.
 let input = { name: "", body: "" };
@@ -46,14 +42,7 @@ const comments = await cms.find("comments", { where: { post: post.id }, populate
 <html lang={locale}>
   <head>
     <meta charset="utf-8" />
-    <title>{meta.title}</title>
-    {meta.description && <meta name="description" content={meta.description} />}
-    {meta.noindex && <meta name="robots" content="noindex" />}
-    {meta.canonical && <link rel="canonical" href={meta.canonical} />}
-    {meta.alternates.map((a) => (
-      <link rel="alternate" hreflang={a.hreflang} href={a.href} />
-    ))}
-    {meta.image && <meta property="og:image" content={meta.image} />}
+    <Seo page={post} general={general} seo={seo} templates={posts.fields.seo.templates} />
   </head>
   <body>
     <Header alternates={post.alternates} />
@@ -64,19 +53,13 @@ const comments = await cms.find("comments", { where: { post: post.id }, populate
       </p>
     )}
     {post.publishedAt && <time datetime={post.publishedAt}>{post.publishedAt}</time>}
-    {post.hero && (
-      <img
-        src={post.hero.src}
-        srcset={post.hero.srcset}
-        sizes="(min-width: 720px) 720px, 100vw"
-        width={post.hero.width}
-        height={post.hero.height}
-        alt={post.hero.alt ?? ""}
-        style="max-width: 100%; height: auto"
-        data-cms={edit("posts", post.id, "hero")}
-        data-cms-attr="src,srcset,alt"
-      />
-    )}
+    <Image
+      image={post.hero}
+      sizes="(min-width: 720px) 720px, 100vw"
+      loading="eager"
+      style="max-width: 100%; height: auto"
+      data-cms={edit("posts", post.id, "hero")}
+    />
     <p style="white-space: pre-wrap" data-cms={edit("posts", post.id, "body")}>
       {post.body}
     </p>

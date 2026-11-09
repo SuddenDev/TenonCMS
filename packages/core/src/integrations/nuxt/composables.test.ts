@@ -11,14 +11,13 @@ import {
   type Ref,
 } from "vue";
 import { localeFromPath, localizePath, switchTarget } from "../../helpers/locale-path.ts";
-import { seoMeta } from "../../helpers/seo-meta.ts";
+import { seoHead, seoMeta } from "../../helpers/seo-meta.ts";
 
 const mocks = vi.hoisted(() => ({
   find: vi.fn(),
   findById: vi.fn(),
   getGlobal: vi.fn(),
   navigateTo: vi.fn(),
-  useSeoMeta: vi.fn(),
   useHead: vi.fn(),
   event: undefined as { headers: Headers } | undefined,
 }));
@@ -30,7 +29,6 @@ const app = {};
 
 vi.mock("#app", () => ({
   navigateTo: mocks.navigateTo,
-  useSeoMeta: mocks.useSeoMeta,
   useHead: mocks.useHead,
   useNuxtApp: () => app,
   useRequestEvent: () => mocks.event,
@@ -61,6 +59,7 @@ vi.mock("#app", () => ({
   },
 }));
 vi.mock("tenoncms/client", () => ({
+  seoHead,
   seoMeta,
   localeFromPath,
   localizePath,
@@ -242,14 +241,12 @@ it("puts the page's SEO tags and translations into the head", async () => {
   const meta = await setup(() => useTenonSeo(page));
   expect(meta.value.title).toBe("Hello · Acme");
 
-  const tags = mocks.useSeoMeta.mock.calls[0]![0];
-  expect([tags.title(), tags.ogUrl(), tags.ogSiteName(), tags.robots()]).toEqual([
-    "Hello · Acme",
-    "https://a.co/posts/hello",
-    "Acme",
-    undefined,
-  ]);
-  expect(mocks.useHead.mock.calls[0]![0]().link).toEqual([
+  const head = mocks.useHead.mock.calls[0]![0];
+  expect(head().title).toBe("Hello · Acme");
+  expect(head().meta).toContainEqual({ property: "og:url", content: "https://a.co/posts/hello" });
+  expect(head().meta).toContainEqual({ property: "og:site_name", content: "Acme" });
+  expect(head().meta).not.toContainEqual(expect.objectContaining({ name: "robots" }));
+  expect(head().link).toEqual([
     { rel: "canonical", href: "https://a.co/posts/hello" },
     { rel: "alternate", hreflang: "en", href: "https://a.co/posts/hello" },
     { rel: "alternate", hreflang: "de", href: "https://a.co/de/posts/hallo" },
@@ -258,5 +255,5 @@ it("puts the page's SEO tags and translations into the head", async () => {
   expect(state.get("tenon:alternates")?.value).toEqual(alternates);
 
   page.value = { ...page.value, seo: { noindex: true } } as never;
-  expect(tags.robots()).toBe("noindex, nofollow");
+  expect(head().meta).toContainEqual({ name: "robots", content: "noindex, nofollow" });
 });

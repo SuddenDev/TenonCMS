@@ -25,12 +25,14 @@ Each integration points `#tenon/config` at the host's `tenon.config.ts`, mounts 
 
 ## Frontend helpers
 
-- `tenoncms/richtext/astro`: `astro/Richtext.astro`.
-- `tenoncms/vue`: `vue/index.ts`, the Vue components `Link`, `Blocks` (with `useBlockEdit()`) and `Richtext`. They take `as` and `asChild` through `vue/primitive.ts`, like reka-ui. Nuxt registers them as `TenonLink` (`nuxt/runtime/components/link.ts`, with `NuxtLink` as `as`), `TenonBlocks` and `TenonRichtext`.
-- `tenoncms/richtext/vue` and `tenoncms/richtext/react`: `vue/richtext.ts` and `react/richtext.ts`. Vue also covers Nuxt.
+- `tenoncms/vue`: `vue/index.ts`, the Vue components `Image`, `Picture`, `Link`, `Blocks` (with `useBlockEdit()`) and `Richtext`. They take `as` and `asChild` through `vue/primitive.ts`. Nuxt registers them as `TenonImage`, `TenonPicture`, `TenonLink` (`nuxt/runtime/components/link.ts`, with `NuxtLink` as `as`), `TenonBlocks` and `TenonRichtext`.
+- `tenoncms/react`: `react/index.ts`, the same components for React, with `as` and `asChild` through `react/primitive.ts`, plus `Seo` (`react/seo.ts`, tags that React 19 hoists into `<head>`). Block components get `edit` as a prop.
+- `tenoncms/astro/components`: `astro/components/`, the same components as `.astro` files, without `asChild`, plus `Seo`, which reads the settings globals from `Astro.locals.tenon` when they are not passed. `Link` renders a plain `<a>`.
+- `tenoncms/components`: `components.ts`, the shared helpers `imageAttrs()`, `pictureAttrs()`, `linkAttrs()` and `editBlock()`. The `Seo` components and `useTenonSeo()` share `seoHead()` from `helpers/`.
+- `tenoncms/richtext/vue`, `tenoncms/richtext/react` and `tenoncms/richtext/astro`: `Richtext` alone. Vue also covers Nuxt.
 - `tenoncms/preview/vue` and `tenoncms/preview/react`: `vue/preview.ts` and `react/preview.ts`, exporting `useDraft()`.
 
-These public imports remain independent of the source layout. The TypeScript helpers are tsdown entries; the Astro component is copied into `dist/integrations/astro/` for the host to compile. See [rich text](../richtext/README.md) and [preview](../preview/README.md) for usage.
+These public imports remain independent of the source layout. The TypeScript helpers are tsdown entries; the Astro components are copied into `dist/integrations/astro/components/` for the host to compile. See [rich text](../richtext/README.md) and [preview](../preview/README.md) for usage.
 
 ## Follow the setup
 
@@ -102,7 +104,11 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 | `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                                                         |
 | `nuxt/runtime/composables.ts`              | `useTenon()`: the client's read methods in `useAsyncData`, in the route's locale, with preview drafts merged in. `useLocale()`, `useAlternates()` and `useTenonSeo()`. |
 | `nuxt/runtime/components/link.ts`          | `TenonLink`: `Link` with `NuxtLink` as `as`.                                                                                                                           |
-| `vue/index.ts`                             | `tenoncms/vue`: `Link`, `Blocks`, `useBlockEdit()` and `Richtext`.                                                                                                     |
+| `components.ts`                            | `tenoncms/components`: `imageAttrs()`, `pictureAttrs()`, `linkAttrs()` and `editBlock()`, shared by the components.                                                    |
+| `vue/index.ts`                             | `tenoncms/vue`: `Image`, `Picture`, `Link`, `Blocks`, `useBlockEdit()` and `Richtext`.                                                                                 |
+| `vue/image.ts`                             | `Image`: a populated `image` field as `<img>`.                                                                                                                         |
+| `react/index.ts`                           | `tenoncms/react`: `Image`, `Picture`, `Link`, `Blocks`, `Richtext` and `Seo`, with `react/primitive.ts` for `as` and `asChild`.                                        |
+| `astro/components/`                        | `tenoncms/astro/components`: the same, and `Seo`, as `.astro` files.                                                                                                   |
 | `vue/primitive.ts`                         | `primitiveProps` and `renderPrimitive()`: `as` and `asChild`.                                                                                                          |
 | `vue/link.ts`                              | `Link`: a populated `link` field. A component `as` gets internal paths as `to`.                                                                                        |
 | `vue/blocks.ts`                            | `Blocks` and `useBlockEdit()`: a component per `blockType`, and `data-cms` values by block index.                                                                      |

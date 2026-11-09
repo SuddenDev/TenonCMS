@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { DEFAULT_SEO_TITLE, seoMeta } from "./seo-meta.ts";
+import { DEFAULT_SEO_TITLE, seoHead, seoMeta } from "./seo-meta.ts";
 
 it("seoMeta falls back to the title", () => {
   expect(seoMeta({ title: "About", seo: null })).toEqual({
@@ -223,10 +223,52 @@ it("seoMeta falls back to the site's description, not the tagline", () => {
   expect(seoMeta({ title: "A", seo: { description: "Page" } }, { seo }).description).toBe("Page");
 });
 
+it("seoHead lists the head tags of seoMeta", () => {
+  const image = { url: "/og.png" };
+  const doc = { title: "Hi", path: "/hi", locale: "en", alternates: { en: "/hi", de: "/de/hi" } };
+  const head = seoHead(
+    { ...doc, seo: { description: "D", image, noindex: true } },
+    { general: { title: "Acme", url: "https://a.co" }, seo: { verification: { google: "g" } } },
+  );
+  expect(head).toEqual({
+    title: "Hi · Acme",
+    meta: [
+      { name: "description", content: "D" },
+      { property: "og:title", content: "Hi · Acme" },
+      { property: "og:description", content: "D" },
+      { property: "og:image", content: "https://a.co/og.png" },
+      { property: "og:url", content: "https://a.co/hi" },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Acme" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "robots", content: "noindex, nofollow" },
+      { name: "google-site-verification", content: "g" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://a.co/hi" },
+      { rel: "alternate", hreflang: "en", href: "https://a.co/hi" },
+      { rel: "alternate", hreflang: "de", href: "https://a.co/de/hi" },
+    ],
+  });
+});
+
+it("seoHead leaves out tags without a value", () => {
+  expect(seoHead({ title: "Hi" })).toEqual({
+    title: "Hi",
+    meta: [
+      { property: "og:title", content: "Hi" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [],
+  });
+});
+
 it("helpers come from the main and the browser-safe client entry", async () => {
   for (const entry of [await import("../index.ts"), await import("../client/index.ts")]) {
     expect(entry).toMatchObject({
       seoMeta,
+      seoHead,
       breadcrumbs: expect.any(Function),
       slugify: expect.any(Function),
       localeFromPath: expect.any(Function),

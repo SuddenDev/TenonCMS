@@ -40,11 +40,11 @@ Deleting a document or file that rich text or a `link` field links to throws `Li
 
 ## Render on the site
 
-The components render Tiptap JSON as an unstyled `<div>`, on the server and in the browser. No editor and no admin styles load.
+The [components](./components.md) render Tiptap JSON as an unstyled `<div>`, on the server and in the browser. No editor and no admin styles load.
 
 ```astro
 ---
-import Richtext from "tenoncms/richtext/astro";
+import { Richtext } from "tenoncms/astro/components";
 ---
 
 <Richtext content={post.body} class="prose" />
@@ -61,14 +61,14 @@ import { Richtext } from "tenoncms/vue"; // in Nuxt: <TenonRichtext>, auto-impor
 ```
 
 ```tsx
-import { Richtext } from "tenoncms/richtext/react";
+import { Richtext } from "tenoncms/react";
 
 <Richtext content={post.body} className="prose" />;
 ```
 
 - `content` can be `null` or `undefined`. Pass populated content to get current link and image URLs; the components fetch nothing.
 - `extensions` adds renderers for custom features, keyed by feature name.
-- Vue: `as` sets the element (default `div`); `asChild` renders into the element in its slot. See [Vue components](./components.md).
+- `as` sets the element (default `div`). In Vue and React, `asChild` renders into the child element. See [Components](./components.md).
 - `renderRichtext(content, extensions?)` from `tenoncms/richtext` returns the same HTML for any other template. It escapes text, checks URLs, and rejects unsupported content instead of dropping it.
 
 ## Add features from a plugin

@@ -1,0 +1,9 @@
+---
+import type { HTMLAttributes, HTMLTag } from "astro/types";
+import { renderRichtext, type RichtextProps } from "tenoncms/richtext";
+
+type Props = RichtextProps & Omit<HTMLAttributes<"div">, "content"> & { as?: HTMLTag };
+const { content, extensions, as: Tag = "div", ...attrs } = Astro.props;
+---
+
+<Tag {...attrs} set:html={renderRichtext(content, extensions)} />

@@ -120,3 +120,48 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
     ].filter((tag) => !!tag),
   };
 }
+
+/** A `<meta>` tag of {@link seoHead}: `name` or `property`, with `content`. */
+export type SeoMetaTag = { name: string; content: string } | { property: string; content: string };
+
+/** A `<link>` tag of {@link seoHead}. */
+export type SeoLinkTag =
+  | { rel: "canonical"; href: string }
+  | { rel: "alternate"; hreflang: string; href: string };
+
+/**
+ * The `<head>` tags of {@link seoMeta}: description, Open Graph, the Twitter card, robots and verification as
+ * `meta`, canonical and `hreflang` as `links`. Tags without a value are left out. `og:site_name` is the `general`
+ * title. TanStack Router's `head()` takes `meta` and `links` as they are; unhead calls `links` `link`.
+ */
+export function seoHead(doc: SeoDoc, settings: SeoSettings = {}) {
+  const meta = seoMeta(doc, settings);
+  const tags: [kind: "name" | "property", key: string, content: string | undefined][] = [
+    ["name", "description", meta.description],
+    ["property", "og:title", meta.title],
+    ["property", "og:description", meta.description],
+    ["property", "og:image", meta.image],
+    ["property", "og:url", meta.canonical],
+    ["property", "og:type", "website"],
+    ["property", "og:site_name", settings.general?.title || undefined],
+    ["name", "twitter:card", meta.image ? "summary_large_image" : "summary"],
+    ["name", "robots", meta.noindex ? "noindex, nofollow" : undefined],
+  ];
+  const links: SeoLinkTag[] = meta.alternates.map(({ hreflang, href }) => ({
+    rel: "alternate" as const,
+    hreflang,
+    href,
+  }));
+  if (meta.canonical) links.unshift({ rel: "canonical", href: meta.canonical });
+
+  return {
+    title: meta.title,
+    meta: [
+      ...tags.flatMap(([kind, key, content]) =>
+        content ? [{ [kind]: key, content } as SeoMetaTag] : [],
+      ),
+      ...meta.verification,
+    ] as SeoMetaTag[],
+    links,
+  };
+}

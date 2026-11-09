@@ -18,5 +18,10 @@
   },
   "include": ["src", "env.d.ts"],
   // They need the Workers types, which clash with the DOM and Node types of the rest. Vitest runs them unchecked.
-  "exclude": ["src/**/*.workerd.test.ts", "src/tests/workerd"]
+  // The Astro components index imports `.astro` files, which only the host's Astro tooling types.
+  "exclude": [
+    "src/**/*.workerd.test.ts",
+    "src/tests/workerd",
+    "src/integrations/astro/components/index.ts"
+  ]
 }

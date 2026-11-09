@@ -49,14 +49,10 @@ useHead(() => ({
   <main v-if="post">
     <h1 :data-cms="edit('posts', post.id, 'title')">{{ post.title }}</h1>
     <time v-if="post.publishedAt" :datetime="post.publishedAt">{{ post.publishedAt }}</time>
-    <img
-      v-if="post.hero"
-      :src="post.hero.src"
-      :srcset="post.hero.srcset"
+    <TenonImage
+      :image="post.hero"
       sizes="(min-width: 720px) 720px, 100vw"
-      :width="post.hero.width"
-      :height="post.hero.height"
-      :alt="post.hero.alt ?? ''"
+      loading="eager"
       style="max-width: 100%; height: auto"
     />
     <p :data-cms="edit('posts', post.id, 'body')" style="white-space: pre-wrap">{{ post.body }}</p>

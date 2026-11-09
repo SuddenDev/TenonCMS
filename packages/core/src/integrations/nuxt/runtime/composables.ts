@@ -6,7 +6,6 @@ import {
   useHead,
   useRequestEvent,
   useRoute,
-  useSeoMeta,
   useState,
 } from "#app";
 import type cms from "#tenon/config";
@@ -22,6 +21,7 @@ import {
   type Localization,
   type ReadOptions,
   type SeoTemplates,
+  seoHead,
   seoMeta,
   switchTarget,
 } from "tenoncms/client";
@@ -291,38 +291,16 @@ export function useTenonSeo(
   };
   const general = read("general");
   const seo = read("seo");
-  const meta = computed(() =>
-    seoMeta(toValue(page) ?? {}, {
-      general: general.data.value,
-      seo: seo.data.value,
-      templates: options.templates,
-    }),
-  );
+  const settings = () => ({
+    general: general.data.value,
+    seo: seo.data.value,
+    templates: options.templates,
+  });
+  const meta = computed(() => seoMeta(toValue(page) ?? {}, settings()));
+  const head = computed(() => seoHead(toValue(page) ?? {}, settings()));
 
   useAlternates(() => toValue(page)?.alternates);
-  useSeoMeta({
-    title: () => meta.value.title,
-    description: () => meta.value.description,
-    ogTitle: () => meta.value.title,
-    ogDescription: () => meta.value.description,
-    ogImage: () => meta.value.image,
-    ogUrl: () => meta.value.canonical,
-    ogType: "website",
-    ogSiteName: () => general.data.value?.title || undefined,
-    twitterCard: () => (meta.value.image ? "summary_large_image" : "summary"),
-    robots: () => (meta.value.noindex ? "noindex, nofollow" : undefined),
-  });
-  useHead(() => ({
-    link: [
-      ...(meta.value.canonical ? [{ rel: "canonical" as const, href: meta.value.canonical }] : []),
-      ...meta.value.alternates.map(({ hreflang, href }) => ({
-        rel: "alternate" as const,
-        hreflang,
-        href,
-      })),
-    ],
-    meta: meta.value.verification,
-  }));
+  useHead(() => ({ title: head.value.title, meta: head.value.meta, link: head.value.links }));
 
   return Promise.all([general, seo]).then(() => meta);
 }

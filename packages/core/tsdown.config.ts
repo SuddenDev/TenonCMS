@@ -7,6 +7,8 @@ export default defineConfig({
     "src/integrations/vue/richtext.ts",
     "src/integrations/vue/index.ts",
     "src/integrations/react/richtext.ts",
+    "src/integrations/react/index.ts",
+    "src/integrations/components.ts",
     "src/client/index.ts",
     "src/integrations/astro/index.ts",
     "src/integrations/cloudflare/index.ts",
@@ -47,7 +49,7 @@ export default defineConfig({
   dts: true,
   // Runtime files ship as source. The host's Vite and Nitro compile them and resolve `#tenon/config`.
   copy: [
-    { from: "src/integrations/astro/Richtext.astro", to: "dist/integrations/astro" },
+    { from: "src/integrations/astro/components", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/route.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/middleware.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/admin.astro", to: "dist/integrations/astro" },

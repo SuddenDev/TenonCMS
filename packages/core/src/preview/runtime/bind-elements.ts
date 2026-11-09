@@ -11,6 +11,26 @@ import { draftKey, getDrafts, readDocuments } from "./store.ts";
 export const edit = (collection: string, id: string | null, path: string) =>
   `${collection}:${id ?? ""}:${path}`;
 
+/** Where a blocks field lives, for click-to-edit. `id` is `null` for a global. */
+export type BlocksEdit = { collection: string; id: string | null; path: string };
+
+/**
+ * The `data-cms` value of `path` inside `block` of a blocks field, or of the block itself without a path. The admin
+ * addresses blocks by index. Drafts replace block objects, so the index comes from the block or its `id`.
+ * @returns `undefined` without `field`, or for a block that is not in `blocks`.
+ */
+export function editBlock(
+  field: BlocksEdit | undefined,
+  blocks: readonly { id?: string }[] | null | undefined,
+  block: { id?: string },
+  path?: string,
+) {
+  const index = blocks?.findIndex((b) => b === block || (!!b.id && b.id === block.id));
+  if (!field || index === undefined || index < 0) return undefined;
+  const at = `${field.path}.${index}`;
+  return edit(field.collection, field.id, path ? `${at}.${path}` : at);
+}
+
 const valueAt = (value: unknown, path: string) =>
   path.split(".").reduce<unknown>((v, key) => (isObject(v) ? v[key] : undefined), value);
 

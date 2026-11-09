@@ -1,0 +1,22 @@
+---
+import type { HTMLAttributes, HTMLTag } from "astro/types";
+import { type BlocksEdit, editBlock } from "tenoncms/components";
+
+type Block = { id?: string; blockType: string };
+type Props = HTMLAttributes<"div"> & {
+  blocks?: readonly Block[] | null;
+  /** Astro components by block type. Each gets the props `block` and `edit`. */
+  components: Record<string, (props: any) => any>;
+  edit?: BlocksEdit;
+  as?: HTMLTag;
+};
+const { blocks, components, edit, as: Tag = "div", ...attrs } = Astro.props;
+---
+
+<Tag {...attrs}>
+  {(blocks ?? []).map((block) => {
+    const Component = components[block.blockType];
+    const bind = (path?: string) => editBlock(edit, blocks, block, path);
+    return Component && <Component block={block} edit={bind} />;
+  })}
+</Tag>

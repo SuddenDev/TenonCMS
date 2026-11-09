@@ -1,5 +1,5 @@
 ---
-import { seoMeta } from "tenoncms";
+import { Seo } from "tenoncms/astro/components";
 import { edit } from "tenoncms/preview";
 import Blocks from "../components/Blocks.astro";
 import Header from "../components/Header.astro";
@@ -12,27 +12,12 @@ export const prerender = false;
 const { tenon: cms, locale, path } = Astro.locals;
 const page = await findPage(cms, path, locale);
 if (!page) return new Response("Not found", { status: 404 });
-const [general, seo] = await Promise.all([
-  cms.getGlobal("general", { locale }),
-  cms.getGlobal("seo", { locale }),
-]);
-const meta = seoMeta(page, { general, seo });
 ---
 
 <html lang={locale}>
   <head>
     <meta charset="utf-8" />
-    <title>{meta.title}</title>
-    {meta.description && <meta name="description" content={meta.description} />}
-    {meta.noindex && <meta name="robots" content="noindex" />}
-    {meta.canonical && <link rel="canonical" href={meta.canonical} />}
-    {meta.alternates.map((a) => (
-      <link rel="alternate" hreflang={a.hreflang} href={a.href} />
-    ))}
-    {meta.image && <meta property="og:image" content={meta.image} />}
-    {meta.verification.map((tag) => (
-      <meta name={tag.name} content={tag.content} />
-    ))}
+    <Seo page={page} />
   </head>
   <body>
     <Header alternates={page.alternates} />

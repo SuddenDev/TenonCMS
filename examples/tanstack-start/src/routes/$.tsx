@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { seoMeta } from "tenoncms/client";
+import { seoHead } from "tenoncms/client";
 import { edit } from "tenoncms/preview";
 import { useDraft } from "tenoncms/preview/react";
 import cms from "../../tenon.config";
@@ -24,17 +24,9 @@ const getPage = createServerFn()
 export const Route = createFileRoute("/$")({
   loader: ({ params }) => getPage({ data: `/${params._splat ?? ""}` }),
   head: ({ loaderData }) => {
-    const meta = loaderData && seoMeta(loaderData.page, loaderData);
-    return {
-      meta: [
-        { title: meta?.title },
-        ...(meta?.description ? [{ name: "description", content: meta.description }] : []),
-        ...(meta?.noindex ? [{ name: "robots", content: "noindex" }] : []),
-        ...(meta?.image ? [{ property: "og:image", content: meta.image }] : []),
-        ...(meta?.verification ?? []),
-      ],
-      links: meta?.canonical ? [{ rel: "canonical", href: meta.canonical }] : [],
-    };
+    if (!loaderData) return {};
+    const { title, meta, links } = seoHead(loaderData.page, loaderData);
+    return { meta: [{ title }, ...meta], links };
   },
   component: Page,
   notFoundComponent: () => <p>Page not found</p>,

@@ -1,9 +1,7 @@
 import { defineComponent, type PropType } from "vue";
 import type { LinkRead } from "../../links/config/types.ts";
+import { linkAttrs } from "../../links/runtime/link-attrs.ts";
 import { primitiveProps, renderPrimitive } from "./primitive.ts";
-
-// A path on this site, which a router component MAY handle. URLs, `//host`, `mailto:` and `#hash` stay plain.
-const isInternal = (href: string) => href.startsWith("/") && !href.startsWith("//");
 
 /**
  * Renders a populated `link` field. The default slot is the content, else the target's title. Renders nothing for a
@@ -22,22 +20,15 @@ export const Link = defineComponent({
   },
   setup(props, { attrs, slots }) {
     return () => {
-      const { href, target, title } = props.link ?? {};
-      if (!href) return null;
+      const own = linkAttrs(props.link, typeof props.as !== "string");
+      if (!own) return null;
 
-      const router = typeof props.as !== "string" && isInternal(href);
-      const own = {
-        ...(router ? { to: href } : { href }),
-        ...(target && target !== "_self" && { target }),
-        ...(target === "_blank" && { rel: "noopener noreferrer" }),
-        ...attrs,
-      };
-      const as = router || props.asChild ? props.as : typeof props.as === "string" ? props.as : "a";
-
+      const as = "to" in own || typeof props.as === "string" ? props.as : "a";
+      const content = props.asChild ? undefined : () => slots.default?.() ?? props.link?.title;
       return renderPrimitive(
         { as, asChild: props.asChild },
-        own,
-        () => slots.default?.() ?? title,
+        { ...own, ...attrs },
+        content,
         slots.default,
       );
     };

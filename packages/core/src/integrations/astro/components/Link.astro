@@ -1,0 +1,14 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import { linkAttrs, type LinkRead } from "tenoncms/components";
+
+type Props = Omit<HTMLAttributes<"a">, "href" | "target"> & { link?: Partial<LinkRead> | null };
+const { link, ...attrs } = Astro.props;
+const own = linkAttrs(link);
+---
+
+{own && (
+  <a {...own} {...attrs}>
+    <slot>{link?.title}</slot>
+  </a>
+)}
