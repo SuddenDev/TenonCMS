@@ -38,6 +38,7 @@ export function settings() {
         },
         favicon: {
           type: "image",
+          separator: true,
           description: { en: "Icon shown in browser tabs.", de: "Symbol in den Browser-Tabs." },
         },
       },
@@ -72,8 +73,19 @@ export function settings() {
             de: "Standardbild für soziale Netzwerke. Empfohlene Größe: 1200×630.",
           },
         },
+        noindex: {
+          type: "boolean",
+          appearance: "switch",
+          separator: true,
+          label: { en: "Hide from search engines", de: "Vor Suchmaschinen verbergen" },
+          description: {
+            en: "Ask search engines not to index any page.",
+            de: "Suchmaschinen bitten, keine Seite zu indexieren.",
+          },
+        },
         verification: {
           type: "group",
+          separator: true,
           label: { en: "Verification", de: "Verifizierung" },
           description: {
             en: "Codes that prove you own the site.",
@@ -94,15 +106,6 @@ export function settings() {
                 de: "Verifizierungscode der Bing Webmaster Tools.",
               },
             },
-          },
-        },
-        noindex: {
-          type: "boolean",
-          appearance: "switch",
-          label: { en: "Hide from search engines", de: "Vor Suchmaschinen verbergen" },
-          description: {
-            en: "Ask search engines not to index any page.",
-            de: "Suchmaschinen bitten, keine Seite zu indexieren.",
           },
         },
       },
