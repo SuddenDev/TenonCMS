@@ -58,18 +58,22 @@ From building the House of Cacao site.
 
 ### Bugs
 
-- [ ] Link buttons vanish in the live preview, with a hydration mismatch (`rendered on server: a.link, expected on client: Symbol(v-cmt)`).
+- [x] Link buttons vanish in the live preview, with a hydration mismatch (`rendered on server: a.link, expected on client: Symbol(v-cmt)`).
   - Cause: a read populates a link field to `{ href, title, target }`, but the draft holds the stored `{ reference: { collection, id } }`. `mergeValue` merges per key of the draft, so the merged link has no `href`.
   - Fix: keep the populated value while the draft's reference equals the current one (keep `reference` in the populated shape so the merge can compare), or resolve link drafts in the preview runtime.
-- [ ] Bound text inside blocks does not update live. Clicking `data-cms="pages:<id>:content.0.headline"` opens the right field, but typing does not patch the text.
+- [x] Bound text inside blocks does not update live. Clicking `data-cms="pages:<id>:content.0.headline"` opens the right field, but typing does not patch the text.
   - Cause: `valueAt` in the preview runtime steps only into plain objects (`isObject` rejects arrays), so a path through a `blocks` or `array` field resolves to `undefined`.
   - Fix: let `valueAt` index arrays by number.
-- [ ] Clicking a bound item inside a block does not expand and scroll to its field. It sometimes expands offscreen. Once the block is open, scrolling works.
-- [ ] Missing config fails only on request, not at startup. With plain `node .output/server/index.mjs` (no `.env`), the site renders, but the admin gets `500` on `/_tenon/auth/get-session` and `401` on `/_tenon/schema`, because `secret` is `''` and is checked lazily.
+- [x] Clicking a bound item inside a block does not expand and scroll to its field. It sometimes expands offscreen. Once the block is open, scrolling works.
+  - Cause: the focus watcher ran during setup, before the field had an element, and a row that just opened keeps its content `hidden` for a frame.
+- [x] Missing config fails only on request, not at startup. With plain `node .output/server/index.mjs` (no `.env`), the site renders, but the admin gets `500` on `/_tenon/auth/get-session` and `401` on `/_tenon/schema`, because `secret` is `''` and is checked lazily.
   - Fix: validate all required config (`secret`, `database`, media storage) at startup and exit with one error that lists every missing or invalid value.
-- [ ] Deleting a document that is still referenced fails, even after the confirm dialog. It SHOULD apply the configured `onDelete` rule (for example, clear the reference), then delete.
-- [ ] The CMS overflows inside the admin. Find out why.
-- [ ] HMR: changes sometimes do not show right away. Find out when and why.
+- [x] Deleting a document that is still referenced fails, even after the confirm dialog. It SHOULD apply the configured `onDelete` rule (for example, clear the reference), then delete.
+  - Cause: "Delete and break links" was an `AlertDialogAction`, which closes the dialog (cancel) before its click confirms.
+- [x] The CMS overflows inside the admin. Find out why.
+  - Not reproduced in hoc-web; likely the site's GSAP ScrollTrigger. Found and fixed: a `<fieldset>` grew to the width of a long row title, and focusing a field scrolled the pane sideways.
+- [x] HMR: changes sometimes do not show right away. Find out when and why.
+  - Cause: the admin bar bundled a dev build of Vue, which replaced the host's `__VUE_HMR_RUNTIME__` once an editor was signed in. The admin build now compiles Vue for production.
 
 ### Admin
 

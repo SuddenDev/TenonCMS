@@ -128,6 +128,10 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - The `Icon` component forces its own size, so a size class on it does nothing. Set a font size on its parent.
 - The shadcn `CommandItem` throws outside a `CommandGroup`, and its check mark needs the `group-data-[state=checked]` variant, because reka sets `data-state`.
 - A named import from the icon library next to the `Icon` component's dynamic import pulls the whole library in statically. The admin bar imports its glyphs one by one from deep paths.
+- `watch(source, cb, { immediate: true, flush: "post" })` runs `cb` during setup, before the template ref exists. To act once a newly mounted element is there, watch the ref too.
+- reka's `CollapsibleContent` keeps newly opened content `hidden` for a frame, and `scrollIntoView` on a hidden element does nothing. `FieldInput` waits until the field has a box.
+- A `<fieldset>` is at least as wide as its content (`min-inline-size: min-content`). The shared `FieldSet` sets `min-w-0`; without it a long row title widens the form, and `scrollIntoView` scrolls the pane sideways, where the editor cannot scroll it back.
+- `AlertDialogAction` closes the dialog before its own click handler runs. A dialog that treats closing as "cancel" MUST confirm with a plain `Button`.
 
 **Styles**
 
@@ -140,4 +144,5 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - Chrome ignores `@property` and `@font-face` in a shadow root's stylesheet. Tailwind v4 initializes its ring, shadow, translate, border-style and animation variables with `@property`, so in the bar they compute to nothing. A PostCSS plugin unwraps the fallback. Web fonts do not load either, so the bar uses system fonts.
 - Inherited properties (font, color, line height) reach a shadow root through its host and beat `:host` rules. The bar resets them with `all: initial` on one wrapper that holds both the bar and the portal target.
 - reka portals teleport to `body` by default, outside the shadow root and its styles. Set the portal target on the config provider.
+- The bar bundles its own Vue and runs on the host's pages. The admin build MUST compile Vue's production code (`process.env.NODE_ENV` is defined at build). A dev copy sets `globalThis.__VUE_HMR_RUNTIME__` over the host's, and the host's components stop updating in its dev server once an editor is signed in.
 - A background Chrome tab fires no scroll events, animation frames or animations, and gets no real focus or key events. Test hiding on scroll, menus and keyboard in a foreground tab.
