@@ -6,7 +6,7 @@ import path from "path";
 // The example dev server serves the API. `pnpm dev:<example>` sets CMS_URL.
 const target = process.env.CMS_URL ?? "http://localhost:4321";
 
-export default defineConfig(() => ({
+export default defineConfig(({ command }) => ({
   plugins: [vue(), tailwindcss()],
   test: { css: { include: [/richtext\/style\.css/] } },
   // vue-i18n feature flags: Composition API only, no devtools in production.
@@ -14,6 +14,9 @@ export default defineConfig(() => ({
     __VUE_I18N_FULL_INSTALL__: false,
     __VUE_I18N_LEGACY_API__: false,
     __INTLIFY_PROD_DEVTOOLS__: false,
+    // The build MUST bundle Vue's production code. The admin bar runs on the host's pages, and a dev copy of Vue there
+    // replaces the host's `__VUE_HMR_RUNTIME__`, so the host's components stop updating in its dev server.
+    ...(command === "build" && { "process.env.NODE_ENV": JSON.stringify("production") }),
   },
   build: {
     // Vue is bundled in. Hosts plug in through `mount(el)`, so no shared runtime is needed.
