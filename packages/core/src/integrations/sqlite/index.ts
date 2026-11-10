@@ -8,4 +8,7 @@ import type { DatabaseOptions } from "../../db/create-db.ts";
  * @example
  * export default defineCms({ database: sqlite("./.data/cms.db"), ... })
  */
-export const sqlite = (path: string): DatabaseOptions => ({ dialect: nodeSqliteDialect(path) });
+export const sqlite = (path: string): DatabaseOptions => ({
+  dialect: nodeSqliteDialect(path),
+  problems: path ? [] : ["the path is missing"],
+});

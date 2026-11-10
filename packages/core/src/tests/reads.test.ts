@@ -4,6 +4,8 @@ import { defineCms } from "../index.ts";
 import { libsqlDialect } from "../db/index.ts";
 import { withDatabase } from "../cms/create-cms.ts";
 import { durableObject } from "../integrations/cloudflare/index.ts";
+import { libsql } from "../integrations/libsql/index.ts";
+import { s3 } from "../media/storage/s3/index.ts";
 import {
   admin,
   base,
@@ -212,27 +214,33 @@ describe("errors", () => {
     expect(await cms.findById("posts", id)).toBeDefined();
   });
 
-  it("keep reads working with a short secret, but fail auth", async () => {
-    const bad = define("short");
-    expect((await bad.fetch(new Request(`${origin}/_tenon/collections/posts`))).status).toBe(200);
-    const cookie = { headers: { cookie: "better-auth.session_token=x" } };
-    expect(
-      (await bad.fetch(new Request(`${origin}/_tenon/collections/posts`, cookie))).status,
-    ).toBe(200);
-    await expect(bad.auth()).rejects.toThrow(/at least 32 characters/);
-    const signIn = new Request(`${origin}/_tenon/auth/sign-in/email`, {
-      method: "POST",
-      headers: { "content-type": "application/json", origin },
-      body: JSON.stringify(admin),
-    });
-    expect((await bad.fetch(signIn)).status).toBe(500);
-    // Without a session, no lookup runs.
-    expect((await bad.fetch(new Request(`${origin}/_tenon/schema`))).status).toBe(401);
+  it("list every missing or invalid option in one error at startup", () => {
+    const missing = undefined as unknown as string;
+    const start = () =>
+      defineCms({
+        ...base,
+        secret: "short",
+        database: libsql(missing),
+        media: {
+          storage: s3({
+            bucket: missing,
+            region: "auto",
+            accessKeyId: missing,
+            secretAccessKey: "",
+          }),
+        },
+      });
+
+    expect(start).toThrow("`secret` MUST be at least 32 characters");
+    expect(start).toThrow("`database`: the URL is missing");
+    expect(start).toThrow("`media.storage`: `bucket` is missing");
+    expect(start).toThrow("`media.storage`: `accessKeyId` is missing");
+    expect(start).toThrow("`media.storage`: `secretAccessKey` is missing");
   });
 
   it("reject unknown options at the type level", () => {
     // @ts-expect-error `globalz` is not an option
-    defineCms({ collections: {}, globalz: {}, database: testDatabase(), secret: "" });
+    defineCms({ collections: {}, globalz: {}, database: testDatabase(), secret: base.secret });
   });
 });
 

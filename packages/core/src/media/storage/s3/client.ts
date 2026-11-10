@@ -65,7 +65,8 @@ export function createClient({
 
 const RENEW_BEFORE = 5 * 60_000;
 
-// Static keys sign with one client. A provider's credentials are kept until they expire within `RENEW_BEFORE`.
+// Static keys sign with one client, created on first use: `AwsClient` throws for missing keys, which `s3()` reports as
+// problems instead. A provider's credentials are kept until they expire within `RENEW_BEFORE`.
 // Returns `AwsClient.sign()` over the current credentials.
 function createSigner(
   region: string,
@@ -73,11 +74,11 @@ function createSigner(
 ) {
   const create = (c: S3Credentials) => new AwsClient({ ...c, region, service: "s3" });
   const { credentials } = keys;
-  const fixed = credentials ? undefined : create(keys as S3Credentials);
+  let fixed: AwsClient | undefined;
 
   let cached: { aws: AwsClient; until: number } | undefined;
   async function current() {
-    if (fixed) return fixed;
+    if (!credentials) return (fixed ??= create(keys as S3Credentials));
     if (cached && Date.now() < cached.until) return cached.aws;
     const c = await credentials!();
     const until = c.expiration ? c.expiration.getTime() - RENEW_BEFORE : 0;

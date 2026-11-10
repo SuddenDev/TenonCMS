@@ -103,7 +103,7 @@ describe("array types", () => {
   });
 
   it("checks relation targets inside items", () => {
-    const db = { database: libsql(":memory:"), secret: "" };
+    const db = { database: libsql(":memory:"), secret: "x".repeat(32) };
     const pages = defineCollection({ fields: {} });
     const valid = defineCollection({
       fields: {
@@ -174,7 +174,7 @@ describe("blocks types", () => {
   });
 
   it("checks relation targets inside blocks", () => {
-    const db = { database: libsql(":memory:"), secret: "" };
+    const db = { database: libsql(":memory:"), secret: "x".repeat(32) };
     const pages = defineCollection({ fields: {} });
     const blocks = (collection: string) => ({
       fields: {
@@ -390,7 +390,7 @@ describe("hook types", () => {
         afterRead: { count: ({ docs }) => docs.map((d) => ({ ...d, views: (d.views ?? 0) + 1 })) },
       },
     });
-    defineCms({ collections: { posts }, database: libsql(":memory:"), secret: "" });
+    defineCms({ collections: { posts }, database: libsql(":memory:"), secret: "x".repeat(32) });
     // A record keeps its keys, so a host can leave one hook out by name.
     const { count, ...rest } = posts.hooks.afterRead;
     defineCollection({ fields: posts.fields, hooks: { afterRead: rest } });
@@ -406,7 +406,12 @@ describe("hook types", () => {
       fields: { name: { type: "text" } },
       hooks: { afterRead: [({ docs }) => docs.map((d) => ({ ...d, name: d.name ?? "x" }))] },
     });
-    defineCms({ collections: {}, globals: { site }, database: libsql(":memory:"), secret: "" });
+    defineCms({
+      collections: {},
+      globals: { site },
+      database: libsql(":memory:"),
+      secret: "x".repeat(32),
+    });
     // Inline collections get untyped arguments.
     defineCms({
       collections: {
@@ -416,15 +421,15 @@ describe("hook types", () => {
         },
       },
       database: libsql(":memory:"),
-      secret: "",
+      secret: "x".repeat(32),
     });
   });
 });
 
 describe("media reads", () => {
   it("types the computed fields of find('media')", async () => {
-    const cms = defineCms({ database: libsql(":memory:"), secret: "", media: false });
-    const typed = defineCms({ database: libsql(":memory:"), secret: "", media: true });
+    const cms = defineCms({ database: libsql(":memory:"), secret: "x".repeat(32), media: false });
+    const typed = defineCms({ database: libsql(":memory:"), secret: "x".repeat(32), media: true });
     const read = async () => {
       const [doc] = await typed.find("media");
       const url: string = doc.url;
@@ -476,7 +481,7 @@ describe("nav option", () => {
 });
 
 describe("settings", () => {
-  const base = { database: libsql(":memory:"), secret: "" };
+  const base = { database: libsql(":memory:"), secret: "x".repeat(32) };
 
   it("types both defaults when omitted", async () => {
     const cms = defineCms(base);
@@ -568,7 +573,7 @@ function slugTypes() {
     const doc = await defineCms({
       collections: { c: { fields: f } },
       database,
-      secret: "",
+      secret: "x".repeat(32),
     }).findById("c", "x");
     doc?.slug satisfies string | undefined;
   };
@@ -661,7 +666,7 @@ const cms = defineCms({
     },
   },
   database,
-  secret: "",
+  secret: "x".repeat(32),
 });
 
 // Checked by `pnpm typecheck` only.
@@ -689,7 +694,7 @@ async function readTypes() {
     collections: { pages: { fields: { parent: { type: "relation", collection: "pages" } } } },
     populate: { depth: 3 },
     database,
-    secret: "",
+    secret: "x".repeat(32),
   });
   const pg = (await deep.find("pages"))[0];
   const p3: string | null | undefined = pg.parent?.parent?.parent?.parent;
@@ -724,7 +729,11 @@ async function readTypes() {
   // @ts-expect-error unknown global populate key
   cms.getGlobal("site", { populate: { nope: true } });
 
-  const wide = defineCms({ collections: {} as Record<string, Collection>, database, secret: "" });
+  const wide = defineCms({
+    collections: {} as Record<string, Collection>,
+    database,
+    secret: "x".repeat(32),
+  });
   const w = (await wide.find("x"))[0];
   w.anything;
 
@@ -800,7 +809,7 @@ async function arrayReadTypes() {
       },
     },
     database,
-    secret: "",
+    secret: "x".repeat(32),
     media: false,
   });
   const item = (await cms.find("menus"))[0].links![0];
@@ -852,7 +861,7 @@ async function blocksReadTypes() {
       },
     },
     database,
-    secret: "",
+    secret: "x".repeat(32),
     media: false,
   });
   const item = (await cms.find("landing"))[0].content![0];
@@ -942,7 +951,7 @@ async function httpTypes() {
       posts: { fields: { author: { type: "relation", collection: "people" } } },
     },
     database,
-    secret: "",
+    secret: "x".repeat(32),
   });
   const client = createClient<typeof cms>();
   const person = await client.findById("people", "x");
@@ -970,7 +979,7 @@ async function httpTypes() {
 }
 
 describe("admin.adminBar option", () => {
-  const base = { database: libsql(":memory:"), secret: "" };
+  const base = { database: libsql(":memory:"), secret: "x".repeat(32) };
 
   it("accepts a position, individual items and false", () => {
     defineCms({
@@ -999,7 +1008,7 @@ describe("admin.adminBar option", () => {
 });
 
 describe("localization types", () => {
-  const base = { database: libsql(":memory:"), secret: "" };
+  const base = { database: libsql(":memory:"), secret: "x".repeat(32) };
   const cms = defineCms({
     ...base,
     collections: {

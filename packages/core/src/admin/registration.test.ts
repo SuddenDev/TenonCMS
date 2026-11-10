@@ -14,7 +14,7 @@ import type {
 } from "./index.d.ts";
 import { libsql } from "../integrations/libsql/index.ts";
 
-const base = { database: libsql(":memory:"), secret: "" };
+const base = { database: libsql(":memory:"), secret: "x".repeat(32) };
 const ref = clientRef("./x");
 
 // These tests check types. `@ts-expect-error` fails the typecheck when a line is NOT an error.

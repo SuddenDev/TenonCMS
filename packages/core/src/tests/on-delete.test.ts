@@ -69,7 +69,7 @@ describe("onDelete restrict", () => {
         g: { fields: { pin: { type: "relation", collection: "posts", onDelete: "restrict" } } },
       },
       database: testDatabase(),
-      secret: "",
+      secret: "x".repeat(32),
     });
     const p = await cms.create("posts", {});
     const note = await cms.create("notes", { post: p.id });
@@ -301,7 +301,7 @@ describe("onDelete inside array items", () => {
       },
       localization: { locales: ["en", "de"], defaultLocale: "en" },
       database: testDatabase(),
-      secret: "",
+      secret: "x".repeat(32),
       media: false,
     });
     const p = await cms.create("pages", {});

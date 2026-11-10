@@ -27,7 +27,8 @@ Server code   ---------> scoped local API ---^
 
 - `defineCms()` builds everything inside a closure. There is no global state, so several instances can coexist.
 - Config is assembled in a fixed order: merge plugins, add the settings globals, add media, then check the whole schema. Invalid config throws at startup.
-- Database and auth are lazy. Nothing connects at import time, and the secret is checked on first auth use, so public pages keep working with a bad config.
+- `requireConfig()` checks `secret`, `database` and `media.storage` at startup and throws one error that lists every missing or invalid value, so a bad deploy fails at boot, not on the first admin request. `libsql()`, `s3()`, `local()` and the other factories report their own missing options in `problems` instead of throwing. A build that loads the config (prerendering) needs these values too.
+- Database and auth are lazy. Nothing connects at import time.
 - `withDatabase(cms, database, { wake }?)` builds a copy of the instance on another database, with its own connection, migrations, auth and HTTP app. Schema, options, media and email stay shared. The Cloudflare adapter gives each Durable Object a copy bound to its storage. `wake(at)` runs after a write queues a job that is due at `at`, so a host with a clock of its own can re-arm it.
 - Tasks and cron entries merge at startup (`resolveJobs()`): built-in tasks (`schedule/tasks.ts`), plugins, then the host. The instance has `jobs.run()`; the `cms` of hooks does not, see the [gotchas](gotchas.md#server-data-and-http).
 

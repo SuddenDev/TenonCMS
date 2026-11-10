@@ -101,3 +101,9 @@ describe("local", () => {
     );
   });
 });
+
+describe("local options", () => {
+  it("reports a missing dir instead of throwing", () => {
+    expect(local({ dir: undefined as unknown as string }).problems).toEqual(["`dir` is missing"]);
+  });
+});

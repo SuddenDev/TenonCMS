@@ -4,6 +4,8 @@
  * Moving or deleting a missing key MUST do nothing.
  */
 export type Storage = {
+  /** Missing or invalid options, which `defineCms()` lists in its startup error. */
+  problems?: string[];
   /** Default part size in bytes. */
   partSize: number;
   /** Starts a multipart upload of `parts` parts. */

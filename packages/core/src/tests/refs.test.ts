@@ -86,7 +86,11 @@ describe("relation schema", () => {
     ],
   ])("rejects %s", (_, config, message) => {
     expect(() =>
-      defineCms({ ...(config as object), database: testDatabase(), secret: "" } as never),
+      defineCms({
+        ...(config as object),
+        database: testDatabase(),
+        secret: "x".repeat(32),
+      } as never),
     ).toThrow(message);
   });
 
@@ -95,7 +99,7 @@ describe("relation schema", () => {
   });
 
   it("checks relation targets and join paths at the type level", () => {
-    const db = { database: testDatabase(), secret: "" };
+    const db = { database: testDatabase(), secret: "x".repeat(32) };
     const authors = defineCollection({
       fields: {
         name: { type: "text" },

@@ -16,7 +16,10 @@ const types = {
  * export default defineCms({ database: postgres(process.env.DATABASE_URL!), ... })
  */
 export function postgres(config: string | pg.PoolConfig): DatabaseOptions & { pool: pg.Pool } {
-  const options = typeof config === "string" ? { connectionString: config } : config;
+  const string = typeof config !== "object" || !config;
+  const options = string ? { connectionString: config } : config;
   const pool = new pg.Pool({ ...options, types });
-  return { dialect: new PostgresDialect({ pool }), pool };
+  // A config object MAY rely on the `PG*` environment variables, so only a missing string counts.
+  const problems = string && !config ? ["the connection string is missing"] : [];
+  return { dialect: new PostgresDialect({ pool }), pool, problems };
 }

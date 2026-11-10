@@ -9,5 +9,9 @@ import type { DatabaseOptions } from "../../db/create-db.ts";
  * export default defineCms({ database: libsql("file:/absolute/path/cms.db"), ... })
  */
 export function libsql(config: string | Config): DatabaseOptions {
-  return { dialect: libsqlDialect(typeof config === "string" ? { url: config } : config) };
+  const options = typeof config === "object" && config ? config : { url: config };
+  return {
+    dialect: libsqlDialect(options),
+    problems: options.url ? [] : ["the URL is missing"],
+  };
 }

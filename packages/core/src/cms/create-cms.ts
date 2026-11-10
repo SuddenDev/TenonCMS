@@ -34,6 +34,7 @@ import { defaultMedia } from "tenoncms/media/default";
 import { mediaCollection } from "../media/config/collection.ts";
 import { localizedKeys } from "../schema/traversal/localized-fields.ts";
 import { createRuntime } from "./runtime/create-runtime.ts";
+import { requireConfig } from "./config/require-config.ts";
 import type { DatabaseOptions } from "../db/create-db.ts";
 import type { Caller, Core } from "./runtime/types.ts";
 import { outerScope } from "./runtime/operation-context.ts";
@@ -128,6 +129,7 @@ export function defineCms<
       : mediaOption !== false
         ? defaultMedia(!!mediaOption)
         : undefined;
+  requireConfig({ secret, database, storage: mediaOptions?.storage });
 
   /* ── Schema creation + validation ────────────────────────────────────────────────────── */
 

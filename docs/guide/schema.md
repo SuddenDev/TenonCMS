@@ -49,6 +49,8 @@ export default defineCms({
 });
 ```
 
+`defineCms()` checks `secret`, `database` and `media.storage` when the config loads. A missing or short secret, a database without its URL or a storage without its bucket or keys throws one error that lists every problem, so the server stops at startup. A build that loads the config, for example to prerender pages, needs these values too. A custom storage adapter MAY report its own missing options in `problems`.
+
 Each database has its own entry and driver, so you install only the one you use:
 
 | Database                         | `database`                                       | Install                |

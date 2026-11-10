@@ -6,7 +6,11 @@ import { type Dialect, Kysely } from "kysely";
  * one. A host's own dialect MUST keep transactions open across `await`, because hooks and nested writes run inside
  * them. A dialect with Kysely's `PostgresAdapter` runs the Postgres queries; any other runs the SQLite ones.
  */
-export type DatabaseOptions = { dialect: Dialect };
+export type DatabaseOptions = {
+  dialect: Dialect;
+  /** Missing or invalid options, which `defineCms()` lists in its startup error. */
+  problems?: string[];
+};
 
 /** Opens Kysely on the configured database. Nothing connects until the first query. */
 export const createDb = (database: DatabaseOptions) =>

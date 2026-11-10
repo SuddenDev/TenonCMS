@@ -85,16 +85,19 @@ export function r2(bucket: R2Bucket, options?: R2Options): Storage;
  */
 export function r2(options: R2ApiOptions): Storage;
 export function r2(source: R2Bucket | R2ApiOptions, options?: R2Options): Storage {
-  if (!("accountId" in source)) return r2Binding(source, options);
+  if (!source || !("accountId" in source)) return r2Binding(source, options);
   const { accountId, region, ...rest } = source;
   const host = [accountId, region === "eu" && "eu", "r2.cloudflarestorage.com"]
     .filter(Boolean)
     .join(".");
-  return s3({ ...rest, region: "auto", endpoint: `https://${host}` });
+  const storage = s3({ ...rest, region: "auto", endpoint: `https://${host}` });
+  if (!accountId) storage.problems = ["`accountId` is missing", ...(storage.problems ?? [])];
+  return storage;
 }
 
 function r2Binding(bucket: R2Bucket, { partSize = 16 * MB, publicUrl }: R2Options = {}): Storage {
   return {
+    problems: bucket ? [] : ["the bucket binding is missing"],
     partSize: Math.max(partSize, 5 * MB),
 
     createUpload: (key, { mimeType }) =>

@@ -218,3 +218,15 @@ describe("s3", () => {
     expect(calls[3].headers.get("x-amz-security-token")).toBe("t3");
   });
 });
+
+describe("s3 options", () => {
+  it("reports missing options instead of throwing", () => {
+    const missing = undefined as unknown as string;
+    expect(s3({ ...options, bucket: "", region: missing, accessKeyId: missing }).problems).toEqual([
+      "`bucket` is missing",
+      "`region` is missing",
+      "`accessKeyId` is missing",
+    ]);
+    expect(s3(options).problems).toEqual([]);
+  });
+});

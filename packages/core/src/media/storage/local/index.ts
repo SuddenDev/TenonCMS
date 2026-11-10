@@ -22,10 +22,12 @@ export type LocalOptions = {
  * ephemeral serverless filesystems. Uploads are streamed through the server part by part.
  */
 export function local({ dir, partSize = 16 * 1024 ** 2, baseUrl }: LocalOptions): Storage {
-  const disk = createDisk(dir);
+  // A missing `dir` is reported by `defineCms()`, so the storage is never used then.
+  const disk = createDisk(dir ?? "");
   const { path } = disk;
 
   return {
+    problems: dir ? [] : ["`dir` is missing"],
     partSize,
     ...localUploads(disk),
 

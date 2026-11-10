@@ -28,7 +28,7 @@ export type Core = {
   populate: { depth: number; maxDepth: number };
   /** Connects and migrates on the first call. */
   db: () => Promise<Kysely<Database>>;
-  /** Creates better-auth on the first call. Throws for a bad `secret`. */
+  /** Creates better-auth on the first call. */
   auth: () => Promise<{ handler(request: Request): Promise<Response>; options: BetterAuthOptions }>;
   /** The session of a request's headers, or `null`. */
   getSession: (headers: Headers) => Promise<{ user: CmsUser } | null>;

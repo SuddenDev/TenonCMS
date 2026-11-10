@@ -15,7 +15,7 @@ type Session = {
 /**
  * Create the database and auth of the CMS. Both are lazy and nothing connects at import time.
  * @param database The libsql url and token, or a Kysely dialect
- * @param secret The secret of better-auth, checked when auth is first used
+ * @param secret The secret of better-auth, checked by `defineCms()`
  * @param host The host's better-auth options
  * @param localized The localized keys of every `collection:<name>` / `global:<name>` (`null` when not localized) and the
  * default locale, with the fields of each entry. After the migrations, the stored state is synced to them.
@@ -54,11 +54,7 @@ export function createRuntime<A extends AuthOptions>(
   const db = async () => (await connect()).db;
 
   let authInstance: ReturnType<typeof createAuth<ReturnType<typeof authOptions<A>>>> | undefined;
-  const auth = async () => {
-    if (!secret || secret.length < 32)
-      throw new Error("tenoncms: `secret` MUST be at least 32 characters");
-    return (authInstance ??= createAuth((await connect()).options));
-  };
+  const auth = async () => (authInstance ??= createAuth((await connect()).options));
 
   // `A` hides `getSession` from the type checker, so it is typed here.
   const getSession = async (headers: Headers) =>

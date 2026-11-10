@@ -29,9 +29,9 @@ Construction happens in this order:
 
 ### Database and auth are lazy
 
-`defineCms()` validates and assembles configuration immediately, but does not open the database. The first `db()` call creates the connection, builds auth options, runs migrations and then `syncLocalized()`, which moves values between shared data and locale rows when the localized fields changed. Concurrent callers share the same initialization promise.
+`defineCms()` validates and assembles configuration immediately, but does not open the database. `config/require-config.ts` throws one error for every missing or invalid `secret`, `database` and `media.storage` value; the factories report their own options in `problems`. The first `db()` call creates the connection, builds auth options, runs migrations and then `syncLocalized()`, which moves values between shared data and locale rows when the localized fields changed. Concurrent callers share the same initialization promise.
 
-The first `auth()` call checks that `secret` has at least 32 characters, initializes the database if needed, and creates the shared better-auth instance. `getSession(headers)` uses that instance to resolve a request's session. Database queries and migrations belong to [db](../db/README.md); auth configuration and caller lookup belong to [auth](../auth/README.md).
+The first `auth()` call initializes the database if needed and creates the shared better-auth instance. `getSession(headers)` uses that instance to resolve a request's session. Database queries and migrations belong to [db](../db/README.md); auth configuration and caller lookup belong to [auth](../auth/README.md).
 
 ## Shared core, caller scope and hook API
 

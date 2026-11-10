@@ -66,6 +66,7 @@ export function s3(options: S3Options): Storage {
   const { copyInParts, ...uploads } = s3Multipart(client);
 
   return {
+    problems: s3Problems(options),
     partSize: Math.max(partSize, 5 * MB),
     ...uploads,
 
@@ -121,4 +122,11 @@ export function s3(options: S3Options): Storage {
         ? `${publicUrl.replace(/\/$/, "")}/${encodePath(key)}`
         : `${API_BASE}/media/files/${encodeKey(key)}`,
   };
+}
+
+function s3Problems(options: S3Options) {
+  const required = options.credentials
+    ? (["bucket", "region"] as const)
+    : (["bucket", "region", "accessKeyId", "secretAccessKey"] as const);
+  return required.filter((key) => !options[key]).map((key) => `\`${key}\` is missing`);
 }
