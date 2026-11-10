@@ -51,6 +51,13 @@ describe("patch", () => {
     return el;
   };
 
+  it("writes a field inside a block", () => {
+    setDraft("pages", "1", { content: [{ id: "b1", block: "hero", headline: "New" }] });
+    const el = bound("pages:1:content.0.headline", "Old");
+    patch(el);
+    expect(el.textContent).toBe("New");
+  });
+
   it("writes a field of a populated relation", () => {
     setDraft("posts", "1", { author: { id: "a1", name: "Ann" } });
     const el = bound("posts:1:author.name", "Old");

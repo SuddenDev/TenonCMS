@@ -31,8 +31,15 @@ export function editBlock(
   return edit(field.collection, field.id, path ? `${at}.${path}` : at);
 }
 
+// Steps into objects by key and into arrays (blocks, array fields, many relations) by index.
 const valueAt = (value: unknown, path: string) =>
-  path.split(".").reduce<unknown>((v, key) => (isObject(v) ? v[key] : undefined), value);
+  path
+    .split(".")
+    .reduce<unknown>(
+      (v, key) =>
+        isObject(v) || Array.isArray(v) ? (v as Record<string, unknown>)[key] : undefined,
+      value,
+    );
 
 /** Splits a `data-cms` value into its parts. A path MAY contain `:`. */
 export function parseBinding(binding: string) {

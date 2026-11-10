@@ -12,6 +12,8 @@ import GlobalEdit from "@/modules/documents/views/GlobalEdit.vue";
 import { Icon, useLocale } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 import { resolveDraft } from "@/modules/preview/draft-documents";
+import type { LinkReference, LinkResolution } from "../../../../../core/src/links/config/types";
+import { linkKey } from "../../../../../core/src/links/runtime/value";
 import PageDocuments from "@/modules/preview/components/PageDocuments.vue";
 import PreviewPane from "@/modules/preview/components/PreviewPane.vue";
 import { routedDocument, type PageDocument } from "@/modules/preview/page-rows";
@@ -183,7 +185,7 @@ async function savedMain(doc?: Record<string, unknown>) {
 }
 
 // Image, file and relation fields go out as their documents, read like a page reads them, in the target's language.
-// Saves clear the cache, because a document MAY have changed.
+// Links go out with their `href` and `title`. Saves clear the cache, because a document MAY have changed.
 let documents = new Map<string, Promise<unknown>>();
 const loadDocument = (collection: string, id: string) => {
   const l = localeOf(collection);
@@ -191,13 +193,25 @@ const loadDocument = (collection: string, id: string) => {
   if (!documents.has(key)) documents.set(key, client.findById(collection, id, { locale: l }));
   return documents.get(key)!;
 };
+const resolveLink = (reference: LinkReference) => {
+  const key = `link:${linkKey(reference)}:${reference.deleted ?? ""}:${locale.value}`;
+  if (!documents.has(key))
+    documents.set(
+      key,
+      client.links
+        .resolve([reference], { locale: locale.value })
+        .then(([resolved]) => resolved)
+        .catch(() => ({ href: null, broken: true })),
+    );
+  return documents.get(key) as Promise<LinkResolution>;
+};
 
 let sent = 0;
 const broadcast = useDebounceFn(async () => {
   if (!name.value || !draft.value) return;
   const n = ++sent;
   const at = scope.value;
-  const data = await resolveDraft(fields.value, draft.value, loadDocument);
+  const data = await resolveDraft(fields.value, draft.value, loadDocument, resolveLink);
   if (n !== sent || at !== scope.value) return;
   // The form state holds Vue proxies, which `postMessage` cannot clone.
   send({
