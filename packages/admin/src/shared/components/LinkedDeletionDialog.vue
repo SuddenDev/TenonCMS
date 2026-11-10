@@ -10,9 +10,9 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogAction,
   AlertDialogCancel,
 } from "./ui/alert-dialog";
+import { Button } from "./ui/button";
 const { t } = useI18n();
 onBeforeUnmount(() => linkedDeletion.value?.finish(false));
 </script>
@@ -50,12 +50,11 @@ onBeforeUnmount(() => linkedDeletion.value?.finish(false));
         </li>
       </ul>
       <AlertDialogFooter>
-        <AlertDialogCancel @click="linkedDeletion?.finish(false)">{{
-          t("common.cancel")
-        }}</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" @click="linkedDeletion?.finish(true)">{{
+        <AlertDialogCancel>{{ t("common.cancel") }}</AlertDialogCancel>
+        <!-- Not an `AlertDialogAction`: it closes the dialog before its click handler runs, and closing cancels. -->
+        <Button variant="destructive" @click="linkedDeletion?.finish(true)">{{
           t("richtext.deleteAnyway")
-        }}</AlertDialogAction>
+        }}</Button>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
