@@ -2,6 +2,8 @@ import type { RichtextDocument } from "../richtext/config/types.ts";
 import type { LinkReference } from "../links/config/types.ts";
 import type { ConflictOptions, DeleteOptions } from "../errors.ts";
 import type { SyncChoice, SyncStructureOptions } from "../content/writes/sync-structure.ts";
+import type { JobFilter } from "../jobs/types.ts";
+import type { ScheduleOptions } from "../schedule/types.ts";
 import type { Schema } from "../schema/index.ts";
 import { API_KEY_HEADER } from "./constants.ts";
 import { createRequest } from "./create-request.ts";
@@ -17,6 +19,9 @@ import type {
 import { createUpload } from "./upload.ts";
 
 type FindQuery = ReadQuery & { where?: object; limit?: number };
+const when = (at: ScheduleOptions["at"]) =>
+  typeof at === "string" ? at : new Date(at).toISOString();
+
 // The implementation is untyped, so the locale is a plain string.
 type Write = LocaleOption<{ localization: { locales: string[] } }>;
 type Save = Write & ConflictOptions;
@@ -84,6 +89,12 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     publish: (name: string, id: string, { locale, updatedAt }: Save = {}) =>
       request("POST", `${doc(name, id)}/publish`, undefined, { locale, updatedAt }),
 
+    unpublish: (name: string, id: string, { locale, updatedAt }: Save = {}) =>
+      request("POST", `${doc(name, id)}/unpublish`, undefined, { locale, updatedAt }),
+
+    schedule: (name: string, id: string, { at, ...options }: ScheduleOptions) =>
+      request("POST", `${doc(name, id)}/schedule`, { ...options, at: when(at) }),
+
     discard: (name: string, id: string, options: Discard = {}) =>
       request("DELETE", `${doc(name, id)}/draft`, undefined, options),
 
@@ -133,6 +144,12 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
 
     publishGlobal: (name: string, { locale, updatedAt }: Save = {}) =>
       request("POST", `${global(name)}/publish`, undefined, { locale, updatedAt }),
+
+    unpublishGlobal: (name: string, { locale, updatedAt }: Save = {}) =>
+      request("POST", `${global(name)}/unpublish`, undefined, { locale, updatedAt }),
+
+    scheduleGlobal: (name: string, { at, ...options }: ScheduleOptions) =>
+      request("POST", `${global(name)}/schedule`, { ...options, at: when(at) }),
 
     discardGlobal: (name: string, options: Discard = {}) =>
       request("DELETE", `${global(name)}/draft`, undefined, options),
@@ -243,6 +260,16 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       },
       delete: async (id: string) => {
         await request("DELETE", `/api-keys/${enc(id)}`);
+      },
+    },
+
+    jobs: {
+      list: (filter: JobFilter = {}) => request("GET", "/jobs", undefined, filter),
+      cron: () => request("GET", "/jobs/cron"),
+      run: (id: string) => request("POST", `/jobs/${enc(id)}/run`),
+      retry: (id: string) => request("POST", `/jobs/${enc(id)}/retry`),
+      cancel: async (id: string) => {
+        await request("DELETE", `/jobs/${enc(id)}`);
       },
     },
 

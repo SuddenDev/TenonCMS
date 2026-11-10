@@ -9,6 +9,7 @@ const reserved = [
   "collections",
   "globals",
   "invites",
+  "jobs",
   "schema",
   "media",
   "preview",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
+import type { Job } from "../../../../../core/src/jobs/types";
 import PublicationStatus from "./PublicationStatus.vue";
 import { useLocale } from "@/shared/composables/useLocale";
 import type { localeStatus } from "@/modules/documents/locale-status";
@@ -17,6 +18,8 @@ import {
 const props = defineProps<{
   doc: Record<string, unknown>;
   languages?: ReturnType<typeof localeStatus>;
+  /** The queued publishes and unpublishes of the document. */
+  scheduled?: Job[];
 }>();
 const { t } = useI18n();
 const { locale, select } = useLocale();
@@ -32,7 +35,11 @@ const labels = {
 
 <template>
   <div class="flex min-w-0 items-center gap-2 text-xs">
-    <PublicationStatus :doc="doc" :missing="languages?.active === 'missing'" />
+    <PublicationStatus
+      :doc="doc"
+      :missing="languages?.active === 'missing'"
+      :scheduled="scheduled"
+    />
     <span v-if="languages?.active === 'missing'" class="text-muted-foreground">
       {{ t("common.notTranslated") }}
     </span>

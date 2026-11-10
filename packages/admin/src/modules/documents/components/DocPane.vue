@@ -3,7 +3,7 @@ import { withLinkedDeletion, DeletionCancelled } from "@/shared/linked-deletion"
 import PaneExpandButton from "@/shared/components/pane/PaneExpandButton.vue";
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
-import { computed, inject, provide, ref, watch } from "vue";
+import { computed, inject, provide, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import { useRouter } from "vue-router";
@@ -24,6 +24,9 @@ import { useTranslations } from "@/modules/documents/composables/useTranslations
 import type { SyncChoice } from "../../../../../core/src/content/writes/sync-structure";
 import { useLock } from "@/modules/documents/composables/useLock";
 import LockNotice from "@/modules/documents/components/LockNotice.vue";
+import ScheduledNotice from "@/modules/documents/components/ScheduledNotice.vue";
+import ScheduleDialog from "@/modules/documents/components/ScheduleDialog.vue";
+import { useSchedules } from "@/modules/documents/composables/useSchedules";
 import { Pane, Icon, useLocale, usePerspective } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
@@ -85,10 +88,20 @@ const lock = useLock({
   onRegain: load,
 });
 const readOnly = computed(() => published.value || !editable.value || !!lock.holder.value);
+// Scheduling needs a saved document and the `update` rule.
+const schedulable = computed(
+  () => !!collection.value?.schedule && drafts.value && editable.value && !isNew.value,
+);
+const schedules = useSchedules(
+  () => (schedulable.value ? { kind: "collection", name: props.name, id: docId.value } : undefined),
+  () => tr.active.value,
+);
+const scheduling = ref(false);
+const form = useTemplateRef<InstanceType<typeof DocForm>>("form");
 const formId = `doc-${props.name}-${props.id}`;
 const error = ref("");
 
-const { locale, defaultLocale, flush } = useLocale();
+const { locale, locales, defaultLocale, flush } = useLocale();
 // The languages of a localized collection. A new document has no languages to compare until its first save.
 const tr = useTranslations(
   () => collection.value,
@@ -218,6 +231,22 @@ async function saveDraft(data: Data<Fields>) {
 
 async function publish() {
   show(await client.publish(props.name, docId.value, saveOptions()));
+  try {
+    await schedules.cancelPublish();
+  } finally {
+    tr.refresh();
+    reload();
+    emit("saved", doc.value ?? undefined);
+  }
+}
+
+function publishNow() {
+  scheduling.value = false;
+  form.value?.publish();
+}
+
+async function unpublish() {
+  show(await client.unpublish(props.name, docId.value, saveOptions()));
   tr.refresh();
   reload();
   emit("saved", doc.value ?? undefined);
@@ -316,7 +345,12 @@ async function remove() {
     <template #title>
       <div class="min-w-0 flex-1">
         <h2 :class="drafts ? 'sr-only' : 'truncate text-sm font-medium'">{{ title() }}</h2>
-        <StatusBadges v-if="doc && drafts" :doc="doc" :languages="languages" />
+        <StatusBadges
+          v-if="doc && drafts"
+          :doc="doc"
+          :languages="languages"
+          :scheduled="schedules.jobs.value"
+        />
       </div>
     </template>
     <template #actions="{ expanded, toggleExpand }">
@@ -364,7 +398,7 @@ async function remove() {
       :get="(v) => client.version(name, docId, v)"
       :restore="restoreVersion"
       :drafts="drafts"
-      :can-restore="!readOnly"
+      :can-restore="!readOnly && !schedules.publishJob.value"
       @close="history = false"
     />
     <div v-else-if="doc" class="flex min-h-full flex-col">
@@ -378,6 +412,11 @@ async function remove() {
           :holder="lock.holder.value"
           :lost="lock.lost.value"
           @takeover="lock.takeOver"
+        />
+        <ScheduledNotice
+          v-else-if="schedules.publishJob.value"
+          :job="schedules.publishJob.value"
+          @open="scheduling = true"
         />
         <p v-else-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           {{ t(editable ? "documents.readOnly" : "documents.noEdit") }}
@@ -409,19 +448,23 @@ async function remove() {
       </header>
       <DocForm
         :id="formId"
+        ref="form"
         class="flex-1 inert:opacity-60"
         :fields="collection.fields"
         :layout="collection"
         :initial="initial"
         :doc="doc"
         :inert="readOnly"
-        v-bind="drafts ? { saveDraft, publish, discard } : { save }"
+        v-bind="drafts ? { saveDraft, publish, unpublish, discard } : { save }"
+        :schedulable="schedulable"
+        :scheduled-at="schedules.publishJob.value?.runAt"
         :is-new="props.id === 'new'"
         :localized="tr.localized.value"
         :defaults="tr.defaults.value"
         :missing="languages?.active === 'missing'"
         :reload="load"
         @change="emit('change', $event)"
+        @schedule="scheduling = true"
       >
         <Button
           v-if="!isNew && can(collection, 'delete', doc)"
@@ -434,6 +477,16 @@ async function remove() {
         </Button>
         <span v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</span>
       </DocForm>
+      <ScheduleDialog
+        v-if="schedulable"
+        v-model:open="scheduling"
+        :schedules="schedules"
+        :locales="tr.localized.value ? locales : undefined"
+        :active-locale="tr.active.value"
+        :publishable="tr.publishable.value"
+        @changed="(reload(), $event && load())"
+        @publish="publishNow"
+      />
     </div>
   </Pane>
 </template>

@@ -1,6 +1,6 @@
 import { Notice } from "./notice.ts";
 import { clientRef } from "tenoncms/admin";
-import { defineCollection, defineGlobal, definePlugin, type LocalApi } from "tenoncms";
+import { defineCollection, defineGlobal, definePlugin, defineTask, type LocalApi } from "tenoncms";
 
 export type ExampleOptions = {
   /** Path of the admin, as set in the adapter. Default `/admin`. */
@@ -91,6 +91,21 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
           },
         },
       }),
+    },
+    // Task names start with the plugin name. `scheduledTasks` queues the task every day at 03:00 (server time).
+    // Also runnable on demand: `cms.jobs.queue("example:quote-count")`.
+    jobs: {
+      tasks: {
+        "example:quote-count": defineTask({
+          meta: { description: "Counts the quotes" },
+          run: async ({ cms }) => {
+            const count = (await cms.find("quotes", { populate: false })).length;
+            console.info(`[example plugin] quote count: ${count}`);
+            return { count };
+          },
+        }),
+      },
+      scheduledTasks: { "0 3 * * *": ["example:quote-count"] },
     },
     // Runs for every collection and global, after their own hooks.
     // Counts saved changes for the stats page.

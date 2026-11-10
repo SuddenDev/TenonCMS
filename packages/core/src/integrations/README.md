@@ -18,10 +18,18 @@ Databases. Each returns `{ dialect }` and imports its driver, an optional peer d
 
 Runtime adapter:
 
-- `tenoncms/cloudflare`: runs the CMS inside a SQLite-backed Durable Object. `durableObject()` is the config's `database`. `tenonObject(cms)` returns the object class. `createObjectClient(request, stub)` is the HTTP client for code outside the object. The Astro integration switches to it with `@astrojs/cloudflare`. Each object gets its own copy of the instance through `withDatabase()` (`src/cms/`), bound to its storage by `durableObjectDialect()` (`src/db/adapters/`). The config's own instance keeps its schema and `localization`, but every database call throws.
+- `tenoncms/cloudflare`: runs the CMS inside a SQLite-backed Durable Object that is also the job clock. `durableObject()` is the config's `database`. `tenonObject(cms)` returns the object class. `createObjectClient(request, stub)` is the HTTP client for code outside the object. The Astro integration switches to it with `@astrojs/cloudflare`. Each object gets its own copy of the instance through `withDatabase()` (`src/cms/`), bound to its storage by `durableObjectDialect()` (`src/db/adapters/`). The config's own instance keeps its schema and `localization`, but every database call throws.
 
 Each integration points `#tenon/config` at the host's `tenon.config.ts`, mounts `/_tenon` (`cms.fetch`, see `src/http/`), serves the admin page (`src/admin/`) and starts the preview runtime (`src/preview/`). Astro and Nuxt also mount `/sitemap.xml` and `/robots.txt` on the same handler, except a path that `siteRoutes()` finds served by the host (see `src/seo/`).
 `tenoncms/vite` only serves the admin; the host mounts the API itself. (see the tanstack start example)
+
+## Job clock
+
+Each adapter starts the clock of `cms.jobs.run()` (see `src/jobs/`), unless its `jobs` option is `false`:
+
+- Nuxt and `tenonAdmin()` schedule the Nitro task `tenon:jobs` every minute. `nitro-jobs.ts` holds the task name and merges the entry into the host's `scheduledTasks`. Nuxt registers `nuxt/runtime/server/jobs-task.ts`. `tenonAdmin()` carries a Nitro module (the `nitro` key of the Vite plugin) with a virtual handler that imports the host's config.
+- The Astro middleware starts `astro/jobs-interval.ts` on the first request, on Node and in `astro dev`.
+- `tenonObject()` sets the Durable Object alarm: `arm-alarm.ts` decides, `wake(at)` moves it forward, `alarm()` runs the jobs.
 
 ## Frontend helpers
 

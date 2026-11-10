@@ -13,6 +13,8 @@ To serve the admin under another path, pass `admin: '/cms'` to the Astro integra
 
 The CMS also serves `/sitemap.xml` and `/robots.txt` (see [Pages and SEO](pages-and-seo.md#sitemap-and-robotstxt)). Astro and Nuxt mount them, unless your project serves the path itself. `sitemap: false` and `robots: false` skip them. Other hosts send both paths to `cms.fetch(request)`.
 
+The adapters also run the due [jobs](jobs.md#the-clock) every minute. `jobs: false` turns that off.
+
 ## Astro
 
 ```ts
@@ -39,7 +41,7 @@ const posts = await Astro.locals.tenon.find("posts");
 
 ### Astro on Cloudflare
 
-With `@astrojs/cloudflare` as the adapter, the CMS runs inside a Durable Object. The integration detects the adapter. See `examples/cloudflare`.
+With `@astrojs/cloudflare` as the adapter, the CMS runs inside a Durable Object. The integration detects the adapter. See `examples/cloudflare`. The object is also the clock for [jobs](jobs.md#the-clock): its alarm runs the due jobs, with no cron trigger to set up.
 
 ```ts
 // tenon.config.ts

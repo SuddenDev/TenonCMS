@@ -34,7 +34,7 @@ Each client keeps its own closures, so two clients with different origins or `fe
 
 `requestPasswordReset({ email, redirectTo })` asks Better Auth to send a reset link. Its response does not reveal whether an account exists. `resetPassword({ token, newPassword })` consumes that link's single-use token and does not sign in. Both methods use the existing auth endpoints; the host must configure email delivery or its own `sendResetPassword` callback.
 
-The draft methods (`createDraft()`, `updateDraft()`, `publish()`, `discard()`, `setGlobalDraft()`, `publishGlobal()`, `discardGlobal()`) call the draft routes. `discard()` returns `null` when it deleted a document that was never published. `preview.enter(perspective?)` and `preview.exit()` set and clear the preview cookie; with `drafts` (the default), reads of the signed-in user see drafts.
+The draft methods (`createDraft()`, `updateDraft()`, `publish()`, `unpublish()`, `discard()`, `setGlobalDraft()`, `publishGlobal()`, `unpublishGlobal()`, `discardGlobal()`) call the draft routes. `schedule(name, id, { action, at, locale })` and `scheduleGlobal(name, { action, at, locale })` post to `/collections/:name/:id/schedule` and `/globals/:name/schedule` and return `{ id }`, the job id; `at` MAY be a `Date`, a number or an ISO string. `discard()` returns `null` when it deleted a document that was never published. `preview.enter(perspective?)` and `preview.exit()` set and clear the preview cookie; with `drafts` (the default), reads of the signed-in user see drafts.
 
 A part upload retries a network error, a 5xx, a 408 and a 429 3 times with backoff. Any other 4xx is final.
 
@@ -43,7 +43,7 @@ A part upload retries a network error, a 5xx, a 408 and a 429 3 times with backo
 `Locale<C>` (from `schema/inference/locale.ts`, exported by `tenoncms/client`) is the union of the instance's `localization.locales`, `never` without it; the admin's untyped client allows any string.
 
 - Reads take `locale`, `fallback` and `alternates`, sent as `?locale=`, `?fallback=` and `?alternates=`.
-- Writes, drafts and `publish()` take `{ locale }`. Saves, draft saves and publishes also take `{ updatedAt }` (`?updatedAt=`): a newer stored version answers 409. `discard()` and `discardGlobal()` take `{ locale }` or `{ all: true }` (`?all=true`).
+- Writes, drafts, `publish()`, `unpublish()` and `unpublishGlobal()` take `{ locale }`. Saves, draft saves and publishes also take `{ updatedAt }` (`?updatedAt=`): a newer stored version answers 409. `discard()` and `discardGlobal()` take `{ locale }` or `{ all: true }` (`?all=true`).
 - `copyLocale(name, id, { from, to })` and `removeLocale(name, id, locale)` call `/collections/:name/:id/locales/…`; `copyGlobalLocale()` and `removeGlobalLocale()` call `/globals/:name/locales/…`.
 - `setSyncStructure(name, id, sync, { locale, dryRun })` posts to `/collections/:name/:id/structure`, `applySyncStructure(name, { dryRun })` to `/collections/:name/structure/apply`, and `setGlobalSyncStructure()` to `/globals/:name/structure`.
 - `previewUrl()` and `previewGlobalUrl()` take `{ locale }` as the third argument.

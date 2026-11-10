@@ -32,6 +32,11 @@ export type Collection<F extends Fields = Fields> = Layout & {
   /** Documents keep a draft next to the published data, saved with `{ draft: true }` and published with `publish()`. Default `true`. */
   drafts?: boolean;
   /**
+   * Editors MAY schedule a publish or an unpublish of a document for a later time. Needs `drafts`. The `update` rule
+   * covers it. Default `false`.
+   */
+  schedule?: boolean;
+  /**
    * The most versions kept per document and language. Recording one more deletes the oldest. Use `Infinity` to keep
    * every version. Default `100`.
    */

@@ -1,5 +1,7 @@
 import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { EmailApi } from "../../email/types.ts";
+import type { JobsApi } from "../../jobs/types.ts";
+import type { ScheduleOptions } from "../../schedule/types.ts";
 import type { MediaApi } from "../../schema/hooks/media.ts";
 import type {
   AppliedStructure,
@@ -25,6 +27,8 @@ type Options = {
 };
 /** Options of `publish` and `publishGlobal`. */
 type PublishOptions = { locale?: string } & ConflictOptions;
+/** Options of `unpublish` and `unpublishGlobal`. */
+type UnpublishOptions = { locale?: string } & ConflictOptions;
 /** Options of `discard` and `discardGlobal`. */
 type DiscardOptions = { locale?: string } & DeleteOptions & {
     /** Drops the shared draft and the draft of every locale. Ignores `locale`. */
@@ -56,6 +60,14 @@ export type LocalApi = {
   ): Promise<Row | undefined>;
   delete(collection: string, id: string, options?: DeleteOptions): Promise<void>;
   publish(collection: string, id: string, options?: PublishOptions): Promise<Row | undefined>;
+  /** Takes a document off the published perspective. A draft stays, or the published data becomes the draft. */
+  unpublish(collection: string, id: string, options?: UnpublishOptions): Promise<Row | undefined>;
+  /** Queues a publish or an unpublish of a document for a later time. Needs `schedule: true` on the collection. Returns `undefined` if the document does not exist. */
+  schedule(
+    collection: string,
+    id: string,
+    options: ScheduleOptions,
+  ): Promise<{ id: string } | undefined>;
   discard(collection: string, id: string, options?: DiscardOptions): Promise<Row | undefined>;
   /** Fills the localized fields of `to` with those of `from`, as a draft. Replaces the pending draft of `to`. */
   copyLocale(
@@ -87,6 +99,9 @@ export type LocalApi = {
     options?: WriteOptions & ConflictOptions,
   ): Promise<Row>;
   publishGlobal(name: string, options?: PublishOptions): Promise<Row>;
+  unpublishGlobal(name: string, options?: UnpublishOptions): Promise<Row>;
+  /** Queues a publish or an unpublish of a global for a later time. Needs `schedule: true` on the global. */
+  scheduleGlobal(name: string, options: ScheduleOptions): Promise<{ id: string }>;
   discardGlobal(name: string, options?: DiscardOptions): Promise<Row>;
   copyGlobalLocale(name: string, locales: { from: string; to: string }): Promise<Row>;
   removeGlobalLocale(name: string, locale: string): Promise<Row>;
@@ -97,6 +112,8 @@ export type LocalApi = {
   ): Promise<Row | StructureCounts | undefined>;
   /** Returns a copy of this API whose reads use the drafts perspective: unpublished documents and pending drafts. */
   withDrafts(): LocalApi;
+  /** The job queue. Inside a hook, a queued job joins the write's transaction. */
+  jobs: JobsApi;
   /** The media library. Missing without `defineCms({ media })`. */
   media?: MediaApi;
 };

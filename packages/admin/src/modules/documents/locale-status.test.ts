@@ -64,6 +64,27 @@ describe("localeStatus", () => {
     expect(s.states[1].state).toBe("published");
   });
 
+  describe("publishable", () => {
+    it("lists the locales with a draft", () => {
+      const s = localeStatus({
+        locales,
+        active: "en",
+        rows: { en: published, de: edited, fr: unpublished },
+      });
+      expect(s.publishable).toEqual(["de", "fr"]);
+    });
+
+    it("adds every locale with a row while the shared draft is pending", () => {
+      const s = localeStatus({
+        locales,
+        active: "en",
+        rows: { en: published, de: published },
+        sharedDraft: true,
+      });
+      expect(s.publishable).toEqual(["en", "de"]);
+    });
+  });
+
   describe("discardAll", () => {
     it("is hidden when only the active locale has a draft", () => {
       const s = localeStatus({ locales, active: "en", rows: { en: edited, de: published } });

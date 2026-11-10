@@ -40,7 +40,7 @@ const busy = ref(false);
 const error = ref("");
 
 const dot =
-  "size-2 shrink-0 rounded-full data-[status=published]:bg-emerald-500 data-[status=draft]:bg-amber-500";
+  "size-2 shrink-0 rounded-full data-[status=published]:bg-emerald-500 data-[status=draft]:bg-amber-500 data-[status=unpublished]:bg-muted-foreground";
 const header =
   "mx-auto w-full max-w-2xl px-6 pt-6 pb-8 group-data-[expanded=true]/pane:max-w-none sm:px-8";
 const byline = (v: Version) =>
@@ -86,7 +86,7 @@ const restore = () => attempt(() => props.restore(open.value!.id));
         </Button>
         <h1 class="mt-4 flex items-center gap-2 text-3xl font-semibold tracking-tight">
           <span :class="dot" :data-status="open.status" aria-hidden="true" />
-          {{ t(open.status === "draft" ? "versions.draft" : "versions.published") }}
+          {{ t(`versions.${open.status}`) }}
         </h1>
         <p class="text-muted-foreground mt-2 text-sm">
           {{ byline(open) }} ·
@@ -129,9 +129,7 @@ const restore = () => attempt(() => props.restore(open.value!.id));
             >
               <span :class="dot" :data-status="v.status" aria-hidden="true" />
               <ItemContent>
-                <ItemTitle>{{
-                  t(v.status === "draft" ? "versions.draft" : "versions.published")
-                }}</ItemTitle>
+                <ItemTitle>{{ t(`versions.${v.status}`) }}</ItemTitle>
                 <ItemDescription>{{ byline(v) }}</ItemDescription>
               </ItemContent>
               <Icon name="chevron-right" class="text-muted-foreground" />

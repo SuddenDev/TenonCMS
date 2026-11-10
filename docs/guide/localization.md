@@ -62,6 +62,7 @@ await cms.getGlobal("general", { locale: "de" });
 const post = await cms.create("posts", { title: "Hello" }, { locale: "en", draft: true });
 await cms.update("posts", post.id, { title: "Hallo" }, { locale: "de", draft: true });
 await cms.publish("posts", post.id, { locale: "de" });
+await cms.unpublish("posts", post.id, { locale: "de" }); // takes German offline
 await cms.discard("posts", post.id, { locale: "de" }); // only the German draft
 await cms.discard("posts", post.id, { all: true }); // every draft, shared fields included
 ```
@@ -69,6 +70,7 @@ await cms.discard("posts", post.id, { all: true }); // every draft, shared field
 - Writes default to `defaultLocale`. A document MAY be created in any locale.
 - Defaults, hooks and validation run on the whole document: the shared fields plus the fields of the written locale.
 - Shared fields live on the document. Localized ones live in one row per locale. A draft is saved per locale. A publish publishes that locale and the pending shared fields, so `required` is checked for the published locale only.
+- `unpublish` takes one locale offline and keeps its content as the draft. The shared fields go offline with the last published locale. See [Drafts](drafts.md#unpublishing).
 - `discard` drops one locale's draft and keeps the shared draft, because another locale MAY have edited it. A locale that was never published loses its row, and a never-published document is deleted. `{ all: true }` ignores `locale`.
 - Over HTTP, every write route takes `?locale=`. `DELETE …/draft?all=true` drops all drafts.
 

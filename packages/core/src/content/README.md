@@ -32,7 +32,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 
 | Path                                                  | Responsibility                                                                                                                             |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `targets.ts`                                          | Collection and global names, schema lookup, name checks and draft eligibility.                                                             |
+| `targets.ts`                                          | Collection and global names, `targetKey()` and its inverse `targetOfKey()`, schema lookup, name checks and draft eligibility.              |
 | `locale.ts`                                           | `withLocale()`: applies `locale` and `fallback` to a scope and rejects unknown locales.                                                    |
 | `lifecycle/run-operation.ts`                          | Operation hooks, delegation to the transaction owner and `afterError` after rollback.                                                      |
 | `lifecycle/collect-hooks.ts`                          | Hook order: collection or global, then plugins, then root. None for media.                                                                 |
@@ -44,9 +44,10 @@ Draft saves check types and run the before hooks, then save the pending version.
 | `reads/alternates.ts`                                 | `addAlternates()`: the `alternates` metadata, one batched published read per locale.                                                       |
 | `reads/permalinks.ts`                                 | `addPermalinks()`: the `permalink` metadata, the public URL in the read's locale, `null` without one.                                      |
 | `collections/operations/local/alternates-at.local.ts` | `alternatesAt(url)`: matches a URL against the `permalink` templates (top-level fields only), reads that document with `alternates`.       |
-| `writes/`                                             | The write pipeline, publish, discard and delete. `prepare-data.ts` prepares; `persist-document.ts` saves.                                  |
+| `writes/`                                             | The write pipeline, publish, unpublish, discard and delete. `prepare-data.ts` prepares; `persist-document.ts` saves.                       |
 | `writes/split-locale.ts`                              | `splitLocale()`: written data to shared and localized keys; a synced list to its structure and values by item id.                          |
 | `writes/persist-localized.ts`                         | `persistLocalized()`: saves a localized write to the document row and the locale row.                                                      |
+| `writes/unpublish-document.ts`                        | `unpublish()`: sets `published_at` to `NULL` and keeps `data`; the draft stays or becomes a copy of `data`. One locale, or the entry.      |
 | `writes/discard-locale.ts`                            | `discardLocalized()`: drops one locale's draft, or every draft with `all`.                                                                 |
 | `writes/copy-locale.ts`                               | `copyLocalized()`: fills a locale from another through the write pipeline.                                                                 |
 | `writes/remove-locale.ts`                             | `removeLocalized()`: deletes one locale row and runs `afterChange`.                                                                        |
@@ -77,6 +78,8 @@ A localized read passes the `Loc` of `locOf()` to the queries, which join the re
 A localized write loads the merged document of the scope's locale (shared fields plus that locale's row, no fallback, `db/queries/locales/load-locale-doc.query.ts`) and runs the whole pipeline on it. `writes/persist-localized.ts` then splits the data with `splitLocale()`: shared keys go to the document row, localized keys to the locale row. A draft save writes both `draft` columns, but leaves the shared draft alone when the shared values do not change. A publish writes both `data` columns and clears both drafts. A published write never creates a row for a locale without values.
 
 A localized entry with lists MAY share one item structure across locales (`syncStructure`). The shared row then holds the structure of each list and each locale row its values by item id; `mergeLocale()` and `splitLocale()` convert both ways, and `writes/sync-structure.ts` switches a document. See [content.md](../../../../docs/dev/content.md#shared-structures).
+
+`writes/unpublish-document.ts` takes the scope's locale offline (its row keeps `data`, and a missing `draft` becomes a copy of it). The shared row goes with the last published locale, which `loadLocaleDoc()` lists in `locales`. It reuses `loadSource()` of `write-document.ts` and runs `afterChange` like `remove-locale.ts`, with the published document as `previousDoc`. A document that is not published is returned as it is.
 
 `writes/discard-locale.ts` drops one locale's draft and keeps the shared draft; with `all`, every draft goes. Locale rows that were never published are deleted, and so is a never-published document without rows. `copy-locale.ts` reads the source locale in the drafts perspective without fallback and writes it to the scope's locale (a draft, or straight to the data with `drafts: false`). `remove-locale.ts` refuses the default locale and the last row.
 

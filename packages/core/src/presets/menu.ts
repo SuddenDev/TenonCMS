@@ -81,13 +81,13 @@ function sharedMenu<const B extends MenuBlocks>(blocks: B | undefined) {
         label: { en: "Link", de: "Link" },
         icon: "link",
         fields: {
-          label: { type: "text", label: { en: "Label", de: "Beschriftung" } },
           link: { type: "link", required: true, label: { en: "Link", de: "Link" } },
           children: {
             type: "blocks",
             label: { en: "Children", de: "Unterpunkte" },
             blocks: items,
           },
+          label: { type: "text", label: { en: "Label", de: "Beschriftung" } },
         },
       },
       menuHeading: {

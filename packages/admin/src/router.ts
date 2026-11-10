@@ -28,6 +28,7 @@ import Users from "@/modules/users/views/Users.vue";
 import UserEdit from "@/modules/users/views/UserEdit.vue";
 import InviteEdit from "@/modules/users/views/InviteEdit.vue";
 import NewUser from "@/modules/users/views/NewUser.vue";
+import Jobs from "@/modules/jobs/views/Jobs.vue";
 import ApiKeys from "@/modules/api-keys/views/ApiKeys.vue";
 import ApiKeyEdit from "@/modules/api-keys/views/ApiKeyEdit.vue";
 import NewApiKey from "@/modules/api-keys/views/NewApiKey.vue";
@@ -128,6 +129,12 @@ export function createAdminRouter(base: string) {
         { path: "new", component: NewApiKey, meta: { panes: true } },
         { path: ":id", component: ApiKeyEdit, meta: { panes: true } },
       ],
+    },
+    // Not `admin`: editors see the jobs of the tasks they MAY access.
+    {
+      path: "/jobs",
+      component: Jobs,
+      meta: { pageHeader: false, breadcrumb: () => t("nav.jobs") },
     },
     { path: "/", redirect: CONTENT },
     {

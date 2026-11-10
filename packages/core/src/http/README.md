@@ -2,7 +2,7 @@
 
 The `/_tenon` API on Hono. It mounts the feature endpoints in a fixed middleware order and offers the helpers they share: body parsing, read options, query filters, caller lookup and error mapping. It does not validate content or run hooks; handlers call the scoped local API, and the operations do that.
 
-Endpoints live in their feature folders: `../collections/endpoints/`, `../globals/endpoints/`, `../media/endpoints/`, `/schema` in `../schema/endpoints/read.endpoint.ts` and the preview cookie in `../preview/endpoints/`. Sessions live in `../auth/`; plugin mounting and middleware collection live in `../plugins/http/`.
+Endpoints live in their feature folders: `../collections/endpoints/`, `../jobs/endpoints/`, `../globals/endpoints/`, `../media/endpoints/`, `/schema` in `../schema/endpoints/read.endpoint.ts` and the preview cookie in `../preview/endpoints/`. Sessions live in `../auth/`; plugin mounting and middleware collection live in `../plugins/http/`.
 
 ## Follow a request
 
@@ -15,7 +15,7 @@ withCms → plugins' publicMiddleware → auth/* or open routes
         → session → apiKeyReach → protected routes
 ```
 
-`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, `user` with a session and `apiKey` with an API key. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session or a key; `apiKeyReach()` lets a key reach only `/schema` there, with `read` on `schema`. `handleError()` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403.
+`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes, `/jobs/run` (a bearer secret, mounted only with `jobs.secret`) and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, `user` with a session and `apiKey` with an API key. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session or a key; `apiKeyReach()` lets a key reach only `/schema` there, with `read` on `schema`. `handleError()` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403.
 
 ## Follow a public read
 

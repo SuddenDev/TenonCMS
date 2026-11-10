@@ -20,13 +20,15 @@ import type { AdapterOptions } from "../admin/types.ts";
 import { setupAdmin } from "./lib/setup-admin.ts";
 import { libsqlBinaries } from "./lib/libsql.ts";
 import { siteRoutes } from "../admin/seo-routes.ts";
+import { JOBS_TASK, withJobsTask } from "../nitro-jobs.ts";
 
 export type { AdapterOptions as Options };
 
 /**
  * Nuxt module for tenoncms. Mounts `/_tenon`, `/sitemap.xml` and `/robots.txt`, serves the admin page, adds
  * `useTenon()`, `useTenonSeo()`, the components `TenonLink`, `TenonBlocks`, `TenonImage`, `TenonPicture` and `TenonRichtext`, and the preview
- * runtime. Options go under `tenonCms` in `nuxt.config.ts`.
+ * runtime. It also schedules the Nitro task `tenon:jobs` every minute, unless `jobs` is `false`. Options go under
+ * `tenonCms` in `nuxt.config.ts`.
  * @example
  * // nuxt.config.ts
  * modules: ['tenoncms/nuxt'],
@@ -109,6 +111,14 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
         ...(config.externals.traceInclude ?? []),
         ...libsqlBinaries(),
       ];
+
+      if (options.jobs === false) return;
+      config.experimental = { ...config.experimental, tasks: true };
+      config.tasks = {
+        ...config.tasks,
+        [JOBS_TASK]: { handler: `${runtime}/server/jobs-task`, description: "Runs the due jobs" },
+      };
+      config.scheduledTasks = withJobsTask(config.scheduledTasks);
     });
   },
 });

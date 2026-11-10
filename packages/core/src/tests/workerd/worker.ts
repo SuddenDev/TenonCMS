@@ -1,9 +1,19 @@
-import { defineCms } from "../../index.ts";
+import { defineCms, defineTask } from "../../index.ts";
 import { durableObject, tenonObject } from "../../integrations/cloudflare/index.ts";
 
 export const cms = defineCms({
   database: durableObject(),
   secret: "workerd-test-secret-workerd-test-secret",
+  jobs: {
+    scheduledTasks: { "* * * * *": ["tick"] },
+    tasks: {
+      tick: defineTask({ run: () => {} }),
+      log: defineTask({
+        run: async ({ cms, payload }) =>
+          void (await cms.create("logs", { message: String(payload) })),
+      }),
+    },
+  },
   collections: {
     authors: { fields: { name: { type: "text" } } },
     posts: {

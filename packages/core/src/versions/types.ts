@@ -3,8 +3,8 @@
 /** One entry of a document's or global's history, without its data. */
 export type Version = {
   id: string;
-  /** `draft` versions are autosaves. A user's draft saves merge into one until someone else saves or it is published. */
-  status: "draft" | "published";
+  /** `draft` versions are autosaves. A user's draft saves merge into one until someone else saves or it is published. `unpublished` holds the content that went offline. */
+  status: "draft" | "published" | "unpublished";
   /** `null` when the entry is not localized. */
   locale: string | null;
   /** `null` for server code. `name` is `''` for a user that no longer exists. */

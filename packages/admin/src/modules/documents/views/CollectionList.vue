@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import PublicationStatus from "@/modules/documents/components/PublicationStatus.vue";
+import { listScheduledByDoc } from "@/modules/jobs/jobs";
+import type { Job } from "../../../../../core/src/jobs/types";
 import { CONTENT } from "@/shared/options";
 import { useHead } from "@unhead/vue";
 import { computed, provide, ref, watch } from "vue";
@@ -32,6 +34,8 @@ const { locale } = useLocale();
 // A localized collection lists the active language with fallback, so every row has a title.
 const active = computed(() => (collection.value?.localized ? locale.value : undefined));
 const docs = ref<Record<string, any>[]>([]);
+// The queued publishes and unpublishes by document id. One request for the whole list.
+const scheduled = ref(new Map<string, Job[]>());
 const loading = ref(true);
 const search = ref("");
 const sorts = computed<PaneSort[]>(() => [
@@ -57,6 +61,7 @@ const rows = computed(() => {
       publishedAt: d.publishedAt,
       hasDraft: d.hasDraft,
       sharedDraft: d.sharedDraft,
+      scheduled: scheduled.value.get(d.id),
     }))
     .sort((a, b) =>
       key === "title" ? a.title.localeCompare(b.title) : b[key].localeCompare(a[key]),
@@ -69,6 +74,12 @@ useHead({ title: () => text(collection.value?.label) ?? name });
 let loads = 0;
 const load = () => {
   const at = ++loads;
+  if (collection.value?.schedule && can(collection.value, "update"))
+    listScheduledByDoc(name)
+      .then((byDoc) => {
+        if (at === loads) scheduled.value = byDoc;
+      })
+      .catch(() => {});
   return client
     .find(name, {
       populate: false,
@@ -135,7 +146,9 @@ provide(keepPaneKey, (id) => (kept = id));
                 <span v-if="!doc.translated" class="text-muted-foreground text-xs">
                   {{ t("common.notTranslated") }}
                 </span>
-                <PublicationStatus v-else-if="collection.drafts !== false" :doc="doc" compact />
+                <template v-else-if="collection.drafts !== false">
+                  <PublicationStatus :doc="doc" :scheduled="doc.scheduled" compact />
+                </template>
               </span>
             </template>
           </PaneMenuItem>

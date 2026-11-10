@@ -32,6 +32,9 @@ import { noStore } from "./middleware/no-store.middleware.ts";
 import { handleError } from "./errors.ts";
 import { withPermissions } from "../access/permissions.ts";
 import { seoRoutes } from "../seo/endpoints/routes.ts";
+import { jobsEndpoint } from "../jobs/endpoints/jobs.endpoint.ts";
+import { runEndpoint } from "../jobs/endpoints/run.endpoint.ts";
+import { scheduleEndpoint } from "../schedule/endpoints/schedule.endpoint.ts";
 
 /**
  * Builds the Hono app behind `cms.fetch`. Open routes mount first and look up no caller. Then `optionalSession` looks
@@ -64,6 +67,7 @@ export function createApp(core: Core, site?: string) {
   open.route("/", acceptEndpoint(core));
   open.route("/", localizationEndpoint(core.localization));
   mountRoutes(open, plugins, "publicRoutes");
+  if (core.jobs.secret) open.route("/", runEndpoint(core, core.jobs.secret));
   if (media) open.route("/media", media.files);
 
   const reads = new Hono<Env>();
@@ -75,6 +79,7 @@ export function createApp(core: Core, site?: string) {
   if (media) writes.route("/media", media.writes);
   writes.route("/", collections.writes);
   writes.route("/", globals.writes);
+  writes.route("/", scheduleEndpoint(core));
 
   const signedIn = new Hono<Env>();
   signedIn.route("/", schemaEndpoint);
@@ -86,6 +91,7 @@ export function createApp(core: Core, site?: string) {
   signedIn.route("/", apiKeysEndpoint(core));
   signedIn.route("/", locksEndpoint(core));
   signedIn.route("/", versionsEndpoint(core));
+  signedIn.route("/", jobsEndpoint(core));
   signedIn.route("/", loadEndpoint(core));
   signedIn.route("/", linkSearchEndpoint(core));
   signedIn.route("/", linkResolveEndpoint(core));
@@ -110,6 +116,8 @@ export function createApp(core: Core, site?: string) {
 
   api.use("/admin/*", noStore);
   api.use("/admin-bar", noStore);
+  api.use("/jobs", noStore);
+  api.use("/jobs/*", noStore);
   // CSRF lets reads through.
   api.use(csrfUnlessApiKey(), optionalSession(core));
   api.route("/", reads);

@@ -76,6 +76,8 @@ export function pagesPreset<
     collections: {
       [name]: {
         label: { en: "Pages", de: "Seiten" },
+        nav: { icon: "file-text" },
+        schedule: true,
         titleField: "title",
         permalink: base.permalink,
         ...collection,

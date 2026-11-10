@@ -1,4 +1,5 @@
 import type { CmsUser, PluginAdminOptions } from "../admin/index.d.ts";
+import type { JobsOptions } from "../jobs/config/define-task.ts";
 import type { Hono, MiddlewareHandler } from "hono";
 import type { Collection, Global, LocalApi, MediaHooks, RootHooks } from "../schema/index.ts";
 
@@ -53,6 +54,11 @@ export type Plugin<
    * Runs after the CSRF and session checks, so `c.var.user` is set and `c.var.cms` runs hooks with that user.
    */
   middleware?: MiddlewareHandler<RouteEnv>;
+  /**
+   * Tasks and cron entries of the plugin. A task name MUST start with `<name>:`, like `redirects:cleanup`, and
+   * `scheduledTasks` MAY name only the plugin's own tasks. A name the host or another plugin uses throws at startup.
+   */
+  jobs?: Omit<JobsOptions, "secret">;
   /**
    * Custom fields, pages and admin bar items of the plugin, like the host's `admin`. A plugin sets neither the
    * bar's position nor `adminBar: false`. Plugins merge in the order of `plugins`, before the host.

@@ -112,7 +112,7 @@ export function useSettings() {
 /**
  * The sidebar sections: items with `nav.display` `content` or unset, each in its `group` (default
  * `Content`). Sorted by `order`; equal orders keep their definition order. A Settings entry under
- * `Admin` is added when any item is shown on the Settings page, and a Users entry for admins.
+ * `Admin` is added when any item is shown on the Settings page, a Jobs entry when the user MAY see a task, and a Users entry for admins.
  */
 export function useMenu() {
   const entries = useEntries();
@@ -129,6 +129,14 @@ export function useMenu() {
         order: 100,
         to: `${CONTENT}/settings`,
         also: targets,
+      });
+    if (schema.value.jobs?.length)
+      items.push({
+        label: t("nav.jobs"),
+        icon: "list-checks",
+        group: t("nav.manage"),
+        order: 90,
+        to: "/jobs",
       });
     if (session?.user.value?.role === "admin")
       items.push(

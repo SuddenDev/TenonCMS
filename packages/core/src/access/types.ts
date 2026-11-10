@@ -37,7 +37,7 @@ export type Access = {
   /** `create`, and media uploads. Default: signed-in users. */
   create?: Rule<{ data: unknown }>;
   /**
-   * `update`, draft saves, `publish`, `discard`, `copyLocale` and `removeLocale`. With a `where`, the document as the
+   * `update`, draft saves, `publish`, `unpublish`, `discard`, `copyLocale` and `removeLocale`. With a `where`, the document as the
    * drafts perspective reads it MUST match. `id` and `data` are missing when the admin asks for permissions. Default:
    * signed-in users.
    */
@@ -50,7 +50,7 @@ export type Access = {
 export type GlobalAccess = {
   /** `getGlobal`. Default: the published global for everyone, the draft with a user. */
   read?: Rule<{ draft: boolean }>;
-  /** `setGlobal`, draft saves, `publishGlobal`, `discardGlobal` and the locale operations. Default: signed-in users. */
+  /** `setGlobal`, draft saves, `publishGlobal`, `unpublishGlobal`, `discardGlobal` and the locale operations. Default: signed-in users. */
   update?: Rule<{ data?: unknown }>;
 };
 

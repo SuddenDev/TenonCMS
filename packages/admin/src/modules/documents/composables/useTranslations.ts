@@ -5,7 +5,7 @@ import { hasStructure, type StructureMenu } from "@/modules/documents/sync-struc
 import type { SyncChoice } from "../../../../../core/src/content/writes/sync-structure";
 import { useLocale } from "@/shared/composables/useLocale";
 import { usePerspective } from "@/shared/composables/usePerspective";
-import { type LocaleRow, localeStatus } from "@/modules/documents/locale-status";
+import { type LocaleRow, localeStatus, rowState } from "@/modules/documents/locale-status";
 
 type Doc = Record<string, unknown>;
 export type TranslationTarget = { collection: string; id: string } | { global: string };
@@ -77,6 +77,22 @@ export function useTranslations(
       sharedDraft: doc()?.sharedDraft === true,
     }),
   );
+
+  /**
+   * What a publish has something for: the languages with a draft, or for an entry without languages whether the
+   * document has one. Empty while the languages load.
+   */
+  const publishable = computed((): string[] | boolean => {
+    if (localized.value) return loaded.value ? status.value.publishable : [];
+    const d = doc();
+    return (
+      !!d &&
+      rowState({
+        publishedAt: (d.publishedAt as string | null) ?? null,
+        hasDraft: !!d.hasDraft,
+      }) === "draft"
+    );
+  });
 
   /** The default language's data, for placeholders. Not for the default language itself. */
   const defaults = computed(() =>
@@ -160,6 +176,7 @@ export function useTranslations(
     write,
     refresh,
     status,
+    publishable,
     defaults,
     loaded,
     copy,

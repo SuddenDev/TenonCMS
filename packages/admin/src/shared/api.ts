@@ -26,5 +26,7 @@ export const schema = ref<
     localization?: { locales: string[]; defaultLocale: string };
     roles?: Role[];
     email?: boolean;
+    /** The background tasks the user MAY see. Empty without any. */
+    jobs?: { name: string; description: string }[];
   }
 >({});

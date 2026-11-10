@@ -1,7 +1,12 @@
 import { env } from "cloudflare:workers";
-import { evictDurableObject, runInDurableObject, SELF } from "cloudflare:test";
+import {
+  evictDurableObject,
+  runDurableObjectAlarm,
+  runInDurableObject,
+  SELF,
+} from "cloudflare:test";
 import { createClient } from "../client/index.ts";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CmsObject } from "./workerd/worker.ts";
 
 type Cms = InstanceType<typeof CmsObject>["cms"];
@@ -117,6 +122,65 @@ describe("reads and integrity", () => {
       expect(read?.contributors).toHaveLength(150);
       expect(read?.contributors?.[149]).toMatchObject({ name: "a149" });
     }));
+});
+
+describe("alarm", () => {
+  const later = () => Date.now() + 3_600_000;
+  const alarmOf = (stub: DurableObjectStub) =>
+    inCms(stub, async (_, state) => state.storage.getAlarm());
+  const cronRows = (stub: DurableObjectStub) =>
+    inCms(
+      stub,
+      async (_, state) =>
+        state.storage.sql
+          .exec<{ n: number }>("SELECT count(*) AS n FROM cms_jobs WHERE cron IS NOT NULL")
+          .one().n,
+    );
+
+  // The alarm is set after the commit, without the caller waiting for it.
+  it("runs a job that is due once the job is queued", () =>
+    inCms(fresh(), async (cms) => {
+      await cms.jobs.queue("log", "queued");
+      await vi.waitFor(async () =>
+        expect((await cms.find("logs")).map((l) => l.message)).toEqual(["queued"]),
+      );
+    }));
+
+  it("moves the alarm forward for a job that is due sooner", async () => {
+    const stub = fresh();
+    const at = later();
+    await inCms(stub, (cms) => cms.jobs.queue("log", "later", { runAt: new Date(at) }));
+    await vi.waitFor(async () => expect(await alarmOf(stub)).toBe(at));
+    await inCms(stub, (cms) => cms.jobs.queue("log", "sooner", { runAt: new Date(at - 1000) }));
+    await vi.waitFor(async () => expect(await alarmOf(stub)).toBe(at - 1000));
+  });
+
+  it("sets itself again for a job that is not due yet", async () => {
+    const stub = fresh();
+    const at = later();
+    await inCms(stub, (cms) => cms.jobs.queue("log", "later", { runAt: new Date(at) }));
+    await vi.waitFor(async () => expect(await alarmOf(stub)).toBe(at));
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    expect(await alarmOf(stub)).toBeLessThanOrEqual(at);
+    await inCms(stub, async (cms) => expect(await cms.find("logs")).toEqual([]));
+  });
+
+  // workerd keeps the alarm in its internal `_cf_KV` table, which Kysely's introspection cannot read.
+  it("leaves migrations working after an eviction", async () => {
+    const stub = fresh();
+    const at = later();
+    await inCms(stub, (cms) => cms.jobs.queue("log", "later", { runAt: new Date(at) }));
+    await vi.waitFor(async () => expect(await alarmOf(stub)).toBe(at));
+    await evictDurableObject(stub);
+    await inCms(stub, async (cms) => expect(await cms.find("logs")).toEqual([]));
+  });
+
+  it("starts with the first request, which seeds the cron entries", async () => {
+    const stub = fresh();
+    await stub.fetch("http://localhost/_tenon/posts");
+    await vi.waitFor(async () => expect(await cronRows(stub)).toBe(1));
+    expect(await alarmOf(stub)).not.toBeNull();
+  });
 });
 
 describe("over HTTP through the Worker", () => {

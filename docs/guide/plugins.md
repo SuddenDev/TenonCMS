@@ -46,6 +46,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 - A `quotes` collection with a custom `rating` field, and a `quoteSettings` global.
 - A root hook and both middlewares.
+- A task `example:quote-count` with a cron entry (`0 3 * * *`), as a model for [jobs](./jobs.md).
 - `GET /_tenon/example/random` (a random quote as text) and `GET /_tenon/example/quotes.csv` (admins).
 - A stats page with a `load` and a `pageHeader`, and a detail page.
 - Four bar items: a link, a loaded dropdown, a button and a custom control.
@@ -55,20 +56,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 A plugin is an object from `definePlugin()`:
 
-| Key                | What it adds                                                                                                                                                                 |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`             | Unique and lowercase, like `redirects`. Prefix of the plugin's routes                                                                                                        |
-| `collections`      | Collections, typed like yours: `cms.find('redirects')` works. A name that you or another plugin uses throws at startup                                                       |
-| `globals`          | Globals, the same way. The admin renders them, so a global doubles as the plugin's settings page                                                                             |
-| `hooks`            | Root hooks for every collection and global. They run after the collection's own hooks and before your root hooks                                                             |
-| `routes`           | `(api) => api.get(…)` on a Hono sub-app at `/_tenon/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, and `c.var.user` is that user           |
-| `publicRoutes`     | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                                            |
-| `publicMiddleware` | Hono middleware for every `/_tenon` request, auth included, before any route. `c.var.cms` has no user. Return a response to stop the request (rate limits, logging, headers) |
-| `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set. API key requests skip it               |
-| `admin`            | Fields, pages and admin bar `items`, like your [`admin`](./admin.md). A plugin sets no bar `position` and never turns the bar off. Merged before yours, in plugin order      |
+| Key                | What it adds                                                                                                                                                                                                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`             | Unique and lowercase, like `redirects`. Prefix of the plugin's routes                                                                                                                                                                                                             |
+| `collections`      | Collections, typed like yours: `cms.find('redirects')` works. A name that you or another plugin uses throws at startup                                                                                                                                                            |
+| `globals`          | Globals, the same way. The admin renders them, so a global doubles as the plugin's settings page                                                                                                                                                                                  |
+| `hooks`            | Root hooks for every collection and global. They run after the collection's own hooks and before your root hooks                                                                                                                                                                  |
+| `routes`           | `(api) => api.get(…)` on a Hono sub-app at `/_tenon/<name>`, behind CSRF and session checks. `c.var.cms` runs with the session user, and `c.var.user` is that user                                                                                                                |
+| `publicRoutes`     | Same, without a session. `c.var.cms` has no user. Meant for reads                                                                                                                                                                                                                 |
+| `publicMiddleware` | Hono middleware for every `/_tenon` request, auth included, before any route. `c.var.cms` has no user. Return a response to stop the request (rate limits, logging, headers)                                                                                                      |
+| `middleware`       | Hono middleware for requests with a session (writes, `/schema`, plugin `routes`), after CSRF and session checks. `c.var.user` is set. API key requests skip it                                                                                                                    |
+| `jobs`             | `{ tasks, scheduledTasks }` for [jobs](./jobs.md). Task names MUST start with `<name>:`, like `redirects:cleanup`. `scheduledTasks` MAY name the plugin's own tasks only. A name that you or another plugin uses throws at startup. Tasks are admin-only unless they set `access` |
+| `admin`            | Fields, pages and admin bar `items`, like your [`admin`](./admin.md). A plugin sets no bar `position` and never turns the bar off. Merged before yours, in plugin order                                                                                                           |
 
 - Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` is 409, anything else is 500.
-- These names are reserved: `account`, `admin`, `auth`, `auth-status`, `collections`, `globals`, `invites`, `localization`, `media`, `preview` and `schema`. Names use `[a-z0-9-]`.
+- These names are reserved: `account`, `admin`, `auth`, `auth-status`, `collections`, `globals`, `invites`, `jobs`, `localization`, `media`, `preview` and `schema`. Names use `[a-z0-9-]`.
 - Public routes run before CSRF and session checks, so a plugin MUST protect its own public writes.
 - Pages call plugin routes with `client.request()`.
 - A plugin that ships browser code MUST keep its `clientRef()` calls literal and keep `tenoncms/admin` external, so the adapters can find them.

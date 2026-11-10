@@ -19,8 +19,11 @@ export function checkAccess(schema: Required<Schema>, roles: Role[]) {
     }
 }
 
-/** Throws for a role in a rule list that no `roles` entry defines. Function rules are not checked. */
-function checkRoles(known: Set<string>, owner: string, access: object | undefined) {
+/**
+ * Throws for a role in a rule list that no `roles` entry defines. Function rules are not checked.
+ * @param access Rules by operation. `{ run: rule }` checks one rule.
+ */
+export function checkRoles(known: Set<string>, owner: string, access: object | undefined) {
   for (const rule of Object.values(access ?? {}))
     for (const role of Array.isArray(rule) ? rule : [])
       if (!known.has(role)) throw new Error(`tenoncms: ${owner} names unknown role "${role}"`);

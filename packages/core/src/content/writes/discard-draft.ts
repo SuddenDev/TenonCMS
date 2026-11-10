@@ -12,12 +12,14 @@ import { discardDraft } from "../../db/queries/drafts/discard-draft.query.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { discardLocalized } from "./discard-locale.ts";
 import { guard } from "../../access/rule.ts";
+import { requireUnscheduled } from "../../schedule/operations/require-unscheduled.ts";
 
 /**
  * Drops the draft. A document that was never published is deleted, with its `onDelete` effects.
  * A localized entry drops the draft of the scope's locale, or with `all` every draft. See `discardLocalized()`.
  * It needs the `update` rule only: deleting a never-published document this way needs no `delete`.
  * @returns The published document after discarding the draft, or `undefined` if it was deleted or missing.
+ * @throws {ValidationError} When a publish of the draft is scheduled.
  * @throws {ForbiddenError} When the `update` rule denies.
  */
 export const discard = async (
@@ -33,9 +35,10 @@ export const discard = async (
   if (name.kind === "global")
     return runOperation(core, scope, "setGlobal", name, { global: name.name }, async (s) => {
       await guard(core, s, name, "update");
+      const db = await databaseForScope(core, s);
+      await requireUnscheduled(db, name, undefined, all ? undefined : loc?.locale);
       if (loc) return discardLocalized(core, s, name, name.name, loc, all, options);
 
-      const db = await databaseForScope(core, s);
       await discardGlobalDraft(db, name.name);
 
       const doc = (await loadGlobal(db, name.name)) ?? { publishedAt: null, hasDraft: false };
@@ -51,9 +54,10 @@ export const discard = async (
     { collection: name.name, id },
     async (s, args) => {
       await guard(core, s, name, "update", { id: args.id });
+      const db = await databaseForScope(core, s);
+      await requireUnscheduled(db, name, args.id, all ? undefined : loc?.locale);
       if (loc) return discardLocalized(core, s, name, args.id, loc, all, options);
 
-      const db = await databaseForScope(core, s);
       const doc = await loadDoc(db, name.name, args.id, true);
       if (!doc) return undefined;
 

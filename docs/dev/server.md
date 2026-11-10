@@ -7,7 +7,7 @@ Code: `packages/core/src/http/`, `auth/`, `users/`, `client/`, `db/` (each has a
 The Hono app mounts feature routes in a fixed order. The order is the security model, so keep it.
 
 1. CMS binding, then public plugin middleware
-2. Session hint cookie on `/auth/*`, then auth routes and the **open** routes: admin branding, auth status, invites check and accept, `/localization`, public plugin routes, media files and images
+2. Session hint cookie on `/auth/*`, then auth routes and the **open** routes: admin branding, auth status, invites check and accept, `/localization`, public plugin routes, `/jobs/run` (only with `jobs.secret`), media files and images
 3. **CSRF** (skipped with an API key), then `optionalSession` (one caller lookup per request)
 4. Content **reads** (collections, globals, media folders)
 5. Protected plugin middleware, then content **writes**. Access rules decide here.
@@ -19,6 +19,16 @@ The Hono app mounts feature routes in a fixed order. The order is the security m
 - Hono's CSRF only checks form-like content types. JSON is safe because browsers preflight cross-origin JSON and we send no CORS headers. Public JSON endpoints that run before CSRF MUST reject other content types.
 - Without a session, a path that matches no public route answers 401, not 404.
 - Unexpected errors are logged and answered without their message.
+
+## Jobs
+
+- Jobs are rows in `cms_jobs`: a queue in our own table, so it runs on every dialect. See [design decisions](design-decisions.md#jobs) and the [jobs README](../../packages/core/src/jobs/README.md).
+- `GET|POST /jobs/run` is open but behind `bearerAuth` with `jobs.secret`. It is mounted only when the secret is set, so without one the path is 404 for a signed-in caller (and 401 without a session, like any unknown path).
+- `GET /jobs/cron` lists the cron entries with the next and the last run. Each tick seeds the next slot first, see the [jobs README](../../packages/core/src/jobs/README.md#cron).
+- `POST /collections/:name/:id/schedule` and `POST /globals/:name/schedule` are content write routes (CSRF and `optionalSession`, then the `update` rule), mounted next to the collection and global writes in `http/app.ts`.
+- The other `/jobs` routes sit behind `session`. A key never reaches them (`apiKeyReach()`). Each checks the `update` rule of the job's document for a scheduled job, and the `access` rule of the job's task for any other: admins by default.
+- A claim is one `UPDATE … RETURNING`. Postgres adds `FOR UPDATE SKIP LOCKED`; SQLite serializes writers. A lease of five minutes lets another runner take over a job whose host died.
+- `cms.jobs.run()` is only on the instance. The `cms` of a hook has `jobs.queue()`, which joins the hook's transaction.
 
 ## Query parsing
 

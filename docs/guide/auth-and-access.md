@@ -262,7 +262,7 @@ defineCollection({
 - A role list matches signed-in users with one of the roles. There is no admin bypass: `["editor"]` excludes `admin`. Unknown roles throw at startup.
 - A function receives `{ user, cms, context, collection | global, locale }`, plus `draft` and `id` (read), `data` (create, update) or `id` (update, delete). It returns a boolean.
 - `read`, `update` and `delete` MAY return a `where` instead: equality filters on top-level fields, `createdBy` and `updatedBy`. Reads only see matching documents. An update or delete of another document is denied.
-- `update` covers draft saves, publish, discard and the locale actions.
+- `update` covers draft saves, publish, unpublish, [schedule](./drafts.md#scheduling), discard and the locale actions. It is checked when a job is scheduled, and the job runs as the server.
 
 **What it affects**
 
@@ -272,5 +272,9 @@ defineCollection({
 - Denied without a session answers 401. Denied with one answers 403 (`ForbiddenError`).
 - The server `cms` and the `cms` that hooks get skip the rules. HTTP and `cms.withSession(request)` apply them.
 - The admin hides what the user MAY NOT read, and shows read-only what they MAY NOT change. The server stays the authority.
+
+**Tasks**
+
+A [job task](./jobs.md#access) takes the same kinds of rule in `access`. It decides who sees, retries, runs and cancels the task's jobs in `/_tenon/jobs`. Without one, only admins do. Scheduled publishes and unpublishes are the exception: they follow the `update` rule of their document. Server code and the job clock skip it.
 
 Every document records `createdBy` and `updatedBy`: the ids of the users who created and last changed it (`null` for server code). Readers without a session do not get them.

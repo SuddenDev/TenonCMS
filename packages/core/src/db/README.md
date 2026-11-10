@@ -35,13 +35,16 @@ A joined query reads two tables with the same column names, so conditions and `O
 | `queries/document-sql.ts`      | Shared perspective, JSON, row-column and ID expressions, and `holdsAt()` for reference scans.       |
 | `queries/documents/`           | Find, load, batched ID reads, insert, update and delete.                                            |
 | `queries/globals/`             | Load and publish globals.                                                                           |
-| `queries/drafts/`              | Insert/save/discard pending document and global versions.                                           |
-| `queries/locales/`             | Upsert, discard, delete and load the locale rows of a document or global.                           |
+| `queries/drafts/`              | Insert, save, discard and unpublish pending document and global versions.                           |
+| `queries/locales/`             | Upsert, discard, unpublish, delete and load the locale rows of a document or global.                |
 | `queries/references/`          | Existing IDs, uniqueness, reverse references (also in locale rows) and populated joins.             |
 | `queries/media/`               | Indexed media-key lookup and distinct library values.                                               |
 | `queries/versions/`            | Record (draft saves merge), list, read and delete versions.                                         |
+| `queries/jobs/`                | The job queue: insert, claim, finish, requeue, list, delete, next due time.                         |
 
-`cms_documents` holds one JSON row per document; `cms_globals` holds one per global. Both have pending `draft` data and `published_at` (`NULL` before first publication). Published reads see published rows and `data`. Draft reads see every row and `COALESCE(draft, data)`.
+`cms_jobs` is the job queue. `claimJob()` takes a job with one `UPDATE … RETURNING`: SQLite serializes writers, Postgres adds `FOR UPDATE SKIP LOCKED` (`isPostgres(db)`). Times are milliseconds, `payload` and `result` are JSON text. `target`, `doc_id` and `locale` name the document of a scheduled publish. The unique index on `(cron, task, run_at)` lets two instances seed one cron slot once (`insertCronSlots()`). See [jobs](../jobs/README.md).
+
+`cms_documents` holds one JSON row per document; `cms_globals` holds one per global. Both have pending `draft` data and `published_at` (`NULL` before first publication and after an unpublish). Published reads see published rows and `data`. Draft reads see every row and `COALESCE(draft, data)`.
 
 `existingIds()` counts published and unpublished rows. Uniqueness and deletion reference scans use published `data`. `cms_uploads` reserves unfinished upload keys and binds uploads to their users; media upload/library operations query it.
 

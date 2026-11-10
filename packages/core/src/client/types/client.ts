@@ -15,6 +15,8 @@ import type {
 import type { Invite, InviteResult } from "../../users/types.ts";
 import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
 import type { Lock } from "../../locks/types.ts";
+import type { CronEntry, Job, JobFilter } from "../../jobs/types.ts";
+import type { ScheduleOptions } from "../../schedule/types.ts";
 import type {
   AppliedStructure,
   StructureCounts,
@@ -158,6 +160,32 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     id: string,
     options?: LocaleOption<C> & ConflictOptions,
   ): Promise<Doc<CollectionFields<C, K>>>;
+
+  /**
+   * Takes a document off the published perspective. A pending draft stays; without one, the published data becomes
+   * the draft. In a localized collection it unpublishes one locale (`locale`). Throws a `CmsError` with status `400`
+   * when the collection has `drafts: false`. Needs a session and the `update` rule.
+   * `POST /_tenon/collections/:collection/:id/unpublish`
+   */
+  unpublish<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    options?: LocaleOption<C> & ConflictOptions,
+  ): Promise<Doc<CollectionFields<C, K>>>;
+
+  /**
+   * Queues a publish or an unpublish of a document for a later time. The draft stays locked until the job publishes it.
+   * Throws a `CmsError` with status `400` for a collection without `schedule: true`, an invalid `at` or a publish
+   * without a draft, `403` without the `update` rule and `404` for a document that does not exist. A past `at` is due
+   * at once. Needs a session.
+   * `POST /_tenon/collections/:collection/:id/schedule`
+   * @returns The id of the job. `GET /_tenon/jobs?target=collection:<name>&docId=<id>` lists the scheduled jobs.
+   */
+  schedule<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+    options: Omit<ScheduleOptions, "locale"> & LocaleOption<C>,
+  ): Promise<{ id: string }>;
 
   /**
    * Drops the draft of a document and returns the published one. A document that was never published is deleted and
@@ -322,6 +350,24 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     name: K,
     options?: LocaleOption<C> & ConflictOptions,
   ): Promise<Data<GlobalFields<C, K>> & GlobalMeta>;
+
+  /**
+   * Takes a global off the published perspective, like {@link Client.unpublish}. Needs a session.
+   * `POST /_tenon/globals/:name/unpublish`
+   */
+  unpublishGlobal<K extends keyof Globals<C> & string>(
+    name: K,
+    options?: LocaleOption<C> & ConflictOptions,
+  ): Promise<Data<GlobalFields<C, K>> & GlobalMeta>;
+
+  /**
+   * Queues a publish or an unpublish of a global for a later time, like {@link Client.schedule}. Needs a session.
+   * `POST /_tenon/globals/:name/schedule`
+   */
+  scheduleGlobal<K extends keyof Globals<C> & string>(
+    name: K,
+    options: Omit<ScheduleOptions, "locale"> & LocaleOption<C>,
+  ): Promise<{ id: string }>;
 
   /**
    * Drops the draft of a global and returns the published one. Like {@link Client.discard}, it takes `locale` or
@@ -558,6 +604,27 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     revoke(id: string): Promise<void>;
     /** Deletes a key for good. `DELETE /_tenon/api-keys/:id` */
     delete(id: string): Promise<void>;
+  };
+
+  /**
+   * The job queue. Every call needs a session; an API key cannot reach it. A scheduled job follows the `update` rule
+   * of its document, any other job the `access` rule of its task, admins only by default. Jobs are queued on the
+   * server only, with `cms.jobs.queue()`.
+   */
+  jobs: {
+    /** The jobs the user MAY see. Queued and running jobs come in the order they are due, the others newest first. `GET /_tenon/jobs` */
+    list(filter?: JobFilter): Promise<Job[]>;
+    /** The cron entries of the tasks the user MAY see, with the next and the last run. `GET /_tenon/jobs/cron` */
+    cron(): Promise<CronEntry[]>;
+    /**
+     * Runs a queued job, or a failed one after queuing it again, and waits for it. Any other status is a 409.
+     * `POST /_tenon/jobs/:id/run`
+     */
+    run(id: string): Promise<Job>;
+    /** Queues a failed job again with all its attempts. Any other status is a 409. `POST /_tenon/jobs/:id/retry` */
+    retry(id: string): Promise<Job>;
+    /** Deletes a job that is not running. A running job is a 409. `DELETE /_tenon/jobs/:id` */
+    cancel(id: string): Promise<void>;
   };
 
   /**

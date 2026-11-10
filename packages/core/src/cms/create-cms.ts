@@ -41,6 +41,10 @@ import { createEmail } from "../email/create-email.ts";
 import { emailTemplates } from "../email/templates.ts";
 import { normalizeRoles } from "../users/roles.ts";
 import { checkAccess } from "../access/check-access.ts";
+import { resolveJobs } from "../jobs/config/resolve-jobs.ts";
+import { scheduleTasks } from "../schedule/tasks.ts";
+import { runJobs } from "../jobs/operations/run-jobs.operation.ts";
+import type { RunResult } from "../jobs/types.ts";
 import { sitemapEntries } from "../seo/sitemap-entries.ts";
 
 /**
@@ -85,6 +89,7 @@ export function defineCms<
   roles: roleOptions,
   sitemap = {},
   robots = {},
+  jobs: jobsOption,
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S, L, B, PR>) {
   type T = {
@@ -141,6 +146,7 @@ export function defineCms<
   // check if the schema is valid before proceeding
   checkSchema(schema, populateOption, localization);
   checkAccess(schema, roles);
+  const jobs = resolveJobs(plugins, jobsOption, roles, scheduleTasks);
 
   const adminRuntime = mergeAdmin(plugins, admin);
   checkRichtextConfig(schema, adminRuntime.richtext);
@@ -185,7 +191,7 @@ export function defineCms<
   const media = mediaOptions && createMediaCore(mediaOptions, schema);
 
   /** The part of an instance bound to one database: connection, auth and the HTTP app. */
-  function bindDatabase(database: DatabaseOptions) {
+  function bindDatabase(database: DatabaseOptions, wake: (at: number) => void = () => {}) {
     const { db, auth, getSession, getApiKey } = createRuntime<A>(
       database,
       secret,
@@ -210,6 +216,7 @@ export function defineCms<
       translations,
       sitemap,
       robots,
+      jobs: { ...jobs, wake },
       localApi: (scope) => createLocalApi(core, scope),
       media,
       admin: adminRuntime,
@@ -231,6 +238,11 @@ export function defineCms<
     overrideAccess: boolean,
   ) {
     const { core, auth, app } = bound;
+    const api = createLocalApi(core, outerScope(visitor, overrideAccess)) as unknown as Api<
+      T,
+      D,
+      L
+    >;
     return {
       schema: schema as unknown as T,
       auth,
@@ -238,7 +250,14 @@ export function defineCms<
       /** The `localization` option with defaults, or `undefined`. `locales` keeps its literal types. */
       localization,
       // The local API is untyped. `Api` adds the schema's types.
-      ...(createLocalApi(core, outerScope(visitor, overrideAccess)) as unknown as Api<T, D, L>),
+      ...api,
+
+      /**
+       * The job queue, and `run()`: one tick of the clock. Call `run()` from the host's trigger, never from a hook.
+       * Hooks get `queue()` only, because running jobs inside a hook's open transaction blocks a single-connection
+       * database.
+       */
+      jobs: { ...api.jobs, run: (): Promise<RunResult> => runJobs(core) },
 
       /** Returns a copy whose reads include drafts. */
       withDrafts<S>(this: S): S {
@@ -266,8 +285,8 @@ export function defineCms<
     };
   }
 
-  const root = (database: DatabaseOptions) =>
-    createInstance(bindDatabase(database), { user: null, perspective: "published" }, true);
+  const root = (database: DatabaseOptions, wake?: (at: number) => void) =>
+    createInstance(bindDatabase(database, wake), { user: null, perspective: "published" }, true);
   const cms = root(database);
   copies.set(cms, root);
   return cms as ReturnType<typeof createInstance> & MediaOf<M>;
@@ -287,16 +306,25 @@ export type Cms<T extends Schema> = ReturnType<
 >;
 
 // The instance of each `defineCms()` call, mapped to how it builds a copy on another database.
-const copies = new WeakMap<object, (database: DatabaseOptions) => object>();
+const copies = new WeakMap<
+  object,
+  (database: DatabaseOptions, wake?: (at: number) => void) => object
+>();
 
 /**
  * A copy of `cms` on another database, with its own connection, migrations and auth. Schema and options stay shared.
  * The Durable Object adapter binds each object's storage this way.
  * @param cms The instance that `defineCms()` returns, not one from `withSession()` or `withDrafts()`.
+ * @param options `wake(at)` runs when a job is queued that is due at `at` (epoch milliseconds), after the write's
+ * commit. The Durable Object adapter sets an alarm with it.
  * @returns A server instance, like the one `defineCms()` returns.
  */
-export function withDatabase<C extends object>(cms: C, database: DatabaseOptions): C {
+export function withDatabase<C extends object>(
+  cms: C,
+  database: DatabaseOptions,
+  { wake }: { wake?: (at: number) => void } = {},
+): C {
   const copy = copies.get(cms);
   if (!copy) throw new Error("tenoncms: `withDatabase()` takes the instance from `defineCms()`");
-  return copy(database) as C;
+  return copy(database, wake) as C;
 }

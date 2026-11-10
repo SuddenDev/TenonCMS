@@ -253,12 +253,12 @@ importers:
       '@libsql/client':
         specifier: ^0.18.0
         version: 0.18.0
-      tenoncms:
-        specifier: workspace:*
-        version: link:../../packages/core
       nuxt:
         specifier: ^4.6.2
         version: 4.6.3(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@libsql/client@0.18.0)(@oxc-project/types@0.155.0)(@types/node@26.6.5)(@vercel/functions@3.10.4(ws@8.22.0))(@vue/compiler-sfc@3.5.44)(acorn@8.19.0)(aws4fetch@1.0.20)(confbox@0.3.1)(db0@0.4.2)(dotenv@17.4.2)(esbuild@0.28.2)(eslint@10.13.0(jiti@2.7.0)(supports-color@10.2.2))(giget@3.3.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(mlly@1.8.2)(optionator@0.9.4)(oxlint@1.90.0)(rolldown@1.2.15)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.15)(rollup@4.66.0))(rollup@4.66.0)(srvx@1.0.8)(stylus@0.57.0(supports-color@10.2.2))(supports-color@10.2.2)(terser@5.51.2)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.51.2)(yaml@2.9.1))(vue-tsc@3.3.11(typescript@6.0.3))(yaml@2.9.1)
+      tenoncms:
+        specifier: workspace:*
+        version: link:../../packages/core
       vue:
         specifier: ^3.5.44
         version: 3.5.44(typescript@6.0.3)
@@ -281,12 +281,12 @@ importers:
       '@libsql/client':
         specifier: ^0.18.0
         version: 0.18.0
-      tenoncms:
-        specifier: workspace:*
-        version: link:../../packages/core
       ipx:
         specifier: 4.0.0-beta.1
         version: 4.0.0-beta.1(@types/node@24.19.2)(unstorage@1.17.6(@vercel/functions@3.10.4(ws@8.22.0))(aws4fetch@1.0.20)(db0@0.4.2)(ioredis@5.11.1(supports-color@10.2.2)))
+      tenoncms:
+        specifier: workspace:*
+        version: link:../../packages/core
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
@@ -312,15 +312,15 @@ importers:
       '@tanstack/react-start':
         specifier: ^1.169.4
         version: 1.169.4(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.15)(rollup@4.66.0)(supports-color@10.2.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.51.2)(yaml@2.9.1))
-      tenoncms:
-        specifier: workspace:*
-        version: link:../../packages/core
       react:
         specifier: ^19.3.1
         version: 19.3.1
       react-dom:
         specifier: ^19.3.1
         version: 19.3.1(react@19.3.1)
+      tenoncms:
+        specifier: workspace:*
+        version: link:../../packages/core
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
@@ -355,12 +355,12 @@ importers:
       astro:
         specifier: ^7.4.2
         version: 7.4.3(@types/node@26.6.5)(@vercel/functions@3.10.4(ws@8.22.0))(aws4fetch@1.0.20)(db0@0.4.2)(esbuild@0.28.2)(ioredis@5.11.1(supports-color@10.2.2))(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.51.2)(yaml@2.9.1)
-      tenoncms:
-        specifier: workspace:*
-        version: link:../../packages/core
       pg:
         specifier: ^8.23.1
         version: 8.23.1
+      tenoncms:
+        specifier: workspace:*
+        version: link:../../packages/core
     devDependencies:
       typescript:
         specifier: ^6.0.3
@@ -501,6 +501,9 @@ importers:
       consola:
         specifier: ^3.4.2
         version: 3.4.2
+      croner:
+        specifier: ^11.0.0
+        version: 11.0.0
       hono:
         specifier: ^4.13.13
         version: 4.13.14
@@ -619,9 +622,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.3.0
         version: 19.3.0(@types/react@19.3.0)
-      tenoncms:
-        specifier: workspace:*
-        version: link:../core
       postcss:
         specifier: ^8.5.31
         version: 8.5.32
@@ -637,6 +637,9 @@ importers:
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
+      tenoncms:
+        specifier: workspace:*
+        version: link:../core
       tsdown:
         specifier: ^0.23.1
         version: 0.23.3(@tsdown/css@0.23.3)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.11)(typescript@6.0.3)(vue-tsc@3.3.11(typescript@6.0.3))
@@ -4038,6 +4041,10 @@ packages:
 
   croner@10.0.1:
     resolution: {integrity: sha512-ixNtAJndqh173VQ4KodSdJEI6nuioBWI0V1ITNKhZZsO0pEMoDxz539T4FTTbSZ/xIOSuDnzxLVRqBVSvPNE2g==}
+    engines: {node: '>=18.0'}
+
+  croner@11.0.0:
+    resolution: {integrity: sha512-T17ADjdttrVToyzLpLq9Xb9xzcMwpQ/M3Qs9szhh0MVNTbv6NWQ9OFYa2qlzPYXFMn+uoDlnW1IpIv6cAvFtyA==}
     engines: {node: '>=18.0'}
 
   cross-spawn@7.0.6:
@@ -11569,6 +11576,8 @@ snapshots:
       readable-stream: 4.8.0
 
   croner@10.0.1: {}
+
+  croner@11.0.0: {}
 
   cross-spawn@7.0.6:
     dependencies:

@@ -1,5 +1,7 @@
 import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { EmailApi } from "../../email/types.ts";
+import type { JobsApi } from "../../jobs/types.ts";
+import type { ScheduleOptions } from "../../schedule/types.ts";
 import type {
   AppliedStructure,
   StructureCounts,
@@ -165,6 +167,33 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /**
+   * Takes a document off the published perspective: only the drafts perspective reads it until `publish()`. A pending
+   * draft stays; without one, the published data becomes the draft. Its unique values stay reserved. In a localized
+   * collection it unpublishes one locale, and the document with its last published locale. Runs `afterChange`
+   * with the published document as `previousDoc`. A document that is not published stays as it is. Throws a
+   * `ValidationError` when the collection has `drafts: false`. Returns `undefined` if the document does not exist.
+   */
+  unpublish<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+    options?: LocaleOption<L> & ConflictOptions,
+  ): Promise<CollectionDoc<T, K> | undefined>;
+
+  /**
+   * Queues a publish or an unpublish of a document for a later time (`at`; a past time is due at once). The job
+   * publishes the draft, which stays locked until then, in one locale (`locale`). It needs `schedule: true` on the collection and the
+   * `update` rule now; the job runs as the server. A document that is gone by then ends the job as `"missing"`.
+   * Returns `undefined` if the document does not exist now. Throws a `ValidationError` for an entry without
+   * `schedule`, an unknown action or locale, an invalid `at`, or a publish without a draft in the locale.
+   * @returns The id of the job. Scheduled jobs are listed with `GET /jobs?target=collection:<name>&docId=<id>`.
+   */
+  schedule<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+    options: ScheduleOptions & LocaleOption<L>,
+  ): Promise<{ id: string } | undefined>;
+
+  /**
    * Drops the draft of a document and returns the published one. A document that was never published is deleted, with
    * its `onDelete` effects, and the result is `undefined`. In a localized collection it drops the draft of one locale;
    * the shared draft stays. `{ all: true }` drops every draft.
@@ -258,6 +287,18 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
     options?: LocaleOption<L> & ConflictOptions,
   ): Promise<GlobalData<T, K> & GlobalMeta>;
 
+  /** Takes a global off the published perspective, like {@link Api.unpublish}. */
+  unpublishGlobal<K extends keyof Globals<T> & string>(
+    name: K,
+    options?: LocaleOption<L> & ConflictOptions,
+  ): Promise<GlobalData<T, K> & GlobalMeta>;
+
+  /** Queues a publish or an unpublish of a global for a later time, like {@link Api.schedule}. */
+  scheduleGlobal<K extends keyof Globals<T> & string>(
+    name: K,
+    options: ScheduleOptions & LocaleOption<L>,
+  ): Promise<{ id: string }>;
+
   /** Drops the draft of a global and returns the published one. Like {@link Api.discard}, it takes `locale` or `{ all: true }`. */
   discardGlobal<K extends keyof Globals<T> & string>(
     name: K,
@@ -295,4 +336,7 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
    * await cms.withDrafts().find("posts")
    */
   withDrafts<S>(this: S): S;
+
+  /** The job queue. */
+  jobs: JobsApi;
 };

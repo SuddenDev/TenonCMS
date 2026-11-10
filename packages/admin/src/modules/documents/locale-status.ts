@@ -14,6 +14,7 @@ export function rowState(row: LocaleRow): LocaleState {
  * The state of every locale and of the active one, and what "Discard all changes" would drop.
  * `sharedDraft`: the shared fields have a pending draft, which a publish in any locale publishes too. It makes the
  * active locale a draft, but never a missing one.
+ * `publishable`: the locales a publish has something for. The shared draft goes out with any locale that has a row.
  * `discardAll.show`: something besides the active locale's own draft is pending.
  */
 export function localeStatus({
@@ -38,6 +39,7 @@ export function localeStatus({
   return {
     active: states.find((s) => s.locale === active)?.state ?? "missing",
     states,
+    publishable: locales.filter((l) => pending.includes(l) || (sharedDraft && rows[l])),
     discardAll: {
       show: sharedDraft || pending.some((l) => l !== active),
       shared: sharedDraft,

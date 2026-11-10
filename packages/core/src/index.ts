@@ -30,6 +30,19 @@ export type {
   Preview,
 } from "./schema/index.ts";
 export { definePlugin, type Plugin } from "./plugins/index.ts";
+export {
+  defineTask,
+  type CronEntry,
+  type Job,
+  type JobFilter,
+  type JobsApi,
+  type JobsOptions,
+  type JobStatus,
+  type QueueOptions,
+  type RunResult,
+  type Task,
+  type TaskContext,
+} from "./jobs/index.ts";
 
 export type { AuthOptions } from "./auth/config/options.ts";
 export type { Role, RoleOptions } from "./users/roles.ts";

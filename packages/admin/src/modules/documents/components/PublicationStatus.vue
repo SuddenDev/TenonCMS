@@ -3,20 +3,28 @@ import { computed, ref } from "vue";
 import { useTimeoutFn } from "@vueuse/core";
 import { useTimeZone } from "@/shared/composables/useTimeZone";
 import { useI18n } from "vue-i18n";
+import type { Job } from "../../../../../core/src/jobs/types";
+import { groupSchedules } from "@/modules/jobs/jobs";
+import { useLocale } from "@/shared/composables/useLocale";
 import { usePerspective } from "@/shared/composables/usePerspective";
-import { ago } from "@/shared/utils";
+import { localeLabel } from "@/shared/locale";
+import { ago, formatDateTime } from "@/shared/utils";
+import Icon from "@/shared/components/Icon.vue";
 import { Button } from "@/shared/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/shared/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
+// `scheduled`: the queued publishes and unpublishes of the document. A clock joins the row, and hovering it lists them.
 const props = defineProps<{
   doc: Record<string, unknown>;
   compact?: boolean;
   missing?: boolean;
+  scheduled?: Job[];
 }>();
 const { t, locale } = useI18n();
 const { timeZone } = useTimeZone();
 const { perspective, set, switching } = usePerspective();
+const { locales } = useLocale();
 const open = ref(false);
 const { start: close, stop: keepOpen } = useTimeoutFn(() => (open.value = false), 150, {
   immediate: false,
@@ -57,23 +65,45 @@ const statuses = computed(() => [
       : t("documents.noDraft"),
   },
 ]);
+// One line per action and time, so languages released together share a line.
+const schedules = computed(() =>
+  groupSchedules(props.scheduled ?? []).map((group) => ({
+    key: `${group.action} ${group.runAt}`,
+    label: t(
+      group.action === "unpublish" ? "documents.scheduledUnpublish" : "documents.scheduledPublish",
+      { when: formatDateTime(group.runAt, locale.value, timeZone.value) },
+    ),
+    detail:
+      group.locales.length > 1 && group.locales.length === locales.value.length
+        ? t("documents.allLanguages")
+        : group.locales.map((l) => localeLabel(l)).join(", "),
+  })),
+);
+const scheduleText = computed(() =>
+  schedules.value.map((s) => (s.detail ? `${s.label} (${s.detail})` : s.label)).join(". "),
+);
 const dot =
   "size-1.5 shrink-0 rounded-full data-[status=published]:bg-emerald-500 data-[status=drafts]:border data-[status=drafts]:data-[exists=true]:bg-amber-500 data-[status=drafts]:border-amber-500";
 </script>
 
 <template>
-  <Popover v-if="compact" v-model:open="open">
-    <PopoverAnchor as-child>
+  <Popover v-model:open="open">
+    <PopoverAnchor v-if="compact" as-child>
       <span
         class="inline-flex min-h-6 min-w-6 shrink-0 items-center justify-end gap-2 rounded-sm"
         tabindex="0"
         role="img"
-        :aria-label="statuses.map((s) => `${s.label}: ${s.detail}`).join('. ')"
+        :aria-label="
+          [...statuses.map((s) => `${s.label}: ${s.detail}`), scheduleText]
+            .filter(Boolean)
+            .join('. ')
+        "
         @pointerenter="show"
         @pointerleave="close()"
         @focus="show"
         @blur="close()"
       >
+        <Icon v-if="schedules.length" name="clock" class="text-scheduled text-[10px]" />
         <span
           v-if="draft"
           :class="dot"
@@ -90,6 +120,60 @@ const dot =
         />
       </span>
     </PopoverAnchor>
+    <span v-else class="inline-flex shrink-0 items-center gap-1" role="group">
+      <Tooltip v-for="status in statuses" :key="status.value">
+        <TooltipTrigger as-child>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="h-6 gap-1.5 rounded-full border px-2.5 text-xs font-normal"
+            :class="
+              perspective === status.value
+                ? {
+                    'border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-300':
+                      status.value === 'drafts' && status.exists,
+                    'border-border bg-border': status.value === 'drafts' && !status.exists,
+                    'border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300':
+                      status.value === 'published',
+                  }
+                : 'border-border text-muted-foreground'
+            "
+            :aria-pressed="perspective === status.value"
+            :disabled="switching || (status.value === 'published' && !published)"
+            @click="set(status.value)"
+          >
+            <span
+              :class="[dot]"
+              :data-status="status.value"
+              :data-exists="!!status.exists"
+              aria-hidden="true"
+            />
+            {{ status.label }}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent align="center" side="bottom">
+          <time v-if="status.savedAt && status.exists" :datetime="status.savedAt">{{
+            dateFormat.format(new Date(status.savedAt))
+          }}</time>
+          <span v-else>{{ status.detail }}</span>
+        </TooltipContent>
+      </Tooltip>
+      <PopoverAnchor v-if="schedules.length" as-child>
+        <span
+          class="border-scheduled/30 bg-scheduled/10 text-scheduled inline-flex size-6 items-center justify-center rounded-full border"
+          tabindex="0"
+          role="img"
+          :aria-label="`${t('documents.scheduled')}: ${scheduleText}`"
+          @pointerenter="show"
+          @pointerleave="close()"
+          @focus="show"
+          @blur="close()"
+        >
+          <Icon name="clock" class="text-[10px]" />
+        </span>
+      </PopoverAnchor>
+    </span>
     <PopoverContent
       side="bottom"
       align="center"
@@ -101,62 +185,31 @@ const dot =
       @pointerenter="keepOpen"
       @pointerleave="close()"
     >
-      <div
-        v-for="status in statuses.filter((s) => s.exists)"
-        :key="status.value"
-        class="flex items-start gap-4"
-      >
-        <div class="flex-1">
-          <p>{{ status.label }}</p>
-          <p class="text-muted-foreground mt-0.5">{{ status.detail }}</p>
-        </div>
-        <span
-          :class="[dot, 'mt-1']"
-          :data-status="status.value"
-          :data-exists="!!status.exists"
-          aria-hidden="true"
-        />
-      </div>
-    </PopoverContent>
-  </Popover>
-  <span v-else class="inline-flex shrink-0 items-center gap-1" role="group">
-    <Tooltip v-for="status in statuses" :key="status.value">
-      <TooltipTrigger as-child>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          class="h-6 gap-1.5 rounded-full border px-2.5 text-xs font-normal"
-          :class="
-            perspective === status.value
-              ? {
-                  'border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-300':
-                    status.value === 'drafts' && status.exists,
-                  'border-border bg-border': status.value === 'drafts' && !status.exists,
-                  'border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300':
-                    status.value === 'published',
-                }
-              : 'border-border text-muted-foreground'
-          "
-          :aria-pressed="perspective === status.value"
-          :disabled="switching || (status.value === 'published' && !published)"
-          @click="set(status.value)"
+      <template v-if="compact">
+        <div
+          v-for="status in statuses.filter((s) => s.exists)"
+          :key="status.value"
+          class="flex items-start gap-4"
         >
+          <div class="flex-1">
+            <p>{{ status.label }}</p>
+            <p class="text-muted-foreground mt-0.5">{{ status.detail }}</p>
+          </div>
           <span
-            :class="[dot]"
+            :class="[dot, 'mt-1']"
             :data-status="status.value"
             :data-exists="!!status.exists"
             aria-hidden="true"
           />
-          {{ status.label }}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent align="center" side="bottom">
-        <time v-if="status.savedAt && status.exists" :datetime="status.savedAt">{{
-          dateFormat.format(new Date(status.savedAt))
-        }}</time>
-        <span v-else>{{ status.detail }}</span>
-      </TooltipContent>
-    </Tooltip>
-  </span>
+        </div>
+      </template>
+      <div v-for="s in schedules" :key="s.key" class="flex items-start gap-4">
+        <div class="flex-1">
+          <p>{{ s.label }}</p>
+          <p v-if="s.detail" class="text-muted-foreground mt-0.5">{{ s.detail }}</p>
+        </div>
+        <Icon name="clock" class="text-scheduled mt-0.5 text-[10px]" />
+      </div>
+    </PopoverContent>
+  </Popover>
 </template>

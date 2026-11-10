@@ -47,5 +47,6 @@ Building or changing tenoncms itself? See the [developer docs](../dev/README.md)
 | -------------------------------------------- | ----------------------------------------------------------- |
 | [Auth, users and access](auth-and-access.md) | better-auth options, roles, invites, API keys, access rules |
 | [Email](email.md)                            | SMTP and custom adapters, templates                         |
+| [Jobs](jobs.md)                              | Tasks, the queue, the clock route, access, retries          |
 | [Customize the admin](admin.md)              | Branding, custom fields and pages                           |
 | [Plugins](plugins.md)                        | Using, writing and publishing plugins                       |

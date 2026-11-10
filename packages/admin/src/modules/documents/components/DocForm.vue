@@ -9,10 +9,10 @@ import { untranslatedIds } from "@/modules/documents/sync-structure";
 import { ago } from "@/shared/utils";
 import { Button } from "@/shared/components/ui/button";
 import FieldInput from "./FieldInput.vue";
+import PublishButton from "./PublishButton.vue";
 import FieldLayout from "./fields/FieldLayout.vue";
 import { useAutosave } from "@/modules/documents/composables/useAutosave";
 import { provideLinks } from "@/modules/documents/composables/useLinks";
-import Icon from "@/shared/components/Icon.vue";
 
 // `isNew`: plain `default` values pre-fill the form, and slugs follow their `from` field. Function defaults are not in the schema; the server fills them.
 // `id`: the form's id, so a button outside of it can submit it with `form`.
@@ -27,6 +27,10 @@ import Icon from "@/shared/components/Icon.vue";
 // `layout`: the tabs and fieldsets of the collection or global.
 // `reload`: loads the stored document again. It is offered when a save answers 409 because someone else saved first.
 // Without `save` and `saveDraft` the form only shows data and has no status bar.
+// `unpublish`: takes the active language off the published site. The form offers it for a published entry.
+// `schedulable`: the form offers Schedule…, which emits `schedule` for the host to open its dialog.
+// `scheduledAt`: when the scheduled publish of the active language runs. It locks the fields and the discard, and
+// Publish opens the schedule instead.
 // `changed`: marks these top-level fields and fades the others, to show what a version changed.
 const props = defineProps<{
   id?: string;
@@ -37,6 +41,9 @@ const props = defineProps<{
   saveDraft?: (data: Data<Fields>) => Promise<void>;
   publish?: () => Promise<void>;
   discard?: () => Promise<void>;
+  unpublish?: () => Promise<void>;
+  schedulable?: boolean;
+  scheduledAt?: string;
   doc?: Record<string, unknown>;
   isNew?: boolean;
   global?: boolean;
@@ -47,7 +54,7 @@ const props = defineProps<{
   changed?: string[];
 }>();
 // `change`: the form state as it would be saved, on every edit and once on load.
-const emit = defineEmits<{ change: [data: Record<string, unknown>] }>();
+const emit = defineEmits<{ change: [data: Record<string, unknown>]; schedule: [] }>();
 const { t, locale } = useI18n();
 
 const data = ref(normalize(props.fields, props.initial, false, props.isNew));
@@ -121,6 +128,10 @@ const canPublish = computed(
     (current.value.publishedAt === null && !props.missing),
 );
 
+const canUnpublish = computed(
+  () => !!props.unpublish && !props.isNew && !props.missing && !!current.value.publishedAt,
+);
+
 // Someone else saved since this form loaded, so the save or publish answered 409 with `code: "CHANGED"`.
 const isConflict = (e: unknown) =>
   e instanceof CmsError && e.status === 409 && e.body?.code === "CHANGED";
@@ -177,6 +188,18 @@ const publish = () =>
     await props.publish!();
   });
 
+// An unpublish waits for the draft, too, so the draft is not lost to a save in flight.
+const unpublish = () =>
+  attempt(async () => {
+    await autosave.flush();
+    if (autosave.error.value) throw autosave.error.value;
+
+    await props.unpublish!();
+  });
+
+// The schedule dialog's Publish now runs the same publish as the button.
+defineExpose({ publish });
+
 async function discard() {
   const message = t(
     current.value.publishedAt || props.global
@@ -202,7 +225,8 @@ async function discard() {
     @focusout="drafts && autosave.flush()"
   >
     <div
-      class="mx-auto flex w-full max-w-2xl flex-col px-6 pb-12 group-data-[expanded=true]/pane:max-w-none sm:px-8"
+      class="mx-auto flex w-full max-w-2xl flex-col px-6 pb-12 group-data-[expanded=true]/pane:max-w-none inert:opacity-60 sm:px-8"
+      :inert="!!scheduledAt"
     >
       <FieldLayout
         split
@@ -272,15 +296,23 @@ async function discard() {
             type="button"
             variant="ghost"
             size="sm"
-            :disabled="busy"
+            :disabled="busy || !!scheduledAt"
+            :title="scheduledAt ? t('documents.discardScheduled') : undefined"
             @click="discard"
           >
             {{ t("documents.discardChanges") }}
           </Button>
-          <Button type="button" size="sm" :disabled="busy || !canPublish" @click="publish">
-            <Icon name="upload" />
-            {{ t("documents.publish") }}
-          </Button>
+          <PublishButton
+            :disabled="busy || !canPublish"
+            :busy="busy"
+            :can-schedule="schedulable"
+            :scheduled-at="scheduledAt"
+            :can-unpublish="canUnpublish"
+            :localized="localized"
+            @publish="publish"
+            @schedule="emit('schedule')"
+            @unpublish="unpublish"
+          />
         </template>
         <Button v-else type="submit" size="sm" :disabled="busy">{{ t("common.save") }}</Button>
       </div>

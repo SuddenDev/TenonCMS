@@ -14,4 +14,9 @@ export type AdapterOptions = {
   sitemap?: boolean;
   /** Serves `/robots.txt` from the CMS. Defaults to `true`, and skipped like `sitemap`. */
   robots?: boolean;
+  /**
+   * Runs the due jobs every minute. Nuxt schedules a Nitro task, Astro starts an interval on Node. Defaults to
+   * `true`. `false` leaves the clock to the host, e.g. on Vercel Hobby, which allows a cron job once a day.
+   */
+  jobs?: boolean;
 };

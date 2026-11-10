@@ -3,6 +3,7 @@ import type { AuthOptions } from "../../auth/config/options.ts";
 import type { EmailOptions } from "../../email/types.ts";
 import type { mediaCollection } from "../../media/config/collection.ts";
 import type { MediaOptions } from "../../media/config/options.ts";
+import type { JobsOptions } from "../../jobs/config/define-task.ts";
 import type { Plugin } from "../../plugins/index.ts";
 import type { settings } from "../../presets/settings.ts";
 import type { RoleOptions } from "../../users/roles.ts";
@@ -214,4 +215,9 @@ export type CmsOptions<
   sitemap?: SitemapOptions | false;
   /** `/robots.txt`: allows the site and points to the sitemap. `rules` changes the groups. `false` turns it off. */
   robots?: RobotsOptions | false;
+  /**
+   * Background work: tasks that `cms.jobs.queue()` and cron entries queue, and the `secret` of the `/jobs/run` clock
+   * route. Plugins add their own tasks.
+   */
+  jobs?: JobsOptions;
 };

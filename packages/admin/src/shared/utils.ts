@@ -26,3 +26,12 @@ export function ago(date: string | number | Date, locale: string) {
   }
   return rtf.format(0, "second");
 }
+
+/** "Jan 5, 2027, 9:00 AM": a date and time in `locale`, in `timeZone`. */
+export function formatDateTime(date: string | number | Date, locale: string, timeZone: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  }).format(new Date(date));
+}

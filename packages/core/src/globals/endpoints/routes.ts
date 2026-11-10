@@ -5,6 +5,7 @@ import { getEndpoint } from "./get.endpoint.ts";
 import { previewUrlEndpoint } from "./preview-url.endpoint.ts";
 import { setEndpoint } from "./set.endpoint.ts";
 import { publishEndpoint } from "./publish.endpoint.ts";
+import { unpublishEndpoint } from "./unpublish.endpoint.ts";
 import { discardEndpoint } from "./discard.endpoint.ts";
 import { copyLocaleEndpoint } from "./copy-locale.endpoint.ts";
 import { syncStructureEndpoint } from "./sync-structure.endpoint.ts";
@@ -17,6 +18,7 @@ export function globalsRoutes(core: Core) {
     writes: new Hono<Env>()
       .route("/", setEndpoint(core))
       .route("/", publishEndpoint(core))
+      .route("/", unpublishEndpoint(core))
       .route("/", discardEndpoint(core))
       .route("/", copyLocaleEndpoint(core))
       .route("/", syncStructureEndpoint(core))

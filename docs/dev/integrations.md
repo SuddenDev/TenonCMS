@@ -23,6 +23,18 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
   - Astro components ship as source, with an `index.ts` that core's `tsc` skips. They have no `asChild`.
   - Nuxt registers the Vue components with a `Tenon` prefix through `addComponent()`; `TenonLink` is a runtime wrapper whose `as` defaults to `NuxtLink`.
 
+## Job clock
+
+`cms.jobs.run()` has no timer of its own (see [jobs](../../packages/core/src/jobs/README.md)). Each adapter starts one, and the option `jobs: false` turns it off.
+
+- **Nitro hosts (Nuxt, TanStack Start, standalone):** the task `tenon:jobs` runs `cms.jobs.run()` every minute through `scheduledTasks["* * * * *"]`. `withJobsTask()` (`integrations/nitro-jobs.ts`) adds the task to the host's own entry instead of replacing it.
+  - Nuxt (Nitro 2): the module sets `experimental.tasks` and the task in `nitro:config`. The handler is the plain object in `nuxt/runtime/server/jobs-task.ts`, so it imports nothing from Nitro. It reaches the config through `#tenon/config`.
+  - Vite hosts (Nitro 3): `tenonAdmin()` carries a `nitro` key, a Nitro module that Nitro installs from any Vite plugin. It sets the same options and registers the handler as a virtual module (`#tenon/jobs-task`) that imports the `entry` file by absolute path. Core does not depend on Nitro, so the part of its module API that it uses is typed in `vite/index.ts`.
+  - Nitro runs scheduled tasks with croner on Node, Bun and Deno, and maps them to Cron Triggers (Cloudflare) and Cron Jobs (Vercel). A task of one name runs once at a time per process.
+- **Astro on Node:** `astro/jobs-interval.ts`, started by the middleware on the first request that is not prerendered. A `setInterval` of 60 s, `unref()`'d, ticks at once and then every minute. It is keyed on `globalThis` and replaces the timer when the module reloads (HMR), so timers never stack. A failed tick is logged. The integration passes the define `__TENON_JOBS__`, true for `astro dev` and `@astrojs/node`; serverless adapters freeze the process, and Cloudflare has the alarm.
+- **Cloudflare:** the alarm of the Durable Object, see below.
+- **Other hosts:** `jobs.secret` mounts `/_tenon/jobs/run` for an external pinger.
+
 ## Astro
 
 - Injects the API route, the admin route and a middleware that puts a session-bound `cms` on `locals`. That is why the admin preview renders drafts. Prerendered pages get the plain instance.
@@ -59,5 +71,7 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 - `tenoncms/cloudflare` runs the CMS inside a SQLite-backed Durable Object, because writes hold a transaction across `await` and D1 cannot. See [design decisions](design-decisions.md#durable-objects).
 - The config sets `database: durableObject()`. `tenonObject(cms)` returns the object class, which the Worker entry exports. Each object binds its storage to its own copy of the instance (`withDatabase()`), so several objects in one isolate and an object reset stay correct. Migrations run on the first call. A failed connect or migration is not cached: the next call tries again.
 - The config's own instance has no database: schema and `localization` work, every read or write throws. Code outside the object uses `createObjectClient(request, stub)`: `createClient()` over the stub's `fetch`, on the request's origin, with its cookie.
+- The object is the job clock. `withDatabase()` gets `wake(at)`, which the queue calls after the commit of a job due at `at`. `wake` sets the alarm when none is set or the set one is later (`arm-alarm.ts`). `fetch` sets the alarm to now once per instance when none is set, after the request, so the cron entries get seeded after a restart. A failed request sets it too. Setting it during the request races with the first migration. `alarm()` calls `cms.jobs.run()` and sets the alarm to `next`; a throw makes Cloudflare retry it. A job that is due now fires the alarm at once, so a test that queues a job sees it run on its own.
+- `setAlarm()` creates workerd's `_cf_KV` table, and workerd refuses to read its columns and indexes. The dialect's introspector (`DurableObjectIntrospector`) and a rewrite of better-auth's index query skip every `_cf_` table, or migrations fail on the next cold start (`SQLITE_AUTH`).
 - The class is plain, without RPC. Extend `DurableObject` from `cloudflare:workers` once something needs RPC.
 - Tests: `*.workerd.test.ts` run in workerd through `@cloudflare/vitest-plugin` (Vitest project `workerd`), inside the Worker of `src/tests/workerd/`.

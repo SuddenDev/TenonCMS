@@ -214,6 +214,7 @@
     "better-auth": "^1.7.12",
     "client-zip": "^2.5.1",
     "consola": "^3.4.2",
+    "croner": "^11.0.0",
     "hono": "^4.13.13",
     "image-size": "^2.0.4",
     "ipx": "4.0.0-beta.1",

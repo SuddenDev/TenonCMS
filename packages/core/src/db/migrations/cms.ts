@@ -155,6 +155,41 @@ const cmsMigrations: Record<string, Migration> = {
       );
     },
   },
+  // The job queue. `target`, `doc_id` and `locale` name the document of a scheduled publish: `target` is
+  // `collection:<name>` or `global:<name>`, `doc_id` is `''` for a global. `cron` marks a slot a cron entry seeded; the
+  // unique index lets two instances seed it once.
+  "010_cms_jobs": {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_jobs (
+        id text PRIMARY KEY NOT NULL,
+        task text NOT NULL,
+        payload text NOT NULL,
+        status text NOT NULL,
+        run_at integer NOT NULL,
+        attempts integer NOT NULL DEFAULT 0,
+        max_attempts integer NOT NULL,
+        locked_until integer,
+        result text,
+        error text,
+        cron text,
+        target text,
+        doc_id text,
+        locale text,
+        created_by text,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL
+      )`.execute(db);
+      await sql`CREATE INDEX IF NOT EXISTS cms_jobs_due_idx ON cms_jobs (status, run_at)`.execute(
+        db,
+      );
+      await sql`CREATE INDEX IF NOT EXISTS cms_jobs_target_idx ON cms_jobs (target, doc_id)`.execute(
+        db,
+      );
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS cms_jobs_cron_idx ON cms_jobs (cron, task, run_at)`.execute(
+        db,
+      );
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables of the database's dialect, with its own migration tables. */

@@ -12,12 +12,14 @@ import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts
 import { deleteLocale } from "../../db/queries/locales/delete-locale.query.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { guard } from "../../access/rule.ts";
+import { requireUnscheduled } from "../../schedule/operations/require-unscheduled.ts";
 
 /**
  * Deletes the locale row of the scope's locale, then runs `afterChange` with the document as it is afterwards.
  *
  * @returns The document in the removed locale, without its localized values, or `undefined` when the document does not exist.
- * @throws {ValidationError} For an unlocalized entry, the default locale, a locale without a version, or the last locale row.
+ * @throws {ValidationError} For an unlocalized entry, the default locale, a locale without a version, the last locale row,
+ * or a locale whose publish is scheduled.
  * @throws {ForbiddenError} When the `update` rule denies.
  */
 export async function removeLocalized(
@@ -41,6 +43,7 @@ export async function removeLocalized(
     throw new ValidationError({ locale: "No version in this locale" });
   if (before.locales.length === 1)
     throw new ValidationError({ locale: "The last locale cannot be removed" });
+  await requireUnscheduled(db, name, id, loc.locale);
 
   await deleteLocale(
     db,

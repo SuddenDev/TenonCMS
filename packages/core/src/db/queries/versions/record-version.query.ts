@@ -9,7 +9,7 @@ type Recorded = {
   target: string;
   docId: string;
   locale: string | null;
-  status: "draft" | "published";
+  status: "draft" | "published" | "unpublished";
   data: DocData;
   by: string | null;
   /** The most versions kept for this document and locale. Default `MAX_VERSIONS`. */

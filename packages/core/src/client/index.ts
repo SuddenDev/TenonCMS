@@ -3,6 +3,7 @@ export { CmsError } from "./errors.ts";
 export { API_BASE, LOCK_TTL } from "./constants.ts";
 export type { Lock } from "../locks/types.ts";
 export type { Version, VersionWithData } from "../versions/types.ts";
+export type { CronEntry, Job, JobFilter, JobStatus } from "../jobs/types.ts";
 export type * from "./types/index.ts";
 export type { Checked, Locale, ReadOptions } from "../schema/index.ts";
 export type { Localization, LocalizationOptions } from "../cms/config/options.ts";

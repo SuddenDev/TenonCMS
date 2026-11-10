@@ -88,6 +88,42 @@ curl -s -o /dev/null -w '%{http_code}\n' -b $J -X DELETE -H "origin: http://$B" 
 
 Expect `200`; the menu with `"href":"/about","title":"About"` on the page link; `[{"href":"/about","title":"About"}]`; the link in the header HTML; then `409` (`LINKED_CONTENT`). In the admin, Settings › Main menu shows the tree: drag a row onto another, open its sheet, and check that the preview follows the edit.
 
+## Jobs
+
+Run after a change to a job clock (Nuxt, `tenonAdmin()`, Astro on Node, Cloudflare). Temporarily add a task and a cron entry to the example's config (revert it afterwards):
+
+```ts
+jobs: {
+  secret: "smoke-secret",
+  tasks: { smoke: defineTask({ run: () => void console.log("SMOKE TICK") }) },
+  scheduledTasks: { "* * * * *": ["smoke"] },
+},
+```
+
+```sh
+B=localhost:3000
+curl -s -o /dev/null -w '%{http_code}\n' $B/_tenon/jobs/run
+curl -s -w ' %{http_code}\n' -H "Authorization: Bearer smoke-secret" $B/_tenon/jobs/run
+curl -s -w ' %{http_code}\n' -X POST -H "Authorization: Bearer wrong" $B/_tenon/jobs/run
+```
+
+Expect `401`, `{"ran":0,"next":<ms of the next minute>} 200`, and `401`. Then wait up to 70 s without any request. Expect `SMOKE TICK` in the server log, once a minute. In Astro on Node the interval starts with the first page request, and the log of `astro dev` is read with `astro dev logs`. With `jobs: false` (`tenonCms: { jobs: false }` in `nuxt.config.ts`, `tenonAdmin({ jobs: false })`, `tenonCms({ jobs: false })` for Astro), nothing prints until a request to the route.
+
+A scheduled publish. Add `schedule: true` to the collection (revert it afterwards), sign up as above, and schedule a draft for 65 s from now:
+
+```sh
+P=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
+  -d '{"title":"Soon","slug":"soon"}' $B/_tenon/collections/posts/draft | node -pe 'JSON.parse(require("fs").readFileSync(0)).id')
+AT=$(node -pe 'new Date(Date.now() + 65000).toISOString()')
+curl -s -b $J -X POST -H 'content-type: application/json' -H "origin: http://$B" \
+  -d "{\"action\":\"publish\",\"at\":\"$AT\"}" $B/_tenon/collections/posts/$P/schedule
+curl -s -b $J "$B/_tenon/jobs?status=queued"
+```
+
+Expect `{"id":"…"}`, then the job in the list. After the time and the next full minute, the post is in `curl -s $B/_tenon/collections/posts` with a `publishedAt` at that minute, and `curl -s -b $J "$B/_tenon/jobs?status=done"` lists the job with the result `"published"`.
+
+The Cloudflare clock is covered by `durable-object.workerd.test.ts` (`pnpm test:full`). For `wrangler dev`, queue a job from a hook or a task and expect it to run without a request.
+
 ## Nuxt production build
 
 Dev does not bundle core, so some breaks only show in `nuxt build`. The example renders no rich text, so add a throwaway page that does, build, and parse every server chunk.

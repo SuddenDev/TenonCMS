@@ -4,6 +4,7 @@ import { collectionTarget, globalTarget } from "../content/targets.ts";
 import { hookArgs } from "../content/lifecycle/hook-args.ts";
 import type { Fields } from "../schema/index.ts";
 import { blocksOf } from "../schema/traversal/blocks-of.ts";
+import { visibleTasks } from "../jobs/operations/job-access.ts";
 import { fieldAllowed } from "./field-access.ts";
 import { type Op, decide } from "./rule.ts";
 import type { FieldAccess } from "./types.ts";
@@ -14,7 +15,7 @@ type Json = Record<string, any>;
  * Adds what the caller MAY do to a copy of the `/schema` JSON, for the admin and API keys: `access` with every
  * operation on each collection and global (`true`, `false`, or a `where` the admin matches a document against), and
  * `access` with the denied operations (`false`) on each field. Rules run without a document, `id` or `data`, and
- * `read` in the caller's `perspective`; the server stays the authority. A shared block is sent once, so its rules run
+ * `read` in the caller's `perspective`; the server stays the authority. `jobs` lists the tasks the caller MAY see. A shared block is sent once, so its rules run
  * without a collection or global, with paths from the block.
  * @returns The copy.
  */
@@ -37,6 +38,8 @@ export async function withPermissions(core: Core, json: Json, visitor: Caller) {
       target.access[op] = await decide(core, s, name, op, op === "read" ? { draft } : {});
     await fieldPermissions(s, entry.fields, target.fields, hookArgs(s, name, {}), "");
   }
+
+  out.jobs = await visibleTasks(core, s);
 
   const shared = {
     cms: s.cms,

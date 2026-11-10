@@ -11,9 +11,9 @@ Construction happens in this order:
 
 1. **Resolve options.** Validate options and set defaults. `localization` gets `fallback: true` and `routing: { prefix: "except-default" }`.
 2. **Assemble the schema.** Merge host, preset and plugin collections/globals (presets also bring blocks), add site settings (localized with `localization`), then add the built-in `media` collection when media is enabled. Duplicate plugin names and duplicate names within collections or globals throw instead of overwriting definitions.
-3. **Validate the completed schema.** [check-schema.ts](../schema/validation/check-schema.ts) checks the assembled definitions and the `localization` config before any database connection opens.
+3. **Validate the completed schema.** [check-schema.ts](../schema/validation/check-schema.ts) checks the assembled definitions and the `localization` config before any database connection opens. It also merges and checks the tasks and cron entries of the `jobs` option and the plugins ([jobs](../jobs/README.md)).
 4. **Create the shared core.** Prepare lazy database/auth functions (with the localized keys of every collection and global, which the database syncs after its migrations), store the schema, plugins, root hooks, population defaults and the normalized `localization`, and create the optional media core.
-5. **Create the entry points.** Build the Hono app and return a typed local API with `schema`, `populate`, `localization`, `auth()`, `withDrafts()`, `withSession(request)` and `fetch(request)`.
+5. **Create the entry points.** Build the Hono app and return a typed local API with `schema`, `populate`, `localization`, `auth()`, `withDrafts()`, `withSession(request)`, `jobs` (`queue()` and `run()`; hooks get `queue()` only) and `fetch(request)`.
 
 ## Default Collections and Globals
 

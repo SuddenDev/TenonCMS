@@ -109,4 +109,32 @@ export const postgresMigrations: Record<string, Migration> = {
       );
     },
   },
+  // The Postgres twin of `010_cms_jobs`. `rowid` keeps jobs due in the same millisecond in the order they were queued.
+  "002_cms_jobs": {
+    async up(db: Kysely<any>) {
+      await sql`CREATE TABLE cms_jobs (
+        id text PRIMARY KEY,
+        task text NOT NULL,
+        payload text NOT NULL,
+        status text NOT NULL,
+        run_at bigint NOT NULL,
+        attempts integer NOT NULL DEFAULT 0,
+        max_attempts integer NOT NULL,
+        locked_until bigint,
+        result text,
+        error text,
+        cron text,
+        target text,
+        doc_id text,
+        locale text,
+        created_by text,
+        created_at bigint NOT NULL,
+        updated_at bigint NOT NULL,
+        rowid bigint GENERATED ALWAYS AS IDENTITY
+      )`.execute(db);
+      await sql`CREATE INDEX cms_jobs_due_idx ON cms_jobs (status, run_at)`.execute(db);
+      await sql`CREATE INDEX cms_jobs_target_idx ON cms_jobs (target, doc_id)`.execute(db);
+      await sql`CREATE UNIQUE INDEX cms_jobs_cron_idx ON cms_jobs (cron, task, run_at)`.execute(db);
+    },
+  },
 };

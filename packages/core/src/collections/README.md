@@ -16,7 +16,7 @@ The local method checks that the collection exists, is writable, and supports dr
 | ------------------- | ---------------------------------------------------------------------------------------------- |
 | `config/`           | Collection options and `defineCollection()`, which preserves field and hook types.             |
 | `operations/local/` | Bind API methods to a scope and check collection-specific rules.                               |
-| `operations/`       | Run reads, writes, publish, discard and delete through the content engine.                     |
+| `operations/`       | Run reads, writes, publish, unpublish, discard and delete through the content engine.          |
 | `endpoints/`        | Parse HTTP requests and call the scoped local API. `routes.ts` groups public reads and writes. |
 
-`find.operation.ts` keeps list, newest-match and ID reads together because they share the read pipeline but pass different hook arguments. Drafts are enabled by default; set `drafts: false` on a collection to disable them.
+`find.operation.ts` keeps list, newest-match and ID reads together because they share the read pipeline but pass different hook arguments. Drafts are enabled by default; set `drafts: false` on a collection to disable them. `schedule: true` lets editors schedule a publish or unpublish; it needs drafts, and [schedule](../schedule/README.md) owns the operation, local method and route.

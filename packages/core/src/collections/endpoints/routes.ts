@@ -7,6 +7,7 @@ import { createEndpoint } from "./create.endpoint.ts";
 import { previewUrlEndpoint } from "./preview-url.endpoint.ts";
 import { updateEndpoint } from "./update.endpoint.ts";
 import { publishEndpoint } from "./publish.endpoint.ts";
+import { unpublishEndpoint } from "./unpublish.endpoint.ts";
 import { discardEndpoint } from "./discard.endpoint.ts";
 import { copyLocaleEndpoint } from "./copy-locale.endpoint.ts";
 import { syncStructureEndpoint } from "./sync-structure.endpoint.ts";
@@ -21,6 +22,7 @@ export function collectionsRoutes(core: Core) {
       .route("/", createEndpoint(core))
       .route("/", updateEndpoint(core))
       .route("/", publishEndpoint(core))
+      .route("/", unpublishEndpoint(core))
       .route("/", discardEndpoint(core))
       .route("/", copyLocaleEndpoint(core))
       .route("/", syncStructureEndpoint(core))

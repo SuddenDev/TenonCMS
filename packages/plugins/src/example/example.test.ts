@@ -77,6 +77,21 @@ describe("example", () => {
     });
   });
 
+  it("counts the quotes in a job", async () => {
+    const { cms, client, fetch } = make();
+    await cms.create("quotes", { text: "One" });
+    await cms.create("quotes", { text: "Two" });
+    await client.signUp(admin);
+
+    await cms.jobs.queue("example:quote-count");
+    // The daily cron entry seeds its next slot, so `next` is set.
+    const { ran, next } = await cms.jobs.run();
+    expect(ran).toBe(1);
+    expect(next).toBeGreaterThan(Date.now());
+    const jobs = await (await fetch(`${origin}/_tenon/jobs?status=done`)).json();
+    expect(jobs).toMatchObject([{ task: "example:quote-count", result: { count: 2 } }]);
+  });
+
   it("mounts the field and pages with the chosen renderer", () => {
     const { fields, pages } = ExamplePlugin({ renderer: "vue" }).admin!;
     expect(fields!.rating.mount).toEqual({

@@ -24,6 +24,18 @@ export function globalTarget(name: string): ContentTarget {
 export const targetKey = ({ kind, name }: ContentTarget) => `${kind}:${name}`;
 
 /**
+ * The inverse of {@link targetKey}.
+ * @returns The target, or `undefined` for a key that names none.
+ */
+export function targetOfKey(key: string): ContentTarget | undefined {
+  const colon = key.indexOf(":");
+  const kind = key.slice(0, colon);
+  const name = key.slice(colon + 1);
+  if ((kind !== "collection" && kind !== "global") || !name) return undefined;
+  return { kind, name };
+}
+
+/**
  * Looks up the schema entry of a target.
  * @returns The fields and hooks of the collection or global.
  */
@@ -44,9 +56,13 @@ export function draftable(core: Core, name: ContentTarget) {
  * Checks that the schema has the collection or global.
  * @throws {Error} For an unknown collection or global.
  */
-export function known({ schema }: Core, kind: ContentTarget["kind"], name: string) {
-  const owners = kind === "collection" ? schema.collections : schema.globals;
-  if (!Object.hasOwn(owners, name)) throw new Error(`Unknown ${kind} "${name}"`);
+export function known(core: Core, kind: ContentTarget["kind"], name: string) {
+  if (!hasTarget(core, { kind, name })) throw new Error(`Unknown ${kind} "${name}"`);
+}
+
+/** Whether the schema has the collection or global. */
+export function hasTarget({ schema }: Core, { kind, name }: ContentTarget) {
+  return Object.hasOwn(kind === "collection" ? schema.collections : schema.globals, name);
 }
 
 /**

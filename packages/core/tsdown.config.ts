@@ -52,6 +52,7 @@ export default defineConfig({
     { from: "src/integrations/astro/components", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/route.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/middleware.ts", to: "dist/integrations/astro" },
+    { from: "src/integrations/astro/jobs-interval.ts", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/admin.astro", to: "dist/integrations/astro" },
     { from: "src/integrations/astro/cloudflare", to: "dist/integrations/astro" },
     { from: "src/integrations/nuxt/runtime", to: "dist/integrations/nuxt" },

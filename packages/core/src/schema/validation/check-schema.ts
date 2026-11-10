@@ -34,6 +34,8 @@ type Owner = Layout & {
   syncStructure?: boolean;
   preview?: Preview;
   permalink?: Preview;
+  drafts?: boolean;
+  schedule?: boolean;
   global: boolean;
 };
 
@@ -54,7 +56,7 @@ const uniqueTypes = [
  * Checks that the schema can work. Runs once while the instance is built.
  * @throws {Error} For a populate depth above the limit, a relation or join that does not fit, a condition on an unknown
  * field, `unique` where it cannot apply, an invalid `pattern`, a `preview` placeholder on an unknown field,
- * a `localized` option or `localization` config that does not fit, array or block items or row limits that do not
+ * a `localized` option or `localization` config that does not fit, `schedule` without drafts, array or block items or row limits that do not
  * fit, select options or number options that do not fit, or an admin layout that names unknown tabs or fieldsets.
  */
 export function checkSchema(
@@ -74,6 +76,8 @@ export function checkSchema(
     checkLayout(owner.fields, owner, owner.name);
     checkPreview(collections, owner, localization?.routing === false);
     checkLocalized(owner, !!localization);
+    if (owner.schedule && owner.drafts === false)
+      fail(`"${owner.name}" sets \`schedule\` with \`drafts: false\`; scheduling needs drafts`);
 
     // Compiles every `pattern`, so an invalid one throws here.
     dataSchema(owner.fields);
@@ -94,6 +98,8 @@ function owners(schema: Schema): Owner[] {
       syncStructure: c.syncStructure,
       preview: c.preview,
       permalink: c.permalink,
+      drafts: c.drafts,
+      schedule: c.schedule,
       tabs: c.tabs,
       fieldsets: c.fieldsets,
       global: false,
@@ -105,6 +111,8 @@ function owners(schema: Schema): Owner[] {
       syncStructure: g.syncStructure,
       preview: g.preview,
       permalink: g.permalink,
+      drafts: g.drafts,
+      schedule: g.schedule,
       tabs: g.tabs,
       fieldsets: g.fieldsets,
       global: true,

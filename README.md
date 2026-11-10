@@ -164,6 +164,7 @@ Working:
 
 - Schema-in-code collections and globals with inferred types, relations, lists and blocks (nested and shared)
 - Hooks, validation, conditions, drafts and publishing, per-locale content
+- Unpublish and scheduled publishing, a job queue with cron, and a Jobs page in the admin, see [Jobs](docs/guide/jobs.md)
 - Page and SEO preset, `/sitemap.xml` and `/robots.txt` with no config, live preview and an admin bar on the site
 - Components for Vue, React and Astro (`Image`, `Picture`, `Link`, `Blocks`, `Richtext`, `Seo`), auto-imported in Nuxt with `useTenonSeo()`
 - Rich text: Tiptap JSON with internal links and images, and Astro, Vue and React renderers

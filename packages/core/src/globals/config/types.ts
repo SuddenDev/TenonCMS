@@ -28,6 +28,11 @@ export type Global<F extends Fields = Fields> = Layout & {
   /** The global keeps a draft next to the published data, saved with `{ draft: true }` and published with `publishGlobal()`. Default `true`. */
   drafts?: boolean;
   /**
+   * Editors MAY schedule a publish or an unpublish of the global for a later time. Needs `drafts`. The `update` rule
+   * covers it. Default `false`.
+   */
+  schedule?: boolean;
+  /**
    * The most versions kept per global and language. Recording one more deletes the oldest. Use `Infinity` to keep
    * every version. Default `100`.
    */

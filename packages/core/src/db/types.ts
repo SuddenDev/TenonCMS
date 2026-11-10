@@ -9,7 +9,7 @@ export interface Database {
     draft: string | null;
     created_at: number;
     updated_at: number;
-    /** `NULL` for a document that was never published. */
+    /** `NULL` for a document that was never published or was unpublished. Its `data` stays after an unpublish. */
     published_at: number | null;
     /** The id of the user who created the document. `NULL` for server code. */
     created_by: string | null;
@@ -32,7 +32,7 @@ export interface Database {
     draft: string | null;
     created_at: number;
     updated_at: number;
-    /** `NULL` while this locale was never published. */
+    /** `NULL` while this locale was never published or is unpublished. */
     published_at: number | null;
   };
   cms_global_locales: {
@@ -80,13 +80,41 @@ export interface Database {
     doc_id: string;
     /** `NULL` when the entry is not localized. */
     locale: string | null;
-    status: "draft" | "published";
+    status: "draft" | "published" | "unpublished";
     /** The written data. For a localized entry, the merged document of `locale`. */
     data: string;
     /** `NULL` for server code. */
     created_by: string | null;
     created_at: number;
     /** A draft version is updated in place while the same user keeps editing. */
+    updated_at: number;
+  };
+  cms_jobs: {
+    id: string;
+    task: string;
+    /** JSON. */
+    payload: string;
+    status: "queued" | "running" | "done" | "failed";
+    /** When the job is due. A retry moves it ahead. */
+    run_at: number;
+    /** How many runs started. */
+    attempts: number;
+    max_attempts: number;
+    /** While `running`: when the lease ends and another run MAY claim the job. */
+    locked_until: number | null;
+    /** JSON, once `done`. */
+    result: string | null;
+    error: string | null;
+    /** The cron pattern that seeded the row. */
+    cron: string | null;
+    /** `collection:<name>` or `global:<name>` for a job that belongs to a document or global. */
+    target: string | null;
+    /** The document id. `''` for a global. */
+    doc_id: string | null;
+    locale: string | null;
+    /** `NULL` for server code and cron. */
+    created_by: string | null;
+    created_at: number;
     updated_at: number;
   };
   cms_invites: {
@@ -102,6 +130,9 @@ export interface Database {
 
 /** A row of `cms_invites`. */
 export type InviteRow = Database["cms_invites"];
+
+/** A row of `cms_jobs`. */
+export type JobRow = Database["cms_jobs"];
 
 /**
  * The locale columns of a localized read. `r_*` belong to the requested locale's row, `d_*` to the default locale's;

@@ -8,6 +8,7 @@ import { faviconDefine } from "../admin/favicon.ts";
 import { adminHtml } from "../admin/html.ts";
 import { adminPath } from "../admin/path.ts";
 import type { AdminOption } from "../admin/types.ts";
+import { JOBS_TASK, withJobsTask } from "../nitro-jobs.ts";
 
 const adminEntry = fileURLToPath(new URL("../../admin/entry.ts", import.meta.url));
 const ADMIN_HTML = "#tenon/admin-html";
@@ -19,13 +20,49 @@ export type TenonAdminOptions = {
   entry?: string;
   /** Path of the admin, e.g. `/cms`. Defaults to `/admin`. The host's server route MUST match it. */
   path?: Exclude<AdminOption, false>;
+  /**
+   * Runs the due jobs every minute, through a Nitro task. Defaults to `true`. `false` leaves the clock to the host,
+   * e.g. on Vercel Hobby, which allows a cron job once a day. Needs Nitro.
+   */
+  jobs?: boolean;
 };
+
+// The part of Nitro's module API that `jobsModule()` uses. Core does not depend on Nitro.
+type NitroLike = {
+  options: {
+    rootDir: string;
+    experimental: { tasks?: boolean };
+    tasks: Record<string, { handler?: string; description?: string }>;
+    scheduledTasks: Record<string, string | (string | undefined)[] | undefined>;
+    virtual: Record<string, string>;
+  };
+};
+
+const JOBS_HANDLER = "#tenon/jobs-task";
+
+// A Nitro module. Nitro registers every Vite plugin that carries a `nitro` key.
+function jobsModule(entry: string) {
+  return {
+    setup({ options }: NitroLike) {
+      options.experimental.tasks = true;
+      options.virtual[JOBS_HANDLER] =
+        `import cms from ${JSON.stringify(resolve(options.rootDir, entry))};
+export default {
+  meta: { description: "Runs the due jobs" },
+  run: async () => ({ result: await cms.jobs.run() }),
+};`;
+      options.tasks[JOBS_TASK] = { handler: JOBS_HANDLER, description: "Runs the due jobs" };
+      options.scheduledTasks = withJobsTask(options.scheduledTasks);
+    },
+  };
+}
 
 /**
  * Vite plugin that adds the admin to Vite frameworks without an adapter, e.g. TanStack Start.
  * It builds the admin as a second client entry, exposes its page as `#tenon/admin-html` and keeps core
  * external in SSR builds. Serve the page from a server route for `/admin` and `/admin/*`, e.g.
  * `src/routes/cms.$.ts` for `/cms`.
+ * With Nitro, it also schedules the task `tenon:jobs` every minute, unless `jobs` is `false`.
  * @example
  * // vite.config.ts
  * plugins: [tanstackStart(), tenonAdmin()]
@@ -37,6 +74,7 @@ export type TenonAdminOptions = {
 export function tenonAdmin({
   path: option = true,
   entry: configEntry = "./tenon.config.ts",
+  jobs = true,
 }: TenonAdminOptions = {}): Plugin[] {
   const path = adminPath(option)!;
   let server: ViteDevServer | undefined;
@@ -46,6 +84,7 @@ export function tenonAdmin({
     clientReferences(configEntry),
     {
       name: "tenoncms:admin",
+      ...(jobs && { nitro: jobsModule(configEntry) }),
 
       config: (config, { command }) => {
         const root = resolve(config.root ?? process.cwd());

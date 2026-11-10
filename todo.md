@@ -44,8 +44,8 @@ Each new query is one more to port, and the test app should run on a real deploy
   - [x] Astro and React ports: `tenoncms/astro/components` and `tenoncms/react`. The shared helpers are `tenoncms/components`.
   - [x] `Picture` (art direction) in all three, and `Seo` for Astro and React on `seoHead()`, which `useTenonSeo()` uses too.
 - [ ] Search: in the admin first (`LIKE` on title fields), later FTS5 / `tsvector` and a shared function. Depends on the database work.
-- [ ] Jobs and cron: one protected `POST /jobs/run`, triggered per platform (Cloudflare Cron Triggers, Vercel Cron, an interval on Node).
-- [ ] Scheduled publishing, on top of jobs.
+- [x] Jobs and cron: one protected `POST /jobs/run`, triggered per platform (Cloudflare Cron Triggers, Vercel Cron, an interval on Node).
+- [x] Scheduled publishing, on top of jobs.
 - [ ] Webhooks and cache invalidation: rebuild prerendered pages or purge the CDN on publish.
 - [x] Sitemap and robots helper, from `permalink` and `alternates`: `/sitemap.xml` and `/robots.txt` with no config, `sitemap.entries` and `robots.rules` to extend, `cms.sitemap()`, `sitemapXml()` and `robotsTxt()`. A host route wins. The `permalink: true` read option.
 - [ ] Mobile: the admin works well on phones. Start with the content list, which is not usable there yet.
@@ -95,9 +95,7 @@ From building the House of Cacao site.
 
 - [ ] Navigation menu preset:
   - [ ] The label comes after the link.
-  - [ ] A "new tab" option.
   - [ ] Link to a file: a button after the link input, or a "File…" option in the combobox that opens the media modal.
-- [ ] Pages preset: a better default icon.
 
 ### Types
 

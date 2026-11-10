@@ -5,6 +5,7 @@ export const posts = defineCollection({
   label: "Posts",
   nav: { group: "Blog", icon: "newspaper" },
   localized: true,
+  schedule: true,
   titleField: "title",
   permalink: "/posts/{slug}",
   // Authors write and change their own posts; editors and admins change every post and delete.

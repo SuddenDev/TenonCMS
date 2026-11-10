@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useHead } from "@unhead/vue";
-import { computed, provide, ref, watch } from "vue";
+import { computed, provide, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
 import { useRoute } from "vue-router";
@@ -16,6 +16,9 @@ import { useTranslations } from "@/modules/documents/composables/useTranslations
 import type { SyncChoice } from "../../../../../core/src/content/writes/sync-structure";
 import { useLock } from "@/modules/documents/composables/useLock";
 import LockNotice from "@/modules/documents/components/LockNotice.vue";
+import ScheduledNotice from "@/modules/documents/components/ScheduledNotice.vue";
+import ScheduleDialog from "@/modules/documents/components/ScheduleDialog.vue";
+import { useSchedules } from "@/modules/documents/composables/useSchedules";
 import { Icon, Pane, useLocale, usePerspective } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
 
@@ -53,6 +56,16 @@ const lock = useLock({
   onRegain: () => load(),
 });
 const readOnly = computed(() => !editable.value || published.value || !!lock.holder.value);
+// A global that was never saved has no draft to publish yet.
+const schedulable = computed(
+  () => !!global.value?.schedule && drafts.value && editable.value && !!doc.value?.updatedAt,
+);
+const schedules = useSchedules(
+  () => (schedulable.value ? { kind: "global", name } : undefined),
+  () => tr.active.value,
+);
+const scheduling = ref(false);
+const form = useTemplateRef<InstanceType<typeof DocForm>>("form");
 // `doc` is the latest saved global. `data` is what the form shows; a draft save leaves it, so typing goes on.
 const doc = ref<Record<string, unknown> | null>(null);
 const data = ref<Record<string, unknown>>({});
@@ -60,7 +73,7 @@ const data = ref<Record<string, unknown>>({});
 useHead({ title: () => text(global.value?.label) ?? name });
 
 const error = ref("");
-const { locale, defaultLocale, flush } = useLocale();
+const { locale, locales, defaultLocale, flush } = useLocale();
 const tr = useTranslations(
   () => global.value,
   () => ({ global: name }),
@@ -118,6 +131,15 @@ const saveOptions = () => ({
 const save = async (body: Data<Fields>) => show(await client.setGlobal(name, body, saveOptions()));
 const publish = async () => {
   show(await client.publishGlobal(name, saveOptions()));
+  tr.refresh();
+  await schedules.cancelPublish();
+};
+function publishNow() {
+  scheduling.value = false;
+  form.value?.publish();
+}
+const unpublish = async () => {
+  show(await client.unpublishGlobal(name, saveOptions()));
   tr.refresh();
 };
 const discard = async () => {
@@ -190,7 +212,12 @@ const discardAll = () =>
         <h2 :class="drafts ? 'sr-only' : 'truncate text-sm font-medium'">
           {{ text(global.label) ?? name }}
         </h2>
-        <StatusBadges v-if="doc && drafts" :doc="doc" :languages="languages" />
+        <StatusBadges
+          v-if="doc && drafts"
+          :doc="doc"
+          :languages="languages"
+          :scheduled="schedules.jobs.value"
+        />
       </div>
     </template>
     <template #actions>
@@ -226,7 +253,7 @@ const discardAll = () =>
       :get="(v) => client.globalVersion(name, v)"
       :restore="restoreVersion"
       :drafts="drafts"
-      :can-restore="!readOnly"
+      :can-restore="!readOnly && !schedules.publishJob.value"
       @close="history = false"
     />
     <div v-else-if="doc" class="flex min-h-full flex-col">
@@ -242,6 +269,11 @@ const discardAll = () =>
           :lost="lock.lost.value"
           @takeover="lock.takeOver"
         />
+        <ScheduledNotice
+          v-else-if="schedules.publishJob.value"
+          :job="schedules.publishJob.value"
+          @open="scheduling = true"
+        />
         <p v-else-if="readOnly" class="text-muted-foreground mt-2 text-sm">
           {{ t(editable ? "documents.readOnly" : "documents.noEdit") }}
         </p>
@@ -251,6 +283,7 @@ const discardAll = () =>
       </header>
       <DocForm
         id="global-form"
+        ref="form"
         class="flex-1 inert:opacity-60"
         :fields="global.fields"
         :layout="global"
@@ -262,9 +295,22 @@ const discardAll = () =>
         :localized="tr.localized.value"
         :defaults="tr.defaults.value"
         :missing="languages?.active === 'missing'"
-        v-bind="drafts ? { saveDraft, publish, discard } : { save }"
+        v-bind="drafts ? { saveDraft, publish, unpublish, discard } : { save }"
+        :schedulable="schedulable"
+        :scheduled-at="schedules.publishJob.value?.runAt"
         :reload="load"
         @change="emit('change', $event)"
+        @schedule="scheduling = true"
+      />
+      <ScheduleDialog
+        v-if="schedulable"
+        v-model:open="scheduling"
+        :schedules="schedules"
+        :locales="tr.localized.value ? locales : undefined"
+        :active-locale="tr.active.value"
+        :publishable="tr.publishable.value"
+        @changed="$event && load()"
+        @publish="publishNow"
       />
       <ApplyStructure
         v-if="name === 'translations' && editable"

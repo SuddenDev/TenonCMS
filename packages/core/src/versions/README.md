@@ -12,7 +12,9 @@ The endpoint runs behind `session` and `apiKeyReach()`, so only signed-in users 
 
 ## Recording
 
-`content/writes/persist-document.ts` calls `recordVersion()` after every save except `onDelete` effects. A draft updates the newest version when it is a draft by the same user in the same locale, saved within 30 minutes (`DRAFT_BREAK`), so autosaves keep one row per editing session. A publish always inserts. An insert deletes the oldest versions beyond the target's `maxVersions` (default 100). Deleting a document deletes its versions.
+`content/writes/persist-document.ts` calls `recordVersion()` after every save except `onDelete` effects. A draft updates the newest version when it is a draft by the same user in the same locale, saved within 30 minutes (`DRAFT_BREAK`), so autosaves keep one row per editing session. A publish and an unpublish always insert. An insert deletes the oldest versions beyond the target's `maxVersions` (default 100). Deleting a document deletes its versions.
+
+`content/writes/unpublish-document.ts` records an `unpublished` version with the published content of the locale that went offline, in the same transaction. A no-op unpublish records none. Restoring one works like restoring any version: `restoreVersion()` ignores `status` and writes `data` back as the draft.
 
 ## Files
 

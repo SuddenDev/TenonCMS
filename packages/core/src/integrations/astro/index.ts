@@ -23,7 +23,8 @@ export type Options = AdapterOptions & {
  * Astro integration for tenoncms. Injects `/_tenon`, the admin page and the preview runtime, and sets
  * `Astro.locals.tenon` to the CMS instance of the request's user.
  * With the `@astrojs/cloudflare` adapter, the CMS runs in a Durable Object bound as `CMS`: `/_tenon` goes to it, and
- * `Astro.locals.tenon` is the HTTP client over it.
+ * `Astro.locals.tenon` is the HTTP client over it, and an alarm of the object runs the jobs.
+ * On Node (and in `astro dev`), an interval runs the due jobs every minute unless `jobs` is `false`.
  * @example
  * // astro.config.mjs
  * integrations: [tenonCms({ admin: '/cms' })]
@@ -34,6 +35,7 @@ export default function tenonCms({
   preview = true,
   sitemap,
   robots,
+  jobs = true,
 }: Options = {}): AstroIntegration {
   let entryPath: string;
   let cloudflare = false;
@@ -50,6 +52,8 @@ export default function tenonCms({
       }) {
         entryPath = fileURLToPath(new URL(entry, config.root));
         cloudflare = config.adapter?.name === "@astrojs/cloudflare";
+        // Serverless hosts freeze the process between requests, so an interval cannot tick there.
+        const nodeAdapter = config.adapter?.name === "@astrojs/node";
         const runtime = cloudflare ? "./cloudflare/" : "./";
 
         injectRoute({
@@ -93,7 +97,10 @@ export default function tenonCms({
           vite: {
             plugins: [clientModules(), clientReferences(entry)],
             resolve: { alias: { "#tenon/config": entryPath } },
-            define: faviconDefine(fileURLToPath(config.publicDir)),
+            define: {
+              ...faviconDefine(fileURLToPath(config.publicDir)),
+              __TENON_JOBS__: JSON.stringify(jobs && (command === "dev" || nodeAdapter)),
+            },
             // Linked workspace packages get bundled by default, which breaks libsql's native binding.
             // Dev does not bundle. Keeping core internal there lets Vite reload it when `dist/` changes.
             // Workers have no native bindings and MUST bundle core.

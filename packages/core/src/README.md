@@ -14,6 +14,8 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `api-keys/`     | API key management: operations and endpoints.                     | [README](api-keys/README.md)                |
 | `locks/`        | Edit locks for the admin: claim, renew, take over, free.          | [README](locks/README.md)                   |
 | `versions/`     | Version history: list, read and restore past versions.            | [README](versions/README.md)                |
+| `jobs/`         | Tasks, the job queue, `cms.jobs.run()` and the `/jobs` routes.    | [README](jobs/README.md)                    |
+| `schedule/`     | Scheduled publish and unpublish, the `tenon:` tasks.              | [README](schedule/README.md)                |
 | `http/`         | Hono application assembly, parsing and errors.                    | [app.ts](http/app.ts)                       |
 | `access/`       | Access rules: decisions, field stripping, `/schema` permissions.  | [README](access/README.md)                  |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |

@@ -12,6 +12,7 @@ import { persistDocument } from "./persist-document.ts";
 import { guard } from "../../access/rule.ts";
 import { dropDenied } from "../../access/field-access.ts";
 import { ConflictError } from "../../errors.ts";
+import { requireUnscheduled } from "../../schedule/operations/require-unscheduled.ts";
 
 export type WriteMode = "save" | "draft" | "publish" | "deletion-effect";
 export type WriteOperation = "create" | "update" | "setGlobal";
@@ -50,7 +51,8 @@ export type WriteState = {
  * Owns access, source selection, preparation and persistence for saves, drafts, publishing and deletion effects.
  * Drafts run before hooks and type checks, but skip custom validation, integrity and after-change hooks.
  * Publish compares hooks against published content. Deletion effects bypass access and reference checks.
- * A stale `updatedAt` throws a `ConflictError` after access and before any hook.
+ * A stale `updatedAt` throws a `ConflictError` after access and before any hook. A draft of a locale with a scheduled
+ * publish throws a `ValidationError`: the schedule locks it.
  * @returns The document after read hooks, or `undefined` for a missing update target.
  */
 export async function writeDocument(core: Core, scope: Inner, request: WriteRequest) {
@@ -62,6 +64,8 @@ export async function writeDocument(core: Core, scope: Inner, request: WriteRequ
   if (mode !== "deletion-effect") {
     await guard(core, scope, name, accessOperation, { id, data: request.input });
   }
+  if (mode === "draft" && operation !== "create")
+    await requireUnscheduled(database, name, id, locale?.locale);
 
   const source = await loadSource(
     database,
@@ -102,7 +106,12 @@ export async function writeDocument(core: Core, scope: Inner, request: WriteRequ
   return persistDocument(state, preparedData);
 }
 
-async function loadSource(
+/**
+ * Loads the document a write starts from, in a perspective: the merged locale document of a localized entry, else the
+ * plain one.
+ * @returns The document, or `undefined` when the perspective does not see it.
+ */
+export async function loadSource(
   db: Db,
   name: ContentTarget,
   id: string | undefined,
