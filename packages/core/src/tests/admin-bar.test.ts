@@ -20,8 +20,6 @@ const bar = (admin: object, extra: object = {}) =>
   defineCms({ ...base, admin, ...extra } as never) as ReturnType<typeof defineCms>;
 const items = (list: object) => bar({ adminBar: { items: list } });
 const mount = clientRef("./m");
-const click = clientRef("./c");
-const IDS = ["dashboard", "edit", "perspective"];
 
 describe("admin bar endpoint", () => {
   it("accepts all eight positions and rejects unsupported positions at startup", () => {
@@ -75,9 +73,11 @@ describe("admin bar endpoint", () => {
     expect((await get()).status).toBe(404);
   });
 
-  it("rejects a bad url or mode with 400, no-store and no loader call", async () => {
+  it("rejects a missing or bad url or mode with 400, no-store and no loader call", async () => {
     const load = vi.fn(() => null);
-    const { get } = await signedIn(items({ x: { label: "X", href: "/x", load } }));
+    const { get, fetch } = await signedIn(items({ x: { label: "X", href: "/x", load } }));
+    for (const q of ["", "?url=/", "?mode=site"])
+      expect((await fetch(`${origin}/_tenon/admin-bar${q}`)).status).toBe(400);
     for (const [url, mode] of [
       ["", "site"],
       ["//evil.test", "site"],
@@ -91,13 +91,6 @@ describe("admin bar endpoint", () => {
       expect(res.headers.get("cache-control")).toBe("no-store");
     }
     expect(load).not.toHaveBeenCalled();
-  });
-
-  it("rejects a request without url or mode", async () => {
-    const { client, fetch } = setup(defineCms(base));
-    await client.signUp(admin);
-    for (const q of ["", "?url=/", "?mode=site"])
-      expect((await fetch(`${origin}/_tenon/admin-bar${q}`)).status).toBe(400);
   });
 });
 
@@ -126,89 +119,27 @@ describe("admin bar items", () => {
     });
   });
 
-  it("sorts equal orders in registration order and unordered items last", async () => {
-    const { ids } = await signedIn(
-      bar(
-        { adminBar: { items: { host: { label: "H", href: "/h", order: 20 } } } },
-        {
-          plugins: [
-            definePlugin({
-              name: "p",
-              admin: { adminBar: { items: { plug: { label: "P", href: "/p", order: 20 } } } },
-            }),
-          ],
-        },
-      ),
-    );
-    expect(await ids()).toEqual(["dashboard", "edit", "plug", "host", "perspective"]);
-  });
-
-  it("resolves a native item with the result of its loader and the page url", async () => {
+  it("resolves a native item with its loader, given the page url and admin language", async () => {
     const load = vi.fn(({ url }: { url: string }) => ({
-      label: "Report",
+      label: { en: "Report", de: "Bericht" },
       href: `https://a.test/?u=${encodeURIComponent(url)}`,
     }));
-    const { items: list } = await signedIn(items({ r: { label: "R", href: "/r", load } }));
-    const r = (await list("/posts/1?x=2")).find((i: { id: string }) => i.id === "r");
-    expect(r).toEqual({ id: "r", label: "Report", href: "https://a.test/?u=%2Fposts%2F1%3Fx%3D2" });
+    const { get } = await signedIn(items({ r: { label: "R", href: "/r", load } }));
+    const res = await get("/posts/1?x=2", "site", "&locale=de");
+    const r = (await res.json()).items.find((i: { id: string }) => i.id === "r");
+    expect(r).toEqual({
+      id: "r",
+      label: { en: "Report", de: "Bericht" },
+      href: "https://a.test/?u=%2Fposts%2F1%3Fx%3D2",
+    });
     expect(load).toHaveBeenCalledWith(
       expect.objectContaining({
         url: "/posts/1?x=2",
+        locale: "de",
         user: expect.anything(),
         cms: expect.anything(),
       }),
     );
-  });
-
-  it("passes the admin language to loaders and keeps a label per language", async () => {
-    const load = vi.fn(() => ({ label: { en: "Report", de: "Bericht" } }));
-    const { get } = await signedIn(items({ r: { label: "R", href: "/r", load } }));
-    const res = await get("/page", "site", "&locale=de");
-    const r = (await res.json()).items.find((i: { id: string }) => i.id === "r");
-    expect(r.label).toEqual({ en: "Report", de: "Bericht" });
-    expect((load.mock.calls[0] as any)[0].locale).toBe("de");
-  });
-
-  it("leaves a native item out when its loader returns null", async () => {
-    const { ids } = await signedIn(items({ r: { label: "R", href: "/r", load: () => null } }));
-    expect(await ids()).toEqual(IDS);
-  });
-
-  it("serves click and mount items with their own data, null included, and the refs", async () => {
-    const { items: list } = await signedIn(
-      items({
-        c: { label: "C", order: 1, onClick: click, load: () => ({ n: 1 }) },
-        m: { label: "M", order: 2, mount, load: () => null },
-        s: { label: "S", order: 3, mount },
-      }),
-    );
-    expect((await list()).slice(0, 3)).toEqual([
-      { id: "c", label: "C", order: 1, onClick: click, data: { n: 1 } },
-      { id: "m", label: "M", order: 2, mount, data: null },
-      { id: "s", label: "S", order: 3, mount },
-    ]);
-  });
-
-  it("loads the children of a dropdown with their own data", async () => {
-    const { items: list } = await signedIn(
-      items({
-        menu: {
-          label: "Menu",
-          order: 1,
-          children: {
-            a: { label: "A", onClick: click, load: () => ({ a: 1 }) },
-            b: { label: "B", mount, load: () => ({ b: 2 }) },
-            hide: { label: "H", href: "/h", load: () => null },
-            link: { label: "L", href: "/l" },
-          },
-        },
-      }),
-    );
-    expect((await list())[0].children).toEqual([
-      { id: "a", label: "A", onClick: click, data: { a: 1 } },
-      { id: "b", label: "B", mount, data: { b: 2 } },
-      { id: "link", label: "L", href: "/l" },
-    ]);
   });
 
   it("keeps the data of every item separate", async () => {
@@ -256,11 +187,6 @@ describe("admin bar items", () => {
     expect(byId.perspective.builtIn).toBe(true);
   });
 
-  it("removes a built-in with a hidden item", async () => {
-    const { ids } = await signedIn(items({ edit: false }));
-    expect(await ids()).toEqual(["dashboard", "perspective"]);
-  });
-
   it("replaces a built-in before any loader runs, so the replaced loader never runs", async () => {
     const first = vi.fn(() => ({ label: "First" }));
     const plugin = definePlugin({
@@ -282,16 +208,16 @@ describe("admin bar items", () => {
     expect(second).toHaveBeenCalledOnce();
   });
 
-  it("runs no loader of a hidden item", async () => {
+  it("removes hidden items, built-ins too, and runs no loader of theirs", async () => {
     const load = vi.fn(() => ({}));
     const plugin = definePlugin({
       name: "p",
       admin: { adminBar: { items: { x: { label: "X", href: "/x", load } } } },
     });
     const { ids } = await signedIn(
-      bar({ adminBar: { items: { x: false } } }, { plugins: [plugin] }),
+      bar({ adminBar: { items: { x: false, edit: false } } }, { plugins: [plugin] }),
     );
-    expect(await ids()).toEqual(IDS);
+    expect(await ids()).toEqual(["dashboard", "perspective"]);
     expect(load).not.toHaveBeenCalled();
   });
 

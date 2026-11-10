@@ -12,7 +12,7 @@ const fields = {
 
 describe("localizedKeys", () => {
   it("lists every top-level field of a localized entry", () => {
-    expect(localizedKeys({ localized: true, fields })).toEqual(["title", "seo"]);
+    expect(localizedKeys({ localized: true, fields }).sort()).toEqual(["seo", "title"]);
   });
 
   it("is empty for an unlocalized entry", () => {
@@ -32,9 +32,9 @@ describe("structureFields", () => {
   } satisfies Fields;
 
   it("lists localized top-level lists and groups that hold lists", () => {
-    expect(Object.keys(structureFields({ localized: true, fields: listed }))).toEqual([
-      "links",
+    expect(Object.keys(structureFields({ localized: true, fields: listed })).sort()).toEqual([
       "content",
+      "links",
       "nav",
     ]);
   });

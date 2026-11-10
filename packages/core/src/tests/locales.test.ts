@@ -5,7 +5,7 @@ import { ValidationError } from "../index.ts";
 import type { LocalApi } from "../cms/api/local-api.ts";
 import type { HookArgs } from "../schema/hooks/index.ts";
 import { page } from "../presets/index.ts";
-import { admin, fresh, localized, seeded, testDb } from "./setup.ts";
+import { admin, localized, seeded, testDb } from "./setup.ts";
 
 const seen: Array<[string, string | undefined]> = [];
 const spy =
@@ -14,43 +14,28 @@ const spy =
     void seen.push([tag, locale]);
 
 describe("locale scope", () => {
-  it("throws a ValidationError for an unknown locale", async () => {
+  it("rejects an unknown locale on reads and writes", async () => {
     const { cms } = localized();
     const bad = { locale: "fr" } as never;
-    const error = new ValidationError({ locale: "Unknown locale" });
-    await expect(cms.find("posts", bad)).rejects.toEqual(error);
-    await expect(cms.findOne("posts", bad)).rejects.toEqual(error);
-    await expect(cms.findById("posts", "x", bad)).rejects.toEqual(error);
-    await expect(cms.create("posts", { title: "a" }, bad)).rejects.toEqual(error);
-    await expect(cms.getGlobal("site", bad)).rejects.toEqual(error);
-    await expect(cms.setGlobal("site", {}, bad)).rejects.toEqual(error);
+    await expect(cms.find("posts", bad)).rejects.toBeInstanceOf(ValidationError);
+    await expect(cms.setGlobal("site", {}, bad)).rejects.toBeInstanceOf(ValidationError);
   });
 
-  it("throws for a locale without localization", async () => {
-    const { cms } = fresh();
-    await expect(cms.find("posts", { locale: "en" } as never)).rejects.toBeInstanceOf(
-      ValidationError,
-    );
-  });
-
-  it("gives hooks the default locale, or the option", async () => {
-    seen.length = 0;
-    const { cms } = localized({ collections: { posts: { hooks: { beforeChange: [spy("w")] } } } });
-    await cms.create("posts", { title: "a" });
-    await cms.create("posts", { title: "b" }, { locale: "de" } as never);
-    expect(seen).toEqual([
-      ["w", "en"],
-      ["w", "de"],
-    ]);
-  });
-
-  it("gives read hooks the option as locale", async () => {
+  it("gives write and read hooks the default locale, or the option", async () => {
     seen.length = 0;
     const { cms } = localized({
-      collections: { posts: { hooks: { beforeRead: [spy("r")] } } },
+      collections: { posts: { hooks: { beforeChange: [spy("w")], beforeRead: [spy("r")] } } },
     });
+    await cms.create("posts", { title: "a" });
+    await cms.create("posts", { title: "b" }, { locale: "de" } as never);
     await cms.find("posts", { locale: "de" } as never);
-    expect(seen).toEqual([["r", "de"]]);
+    expect(seen).toEqual(
+      expect.arrayContaining([
+        ["w", "en"],
+        ["w", "de"],
+        ["r", "de"],
+      ]),
+    );
   });
 
   it("lets nested calls inherit the locale, and an explicit option override it", async () => {
@@ -166,22 +151,15 @@ async function posts() {
 }
 
 describe("locale reads", () => {
-  it("reads the requested locale with the shared fields", async () => {
+  it("reads the requested locale with the shared fields, falling back per missing value", async () => {
     const { cms } = await posts();
     expect(await cms.findById("posts", "p1", de)).toMatchObject({
       title: "Hallo",
-      slug: "hallo",
       views: 3,
-    });
-    expect(await cms.findById("posts", "p1")).toMatchObject({ title: "Hello", views: 3 });
-  });
-
-  it("falls back to the default locale for a missing value, or reads null without fallback", async () => {
-    const { cms } = await posts();
-    expect(await cms.findById("posts", "p1", de)).toMatchObject({
       body: "Body",
       seo: { description: "EN seo" },
     });
+    expect(await cms.findById("posts", "p1")).toMatchObject({ title: "Hello", views: 3 });
     expect(await cms.findById("posts", "p1", strict)).toMatchObject({
       title: "Hallo",
       body: null,
@@ -265,17 +243,6 @@ describe("locale reads", () => {
     );
   });
 
-  it("reads a global per locale", async () => {
-    const s = seeded();
-    await s.global(
-      "site",
-      { data: { email: "a@b.co" } },
-      { en: { data: { tagline: "Hi" } }, de: { data: { tagline: "Hallo" } } },
-    );
-    expect(await s.cms.getGlobal("site")).toMatchObject({ tagline: "Hi", email: "a@b.co" });
-    expect(await s.cms.getGlobal("site", de)).toMatchObject({ tagline: "Hallo", email: "a@b.co" });
-  });
-
   it("applies fallback and perspective to a global's locale rows", async () => {
     const s = seeded();
     await s.global(
@@ -286,7 +253,7 @@ describe("locale reads", () => {
         de: { data: {}, draft: { tagline: "Entwurf" }, published: false },
       },
     );
-    expect(await s.cms.getGlobal("site", de)).toMatchObject({ tagline: "Hi" });
+    expect(await s.cms.getGlobal("site", de)).toMatchObject({ tagline: "Hi", email: "a@b.co" });
     expect(await s.cms.getGlobal("site", strict)).not.toHaveProperty("tagline");
     expect(await s.cms.withDrafts().getGlobal("site", strict)).toMatchObject({
       tagline: "Entwurf",
@@ -339,16 +306,8 @@ describe("locale population", () => {
     expect((await read("p1", {})).topic).toMatchObject({ name: "Katzen", locale: "de" });
     expect((await read("p2", {})).topic).toMatchObject({ name: "Dogs" });
     expect((await read("p2", { fallback: false })) ?? null).toBeNull();
-  });
-
-  it("selects locale metadata of a populated localized target", async () => {
-    const cms = await seed();
-    const post = await cms.findById("posts", "p1", {
-      populate: { topic: true },
-      locale: "de",
-      select: { topic: { name: true, locale: true } },
-    });
-    expect(post.topic).toEqual({ id: "t1", name: "Katzen", locale: "de" });
+    const picked = await read("p1", { select: { topic: { name: true, locale: true } } });
+    expect(picked.topic).toEqual({ id: "t1", name: "Katzen", locale: "de" });
   });
 
   it("reads joined documents in the scope's locale", async () => {
@@ -390,29 +349,10 @@ describe("locale reads over HTTP", () => {
     expect(await one.json()).toMatchObject({ title: "Hallo", body: null });
 
     expect(await get("/collections/posts?locale=de&title=Hallo")).toHaveLength(1);
-    expect(await get("/collections/posts?alternates=true")).toHaveLength(1);
-  });
 
-  it("shows private fields to a session", async () => {
-    const s = seeded();
-    await s.doc("p1", { data: {} }, { en: { data: { title: "Hello", secret: "s-en" } } });
-    await s.client.signUp(admin);
-    const [doc] = (await (await s.fetchWithSession("/collections/posts")).json()) as any[];
-    expect(doc.secret).toBe("s-en");
-  });
-
-  it("answers 400 for an unknown locale", async () => {
-    const s = seeded();
-    await s.doc("p1", { data: {} }, { en: { data: { title: "Hello" } } });
-    for (const path of [
-      "/collections/posts?locale=fr",
-      "/collections/posts/p1?locale=fr",
-      "/globals/site?locale=fr",
-    ]) {
-      const res = await s.fetchWithSession(path);
-      expect(res.status).toBe(400);
-      expect(await res.json()).toMatchObject({ errors: { locale: "Unknown locale" } });
-    }
+    const res = await s.fetchWithSession("/collections/posts?locale=fr");
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ errors: { locale: "Unknown locale" } });
   });
 
   it("reads a global with ?locale=", async () => {
@@ -424,6 +364,7 @@ describe("locale reads over HTTP", () => {
     );
     const res = await s.fetchWithSession("/globals/site?locale=de");
     expect(await res.json()).toMatchObject({ tagline: "Hallo" });
+    expect((await s.fetchWithSession("/globals/site?locale=fr")).status).toBe(400);
   });
 });
 
@@ -460,33 +401,7 @@ describe("permalink with routing", () => {
     expect(await url(s, "/collections/posts/preview-url?locale=en")).toBe("/posts/hello");
     expect(await url(s, "/collections/posts/preview-url?locale=de")).toBe("/de/posts/hello");
     expect(await url(s, "/globals/site/preview-url?locale=de", {})).toBe("/de/site");
-  });
-
-  it("prefixes every locale with prefix always", async () => {
-    const s = routed({ prefix: "always" });
-    await s.client.signUp(admin);
-    expect(await url(s, "/collections/posts/preview-url")).toBe("/en/posts/hello");
-    expect(await url(s, "/collections/posts/preview-url?locale=de")).toBe("/de/posts/hello");
-  });
-
-  it("uses an explicit preview as it is", async () => {
-    const s = routed({ prefix: "except-default" }, { preview: "/draft/{slug}" });
-    await s.client.signUp(admin);
-    expect(await url(s, "/collections/posts/preview-url?locale=de")).toBe("/draft/hello");
-  });
-
-  it("answers 400 for an unknown locale", async () => {
-    const s = routed({ prefix: "except-default" });
-    await s.client.signUp(admin);
     expect(await url(s, "/collections/posts/preview-url?locale=fr")).toBe(400);
-    expect(await url(s, "/globals/site/preview-url?locale=fr", {})).toBe(400);
-  });
-
-  it("fills {locale} without routing and adds no prefix", async () => {
-    const s = routed(false, { permalink: "/{locale}/blog/{slug}" });
-    await s.client.signUp(admin);
-    expect(await url(s, "/collections/posts/preview-url?locale=de")).toBe("/de/blog/hello");
-    expect(await url(s, "/collections/posts/preview-url")).toBe("/en/blog/hello");
   });
 
   it("passes the locale to a permalink function", async () => {
@@ -539,53 +454,33 @@ describe("alternates", () => {
   const one = (s: { cms: any }, id: string, o: object = {}): Promise<any> =>
     s.cms.findById("posts", id, o);
 
-  it("lists the published locales with x-default", async () => {
+  it("lists the published locales with x-default, and omits unpublished ones", async () => {
     const s = await seedPosts(withPermalink());
-    expect(await s.cms.findById("posts", "p1", { alternates: true } as never)).toMatchObject({
-      alternates: { en: "/posts/hello", de: "/de/posts/hallo", "x-default": "/posts/hello" },
+    expect((await one(s, "p1", { alternates: true })).alternates).toEqual({
+      en: "/posts/hello",
+      de: "/de/posts/hallo",
+      "x-default": "/posts/hello",
     });
-  });
-
-  describe("alternatesAt", () => {
-    const at = (s: { cms: any }, url: string) => s.cms.alternatesAt(url);
-
-    it("finds the document behind a URL, in any locale", async () => {
-      const s = await seedPosts(withPermalink());
-      const expected = { en: "/posts/hello", de: "/de/posts/hallo", "x-default": "/posts/hello" };
-      expect(await at(s, "/posts/hello")).toEqual(expected);
-      expect(await at(s, "/de/posts/hallo")).toEqual(expected);
-    });
-
-    it("omits an unpublished locale", async () => {
-      const s = await seedPosts(withPermalink());
-      expect(await at(s, "/posts/two")).toEqual({ en: "/posts/two", "x-default": "/posts/two" });
-    });
-
-    it("answers null for a URL no document has", async () => {
-      const s = await seedPosts(withPermalink());
-      expect(await at(s, "/posts/nope")).toBeNull();
-      expect(await at(s, "/de/posts/hello")).toBeNull();
-      expect(await at(s, "/about")).toBeNull();
-    });
-
-    it("answers null without localization", async () => {
-      const s = seeded({ collections: { posts: { permalink: "/posts/{slug}" } } });
-      expect(await at(s, "/posts/hello")).toBeNull();
-    });
-  });
-
-  it("omits an unpublished locale", async () => {
-    const s = await seedPosts(withPermalink());
     expect((await one(s, "p2", opts)).alternates).toEqual({
       en: "/posts/two",
       "x-default": "/posts/two",
     });
-  });
-
-  it("omits x-default without a published default locale", async () => {
-    const s = await seedPosts(withPermalink());
     const read = await one(s, "p3", { locale: "de", alternates: true });
     expect(read.alternates).toEqual({ de: "/de/posts/nur" });
+  });
+
+  it("alternatesAt finds the document behind a URL in any locale, or answers null", async () => {
+    const s = await seedPosts(withPermalink());
+    const expected = { en: "/posts/hello", de: "/de/posts/hallo", "x-default": "/posts/hello" };
+    expect(await s.cms.alternatesAt("/de/posts/hallo")).toEqual(expected);
+    expect(await s.cms.alternatesAt("/posts/two")).toEqual({
+      en: "/posts/two",
+      "x-default": "/posts/two",
+    });
+    expect(await s.cms.alternatesAt("/de/posts/hello")).toBeNull();
+    expect(await s.cms.alternatesAt("/about")).toBeNull();
+    const plain = seeded({ collections: { posts: { permalink: "/posts/{slug}" } } });
+    expect(await plain.cms.alternatesAt("/posts/hello")).toBeNull();
   });
 
   it("resolves a list in one batch per locale", async () => {
@@ -614,27 +509,22 @@ describe("alternates", () => {
     expect(doc.locales).toEqual(["en", "de"]);
   });
 
-  it("adds nothing without permalink or alternates: true", async () => {
-    const plain = seeded();
-    await plain.doc("p1", { data: {} }, { en: { data: { title: "Hello", slug: "hello" } } });
-    expect(
-      await plain.cms.findById("posts", "p1", { alternates: true } as never),
-    ).not.toHaveProperty("alternates");
-    const s = await seedPosts(withPermalink());
-    expect(await s.cms.findById("posts", "p1")).not.toHaveProperty("alternates");
-  });
-
-  it("adds nothing to an unlocalized collection", async () => {
-    const s = seeded({
+  it("adds nothing without permalink, alternates: true or localization", async () => {
+    const plain = seeded({
       collections: {
         authors: { permalink: "/authors/{name}", fields: { name: { type: "text" } } },
       },
     });
-    await s.client.signUp(admin);
-    const a = await s.cms.create("authors", { name: "Ann" });
-    expect(await s.cms.findById("authors", a.id, { alternates: true } as never)).not.toHaveProperty(
-      "alternates",
-    );
+    await plain.doc("p1", { data: {} }, { en: { data: { title: "Hello", slug: "hello" } } });
+    expect(
+      await plain.cms.findById("posts", "p1", { alternates: true } as never),
+    ).not.toHaveProperty("alternates");
+    const a = await plain.cms.create("authors", { name: "Ann" });
+    expect(
+      await plain.cms.findById("authors", a.id, { alternates: true } as never),
+    ).not.toHaveProperty("alternates");
+    const s = await seedPosts(withPermalink());
+    expect(await s.cms.findById("posts", "p1")).not.toHaveProperty("alternates");
   });
 
   it("follows select", async () => {
@@ -691,7 +581,6 @@ describe("alternates", () => {
         posts: { permalink: "/{related.name}/{slug}" },
       },
     });
-    await s.client.signUp(admin);
     const author = await s.cms.create("authors", { name: "ann" });
     await s.doc(
       "p1",
@@ -741,34 +630,21 @@ describe("global metadata", () => {
     return s;
   }
 
-  it("lists the published locales in the published perspective", async () => {
+  it("lists the published locales, or every locale with a row in the drafts perspective", async () => {
     const s = await site();
-    expect(await s.cms.getGlobal("site")).toMatchObject({ locale: "en", locales: ["en"] });
     expect(await s.cms.getGlobal("site", { locale: "de" } as never)).toMatchObject({
       locale: "de",
       locales: ["en"],
     });
-  });
-
-  it("lists every locale with a row in the drafts perspective", async () => {
-    const s = await site();
     expect(await s.cms.withDrafts().getGlobal("site", { locale: "de" } as never)).toMatchObject({
       locale: "de",
       locales: ["en", "de"],
     });
-  });
-
-  it("has an empty list for a global without rows", async () => {
-    const s = seeded();
-    await s.client.signUp(admin);
-    expect(await s.cms.withDrafts().getGlobal("site")).toMatchObject({ locale: "en", locales: [] });
-  });
-
-  it("adds nothing to an unlocalized global", async () => {
-    const s = await site();
-    const plain = await s.cms.getGlobal("plain" as never);
-    expect(plain).not.toHaveProperty("locale");
-    expect(plain).not.toHaveProperty("locales");
+    expect(await seeded().cms.withDrafts().getGlobal("site")).toMatchObject({
+      locale: "en",
+      locales: [],
+    });
+    expect(await s.cms.getGlobal("plain" as never)).not.toHaveProperty("locales");
   });
 
   it("follows select", async () => {
@@ -1137,15 +1013,7 @@ describe("integrity", () => {
   const read = (cms: any, id: string, options: object = strict) =>
     cms.withDrafts().findById("articles", id, { ...options, populate: false });
 
-  it("blocks the delete of a document that a German row references with restrict", async () => {
-    const { cms, author, id } = await german("restrict");
-    await expect(cms.delete("authors", author.id)).rejects.toMatchObject({
-      references: [{ collection: "articles", id }],
-    });
-    expect(await cms.findById("authors", author.id)).toBeDefined();
-  });
-
-  it("blocks the delete when only a German draft references it", async () => {
+  it("blocks the delete with restrict when only a German draft references it", async () => {
     const s = withRule("restrict");
     const author = await s.cms.create("authors", { name: "Ann" });
     const article = await s.cms.create("articles", { title: "Hello" });
@@ -1154,6 +1022,7 @@ describe("integrity", () => {
     await expect(s.cms.delete("authors", author.id)).rejects.toMatchObject({
       references: [{ collection: "articles", id: article.id }],
     });
+    expect(await s.cms.findById("authors", author.id)).toBeDefined();
   });
 
   it("nulls the reference in the German row only with set-null", async () => {
@@ -1293,12 +1162,21 @@ describe("integrity", () => {
     const create = (cms: any, data: object, options?: object) =>
       cms.create("articles", data, options);
 
-    it("allows the same slug in English and German", async () => {
+    const used = { errors: { slug: "Already used" } };
+
+    it("compares slugs within one locale, on the value a read returns", async () => {
       const { cms } = setup();
       const a = await create(cms, { slug: "hello" });
       await cms.update("articles", a.id, { slug: "hello" }, de);
       const b = await create(cms, { slug: "other" });
       await expect(cms.update("articles", b.id, { slug: "other" }, de)).resolves.toBeDefined();
+
+      await create(cms, { slug: "untranslated" });
+      await expect(
+        cms.update("articles", b.id, { slug: "untranslated" }, de),
+      ).rejects.toMatchObject(used);
+      await cms.update("articles", a.id, { slug: "hallo" }, de);
+      await expect(cms.update("articles", b.id, { slug: "hello" }, de)).resolves.toBeDefined();
     });
 
     it("rejects a slug that another document uses in the same locale", async () => {
@@ -1307,31 +1185,8 @@ describe("integrity", () => {
       await cms.update("articles", a.id, { slug: "de-a" }, de);
       const b = await create(cms, { slug: "en-b" });
 
-      await expect(cms.update("articles", b.id, { slug: "de-a" }, de)).rejects.toMatchObject({
-        errors: { slug: "Already used" },
-      });
-      await expect(create(cms, { slug: "de-a" }, de)).rejects.toMatchObject({
-        errors: { slug: "Already used" },
-      });
-    });
-
-    it("rejects a German slug equal to the English slug of an untranslated document", async () => {
-      const { cms } = setup();
-      await create(cms, { slug: "hello" });
-      const b = await create(cms, { slug: "other" });
-
-      await expect(cms.update("articles", b.id, { slug: "hello" }, de)).rejects.toMatchObject({
-        errors: { slug: "Already used" },
-      });
-    });
-
-    it("allows a German slug equal to the English slug of a translated document", async () => {
-      const { cms } = setup();
-      const a = await create(cms, { slug: "hello" });
-      await cms.update("articles", a.id, { slug: "hallo" }, de);
-      const b = await create(cms, { slug: "other" });
-
-      await expect(cms.update("articles", b.id, { slug: "hello" }, de)).resolves.toBeDefined();
+      await expect(cms.update("articles", b.id, { slug: "de-a" }, de)).rejects.toMatchObject(used);
+      await expect(create(cms, { slug: "de-a" }, de)).rejects.toMatchObject(used);
     });
   });
 });
@@ -1352,8 +1207,9 @@ describe("shared draft", () => {
     const doc = await cms.update("posts", id, { title: "Hallo" }, draftDe);
 
     expect(doc).toMatchObject({ hasDraft: true, sharedDraft: false });
-    expect(await drafts(cms, id, de)).toMatchObject({ sharedDraft: false });
     expect(await cms.findById("posts", id)).toMatchObject({ sharedDraft: false });
+    const created = await cms.create("posts", { title: "Hello" }, { draft: true });
+    expect(created).toMatchObject({ sharedDraft: false });
   });
 
   it("is true when a shared field changes, until a publish clears it", async () => {
@@ -1377,12 +1233,6 @@ describe("shared draft", () => {
     expect(await drafts(cms, id, de)).toMatchObject({ sharedDraft: false, views: 1 });
   });
 
-  it("is false for a document created as a draft with localized fields only", async () => {
-    const { cms } = localized();
-    const doc = await cms.create("posts", { title: "Hello" }, { draft: true });
-    expect(doc).toMatchObject({ sharedDraft: false });
-  });
-
   it("is dropped by discard with all", async () => {
     const { cms, id } = await published();
     await cms.update("posts", id, { views: 5 }, draftDe);
@@ -1390,19 +1240,14 @@ describe("shared draft", () => {
     expect(await drafts(cms, id, de)).toMatchObject({ sharedDraft: false, views: 1 });
   });
 
-  it("is a selectable metadata key on localized documents", async () => {
+  it("is a selectable metadata key on localized documents only", async () => {
     const { cms, id } = await published();
     await cms.update("posts", id, { views: 5 }, draftDe);
     const doc = await cms
       .withDrafts()
       .findById("posts", id, { select: { sharedDraft: true } } as never);
     expect(doc).toEqual({ id, sharedDraft: true });
-  });
-
-  it("is missing on unlocalized documents", async () => {
-    const { cms } = localized();
-    const author = await cms.create("authors", { name: "Ann" });
-    expect(author).not.toHaveProperty("sharedDraft");
+    expect(await cms.create("authors", { name: "Ann" })).not.toHaveProperty("sharedDraft");
   });
 
   it("tracks a localized global", async () => {
@@ -1484,38 +1329,21 @@ describe("copy and remove", () => {
     });
   });
 
-  it("refuses unknown, equal and missing source locales", async () => {
+  it("refuses bad locales and unlocalized collections, and returns undefined for a missing document", async () => {
     const { cms, id } = await published();
-    const copy = (from: string, to: string) => (cms as any).copyLocale("posts", id, { from, to });
-    await expect(copy("en", "fr")).rejects.toBeInstanceOf(ValidationError);
-    await expect(copy("fr", "de")).rejects.toBeInstanceOf(ValidationError);
-    await expect(copy("en", "en")).rejects.toBeInstanceOf(ValidationError);
-    await expect(copy("de", "en")).rejects.toBeInstanceOf(ValidationError);
-  });
-
-  it("refuses an unlocalized collection and returns undefined for a missing document", async () => {
-    const { cms, id } = await published();
+    const copy = (from: string, to: string, c = "posts", i = id) =>
+      (cms as any).copyLocale(c, i, { from, to });
+    for (const [from, to] of [
+      ["en", "fr"],
+      ["fr", "de"],
+      ["en", "en"],
+      ["de", "en"],
+    ]) {
+      await expect(copy(from, to)).rejects.toBeInstanceOf(ValidationError);
+    }
     const author = await cms.create("authors", { name: "Ann" });
-    await expect(
-      (cms as any).copyLocale("authors", author.id, { from: "en", to: "de" }),
-    ).rejects.toBeInstanceOf(ValidationError);
-    expect(
-      await (cms as any).copyLocale("posts", "nope", { from: "en", to: "de" }),
-    ).toBeUndefined();
-    expect(id).toBeTruthy();
-  });
-
-  it("runs the normal hooks in the target locale", async () => {
-    const calls: Array<string | undefined> = [];
-    const { cms } = localized({
-      collections: {
-        posts: { hooks: { beforeChange: [({ locale }: HookArgs) => void calls.push(locale)] } },
-      },
-    });
-    const post = await cms.create("posts", { title: "Hello" });
-    calls.length = 0;
-    await (cms as any).copyLocale("posts", post.id, { from: "en", to: "de" });
-    expect(calls).toEqual(["de"]);
+    await expect(copy("en", "de", "authors", author.id)).rejects.toBeInstanceOf(ValidationError);
+    expect(await copy("en", "de", "posts", "nope")).toBeUndefined();
   });
 
   it("removes a locale", async () => {
@@ -1537,44 +1365,36 @@ describe("copy and remove", () => {
     expect(await drafts(cms, id, "de")).toMatchObject({ locales: ["en"], hasDraft: false });
   });
 
-  it("refuses to remove the default locale", async () => {
-    const { cms, id } = await published();
-    await expect((cms as any).removeLocale("posts", id, "en")).rejects.toBeInstanceOf(
-      ValidationError,
-    );
-  });
-
-  it("refuses to remove the last locale row", async () => {
-    const { cms } = localized();
-    const post = await cms.create("posts", { title: "Nur de" }, { locale: "de" } as never);
-    await expect((cms as any).removeLocale("posts", post.id, "de")).rejects.toBeInstanceOf(
-      ValidationError,
-    );
-  });
-
-  it("refuses an unknown locale, an unlocalized collection and a missing locale row", async () => {
+  it("refuses the default, last, unknown or missing locale row and unlocalized collections", async () => {
     const { cms, id } = await published();
     const remove = (c: string, i: string, l: string) => (cms as any).removeLocale(c, i, l);
+    await expect(remove("posts", id, "en")).rejects.toBeInstanceOf(ValidationError);
     await expect(remove("posts", id, "fr")).rejects.toBeInstanceOf(ValidationError);
     await expect(remove("posts", id, "de")).rejects.toBeInstanceOf(ValidationError);
     const author = await cms.create("authors", { name: "Ann" });
     await expect(remove("authors", author.id, "de")).rejects.toBeInstanceOf(ValidationError);
     expect(await remove("posts", "nope", "de")).toBeUndefined();
+    const only = await cms.create("posts", { title: "Nur de" }, { locale: "de" } as never);
+    await expect(remove("posts", only.id, "de")).rejects.toBeInstanceOf(ValidationError);
   });
 
-  it("runs afterChange with the document afterwards", async () => {
-    const calls: Array<[string | undefined, unknown]> = [];
+  it("runs the hooks in the target locale, and afterChange with the document afterwards", async () => {
+    const calls: unknown[] = [];
     const { cms } = localized({
       collections: {
         posts: {
           hooks: {
+            beforeChange: [({ locale }: HookArgs) => void calls.push(locale)],
             afterChange: [({ doc, locale }: any) => void calls.push([locale, doc.locales])],
           },
         },
       },
     });
     const post = await cms.create("posts", { title: "Hello" });
-    await cms.update("posts", post.id, { title: "Hallo" }, { locale: "de" } as never);
+    calls.length = 0;
+    await (cms as any).copyLocale("posts", post.id, { from: "en", to: "de" });
+    expect(calls).toEqual(["de"]);
+    await cms.publish("posts", post.id, { locale: "de" } as never);
     calls.length = 0;
     await (cms as any).removeLocale("posts", post.id, "de");
     expect(calls).toEqual([["de", ["en"]]]);

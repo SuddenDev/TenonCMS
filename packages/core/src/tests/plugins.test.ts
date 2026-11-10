@@ -1,13 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms, definePlugin, ValidationError } from "../index.ts";
-import { admin, base, fresh, origin, setup, status, type Env } from "./setup.ts";
-
-let cms: Env["cms"];
-let client: Env["client"];
-let fetchWithSession: Env["fetchWithSession"];
-beforeEach(() => {
-  ({ cms, client, fetchWithSession } = fresh());
-});
+import { admin, base, origin, setup, status } from "./setup.ts";
 
 describe("plugins", () => {
   const calls: string[] = [];
@@ -42,7 +35,6 @@ describe("plugins", () => {
     // The host's relation points to the plugin's collection.
     const post = await cms.create("posts", { title: "a", log: log.id });
     expect((await cms.findById("posts", post.id))?.log).toMatchObject({ message: "hi" });
-    expect(Object.keys(cms.schema.collections!)).toEqual(["posts", "logs", "media"]);
     // @ts-expect-error unknown collection
     await expect(cms.find("nope")).rejects.toThrow();
   });

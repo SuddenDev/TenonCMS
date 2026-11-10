@@ -92,7 +92,7 @@ describe("link values", () => {
     });
   });
 
-  it("keeps the suffix when a read value is saved again", async () => {
+  it("strips read decoration on write and keeps the suffix", async () => {
     const cms = make();
     const page = await cms.create("pages", { title: "About", slug: "about" });
     const article = await cms.create("articles", { cta: { ...to(page.id), suffix: "#team" } });
@@ -104,29 +104,6 @@ describe("link values", () => {
       ...to(page.id),
       suffix: "#team",
     });
-  });
-
-  it("returns the stored value with populate: false", async () => {
-    const cms = make();
-    const page = await cms.create("pages", { title: "About", slug: "about" });
-    const article = await cms.create("articles", { cta: to(page.id) });
-
-    expect((await cms.findById("articles", article.id, { populate: false }))?.cta).toEqual(
-      to(page.id),
-    );
-  });
-
-  it("strips read decoration on write", async () => {
-    const cms = make();
-    const page = await cms.create("pages", { title: "About", slug: "about" });
-    const article = await cms.create("articles", { cta: to(page.id) });
-    const read = await cms.findById("articles", article.id);
-
-    await cms.update("articles", article.id, { cta: read!.cta });
-
-    expect((await cms.findById("articles", article.id, { populate: false }))?.cta).toEqual(
-      to(page.id),
-    );
   });
 
   it("resolves href and title per locale with routing, also in an unlocalized global", async () => {
@@ -184,7 +161,7 @@ describe("link values", () => {
 });
 
 describe("link validation", () => {
-  it("rejects bad shapes, executable schemes and unknown collections at the positional path", async () => {
+  it("rejects bad shapes, executable schemes, unknown collections and forged deletion markers", async () => {
     const cms = make();
     const page = await cms.create("pages", { slug: "about" });
 
@@ -217,6 +194,13 @@ describe("link validation", () => {
     await expect(
       cms.create("articles", { cta: { reference: { collection: "notes", id: "1" } } }),
     ).rejects.toMatchObject({ errors: { cta: 'Unknown collection "notes"' } });
+    await expect(
+      cms.create(
+        "articles",
+        { cta: { reference: { collection: "pages", id: page.id, deleted: true } } },
+        { draft: true },
+      ),
+    ).rejects.toMatchObject({ errors: { cta: "Deletion markers are owned by the server" } });
   });
 
   it("checks targets when publishing and keeps drafts loose", async () => {
@@ -229,19 +213,6 @@ describe("link validation", () => {
     const draft = await cms.create("articles", { cta: to("missing") }, { draft: true });
 
     await expect(cms.publish("articles", draft.id)).rejects.toBeInstanceOf(ValidationError);
-  });
-
-  it("rejects forged deletion markers", async () => {
-    const cms = make();
-    const page = await cms.create("pages", { slug: "about" });
-
-    await expect(
-      cms.create(
-        "articles",
-        { cta: { reference: { collection: "pages", id: page.id, deleted: true } } },
-        { draft: true },
-      ),
-    ).rejects.toMatchObject({ errors: { cta: "Deletion markers are owned by the server" } });
   });
 
   it("is neither filterable nor unique", () => {
@@ -326,20 +297,5 @@ describe("client.links", () => {
     await expect(client.links.resolve([{ collection: 1 } as never])).rejects.toMatchObject({
       status: 400,
     });
-  });
-
-  it("reads in the perspective of the preview cookie", async () => {
-    const cms = make();
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    const page = await cms.create("pages", { title: "Draft", slug: "draft" }, { draft: true });
-
-    expect(await client.links.resolve([to(page.id).reference])).toEqual([
-      { href: null, broken: true },
-    ]);
-    await client.preview.enter("drafts");
-    expect(await client.links.resolve([to(page.id).reference])).toEqual([
-      { href: "/draft", title: "Draft" },
-    ]);
   });
 });

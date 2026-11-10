@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { DEFAULT_SEO_TITLE, seoHead, seoMeta } from "./seo-meta.ts";
 
 it("seoMeta falls back to the title", () => {
-  expect(seoMeta({ title: "About", seo: null })).toEqual({
+  const empty = {
     title: "About",
     description: undefined,
     noindex: false,
@@ -10,25 +10,12 @@ it("seoMeta falls back to the title", () => {
     image: undefined,
     verification: [],
     alternates: [],
-  });
-  expect(seoMeta({ title: "About" })).toEqual({
-    title: "About",
-    description: undefined,
-    noindex: false,
-    canonical: undefined,
-    image: undefined,
-    verification: [],
-    alternates: [],
-  });
-  expect(seoMeta({ title: "About", seo: { title: "", description: "D", noindex: true } })).toEqual({
-    title: "About",
-    description: "D",
-    noindex: true,
-    canonical: undefined,
-    image: undefined,
-    verification: [],
-    alternates: [],
-  });
+  };
+  expect(seoMeta({ title: "About", seo: null })).toEqual(empty);
+  expect(seoMeta({ title: "About" })).toEqual(empty);
+  expect(
+    seoMeta({ title: "About", seo: { title: "", description: "D", noindex: true } }),
+  ).toMatchObject({ title: "About", description: "D", noindex: true });
   expect(seoMeta({ title: "About", seo: { title: "Custom" } }).title).toBe("Custom");
 });
 

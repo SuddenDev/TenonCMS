@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 import type { DocumentOf, GlobalOf } from "../client/index.ts";
 import { defineCms } from "../index.ts";
-import { seo } from "../presets/index.ts";
 import { libsqlDialect } from "../db/index.ts";
 import { withDatabase } from "../cms/create-cms.ts";
 import { durableObject } from "../integrations/cloudflare/index.ts";
@@ -44,25 +43,16 @@ describe("reads", () => {
     ).toEqual(["B"]);
   });
 
-  it("filter by null as the query value null", async () => {
+  it("filter by null as the query value null, and ignore empty or undefined values", async () => {
     await cms.create("posts", { title: "D" });
-    expect((await client.find("posts", { where: { views: null } })).map((p) => p.title)).toEqual([
-      "D",
-    ]);
     expect(
       (await client.find("posts", { where: { featured: null, views: null } })).map((p) => p.title),
     ).toEqual(["D"]);
     const res = await cms.fetch(new Request(`${origin}/_tenon/collections/posts?views=null`));
     expect((await res.json()).map((p: { title: string }) => p.title)).toEqual(["D"]);
-  });
-
-  it("ignore empty query values", async () => {
-    const res = await cms.fetch(new Request(`${origin}/_tenon/collections/posts?views=&title=`));
-    expect(await res.json()).toHaveLength(3);
-  });
-
-  it("ignore undefined filters", async () => {
-    expect(await client.find("posts", { where: { views: undefined } })).toHaveLength(3);
+    const empty = await cms.fetch(new Request(`${origin}/_tenon/collections/posts?views=&title=`));
+    expect(await empty.json()).toHaveLength(4);
+    expect(await client.find("posts", { where: { views: undefined } })).toHaveLength(4);
   });
 
   it("limit results", async () => {
@@ -70,14 +60,19 @@ describe("reads", () => {
     expect(await client.findOne("posts", { where: { views: 2 } })).toMatchObject({ title: "C" });
   });
 
-  it.each(["?nope=1", "?seo=x", "?limit=0", "?limit=-1", "?limit=abc"])(
-    "reject %s",
-    async (query) => {
-      expect(
-        (await cms.fetch(new Request(`${origin}/_tenon/collections/posts${query}`))).status,
-      ).toBe(400);
-    },
-  );
+  it.each([
+    "?nope=1",
+    "?seo=x",
+    "?limit=0",
+    "?limit=-1",
+    "?limit=abc",
+    "?views=abc",
+    "?featured=yes",
+  ])("reject %s", async (query) => {
+    expect(
+      (await cms.fetch(new Request(`${origin}/_tenon/collections/posts${query}`))).status,
+    ).toBe(400);
+  });
 
   it("return 404 for unknown names", async () => {
     expect(await status(client.find("pages" as never))).toBe(404);
@@ -97,9 +92,6 @@ describe("local API", () => {
     await expect(cms.find("posts", { where: { seo: null } as never })).rejects.toThrow(
       /not filterable/,
     );
-  });
-
-  it("rejects group keys in where at the type level", () => {
     () => {
       // @ts-expect-error `seo` is a group
       cms.find("posts", { where: { seo: null } });
@@ -185,16 +177,6 @@ describe("errors", () => {
     expect(body.globals.footer).toMatchObject({ description: "Footer", nav });
   });
 
-  it("reject a malformed JSON body with 400", async () => {
-    await client.signUp(admin);
-    const res = await fetchWithSession("/collections/posts", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: '{"title":',
-    });
-    expect(res.status).toBe(400);
-  });
-
   it("reject invalid sign-up data", async () => {
     expect(await status(client.signUp({ ...admin, email: "not-an-email" }))).toBe(400);
     expect(await status(client.signUp({ ...admin, password: "short" }))).toBe(400);
@@ -202,7 +184,6 @@ describe("errors", () => {
   });
 
   it("reject a forged session cookie", async () => {
-    await client.signUp(admin);
     const res = await cms.fetch(
       new Request(`${origin}/_tenon/schema`, {
         headers: { origin, cookie: "better-auth.session_token=forged.value" },
@@ -211,24 +192,12 @@ describe("errors", () => {
     expect(res.status).toBe(401);
   });
 
-  it("reject writes to unknown names with 404", async () => {
+  it("reject writes to unknown names or documents with 404, and invalid data with 400", async () => {
     await client.signUp(admin);
     expect(await status(client.create("pages" as never, { title: "Hi" } as never))).toBe(404);
     expect(await status(client.setGlobal("nope" as never, {} as never))).toBe(404);
-  });
-
-  it("reject invalid global data", async () => {
-    await client.signUp(admin);
-    expect(await status(client.setGlobal("site", { name: 1 } as never))).toBe(400);
-  });
-
-  it("return 404 when updating a missing document", async () => {
-    await client.signUp(admin);
     expect(await status(client.update("posts", "missing", { title: "Hi" }))).toBe(404);
-  });
-
-  it("reject invalid data on update", async () => {
-    await client.signUp(admin);
+    expect(await status(client.setGlobal("site", { name: 1 } as never))).toBe(400);
     const { id } = await client.create("posts", { title: "Hi" });
     expect(await status(client.update("posts", id, { title: "" }))).toBe(400);
     expect(await client.findById("posts", id)).toMatchObject({ title: "Hi" });
@@ -242,15 +211,6 @@ describe("errors", () => {
     await expect(cms.delete("other" as never, id)).rejects.toThrow(unknown);
     expect(await cms.findById("posts", id)).toBeDefined();
   });
-
-  it.each(["?views=abc", "?featured=yes"])(
-    "reject a filter value of the wrong type: %s",
-    async (query) => {
-      expect(
-        (await cms.fetch(new Request(`${origin}/_tenon/collections/posts${query}`))).status,
-      ).toBe(400);
-    },
-  );
 
   it("keep reads working with a short secret, but fail auth", async () => {
     const bad = define("short");

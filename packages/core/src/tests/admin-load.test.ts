@@ -157,7 +157,7 @@ describe("admin loaders: request validation", () => {
 describe("field loaders", () => {
   const color = (load: (ctx: any) => unknown) => ({ fields: { color: { mount, load } } });
 
-  it("passes the schema field, path and owner for a new document", async () => {
+  it("passes the schema field, path, owner and admin language for a new document", async () => {
     const load = vi.fn(() => ({ palette: ["red"] }));
     const { post } = await boot(color(load));
     const res = await post(field({ path: "seo.accent" }));
@@ -172,19 +172,13 @@ describe("field loaders", () => {
       user: { email: admin.email },
     });
     expect(typeof ctx.cms.find).toBe("function");
-  });
-
-  it("passes the admin language, English by default", async () => {
-    const load = vi.fn(() => "ok");
-    const { post } = await boot(color(load));
+    expect(ctx.locale).toBe("en");
     await post(field({ path: "seo.accent", locale: "de" }));
-    await post(field({ path: "seo.accent" }));
-    expect((load.mock.calls[0] as any)[0].locale).toBe("de");
-    expect((load.mock.calls[1] as any)[0].locale).toBe("en");
+    expect((load.mock.lastCall as any)[0].locale).toBe("de");
     expect((await post(field({ path: "seo.accent", locale: "fr" }))).status).toBe(400);
   });
 
-  it("accepts an existing document and a global", async () => {
+  it("accepts an existing document, a global and a field inside a block", async () => {
     const load = vi.fn(() => "ok");
     const { post, cms } = await boot(color(load));
     const doc = await cms.create("posts", { title: "T" });
@@ -195,26 +189,22 @@ describe("field loaders", () => {
     const res = await post(field({ path: "theme", owner: { global: "site" } }));
     expect(await res.json()).toEqual({ data: "ok" });
     expect((load.mock.calls[1] as any)[0].owner).toEqual({ global: "site" });
-  });
 
-  it("finds a field inside a block by the stored block type", async () => {
-    const load = vi.fn(() => "ok");
-    const { post, cms } = await boot(color(load));
-    const doc = await cms.create("posts", {
+    const blocks = await cms.create("posts", {
       content: [{ blockType: "text" }, { blockType: "hero" }],
     });
-    const owner = { collection: "posts", id: doc.id };
+    const owner = { collection: "posts", id: blocks.id };
     expect((await post(field({ path: "content.1.accent", owner }))).status).toBe(200);
-    expect((load.mock.calls[0] as any)[0].field).toBe(
+    expect((load.mock.lastCall as any)[0].field).toBe(
       schema.collections.posts.fields.content.blocks.hero.fields.accent,
     );
     expect((await post(field({ path: "content.0.accent", owner }))).status).toBe(400);
     expect((await post(field({ path: "content.1.accent" }))).status).toBe(400);
   });
 
-  it("answers 404 for an unknown collection, global or document", async () => {
+  it("answers 404 for an unknown owner, 400 for a path that is not a field of that type", async () => {
     const load = vi.fn(() => 1);
-    const { post } = await boot(color(load));
+    const { post } = await boot({ fields: { color: { mount, load }, other: { mount, load } } });
     for (const owner of [
       { collection: "nope" },
       { collection: "__proto__" },
@@ -223,12 +213,6 @@ describe("field loaders", () => {
       { global: "constructor" },
     ])
       expect((await post(field({ owner }))).status, JSON.stringify(owner)).toBe(404);
-    expect(load).not.toHaveBeenCalled();
-  });
-
-  it("answers 400 when the path is not a stored field of that custom type", async () => {
-    const load = vi.fn(() => 1);
-    const { post } = await boot(color(load));
     for (const [path, owner] of [
       ["title", { collection: "posts" }],
       ["missing", { collection: "posts" }],
@@ -240,19 +224,13 @@ describe("field loaders", () => {
       ["name", { global: "site" }],
     ] as const)
       expect((await post(field({ path, owner }))).status, `${path}`).toBe(400);
-    expect(load).not.toHaveBeenCalled();
-  });
-
-  it("answers 400 when the registered type differs from the field type", async () => {
-    const load = vi.fn(() => 1);
-    const { post } = await boot({ fields: { other: { mount, load } } });
     expect((await post(field({ type: "other" }))).status).toBe(400);
     expect(load).not.toHaveBeenCalled();
   });
 });
 
 describe("page loaders", () => {
-  it("passes params and query", async () => {
+  it("passes params and query, and keeps prototype-like keys off prototypes", async () => {
     const load = vi.fn(() => ({ ok: true }));
     const { post } = await boot({ pages: { stats: { mount, load } } });
     const params = { id: "7", rest: ["a", "b"] };
@@ -263,24 +241,20 @@ describe("page loaders", () => {
     expect(ctx.params).toEqual(params);
     expect(ctx.query).toEqual(query);
     expect(ctx.user.email).toBe(admin.email);
-  });
 
-  it("does not let prototype-like keys reach prototypes", async () => {
-    const load = vi.fn(() => 1);
-    const { post } = await boot({ pages: { stats: { mount, load } } });
-    const res = await post(
+    const polluted = await post(
       '{"kind":"page","key":"stats","params":{"__proto__":["x"],"constructor":"c","polluted":"1"},"query":{"__proto__":"y","prototype":null}}',
     );
-    expect(res.status).toBe(200);
-    const ctx = (load.mock.calls[0] as any)[0];
-    expect(Object.getPrototypeOf(ctx.params)).toBe(Object.prototype);
-    expect(Object.getPrototypeOf(ctx.query)).toBe(Object.prototype);
-    expect(ctx.params.constructor).toBe("c");
-    expect(ctx.params.polluted).toBe("1");
-    expect(ctx.query.prototype).toBeNull();
+    expect(polluted.status).toBe(200);
+    const next = (load.mock.lastCall as any)[0];
+    expect(Object.getPrototypeOf(next.params)).toBe(Object.prototype);
+    expect(Object.getPrototypeOf(next.query)).toBe(Object.prototype);
+    expect(next.params.constructor).toBe("c");
+    expect(next.params.polluted).toBe("1");
+    expect(next.query.prototype).toBeNull();
     expect(({} as any).x).toBeUndefined();
     expect(({} as any).y).toBeUndefined();
-    expect(Object.keys(ctx.params)).not.toContain("__proto__");
+    expect(Object.keys(next.params)).not.toContain("__proto__");
   });
 });
 
@@ -469,13 +443,9 @@ describe("perspective and user", () => {
     return { ...b, doc };
   }
 
-  it("reads published data without the preview cookie", async () => {
-    const { post } = await titled();
-    expect(await (await post(page())).json()).toEqual({ data: "Published" });
-  });
-
-  it("reads drafts with a session and the preview cookie", async () => {
+  it("reads published data, and drafts with a session and the preview cookie", async () => {
     const { post, fetch } = await titled();
+    expect(await (await post(page())).json()).toEqual({ data: "Published" });
     await fetch(`${origin}/_tenon/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },

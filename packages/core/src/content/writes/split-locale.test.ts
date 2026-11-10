@@ -87,7 +87,7 @@ describe("splitLocale with a shared structure", () => {
     const de = { ...data, content: [{ ...data.content[0], heading: "Hallo" }, data.content[1]] };
     const a = splitLocale(["content", "nav"], data, { fields, synced: true }).shared;
     const b = splitLocale(["content", "nav"], de, { fields, synced: true }).shared;
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(a).toEqual(b);
   });
 
   it("keeps full lists when not synced", () => {

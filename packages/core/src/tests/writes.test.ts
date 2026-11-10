@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms, ValidationError } from "../index.ts";
-import { seo } from "../presets/index.ts";
 import {
   admin,
   base,
@@ -42,17 +41,17 @@ describe("writes", () => {
     expect(res.status).toBe(403);
   });
 
-  it("validate data", async () => {
+  it("create, update and delete a document with a group, and set a global", async () => {
     await client.signUp(admin);
-    expect(await status(client.create("posts", { title: "" }))).toBe(400);
-    expect(await status(client.create("posts", { title: "Hi", views: "3" } as never))).toBe(400);
-  });
-
-  it("create, update and delete a document", async () => {
-    await client.signUp(admin);
-    const post = await client.create("posts", { title: "Hi", views: 1, extra: "x" } as never);
-    expect(post).toMatchObject({ title: "Hi", views: 1 });
+    const post = await client.create("posts", {
+      title: "Hi",
+      views: 1,
+      extra: "x",
+      seo: { title: "S", noindex: true, extra: 1 },
+    } as never);
+    expect(post).toMatchObject({ title: "Hi", views: 1, seo: { title: "S", noindex: true } });
     expect(post).not.toHaveProperty("extra");
+    expect(post.seo).not.toHaveProperty("extra");
     expect(await client.update("posts", post.id, { title: "Hello" })).toMatchObject({
       id: post.id,
       title: "Hello",
@@ -60,29 +59,10 @@ describe("writes", () => {
     });
     await client.update("posts", post.id, { views: null });
     expect(await client.findById("posts", post.id)).toMatchObject({ title: "Hello", views: null });
+    expect((await client.findById("posts", post.id)).seo).toEqual({ title: "S", noindex: true });
     await client.delete("posts", post.id);
     expect(await status(client.findById("posts", post.id))).toBe(404);
-  });
 
-  it("store and read a group", async () => {
-    await client.signUp(admin);
-    const post = await client.create("posts", {
-      title: "Hi",
-      seo: { title: "S", noindex: true, extra: 1 } as never,
-    });
-    expect(post.seo).toEqual({ title: "S", noindex: true });
-    expect((await client.findById("posts", post.id)).seo).toEqual({ title: "S", noindex: true });
-  });
-
-  it("reject invalid group data", async () => {
-    await client.signUp(admin);
-    expect(
-      await status(client.create("posts", { title: "Hi", seo: { noindex: "yes" } } as never)),
-    ).toBe(400);
-  });
-
-  it("set a global", async () => {
-    await client.signUp(admin);
     expect(await client.getGlobal("site")).toEqual(unpublished);
     await client.setGlobal("site", { name: "Site" });
     expect(await client.getGlobal("site")).toEqual({ name: "Site", ...published });

@@ -13,7 +13,7 @@ beforeEach(async () => {
 });
 
 describe("edit conflicts", () => {
-  it("refuse an update with a stale updatedAt", async () => {
+  it("refuse an update with a stale updatedAt, accept the current one or none", async () => {
     const loaded = await client.create("posts", { title: "One" });
     await tick();
     await client.update("posts", loaded.id, { title: "Two" });
@@ -27,20 +27,18 @@ describe("edit conflicts", () => {
     await expect(
       client.update("posts", loaded.id, { title: "Three" }, { updatedAt: loaded.updatedAt }),
     ).rejects.toMatchObject({ body: { code: "CHANGED" } });
-  });
 
-  it("accept an update with the current updatedAt or none", async () => {
-    const loaded = await client.create("posts", { title: "One" });
+    const current = await client.findById("posts", loaded.id);
     await tick();
     const saved = await client.update(
       "posts",
       loaded.id,
-      { title: "Two" },
-      { updatedAt: loaded.updatedAt },
+      { title: "Four" },
+      { updatedAt: current.updatedAt },
     );
-    expect(saved).toMatchObject({ title: "Two" });
-    expect(await client.update("posts", loaded.id, { title: "Three" })).toMatchObject({
-      title: "Three",
+    expect(saved).toMatchObject({ title: "Four" });
+    expect(await client.update("posts", loaded.id, { title: "Five" })).toMatchObject({
+      title: "Five",
     });
   });
 

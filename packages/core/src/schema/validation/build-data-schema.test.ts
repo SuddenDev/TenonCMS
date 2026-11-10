@@ -228,23 +228,10 @@ describe("array", () => {
   const paths = (r: ReturnType<typeof parse>) =>
     r.success ? {} : Object.fromEntries(r.error.issues.map((i) => [i.path.join("."), i.message]));
 
-  it("fills missing ids and keeps given ones", () => {
-    const r = parse(fields, { links: [{ label: "a" }, { id: "x", label: "b" }] });
-    expect(r.success).toBe(true);
-    const links = r.data!.links as { id: string }[];
-    expect(links[0].id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(links[1]).toEqual({ id: "x", label: "b" });
-  });
-
   it("strips unknown keys in items", () => {
     expect(parse(fields, { links: [{ id: "x", label: "a", extra: 1 }] }).data).toEqual({
       links: [{ id: "x", label: "a" }],
     });
-  });
-
-  it("reports item errors at their position", () => {
-    const r = parse(fields, { links: [{ label: "a" }, { label: "b" }, { label: 5 }] });
-    expect(Object.keys(paths(r))).toEqual(["links.2.label"]);
   });
 
   it("rejects a value that is not an array or an item that is not an object", () => {
@@ -257,16 +244,6 @@ describe("array", () => {
 
   it("rejects an empty id", () => {
     expect(parse(fields, { links: [{ id: "", label: "a" }] }).success).toBe(false);
-  });
-
-  it("rejects duplicate ids at the list path", () => {
-    const r = parse(fields, {
-      links: [
-        { id: "x", label: "a" },
-        { id: "x", label: "b" },
-      ],
-    });
-    expect(paths(r)).toEqual({ links: "Duplicate id" });
   });
 
   it("checks required, minRows and maxRows when the field applies", () => {
@@ -320,13 +297,6 @@ describe("array", () => {
     expect(Object.keys(paths(parse(f, { mode: "strict", items: [{ kind: "text" }] })))).toEqual([
       "items.0.note",
     ]);
-  });
-
-  it("fills ids in a loose parse and checks only types", () => {
-    const r = parse(fields, { links: [{}] }, false);
-    expect(r.success).toBe(true);
-    expect((r.data!.links as { id: string }[])[0].id).toBeTypeOf("string");
-    expect(parse(fields, { links: [{ label: 1 }] }, false).success).toBe(false);
   });
 
   it("nests in arrays and groups", () => {
@@ -406,23 +376,6 @@ describe("blocks", () => {
     });
     expect(Object.keys(paths(r)).sort()).toEqual(["content.0.body", "content.1.title"]);
     expect(parse(fields, { content: [{ blockType: "text" }] }).success).toBe(true);
-  });
-
-  it("checks row limits and duplicate ids", () => {
-    const hero = { blockType: "hero", title: "a" };
-    expect(paths(parse(fields, { content: [hero, hero, hero] }))).toEqual({
-      content: "At most 2 items",
-    });
-    expect(
-      paths(
-        parse(fields, {
-          content: [
-            { ...hero, id: "x" },
-            { ...hero, id: "x" },
-          ],
-        }),
-      ),
-    ).toEqual({ content: "Duplicate id" });
   });
 
   it("checks only types in a loose parse", () => {

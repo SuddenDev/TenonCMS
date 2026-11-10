@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ValidationError } from "../errors.ts";
 import { defineCms, defineTask } from "../index.ts";
-import { localized, origin, setup, status, testDatabase, testDb, withAdmin } from "./setup.ts";
+import {
+  localized,
+  origin,
+  setup,
+  status,
+  testDatabase,
+  testDb,
+  withAdmin,
+  fastAuth,
+} from "./setup.ts";
 
 const HOUR = 3_600_000;
 const editor = { name: "Ed", email: "e@b.co", password: "password123" };
@@ -34,6 +43,7 @@ const make = (database = testDatabase()) =>
     settings: false,
     database,
     secret: "x".repeat(32),
+    auth: fastAuth,
   });
 
 afterEach(() => vi.useRealTimers());
@@ -69,6 +79,7 @@ describe("startup check", () => {
       settings: false,
       database: testDatabase(),
       secret: "x".repeat(32),
+      auth: fastAuth,
       ...extra,
     });
 
@@ -523,6 +534,7 @@ describe("/schema", () => {
       settings: false,
       database: testDatabase(),
       secret: "x".repeat(32),
+      auth: fastAuth,
     });
     const a = await withAdmin(cms);
     await a.create(editor);

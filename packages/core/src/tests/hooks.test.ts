@@ -6,25 +6,8 @@ import {
   defineGlobal,
   ValidationError,
 } from "../index.ts";
-import { seo } from "../presets/index.ts";
-import {
-  admin,
-  fresh,
-  origin,
-  published,
-  setup,
-  status,
-  unpublished,
-  type Env,
-  testDatabase,
-} from "./setup.ts";
+import { admin, origin, published, setup, unpublished, testDatabase } from "./setup.ts";
 
-let cms: Env["cms"];
-let client: Env["client"];
-let fetchWithSession: Env["fetchWithSession"];
-beforeEach(() => {
-  ({ cms, client, fetchWithSession } = fresh());
-});
 describe("hooks", () => {
   let calls: string[];
   beforeEach(() => {
@@ -112,10 +95,9 @@ describe("hooks", () => {
         posts: { fields: title, hooks: { beforeChange: [({ data }) => ({ ...data, title: "" })] } },
       },
     });
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    const error = await client.create("posts", { title: "a" }).catch((e: unknown) => e);
-    expect(error).toMatchObject({ status: 400, body: { errors: { title: expect.any(String) } } });
+    await expect(cms.create("posts", { title: "a" })).rejects.toMatchObject({
+      errors: { title: expect.any(String) },
+    });
     expect(await cms.find("posts")).toEqual([]);
   });
 
@@ -307,9 +289,7 @@ describe("hooks", () => {
       collections: {},
       globals: { site: { fields: title, hooks: { beforeChange: [() => ({ title: "" })] } } },
     });
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    expect(await status(client.setGlobal("site", { title: "a" }))).toBe(400);
+    await expect(cms.setGlobal("site", { title: "a" })).rejects.toBeInstanceOf(ValidationError);
     expect(await cms.getGlobal("site")).toEqual(unpublished);
   });
 
@@ -388,7 +368,7 @@ describe("hooks", () => {
     expect((await cms.findById("posts", post.id))?.views).toBe(1);
   });
 
-  it("are not sent in /schema", async () => {
+  it("are not sent in /schema, and neither are validate and function defaults", async () => {
     const cms = defineCms({
       ...db,
       collections: {
@@ -396,73 +376,6 @@ describe("hooks", () => {
           fields: {
             title: { type: "text", hooks: { afterRead: [log("f")] } },
             hooks: { type: "text" },
-          },
-          hooks: { beforeChange: [log("a")], afterRead: { b: log("b") } },
-        },
-      },
-      globals: { site: { fields: {}, hooks: { afterRead: [log("g")] } } },
-    });
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    const schema = await client.getSchema();
-    expect(schema.collections?.posts.fields.hooks).toEqual({ type: "text" });
-    expect(JSON.stringify(schema).replace('"hooks":{"type":"text"}', "")).not.toContain("hooks");
-  });
-
-  it("are not sent in /schema from block fields, and blocks named like options stay", async () => {
-    const field = { type: "text" as const, hooks: { afterRead: [log("f")] } };
-    const cms = defineCms({
-      ...db,
-      collections: {
-        posts: {
-          fields: {
-            content: {
-              type: "blocks",
-              blocks: { hooks: { fields: { field } }, preview: { fields: { field } } },
-            },
-          },
-        },
-      },
-    });
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    const schema = await client.getSchema();
-    expect((schema.collections!.posts.fields.content as any).blocks).toEqual({
-      hooks: { fields: { field: { type: "text" } } },
-      preview: { fields: { field: { type: "text" } } },
-    });
-  });
-
-  it("keep tabs and fieldsets named like options in /schema", async () => {
-    const layout = {
-      tabs: { hooks: { label: "Hooks" }, preview: {} },
-      fieldsets: { permalink: { label: "Links" } },
-    };
-    const cms = defineCms({
-      ...db,
-      collections: {
-        posts: {
-          ...layout,
-          permalink: "/{title}",
-          hooks: { afterRead: [log("a")] },
-          fields: { title: { type: "text", tab: "hooks", fieldset: "permalink" } },
-        },
-      },
-    });
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    const posts = (await client.getSchema()).collections!.posts as any;
-    expect({ tabs: posts.tabs, fieldsets: posts.fieldsets }).toEqual(layout);
-    expect(posts.hooks).toBeUndefined();
-    expect(posts.preview).toBe(true);
-  });
-
-  it("are not sent in /schema, and neither are validate and function defaults", async () => {
-    const cms = defineCms({
-      ...db,
-      collections: {
-        posts: {
-          fields: {
             status: {
               type: "select",
               options: ["draft", "live"],
@@ -476,17 +389,57 @@ describe("hooks", () => {
               hooks: { beforeChange: [log("f")] },
             },
           },
+          hooks: { beforeChange: [log("a")], afterRead: { b: log("b") } },
+        },
+      },
+      globals: { site: { fields: {}, hooks: { afterRead: [log("g")] } } },
+    });
+    const { client } = setup(cms);
+    await client.signUp(admin);
+    const schema = await client.getSchema();
+    expect(schema.collections?.posts.fields.hooks).toEqual({ type: "text" });
+    expect(JSON.stringify(schema).replace('"hooks":{"type":"text"}', "")).not.toMatch(
+      /validate|hooks/,
+    );
+    expect(schema.collections?.posts.fields.owner).not.toHaveProperty("default");
+    expect(schema.collections?.posts.fields.status).toMatchObject({
+      default: "draft",
+      condition: { owner: { exists: true } },
+    });
+  });
+
+  it("keep blocks, tabs and fieldsets named like options in /schema", async () => {
+    const field = { type: "text" as const, hooks: { afterRead: [log("f")] } };
+    const layout = {
+      tabs: { hooks: { label: "Hooks" }, preview: {} },
+      fieldsets: { permalink: { label: "Links" } },
+    };
+    const cms = defineCms({
+      ...db,
+      collections: {
+        posts: {
+          ...layout,
+          permalink: "/{title}",
+          hooks: { afterRead: [log("a")] },
+          fields: {
+            title: { type: "text", tab: "hooks", fieldset: "permalink" },
+            content: {
+              type: "blocks",
+              blocks: { hooks: { fields: { field } }, preview: { fields: { field } } },
+            },
+          },
         },
       },
     });
     const { client } = setup(cms);
     await client.signUp(admin);
-    const schema = await client.getSchema();
-    expect(JSON.stringify(schema)).not.toMatch(/validate|hooks/);
-    expect(schema.collections?.posts.fields.owner).not.toHaveProperty("default");
-    expect(schema.collections?.posts.fields.status).toMatchObject({
-      default: "draft",
-      condition: { owner: { exists: true } },
+    const posts = (await client.getSchema()).collections!.posts as any;
+    expect({ tabs: posts.tabs, fieldsets: posts.fieldsets }).toEqual(layout);
+    expect(posts.hooks).toBeUndefined();
+    expect(posts.preview).toBe(true);
+    expect(posts.fields.content.blocks).toEqual({
+      hooks: { fields: { field: { type: "text" } } },
+      preview: { fields: { field: { type: "text" } } },
     });
   });
 });
@@ -614,12 +567,7 @@ describe("afterError", () => {
     const cms = make(() => {
       throw new ValidationError({ title: "Taken" });
     });
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    expect(await client.create("posts", { title: "a" }).catch((e: unknown) => e)).toMatchObject({
-      status: 400,
-      body: { errors: { title: "Taken" } },
-    });
+    await expect(cms.create("posts", { title: "a" })).rejects.toBeInstanceOf(ValidationError);
     const ok = make(() => undefined);
     const post = await ok.create("posts", { title: "a" });
     await ok.create("notes", { post: post.id });

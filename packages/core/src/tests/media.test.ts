@@ -875,18 +875,10 @@ describe("regenerate", () => {
     expect(files(m.dir)).toEqual([]);
   });
 
-  it("tells the admin in /schema whether variants can be regenerated", async () => {
+  it("has a route per file and tells /schema, 404 without render", async () => {
     const m = await setupStale(true);
     await m.client.signUp(admin);
     expect((await m.client.getSchema()).media).toEqual({ regenerate: true });
-    const plain = withMedia({ images: { provider: { getImage: () => ({ url: "" }) } } });
-    await plain.client.signUp(admin);
-    expect((await plain.client.getSchema()).media).toEqual({ regenerate: false });
-  });
-
-  it("has a route per file, 404 without render", async () => {
-    const m = await setupStale(true);
-    await m.client.signUp(admin);
     const res = await m.fetchWithSession(`/media/${m.doc.id}/regenerate`, json({ force: false }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ rendered: 1, removed: 1 });
@@ -896,6 +888,7 @@ describe("regenerate", () => {
     expect((await m.fetchWithSession("/media/nope/regenerate", json({}))).status).toBe(404);
     const plain = withMedia({ images: { provider: { getImage: () => ({ url: "" }) } } });
     await plain.client.signUp(admin);
+    expect((await plain.client.getSchema()).media).toEqual({ regenerate: false });
     const doc = await plain.cms.media.upload(png300, { filename: "x.png", mimeType: "image/png" });
     expect((await plain.fetchWithSession(`/media/${doc.id}/regenerate`, json({}))).status).toBe(
       404,

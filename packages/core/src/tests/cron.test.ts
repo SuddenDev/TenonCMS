@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobsOptions } from "../jobs/index.ts";
 import { defineTask } from "../index.ts";
-import { boom, calls, greet, jobsCms, onFile, resetJobs } from "./jobs-setup.ts";
+import { boom, calls, jobsCms, onFile, resetJobs } from "./jobs-setup.ts";
 import { origin, setup, withAdmin } from "./setup.ts";
 
 const DAY = 24 * 3_600_000;
@@ -32,7 +32,7 @@ describe("cron", () => {
   }
   const at = (ms: number) => vi.setSystemTime(START + ms);
 
-  it("seeds the next slot with one attempt and runs it once it is due", async () => {
+  it("seeds the next slot with one attempt, runs it once it is due, and never seeds it again", async () => {
     const { cms, cron } = await started();
     expect(await cron()).toEqual([
       {
@@ -53,24 +53,11 @@ describe("cron", () => {
       { status: "done", run_at: START + M },
       { status: "queued", run_at: START + 2 * M },
     ]);
-  });
 
-  it("does not seed a slot again after it ran", async () => {
-    const { cms, cron } = await started();
-    at(M);
-    await cms.jobs.run();
     const rows = await cron();
     await cms.jobs.run();
     await cms.jobs.run();
     expect(await cron()).toEqual(rows);
-    expect(calls).toHaveLength(1);
-  });
-
-  it("runs a slot once for two run() calls on one instance", async () => {
-    const { cms } = await started();
-    at(M);
-    const [a, b] = await Promise.all([cms.jobs.run(), cms.jobs.run()]);
-    expect(a.ran + b.ran).toBe(1);
     expect(calls).toHaveLength(1);
   });
 

@@ -88,7 +88,7 @@ describe("shared blocks", () => {
     if (note.blockType === "note") expectTypeOf(note.body).toEqualTypeOf<string>();
   });
 
-  it("type items in the client", async () => {
+  it("type items in the client and are sent by name in /schema", async () => {
     const { client } = setup(make());
     await client.signUp(admin);
     const page = await client.create("pages", { content: [{ blockType: "hero", heading: "Hi" }] });
@@ -98,6 +98,17 @@ describe("shared blocks", () => {
       if (inner.blockType === "section") expectTypeOf(inner.owner).toEqualTypeOf<string>();
     }
     expect(item).toMatchObject({ blockType: "hero", heading: "Hi" });
+
+    const schema = (await client.getSchema()) as any;
+    expect(schema.collections.pages.fields.content.blocks).toMatchObject({
+      hero: { fields: { heading: { type: "text" } } },
+      section: "section",
+      note: "text",
+    });
+    expect(schema.blocks.section.fields.children.blocks).toEqual({
+      section: "section",
+      text: "text",
+    });
   });
 
   it("validates at the positional path of a nested item", async () => {
@@ -131,7 +142,7 @@ describe("shared blocks", () => {
     ).rejects.toMatchObject({ errors: { "content.0.children.0.link": 'Unknown id in "posts"' } });
   });
 
-  it("apply onDelete at any depth", async () => {
+  it("populate and apply onDelete at any depth", async () => {
     const cms = make();
     const author = await cms.create("authors", {});
     const post = await cms.create("posts", {});
@@ -139,6 +150,8 @@ describe("shared blocks", () => {
     const page = await cms.create("pages", {
       content: [{ blockType: "section", owner: author.id, children: [deep] }],
     });
+    const read = await cms.findById("pages", page.id, { depth: 1 });
+    expect(read!.content![0]).toMatchObject({ children: [{ link: { id: post.id } }] });
 
     await cms.delete("posts", post.id);
     const [section] = (await cms.findById("pages", page.id, { populate: false }))!.content!;
@@ -184,38 +197,6 @@ describe("shared blocks", () => {
       const doc = await read.findById("pages", page.id, { locale: "de", populate: false });
       expect(doc!.content![0]).toMatchObject({ children: [{ link: null }] });
     }
-  });
-
-  it("populate relations at any depth", async () => {
-    const cms = make();
-    const author = await cms.create("authors", {});
-    const post = await cms.create("posts", {});
-    const page = await cms.create("pages", {
-      content: [
-        {
-          blockType: "section",
-          owner: author.id,
-          children: [{ blockType: "section", owner: author.id, link: post.id }],
-        },
-      ],
-    });
-    const read = await cms.findById("pages", page.id, { depth: 1 });
-    expect(read!.content![0]).toMatchObject({ children: [{ link: { id: post.id } }] });
-  });
-
-  it("are sent by name in /schema", async () => {
-    const { client } = setup(make());
-    await client.signUp(admin);
-    const schema = (await client.getSchema()) as any;
-    expect(schema.collections.pages.fields.content.blocks).toMatchObject({
-      hero: { fields: { heading: { type: "text" } } },
-      section: "section",
-      note: "text",
-    });
-    expect(schema.blocks.section.fields.children.blocks).toEqual({
-      section: "section",
-      text: "text",
-    });
   });
 
   it("reject an unknown name at the type level", () => {

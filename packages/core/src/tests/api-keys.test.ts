@@ -98,7 +98,7 @@ describe("API key callers", () => {
     expect(((await res.json()) as { id: string }[]).map((p) => p.id)).toEqual([live.id]);
   });
 
-  it("answer 401 for an unknown, revoked or deleted key", async () => {
+  it("answer 401 for an unknown, revoked or deleted key, also in withSession()", async () => {
     const u = await users();
     expect(await status(keyed(u.cms, "nope".repeat(20)).client.find("posts"))).toBe(401);
 
@@ -113,10 +113,7 @@ describe("API key callers", () => {
     await u.client.apiKeys.delete(k.id);
     expect(await u.client.apiKeys.list()).toEqual([]);
     expect(await status(k.client.find("posts"))).toBe(401);
-  });
 
-  it("are refused by withSession() for a bad key", async () => {
-    const u = await users();
     const request = new Request(origin, { headers: { "x-api-key": "nope".repeat(20) } });
     await expect(u.cms.withSession(request)).rejects.toMatchObject({ status: 401 });
   });
@@ -162,26 +159,19 @@ describe("API key grid", () => {
     await expect(cms.create("posts", { title: "C" })).rejects.toMatchObject({ status: 403 });
   });
 
-  it("replaces a role list, keeps `false`, and lets a function rule see the key", async () => {
+  it("replaces a role list, keeps `false`, lets a function rule see the key, hides role-only and private fields", async () => {
     const u = await users();
-    const n = await u.client.create("notes", { title: "A" });
+    const n = await u.client.create("notes", { title: "A", secret: "s", staff: "t" });
     const k = await keyFor(u, { "collection:notes": ["read", "update", "delete"] });
-    expect((await k.client.find("notes")).map((d) => d.id)).toEqual([n.id]);
+    const [note] = await k.client.find("notes");
+    expect(note.id).toBe(n.id);
+    expect(note).not.toHaveProperty("secret");
+    expect(note).not.toHaveProperty("staff");
     expect((await k.client.update("notes", n.id, { title: "B" })).title).toBe("B");
     expect(await status(k.client.delete("notes", n.id))).toBe(403);
 
     const narrow = await keyFor(u, { "collection:notes": ["update"] }, "Narrow");
     expect(await status(narrow.client.update("notes", n.id, { title: "C" }))).toBe(403);
-  });
-
-  it("hides role-only and private fields from a key", async () => {
-    const u = await users();
-    await u.client.create("notes", { title: "A", secret: "s", staff: "t" });
-    const k = await keyFor(u, { "collection:notes": ["read"] });
-    const [note] = await k.client.find("notes");
-    expect(note.title).toBe("A");
-    expect(note).not.toHaveProperty("secret");
-    expect(note).not.toHaveProperty("staff");
   });
 
   it("records the key as the author", async () => {
@@ -263,14 +253,10 @@ describe("API key grid", () => {
 });
 
 describe("API key management", () => {
-  it("is refused over better-auth's own endpoints", async () => {
+  it("is for admins only and refused over better-auth's own endpoints", async () => {
     const u = await users();
     expect((await post(u.editor.fetch, "/auth/api-key/create", { name: "x" })).status).toBe(403);
     expect((await post(u.fetch, "/auth/api-key/create", { name: "x" })).status).toBe(403);
-  });
-
-  it("is for admins only", async () => {
-    const u = await users();
     const k = await keyFor(u, {});
     const c = u.editor.client.apiKeys;
     expect(await status(c.list())).toBe(403);
@@ -279,7 +265,7 @@ describe("API key management", () => {
     expect(await status(c.delete(k.id))).toBe(403);
   });
 
-  it("lists every key with its creator and grid, never the secret", async () => {
+  it("lists every key with its creator and grid, never the secret, and sets the expiry", async () => {
     const u = await users();
     const permissions = { "collection:posts": ["read"], schema: ["read"] } as ApiKeyPermissions;
     const created = await u.client.apiKeys.create({ name: "Build", permissions });
@@ -294,6 +280,13 @@ describe("API key management", () => {
       lastUsedAt: null,
     });
     expect(listed).not.toHaveProperty("key");
+
+    const expiring = await u.client.apiKeys.create({
+      name: "x",
+      permissions: {},
+      expiresIn: 86_400,
+    });
+    expect(Date.parse(expiring.expiresAt!) - Date.now()).toBeGreaterThan(86_000_000);
   });
 
   it("rejects unknown targets and operations", async () => {
@@ -307,7 +300,7 @@ describe("API key management", () => {
       expect((await post(u.fetch, "/api-keys", { name: "x", permissions })).status).toBe(400);
   });
 
-  it("rolls a key: a new secret for the same key, the old one stops at once", async () => {
+  it("rolls a key: a new secret for the same key, the old one stops at once; never a revoked or unknown one", async () => {
     const u = await users();
     const old = await keyFor(u, { "collection:posts": ["read", "create"] }, "Sync");
     const before = (await u.client.apiKeys.list())[0];
@@ -323,20 +316,10 @@ describe("API key management", () => {
     expect(await status(old.client.find("posts"))).toBe(401);
     const k = keyed(u.cms, rolled.key);
     expect((await k.client.create("posts", { title: "A" })).createdBy).toBe(`key:${old.id}`);
-  });
 
-  it("does not roll a revoked or unknown key", async () => {
-    const u = await users();
-    const k = await keyFor(u, {});
-    await u.client.apiKeys.revoke(k.id);
-    expect(await status(u.client.apiKeys.roll(k.id))).toBe(404);
+    expect(await status(u.editor.client.apiKeys.roll(old.id))).toBe(403);
+    await u.client.apiKeys.revoke(old.id);
+    expect(await status(u.client.apiKeys.roll(old.id))).toBe(404);
     expect(await status(u.client.apiKeys.roll("nope"))).toBe(404);
-    expect(await status(u.editor.client.apiKeys.roll(k.id))).toBe(403);
-  });
-
-  it("sets the expiry", async () => {
-    const u = await users();
-    const k = await u.client.apiKeys.create({ name: "x", permissions: {}, expiresIn: 86_400 });
-    expect(Date.parse(k.expiresAt!) - Date.now()).toBeGreaterThan(86_000_000);
   });
 });

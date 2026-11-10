@@ -7,10 +7,15 @@ const send = async () => {};
 const editor = { name: "Ed", email: "e@b.co", password: "password123" };
 
 describe("roles of users", () => {
-  it("makes the first user an admin and later users editors", async () => {
-    const { me, create } = await withAdmin();
+  it("makes the first user an admin and later users editors, checks the password, never impersonates", async () => {
+    const { fetch, me, create } = await withAdmin();
     expect(me.role).toBe("admin");
-    expect((await create(editor)).role).toBe("editor");
+    const ed = await create(editor);
+    expect(ed.role).toBe("editor");
+    expect((await post(fetch, "/auth/admin/impersonate-user", { userId: ed.id })).status).toBe(403);
+    const res = await post(fetch, "/auth/admin/create-user", { ...editor, password: "short" });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ message: "Password MUST be at least 8 characters" });
   });
 
   it("lets only admins create users", async () => {
@@ -21,13 +26,6 @@ describe("roles of users", () => {
     const user = { name: "X", email: "x@b.co", password: "password123" };
     expect((await post(ed.fetch, "/auth/admin/create-user", user)).status).toBe(403);
     expect((await post(ed.fetch, "/auth/sign-up/email", user)).status).toBe(403);
-  });
-
-  it("checks the password length when an admin creates a user", async () => {
-    const { fetch } = await withAdmin();
-    const res = await post(fetch, "/auth/admin/create-user", { ...editor, password: "short" });
-    expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ message: "Password MUST be at least 8 characters" });
   });
 
   it("refuses to demote the last admin", async () => {
@@ -46,12 +44,6 @@ describe("roles of users", () => {
     expect((await post(second.fetch, "/auth/admin/ban-user", { userId: me.id })).status).toBe(200);
     const demote = { userId: other.id, role: "editor" };
     expect((await post(second.fetch, "/auth/admin/set-role", demote)).status).toBe(409);
-  });
-
-  it("does not let admins impersonate", async () => {
-    const { fetch, create } = await withAdmin();
-    const ed = await create(editor);
-    expect((await post(fetch, "/auth/admin/impersonate-user", { userId: ed.id })).status).toBe(403);
   });
 
   it("gives hooks the role of the user", async () => {
@@ -81,7 +73,7 @@ describe("roles of users", () => {
 });
 
 describe("roles in /schema", () => {
-  it("lists the built-in roles and the host's", async () => {
+  it("lists the built-in roles and the host's, and says whether email is configured", async () => {
     const { client } = setup(
       defineCms({ ...base, roles: { author: { label: { en: "Author", de: "Autor" } } } }),
     );
@@ -89,12 +81,7 @@ describe("roles in /schema", () => {
     const schema = await client.request<{ roles: { name: string }[] }>("/schema");
     expect(schema.roles.map((r) => r.name)).toEqual(["admin", "editor", "author"]);
     expect(schema.roles[2]).toEqual({ name: "author", label: { en: "Author", de: "Autor" } });
-  });
-
-  it("says whether email is configured", async () => {
-    const without = setup();
-    await without.client.signUp(admin);
-    expect(await without.client.request("/schema")).toMatchObject({ email: false });
+    expect(schema).toMatchObject({ email: false });
 
     const withEmail = setup(
       defineCms({ ...base, email: { from: "cms@example.com", adapter: { send } } }),

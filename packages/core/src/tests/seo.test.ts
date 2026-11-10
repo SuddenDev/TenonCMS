@@ -33,18 +33,13 @@ describe("permalink read option", () => {
     expectTypeOf(docs[0]!.permalink).toEqualTypeOf<string | null>();
   });
 
-  it("is null without a permalink or a value to fill it", async () => {
+  it("is null without a permalink or a value to fill it, and left out without the option", async () => {
     const cms = site();
     await cms.create("notes", { text: "N" });
     await cms.create("posts", { title: "No slug" });
 
     expect((await cms.find("notes", { permalink: true }))[0]).toHaveProperty("permalink", null);
     expect((await cms.find("posts", { permalink: true }))[0]).toHaveProperty("permalink", null);
-  });
-
-  it("is left out without the option", async () => {
-    const cms = site();
-    await cms.create("posts", { title: "A", slug: "a" });
     const [doc] = await cms.find("posts");
     expect(doc).not.toHaveProperty("permalink");
     // @ts-expect-error Only typed with the option.
@@ -234,7 +229,7 @@ describe("robots.txt", () => {
     );
   });
 
-  it("takes the host's rules, and drops the sitemap line without a sitemap", async () => {
+  it("takes the host's rules, drops the sitemap line without a sitemap, and is off with `robots: false`", async () => {
     const cms = site({
       sitemap: false,
       robots: {
@@ -247,9 +242,6 @@ describe("robots.txt", () => {
     const { text } = await get(cms, "/robots.txt");
     expect(text).toContain("\n\nUser-agent: GPTBot\nDisallow: /\n");
     expect(text).not.toContain("Sitemap:");
-  });
-
-  it("is off with `robots: false`", async () => {
     expect((await get(site({ robots: false }), "/robots.txt")).status).toBe(404);
   });
 });

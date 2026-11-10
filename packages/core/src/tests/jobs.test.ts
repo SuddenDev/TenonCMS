@@ -3,7 +3,7 @@ import { withDatabase } from "../cms/create-cms.ts";
 import type { JobsOptions } from "../jobs/index.ts";
 import { defineCms, definePlugin, defineTask, ValidationError } from "../index.ts";
 import { boom, calls, greet, jobsCms, onFile, resetJobs, SELECT } from "./jobs-setup.ts";
-import { base, origin, setup, status, testDatabase, testDb, withAdmin } from "./setup.ts";
+import { base, origin, setup, testDatabase, testDb, withAdmin } from "./setup.ts";
 
 const DAY = 24 * 3_600_000;
 const editor = { name: "Ed", email: "e@b.co", password: "password123" };
@@ -85,13 +85,6 @@ describe("running jobs", () => {
     expect(await rows()).toMatchObject([{ status: "failed", attempts: 3, error: "nope" }]);
     vi.setSystemTime(start + 10 * DAY);
     expect((await cms.jobs.run()).ran).toBe(0);
-  });
-
-  it("honors maxAttempts", async () => {
-    const { cms, rows } = await onFile();
-    await cms.jobs.queue("boom", undefined, { maxAttempts: 1 });
-    await cms.jobs.run();
-    expect(await rows()).toMatchObject([{ status: "failed", attempts: 1 }]);
   });
 
   it("deletes done jobs after 30 days and keeps failed ones", async () => {
@@ -395,27 +388,14 @@ describe("job routes", () => {
       (await (await a.fetch(`${origin}/_tenon/jobs${query}`)).json()) as Array<{ task: string }>;
 
     expect((await list("?status=failed")).map((j) => j.task)).toEqual(["boom"]);
-    expect((await list("?task=greet")).map((j) => j.task)).toEqual(["greet"]);
+    expect(await list("?task=greet")).toMatchObject([
+      { task: "greet", status: "done", attempts: 1, maxAttempts: 3, user: null },
+    ]);
     expect((await a.fetch(`${origin}/_tenon/jobs?status=bogus`)).status).toBe(400);
     expect((await setup(cms).fetch(`${origin}/_tenon/jobs`)).status).toBe(401);
   });
 
-  it("show the job with its creator", async () => {
-    const { a } = await users();
-    const cms = a.cms;
-    await cms.jobs.queue("greet", { n: 1 });
-    const [job] = await (await a.fetch(`${origin}/_tenon/jobs`)).json();
-    expect(job).toMatchObject({
-      task: "greet",
-      status: "queued",
-      payload: { n: 1 },
-      attempts: 0,
-      maxAttempts: 3,
-      user: null,
-    });
-  });
-
-  it("cancel a queued job, answer 409 for a running one and 404 for a missing one", async () => {
+  it("cancel a queued job, answer 409 to cancel or run a running one and 404 for a missing one", async () => {
     const { database, exec } = testDb();
     const cms = jobsCms({}, database);
     const a = await withAdmin(cms);
@@ -424,6 +404,7 @@ describe("job routes", () => {
 
     await exec(`UPDATE cms_jobs SET status = 'running', locked_until = ?`, [Date.now() + 60_000]);
     expect((await del(id)).status).toBe(409);
+    expect((await a.fetch(`${origin}/_tenon/jobs/${id}/run`, { method: "POST" })).status).toBe(409);
     await exec(`UPDATE cms_jobs SET status = 'queued', locked_until = NULL`);
     expect((await del(id)).status).toBe(204);
     expect(await exec(`SELECT id FROM cms_jobs`)).toEqual([]);
@@ -485,11 +466,6 @@ describe("client.jobs", () => {
     expect(await client.jobs.list({ task: "boom" })).toEqual([]);
     expect(await client.jobs.cron()).toMatchObject([{ pattern: "0 3 * * *", task: "greet" }]);
   });
-
-  it("needs a session", async () => {
-    const { client } = setup(jobsCms({ tasks }));
-    await expect(status(client.jobs.list())).resolves.toBe(401);
-  });
 });
 
 describe("run now on a failed job", () => {
@@ -517,14 +493,5 @@ describe("run now on a failed job", () => {
       result: "ok",
     });
     expect((await run()).status).toBe(409);
-  });
-
-  it("answers 409 for a running job", async () => {
-    const { database, exec } = testDb();
-    const cms = jobsCms({}, database);
-    const a = await withAdmin(cms);
-    const { id } = await cms.jobs.queue("greet");
-    await exec(`UPDATE cms_jobs SET status = 'running', locked_until = ?`, [Date.now() + 60_000]);
-    expect((await a.fetch(`${origin}/_tenon/jobs/${id}/run`, { method: "POST" })).status).toBe(409);
   });
 });

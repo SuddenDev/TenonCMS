@@ -7,13 +7,18 @@ const url = (ids: string[] = [], folders: string[] = []) =>
   `/media/download?${new URLSearchParams([...ids.map((id) => ["id", id]), ...folders.map((folder) => ["folder", folder])])}`;
 
 describe("media downloads", () => {
-  it("follows `media.access.read` and rejects empty or unsafe selections", async () => {
+  it("follows `media.access.read`, rejects empty or unsafe selections, and zips an empty folder", async () => {
     const m = withMedia({ access: { read: ({ user }) => !!user } });
     expect((await m.fetchWithSession(url(["missing"]))).status).toBe(401);
     await m.client.signUp(admin);
     expect((await m.fetchWithSession(url())).status).toBe(400);
     expect((await m.fetchWithSession(url([], ["a/../b"]))).status).toBe(400);
     expect((await m.fetchWithSession(url(["missing"]))).status).toBe(404);
+
+    const empty = await m.fetchWithSession(url([], ["posts/empty"]));
+    expect(empty.status).toBe(200);
+    expect(empty.headers.get("content-disposition")).toContain("empty.zip");
+    expect(await empty.text()).toContain("empty/");
   });
 
   it("downloads one original as an attachment with a Unicode filename", async () => {
@@ -34,15 +39,6 @@ describe("media downloads", () => {
     expect(part.status).toBe(206);
     expect(part.headers.get("content-disposition")).toContain("caf%C3%A9.txt");
     expect(await part.text()).toBe("ell");
-  });
-
-  it("includes an empty directory in a folder download", async () => {
-    const m = withMedia();
-    await m.client.signUp(admin);
-    const response = await m.fetchWithSession(url([], ["posts/empty"]));
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-disposition")).toContain("empty.zip");
-    expect(await response.text()).toContain("empty/");
   });
 
   it("streams a folder ZIP with nested paths and excludes sibling folders and variants", async () => {

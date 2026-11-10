@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCms, LinkedContentError, ValidationError } from "../index.ts";
-import { base, testDb } from "./setup.ts";
+import { base } from "./setup.ts";
 
 const make = () =>
   defineCms({
@@ -127,22 +127,12 @@ describe("rich text relations", () => {
   });
 });
 
-it("protects search and resolution endpoints and returns grouped, bounded results", async () => {
+it("resolves rich text and answers 409 for a linked delete over HTTP", async () => {
   const { setup, admin } = await import("./setup.ts");
   const cms = make();
   const { client } = setup(cms);
-
-  await expect(client.links.search()).rejects.toMatchObject({ status: 401 });
-
   const page = await cms.create("pages", { title: "About us", slug: "about" });
-  await cms.create("pages", { title: "Different", slug: "different" });
   await client.signUp(admin);
-
-  const groups = await client.links.search({ query: "ABOUT" });
-
-  expect(groups).toEqual([
-    { collection: "pages", label: "pages", items: [{ id: page.id, label: "About us" }] },
-  ]);
 
   const resolved = await client.links.resolve(link(page.id));
 

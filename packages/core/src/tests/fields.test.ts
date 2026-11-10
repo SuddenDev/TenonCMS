@@ -1,25 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { defineCms } from "../index.ts";
-import { seo } from "../presets/index.ts";
-import {
-  admin,
-  fresh,
-  origin,
-  published,
-  setup,
-  status,
-  type Env,
-  testDatabase,
-  testDb,
-  onPglite,
-} from "./setup.ts";
-
-let cms: Env["cms"];
-let client: Env["client"];
-let fetchWithSession: Env["fetchWithSession"];
-beforeEach(() => {
-  ({ cms, client, fetchWithSession } = fresh());
-});
+import { admin, origin, published, setup, testDatabase, testDb, onPglite } from "./setup.ts";
 
 describe("datetime", () => {
   it("round-trips timestamps through the client and enforces validation and uniqueness", async () => {
@@ -62,19 +43,17 @@ describe("condition", () => {
       secret: "x".repeat(32),
     });
 
-  it("lets a required field be missing while its condition is false", async () => {
-    await expect(make().create("videos", { mediaType: "image" })).resolves.toMatchObject({
-      mediaType: "image",
-    });
-    await expect(make().create("videos", { mediaType: "youtube" })).rejects.toMatchObject({
+  it("lets a required field be missing while its condition is false, and keeps its value", async () => {
+    const cms = make();
+    await expect(cms.create("videos", { mediaType: "image" })).resolves.toBeDefined();
+    await expect(cms.create("videos", { mediaType: "youtube" })).rejects.toMatchObject({
       errors: { url: expect.any(String) },
     });
-  });
-
-  it("keeps values of fields whose condition is false", async () => {
-    const cms = make();
     const doc = await cms.create("videos", { mediaType: "image", url: "x" });
     expect(await cms.findById("videos", doc.id)).toMatchObject({ url: "x" });
+    await expect(cms.create("videos", { mediaType: "image", url: 5 })).rejects.toMatchObject({
+      errors: { url: expect.any(String) },
+    });
   });
 
   it("checks the field again after beforeChange", async () => {
@@ -84,12 +63,6 @@ describe("condition", () => {
       ],
     });
     await expect(cms.create("videos", { mediaType: "image" })).rejects.toMatchObject({
-      errors: { url: expect.any(String) },
-    });
-  });
-
-  it("keeps the type check while the condition is false", async () => {
-    await expect(make().create("videos", { mediaType: "image", url: 5 })).rejects.toMatchObject({
       errors: { url: expect.any(String) },
     });
   });
@@ -120,7 +93,8 @@ describe("default", () => {
       secret: "x".repeat(32),
     });
 
-  it("fills undefined fields on create", async () => {
+  it("fills undefined fields on create, before beforeValidate", async () => {
+    seen = [];
     const cms = make();
     const { client } = setup(cms);
     await client.signUp(admin);
@@ -130,6 +104,7 @@ describe("default", () => {
       tags: [],
     });
     expect(await cms.create("items", {})).toMatchObject({ status: "draft", owner: "system" });
+    expect(seen).toEqual(["draft", "draft"]);
   });
 
   it("fills group children only when the group is sent", async () => {
@@ -140,20 +115,11 @@ describe("default", () => {
     expect(await cms.create("items", {})).not.toHaveProperty("meta");
   });
 
-  it("does not replace null", async () => {
-    expect(await make().create("items", { status: null })).toMatchObject({ status: null });
-  });
-
-  it("does not apply on update", async () => {
+  it("does not replace null and does not apply on update", async () => {
     const cms = make();
     const item = await cms.create("items", { status: null });
+    expect(item).toMatchObject({ status: null });
     expect(await cms.update("items", item.id, {})).toMatchObject({ status: null });
-  });
-
-  it("runs before beforeValidate", async () => {
-    seen = [];
-    await make().create("items", {});
-    expect(seen).toEqual(["draft"]);
   });
 });
 
@@ -203,25 +169,13 @@ describe("validate", () => {
     calls = [];
   });
 
-  it("collects all messages in one 400", async () => {
+  it("collects all messages before beforeChange, and passes the path of group children", async () => {
     const cms = make();
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    const error = await client
-      .create("events", { start: "2026-02-01", end: "2026-01-01", code: "x" })
-      .catch((e: unknown) => e);
-    expect(error).toMatchObject({
-      status: 400,
-      body: {
-        message: expect.any(String),
-        errors: { end: "Ends before start", code: "Not allowed" },
-      },
-    });
+    await expect(
+      cms.create("events", { start: "2026-02-01", end: "2026-01-01", code: "x" }),
+    ).rejects.toMatchObject({ errors: { end: "Ends before start", code: "Not allowed" } });
     expect(calls).not.toContain("beforeChange");
-  });
-
-  it("passes the path of group children", async () => {
-    await make().create("events", { seo: { title: "T" } });
+    await cms.create("events", { seo: { title: "T" } });
     expect(calls).toContainEqual(["seo.title", "create", "T"]);
   });
 
@@ -268,42 +222,30 @@ describe("unique", () => {
       secret: "x".repeat(32),
     });
 
-  it("rejects a used value", async () => {
+  it("rejects a used text or number value", async () => {
     const cms = make();
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    await client.create("tags", { slug: "a", rank: 1 });
-    const error = await client.create("tags", { slug: "a" }).catch((e: unknown) => e);
-    expect(error).toMatchObject({ status: 400, body: { errors: { slug: "Already used" } } });
+    const tag = await cms.create("tags", { slug: "a", rank: 1 });
+    await expect(cms.create("tags", { slug: "a" })).rejects.toMatchObject({
+      errors: { slug: "Already used" },
+    });
     await expect(cms.create("tags", { rank: 1 })).rejects.toMatchObject({
       errors: { rank: "Already used" },
     });
+    await expect(cms.update("tags", tag.id, { slug: "a", rank: 1 })).resolves.toBeDefined();
   });
 
-  it("is case-sensitive and per collection", async () => {
+  it("is case-sensitive, per collection and never matches null or missing", async () => {
     const cms = make();
     await cms.create("other", { slug: "a" });
     await cms.create("tags", { slug: "a" });
     await expect(cms.create("tags", { slug: "A" })).resolves.toBeDefined();
-  });
-
-  it("never matches null or missing", async () => {
-    const cms = make();
     await cms.create("tags", {});
     await cms.create("tags", {});
     await cms.create("tags", { slug: null });
     await expect(cms.create("tags", { slug: null })).resolves.toBeDefined();
   });
 
-  it("lets a document keep its own value", async () => {
-    const cms = make();
-    const tag = await cms.create("tags", { slug: "a", rank: 1 });
-    await expect(cms.update("tags", tag.id, { slug: "a", rank: 1 })).resolves.toMatchObject({
-      slug: "a",
-    });
-  });
-
-  it("rejects a used slug", async () => {
+  it("rejects a used slug field", async () => {
     const cms = defineCms({
       collections: {
         posts: {
@@ -313,11 +255,10 @@ describe("unique", () => {
       database: testDatabase(),
       secret: "x".repeat(32),
     });
-    const { client } = setup(cms);
-    await client.signUp(admin);
-    await client.create("posts", { title: "A", slug: "a" });
-    const error = await client.create("posts", { title: "B", slug: "a" }).catch((e: unknown) => e);
-    expect(error).toMatchObject({ status: 400, body: { errors: { slug: "Already used" } } });
+    await cms.create("posts", { title: "A", slug: "a" });
+    await expect(cms.create("posts", { title: "B", slug: "a" })).rejects.toMatchObject({
+      errors: { slug: "Already used" },
+    });
   });
 
   it("checks values set by beforeChange", async () => {
@@ -362,50 +303,34 @@ describe("private", () => {
     });
   const person = { name: "A", email: "e", contact: { phone: "p" } };
 
-  it("is missing on public reads and sent with a session", async () => {
+  it("is missing on public reads, in items and populated documents, and sent with a session", async () => {
     const cms = make();
     const { client } = setup(cms);
-    const p = await cms.create("people", person);
+    const link = { id: "l", url: "u", note: "n" };
+    const quote = { id: "q", blockType: "quote", text: "t", source: "s" } as const;
+    const p = await cms.create("people", { ...person, links: [link], content: [quote] });
+    const post = await cms.create("posts", { author: p.id });
     await cms.setGlobal("site", { name: "S", key: "k" });
     const reads = async () => [
       await client.findById("people", p.id),
       (await client.find("people"))[0],
       await client.findOne("people", { where: { name: "A" } }),
+      (await client.findById("posts", post.id)).author,
     ];
     for (const read of await reads())
       expect(read).toEqual({
         name: "A",
         id: p.id,
         createdAt: expect.any(String),
+        links: [{ id: "l", url: "u" }],
+        content: [{ id: "q", blockType: "quote", text: "t" }],
         ...published,
       });
     expect(await client.getGlobal("site")).toEqual({ name: "S", ...published });
     await client.signUp(admin);
-    for (const read of await reads()) expect(read).toMatchObject(person);
+    for (const read of await reads())
+      expect(read).toMatchObject({ ...person, links: [link], content: [quote] });
     expect(await client.getGlobal("site")).toEqual({ name: "S", key: "k", ...published });
-  });
-
-  it("is missing in array items on public reads and sent with a session", async () => {
-    const cms = make();
-    const { client } = setup(cms);
-    const p = await cms.create("people", { name: "A", links: [{ id: "l", url: "u", note: "n" }] });
-    expect((await client.findById("people", p.id)).links).toEqual([{ id: "l", url: "u" }]);
-    await client.signUp(admin);
-    expect((await client.findById("people", p.id)).links).toEqual([
-      { id: "l", url: "u", note: "n" },
-    ]);
-  });
-
-  it("is missing in block items on public reads and sent with a session", async () => {
-    const cms = make();
-    const { client } = setup(cms);
-    const item = { id: "q", blockType: "quote", text: "t", source: "s" } as const;
-    const p = await cms.create("people", { name: "A", content: [item] });
-    expect((await client.findById("people", p.id)).content).toEqual([
-      { id: "q", blockType: "quote", text: "t" },
-    ]);
-    await client.signUp(admin);
-    expect((await client.findById("people", p.id)).content).toEqual([item]);
   });
 
   it("reduces a block item of an unknown block to id and blockType on public reads", async () => {
@@ -431,37 +356,21 @@ describe("private", () => {
     expect((await client.findById("people", p.id)).content).toEqual([item]);
   });
 
-  it("cannot be filtered without a session", async () => {
-    const { client, fetch } = setup(make());
-    const get = (query: string) => fetch(`${origin}/_tenon/collections/people?${query}`);
-    expect((await get("email=e")).status).toBe(400);
-    await client.signUp(admin);
-    expect((await get("email=e")).status).toBe(200);
-  });
-
-  it("is left out of a select without a session and returned with one", async () => {
+  it("cannot be filtered or selected without a session", async () => {
     const cms = make();
     const { client, fetch } = setup(cms);
     const p = await cms.create("people", person);
-    const get = async () =>
-      (
-        await fetch(`${origin}/_tenon/collections/people/${p.id}?select=name,email,contact.phone`)
-      ).json();
-    expect(await get()).toEqual({ id: p.id, name: "A" });
+    const get = async (query: string) => fetch(`${origin}/_tenon/collections/people${query}`);
+    const select = `/${p.id}?select=name,email,contact.phone`;
+    expect((await get("?email=e")).status).toBe(400);
+    expect(await (await get(select)).json()).toEqual({ id: p.id, name: "A" });
     await client.signUp(admin);
-    expect(await get()).toEqual({ id: p.id, name: "A", email: "e", contact: { phone: "p" } });
-  });
-
-  it("is missing in populated documents on public reads", async () => {
-    const cms = make();
-    const { client } = setup(cms);
-    const p = await cms.create("people", person);
-    const post = await cms.create("posts", { author: p.id });
-    expect((await client.findById("posts", post.id)).author).toEqual({
-      name: "A",
+    expect((await get("?email=e")).status).toBe(200);
+    expect(await (await get(select)).json()).toEqual({
       id: p.id,
-      createdAt: expect.any(String),
-      ...published,
+      name: "A",
+      email: "e",
+      contact: { phone: "p" },
     });
   });
 });

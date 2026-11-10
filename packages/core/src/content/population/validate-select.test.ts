@@ -69,17 +69,18 @@ describe("badSelectPath", () => {
   });
 
   it.each([
-    [{ titel: true }, 2],
-    [{ author: { nam: true } }, 2],
-    [{ title: { x: true } }, 2],
-    [{ author: { name: true } }, false],
-    [{ author: { name: true } }, 0],
-    [{ author: { avatar: { url: true } } }, 1],
-    [{ author: { avatar: { url: true } } }, { author: true }],
-    [{ tags: { name: true } }, { author: true }],
-    [{ constructor: true }, 2],
-  ])("rejects %o with populate %o", (select, plan) => {
-    expect(check(select, plan as never)).toEqual(expect.any(String));
+    [{ titel: true }, 2, "titel"],
+    [{ author: { nam: true } }, 2, "author.nam"],
+    [{ title: { x: true } }, 2, "title"],
+    [{ seo: { nope: true } }, 2, "seo.nope"],
+    [{ author: { name: true } }, false, "author"],
+    [{ author: { name: true } }, 0, "author"],
+    [{ author: { avatar: { url: true } } }, 1, "author.avatar"],
+    [{ author: { avatar: { url: true } } }, { author: true }, "author.avatar"],
+    [{ tags: { name: true } }, { author: true }, "tags"],
+    [{ constructor: true }, 2, "constructor"],
+  ])("rejects %o with populate %o at %s", (select, plan, path) => {
+    expect(check(select, plan as never)).toBe(path);
   });
 
   it("selects into array items like a group, without a hop", () => {
@@ -120,19 +121,8 @@ describe("badSelectPath", () => {
     expect(check({ content: { id: true } })).toBe("content.id");
   });
 
-  it("selects into a group with populate: false", () => {
+  it("selects into a group with populate: false, and rejects a join that populate does not name", () => {
     expect(check({ seo: { image: true } }, false)).toBeUndefined();
-  });
-
-  it("names the offending path", () => {
-    expect(check({ titel: true })).toBe("titel");
-    expect(check({ author: { nam: true } })).toBe("author.nam");
-    expect(check({ title: { x: true } })).toBe("title");
-    expect(check({ author: { avatar: { url: true } } }, 1)).toBe("author.avatar");
-    expect(check({ seo: { nope: true } })).toBe("seo.nope");
-  });
-
-  it("rejects a join that populate does not name", () => {
     expect(check({ posts: { title: true } }, 2, "authors")).toBe("posts");
   });
 });

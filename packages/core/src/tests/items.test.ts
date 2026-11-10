@@ -53,12 +53,6 @@ const make = () =>
     media: false,
   });
 
-async function signedIn() {
-  const s = setup(make());
-  await s.client.signUp(admin);
-  return s;
-}
-
 const errorOf = (p: Promise<unknown>) =>
   p.then(
     () => undefined,
@@ -67,7 +61,7 @@ const errorOf = (p: Promise<unknown>) =>
 
 describe("array ids", () => {
   it("fills missing ids and keeps a given one", async () => {
-    const { client } = await signedIn();
+    const client = make();
     const doc = await client.create("menus", {
       links: [{ label: "Docs" }, { id: "keep", label: "Blog" }],
     });
@@ -79,7 +73,7 @@ describe("array ids", () => {
   });
 
   it("keeps the ids an update sends", async () => {
-    const { client } = await signedIn();
+    const client = make();
     const doc = await client.create("menus", { links: [{ label: "A" }, { label: "B" }] });
     const [a, b] = doc.links!;
     const next = await client.update("menus", doc.id, {
@@ -88,15 +82,15 @@ describe("array ids", () => {
         { ...a, label: "A2" },
       ],
     });
-    expect(next.links!.map((l) => [l.id, l.label])).toEqual([
+    expect(next!.links!.map((l) => [l.id, l.label])).toEqual([
       [b.id, "B2"],
       [a.id, "A2"],
     ]);
-    expect((await client.findById("menus", doc.id))!.links).toEqual(next.links);
+    expect((await client.findById("menus", doc.id))!.links).toEqual(next!.links);
   });
 
   it("rejects a duplicate id at the list's path", async () => {
-    const { client } = await signedIn();
+    const client = make();
     const error = await errorOf(
       client.create("menus", {
         links: [
@@ -105,36 +99,37 @@ describe("array ids", () => {
         ],
       }),
     );
-    expect(error).toMatchObject({ status: 400, body: { errors: { links: "Duplicate id" } } });
+    expect(error).toMatchObject({ errors: { links: "Duplicate id" } });
   });
 });
 
 describe("array validation", () => {
-  it("answers 400 with the positional path of an invalid item value", async () => {
-    const { client } = await signedIn();
+  it("fails at the positional path of an invalid item value, custom messages too", async () => {
+    const client = make();
     const error = await errorOf(
       client.create("menus", { links: [{ label: "A" }, { label: 5 }] } as never),
     );
     expect(error).toMatchObject({
-      status: 400,
-      body: { errors: { "links.1.label": expect.any(String) } },
+      errors: { "links.1.label": expect.any(String) },
     });
+    expect(
+      await errorOf(
+        client.create("menus", { links: [{ label: "ok" }, { label: "bad" }] } as never),
+      ),
+    ).toMatchObject({ errors: { "links.1.label": "Not allowed" } });
   });
 
   it("checks required, minRows and maxRows", async () => {
-    const { client } = await signedIn();
+    const client = make();
     expect(await errorOf(client.create("lists", {} as never))).toMatchObject({
-      status: 400,
-      body: { errors: { tags: expect.any(String) } },
+      errors: { tags: expect.any(String) },
     });
     expect(await errorOf(client.create("lists", { tags: [] }))).toMatchObject({
-      status: 400,
-      body: { errors: { tags: "At least 2 items" } },
+      errors: { tags: "At least 2 items" },
     });
     expect(await errorOf(client.create("lists", { tags: [{ name: "a" }] } as never))).toMatchObject(
       {
-        status: 400,
-        body: { errors: { tags: "At least 2 items" } },
+        errors: { tags: "At least 2 items" },
       },
     );
     await expect(
@@ -142,19 +137,7 @@ describe("array validation", () => {
     ).resolves.toMatchObject({ tags: [{ name: "a" }, { name: "b" }] });
     const four = [{ label: "a" }, { label: "b" }, { label: "c" }, { label: "d" }];
     expect(await errorOf(client.create("menus", { links: four } as never))).toMatchObject({
-      status: 400,
-      body: { errors: { links: "At most 3 items" } },
-    });
-  });
-
-  it("reports a custom validate message at the positional path", async () => {
-    const { client } = await signedIn();
-    const error = await errorOf(
-      client.create("menus", { links: [{ label: "ok" }, { label: "bad" }] } as never),
-    );
-    expect(error).toMatchObject({
-      status: 400,
-      body: { errors: { "links.1.label": "Not allowed" } },
+      errors: { links: "At most 3 items" },
     });
   });
 });
@@ -287,14 +270,9 @@ describe("blocks", () => {
       secret: "x".repeat(32),
       media: false,
     });
-  const signedIn = async () => {
-    const s = setup(make());
-    await s.client.signUp(admin);
-    return s;
-  };
 
   it("fills ids, keeps blockType and narrows on it", async () => {
-    const { client } = await signedIn();
+    const client = make();
     const doc = await client.create("pages", {
       content: [
         { blockType: "hero", title: "Hi" },
@@ -309,15 +287,16 @@ describe("blocks", () => {
     if (hero?.blockType === "hero") expect(hero.title).toBe("Hi");
   });
 
+  // Over HTTP, so field access walks an item of an unknown block before validation rejects it.
   it("answers 400 for an unknown block, an invalid item value and duplicate ids", async () => {
-    const { client } = await signedIn();
+    const { client } = setup(make());
+    await client.signUp(admin);
     const create = (content: unknown) => errorOf(client.create("pages", { content } as never));
     expect(await create([{ blockType: "hero", title: "a" }, { blockType: "nope" }])).toMatchObject({
       status: 400,
       body: { errors: { "content.1.blockType": "Unknown block" } },
     });
     expect(await create([{ blockType: "text", body: "a" }, { blockType: "hero" }])).toMatchObject({
-      status: 400,
       body: { errors: { "content.1.title": expect.any(String) } },
     });
     const twice = { id: "x", blockType: "text", body: "a" };
@@ -327,19 +306,19 @@ describe("blocks", () => {
   });
 
   it("checks required, minRows and maxRows", async () => {
-    const { client } = await signedIn();
+    const client = make();
     const a = { blockType: "a" };
     expect(await errorOf(client.create("stacks", {} as never))).toMatchObject({
-      body: { errors: { items: expect.any(String) } },
+      errors: { items: expect.any(String) },
     });
     expect(await errorOf(client.create("stacks", { items: [a] } as never))).toMatchObject({
-      body: { errors: { items: "At least 2 items" } },
+      errors: { items: "At least 2 items" },
     });
     await expect(client.create("stacks", { items: [a, a] } as never)).resolves.toBeTruthy();
     const hero = { blockType: "hero", title: "x" };
     expect(
       await errorOf(client.create("pages", { content: [hero, hero, hero, hero] } as never)),
-    ).toMatchObject({ body: { errors: { content: "At most 3 items" } } });
+    ).toMatchObject({ errors: { content: "At most 3 items" } });
   });
 
   it("applies defaults and field hooks of the item's block", async () => {

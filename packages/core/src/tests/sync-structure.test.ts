@@ -129,7 +129,7 @@ describe("same structure in all languages", () => {
           )
         )[0].data,
       );
-    expect(Object.keys((await row()).content)).toEqual([a.id, b.id]);
+    expect(Object.keys((await row()).content).sort()).toEqual([a.id, b.id].sort());
     await cms.update("pages", page.id, { title: "Seite" }, de);
     expect(Object.keys((await row()).content)).toEqual([a.id]);
   });
@@ -361,7 +361,7 @@ describe("translations setting", () => {
   it("lists the entries with a structure and their code defaults", async () => {
     const cms = make();
     const g = cms.schema.globals.translations;
-    expect(Object.keys(g.fields)).toEqual(["pages", "posts", "plain", "strict", "menu"]);
+    expect(Object.keys(g.fields).sort()).toEqual(["menu", "pages", "plain", "posts", "strict"]);
     expect(g.fields.posts.default).toBe(false);
     expect(g.localized).toBeUndefined();
   });

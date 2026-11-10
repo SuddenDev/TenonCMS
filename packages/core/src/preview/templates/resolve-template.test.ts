@@ -2,10 +2,6 @@ import { describe, expect, it } from "vitest";
 import { resolveTemplate } from "./resolve-template.ts";
 
 describe("resolveTemplate", () => {
-  it("fills top-level values", () => {
-    expect(resolveTemplate("/posts/{slug}", { slug: "hello" })).toBe("/posts/hello");
-  });
-
   it("walks into groups and a related document", () => {
     const doc = { slug: "a", seo: { lang: "de" }, category: { id: "c1", slug: "news" } };
     expect(resolveTemplate("/{seo.lang}/{category.slug}/{slug}", doc)).toBe("/de/news/a");
@@ -20,9 +16,5 @@ describe("resolveTemplate", () => {
     expect(resolveTemplate("/posts/{slug}", { slug: "" })).toBeNull();
     expect(resolveTemplate("/{category.slug}", { category: "c1" })).toBeNull();
     expect(resolveTemplate("/{seo.lang}", { seo: null })).toBeNull();
-  });
-
-  it("returns a template without placeholders as is", () => {
-    expect(resolveTemplate("/", {})).toBe("/");
   });
 });

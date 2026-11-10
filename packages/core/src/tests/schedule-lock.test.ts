@@ -78,18 +78,7 @@ describe("a scheduled publish locks its draft", () => {
     expect(await cms.create("authors", { name: "Other" }, { draft: true })).toHaveProperty("id");
   });
 
-  it("blocks discard and locale removal of that locale", async () => {
-    const { cms, id } = await scheduledPost();
-
-    expect(await errors(cms.discard("posts", id, { locale: "de" } as never))).toEqual(SCHEDULED);
-    expect(await errors(cms.discard("posts", id, { all: true } as never))).toEqual(SCHEDULED);
-    expect(await errors(cms.removeLocale("posts", id, "de" as never))).toEqual(SCHEDULED);
-    expect(await cms.discard("posts", id, { locale: "en" } as never)).toMatchObject({
-      title: "Hello",
-    });
-  });
-
-  it("blocks draft saves in that locale only", async () => {
+  it("blocks draft saves, discard and locale removal of that locale only", async () => {
     const { cms, id } = await scheduledPost();
 
     expect(
@@ -99,6 +88,13 @@ describe("a scheduled publish locks its draft", () => {
     ).toEqual(SCHEDULED);
     expect(await cms.update("posts", id, { title: "Hi 2" }, { draft: true })).toMatchObject({
       title: "Hi 2",
+    });
+
+    expect(await errors(cms.discard("posts", id, { locale: "de" } as never))).toEqual(SCHEDULED);
+    expect(await errors(cms.discard("posts", id, { all: true } as never))).toEqual(SCHEDULED);
+    expect(await errors(cms.removeLocale("posts", id, "de" as never))).toEqual(SCHEDULED);
+    expect(await cms.discard("posts", id, { locale: "en" } as never)).toMatchObject({
+      title: "Hello",
     });
   });
 });

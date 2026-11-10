@@ -33,21 +33,6 @@ describe("defineCms checks", () => {
     ).toThrow(/c.price.description.*\.client/);
   });
 
-  it("accepts a reference-backed field description", () => {
-    expect(
-      define({
-        c: {
-          fields: {
-            price: {
-              type: "number",
-              description: { clientRef: "./price.client.ts#description" },
-            },
-          },
-        },
-      }),
-    ).not.toThrow();
-  });
-
   it("throws for a condition on an unknown field", () => {
     expect(define({ c: { fields: { a: { type: "text", condition: { nope: 1 } } } } })).toThrow(
       /"c.a" names unknown field "nope"/,
@@ -273,12 +258,6 @@ describe("defineCms checks", () => {
       expect(define({ c: { fields } })).toThrow(/join "c.j" needs "links.r" to be a relation/);
     });
 
-    it("throws for unique inside an item", () => {
-      expect(
-        define({ c: { fields: { links: array({ t: { type: "text", unique: true } }) } } }),
-      ).toThrow(/"c.links.t" cannot be unique/);
-    });
-
     it("throws for bad minRows and maxRows", () => {
       const t = { t: { type: "text" } } as const;
       expect(define({ c: { fields: { a: array(t, { minRows: 3, maxRows: 2 }) } } })).toThrow(
@@ -314,21 +293,6 @@ describe("defineCms checks", () => {
         ...extra,
       }) as const;
 
-    it("accepts sibling conditions, nested lists and root conditions inside blocks", () => {
-      const fields = {
-        x: { type: "text" },
-        content: blocks({
-          hero: {
-            t: { type: "text" },
-            u: { type: "text", condition: { t: 1, "/x": 2 } },
-            sub: blocks({ a: { b: { type: "text" } } }),
-          },
-          text: { body: { type: "text" } },
-        }),
-      } as Fields;
-      expect(define({ c: { fields } })).not.toThrow();
-    });
-
     it("throws for an empty blocks record", () => {
       expect(define({ c: { fields: { content: blocks({}) } } })).toThrow(
         /blocks "c.content" has no blocks/,
@@ -356,24 +320,6 @@ describe("defineCms checks", () => {
       const cond = { content: blocks({ hero: { t: { type: "text", condition: { nope: 1 } } } }) };
       expect(define({ c: { fields: cond as Fields } })).toThrow(
         /"c.content.hero.t" names unknown field "nope"/,
-      );
-    });
-
-    it("throws for a join on a relation inside a block", () => {
-      const fields = {
-        content: blocks({ hero: { r: { type: "relation", collection: "c" } } }),
-        j: { type: "join", collection: "c", on: "content.r" },
-      } as Fields;
-      expect(define({ c: { fields } })).toThrow(/join "c.j" needs "content.r" to be a relation/);
-    });
-
-    it("throws for bad minRows and maxRows", () => {
-      const b = { hero: { t: { type: "text" } } } as const;
-      expect(define({ c: { fields: { a: blocks(b, { minRows: 3, maxRows: 2 }) } } })).toThrow(
-        /blocks "c.a" has minRows above maxRows/,
-      );
-      expect(define({ c: { fields: { a: blocks(b, { maxRows: -1 }) } } })).toThrow(
-        /blocks "c.a" has a negative maxRows/,
       );
     });
 

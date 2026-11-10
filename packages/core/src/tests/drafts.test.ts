@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { ValidationError } from "../errors.ts";
 import { defineCms } from "../index.ts";
 import { page } from "../presets/index.ts";
-import { admin, origin, relational, seed, setup, testDatabase, testDb } from "./setup.ts";
+import { admin, origin, relational, seed, setup, testDatabase, testDb, fastAuth } from "./setup.ts";
 
 let db: ReturnType<typeof testDb>;
 let cms: ReturnType<typeof relational>;
@@ -345,6 +345,7 @@ describe("draft writes", () => {
       settings: false,
       database: testDatabase(),
       secret: "x".repeat(32),
+      auth: fastAuth,
     });
   let cms: ReturnType<typeof make>;
   beforeEach(() => {

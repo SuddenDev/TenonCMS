@@ -142,6 +142,9 @@ describe("auth email", () => {
       email: admin.email,
       redirectTo: `${origin}/cms/reset-password`,
     });
+    expect(send).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ from, to: admin.email, html: expect.any(String) }),
+    );
     const link = send.mock.calls[0][0].text!.match(/https?:\/\/\S+/)![0];
     const response = await fetch(link);
     expect(response.status).toBe(302);
@@ -164,30 +167,6 @@ describe("auth email", () => {
     expect(failed.pathname).toBe("/cms/reset-password");
     expect(failed.searchParams.get("error")).toBe("INVALID_TOKEN");
     expect(failed.searchParams.has("token")).toBe(false);
-  });
-
-  it("delivers a password reset through the adapter and accepts its token", async () => {
-    const send = vi.fn(async (_message: { text?: string }) => {});
-    const { cms, client } = setup(defineCms({ ...base, email: { from, adapter: { send } } }));
-    await client.signUp(admin);
-    await client.signOut();
-    await client.request("/auth/request-password-reset", {
-      method: "POST",
-      body: { email: admin.email },
-    });
-    expect(send).toHaveBeenCalledOnce();
-    expect(send).toHaveBeenCalledWith(
-      expect.objectContaining({ from, to: admin.email, html: expect.any(String) }),
-    );
-    const link = send.mock.calls[0][0].text!.match(/https?:\/\/\S+/)![0];
-    const token = new URL(link).pathname.split("/").at(-1);
-    await client.request("/auth/reset-password", {
-      method: "POST",
-      body: { token, newPassword: "new-password123" },
-    });
-    await client.signIn({ email: admin.email, password: "new-password123" });
-    expect(await client.getSession()).not.toBeNull();
-    expect(cms.email).toBeDefined();
   });
 
   it("replaces an auth template with an async function", async () => {
@@ -240,7 +219,7 @@ describe("auth email", () => {
     expect((await client.getSession())?.user.emailVerified).toBe(true);
   });
 
-  it("preserves explicit host email callbacks and auth options", async () => {
+  it("preserves host email callbacks and auth options, and defaults undefined ones", async () => {
     const send = vi.fn(async () => {});
     const reset = vi.fn(async () => {});
     const verify = vi.fn(async () => {});
@@ -258,16 +237,12 @@ describe("auth email", () => {
     expect(options.emailVerification?.sendVerificationEmail).toBe(verify);
     expect(options.emailVerification?.expiresIn).toBe(1234);
     expect(send).not.toHaveBeenCalled();
-  });
 
-  it("leaves auth delivery unconfigured when email is omitted", async () => {
-    const { options } = await defineCms(base).auth();
-    expect(options.emailAndPassword?.sendResetPassword).toBeUndefined();
-    expect(options.emailVerification?.sendVerificationEmail).toBeUndefined();
-  });
+    const omitted = (await defineCms(base).auth()).options;
+    expect(omitted.emailAndPassword?.sendResetPassword).toBeUndefined();
+    expect(omitted.emailVerification?.sendVerificationEmail).toBeUndefined();
 
-  it("uses default delivery when an optional host callback is undefined", async () => {
-    const cms = defineCms({
+    const fallback = defineCms({
       ...base,
       email: { from, adapter: { send: async () => {} } },
       auth: {
@@ -275,8 +250,8 @@ describe("auth email", () => {
         emailVerification: { sendVerificationEmail: undefined },
       },
     });
-    const { options } = await cms.auth();
-    expect(options.emailAndPassword?.sendResetPassword).toBeTypeOf("function");
-    expect(options.emailVerification?.sendVerificationEmail).toBeTypeOf("function");
+    const defaults = (await fallback.auth()).options;
+    expect(defaults.emailAndPassword?.sendResetPassword).toBeTypeOf("function");
+    expect(defaults.emailVerification?.sendVerificationEmail).toBeTypeOf("function");
   });
 });

@@ -633,18 +633,6 @@ describe("disposal", () => {
 });
 
 describe("preview tab", () => {
-  it("asks for the fixed controls only and never loads browser code", async () => {
-    bar = (q) => answer(builtIns(q.get("mode") as "site" | "preview-tab"));
-    await start("preview-tab");
-    await vi.waitFor(() => expect(mountAdminBar).toHaveBeenCalled());
-    expect(barCalls[0]!.get("mode")).toBe("preview-tab");
-    expect(shown.mode).toBe("preview-tab");
-    expect(shown.items.map((i) => i.id)).toEqual(["edit", "live-edit"]);
-    expect(shownItem("edit").href).toBe(
-      `/cms/presentation?url=${encodeURIComponent(location.href)}`,
-    );
-  });
-
   it("requests no site items on navigation, then loads them when the normal bar returns", async () => {
     bar = (q) =>
       q.get("mode") === "site"

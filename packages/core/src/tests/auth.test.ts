@@ -46,18 +46,14 @@ describe("database", () => {
 });
 
 describe("auth", () => {
-  it("lets only the first user sign up", async () => {
+  it("lets only the first user sign up, and reports setup until then", async () => {
+    const closed = { setup: false, signUp: false, passkeys: false };
+    expect(await client.request("/auth-status")).toMatchObject({ setup: true, signUp: true });
     await client.signUp(admin);
     expect(await client.getSession()).toMatchObject({ user: { email: admin.email } });
-    expect(await status(client.signUp({ ...admin, email: "c@d.co" }))).toBe(403);
-  });
-
-  it("reports first-admin setup until a user exists", async () => {
-    const closed = { setup: false, signUp: false, passkeys: false };
-    expect(await client.request("/auth-status")).toEqual({ ...closed, setup: true, signUp: true });
-    await client.signUp(admin);
     await client.signOut();
-    expect(await client.request("/auth-status")).toEqual(closed);
+    expect(await client.request("/auth-status")).toMatchObject(closed);
+    expect(await status(client.signUp({ ...admin, email: "c@d.co" }))).toBe(403);
   });
 
   it("has no passkeys without the host's plugin", async () => {

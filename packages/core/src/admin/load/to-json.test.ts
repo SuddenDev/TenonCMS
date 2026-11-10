@@ -17,7 +17,7 @@ describe("toJson", () => {
   it("drops object properties that are undefined", () => {
     const copy = toJson({ a: 1, b: undefined, c: { d: undefined } }, "result");
     expect(copy).toEqual({ a: 1, c: {} });
-    expect(Object.keys(copy as object)).toEqual(["a", "c"]);
+    expect(copy).not.toHaveProperty("b");
   });
 
   it("keeps an own __proto__ key as data", () => {

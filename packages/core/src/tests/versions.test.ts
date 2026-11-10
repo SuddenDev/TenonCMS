@@ -30,7 +30,7 @@ async function twoEditors() {
 afterEach(() => vi.useRealTimers());
 
 describe("versions", () => {
-  it("record a publish with its user", async () => {
+  it("record a publish with its user, and go with their document", async () => {
     const { a } = await twoEditors();
     const post = await a.createDraft("posts", { title: "One" });
     await a.publish("posts", post.id);
@@ -41,6 +41,9 @@ describe("versions", () => {
     expect(await a.version("posts", post.id, versions[0].id)).toMatchObject({
       data: { title: "One" },
     });
+
+    await a.delete("posts", post.id);
+    expect(await a.versions("posts", post.id)).toEqual([]);
   });
 
   it("merge draft saves of one user until someone else saves or it is published", async () => {
@@ -83,18 +86,7 @@ describe("versions", () => {
     });
   });
 
-  it("record every save without drafts", async () => {
-    const { a } = await twoEditors();
-    const doc = await a.create("plain", { title: "One" });
-    await a.update("plain", doc.id, { title: "Two" });
-
-    expect((await a.versions("plain", doc.id)).map((v) => v.status)).toEqual([
-      "published",
-      "published",
-    ]);
-  });
-
-  it("keep the newest 100 per document, or `maxVersions`", async () => {
+  it("record every save without drafts, and keep the newest 100 per document, or `maxVersions`", async () => {
     const { cms, a } = await twoEditors();
     const doc = await a.create("capped", { title: "One" });
     await a.update("capped", doc.id, { title: "Two" });
@@ -107,7 +99,9 @@ describe("versions", () => {
 
     const plain = await cms.create("plain", { title: "0" });
     for (let i = 1; i <= 100; i++) await cms.update("plain", plain.id, { title: String(i) });
-    expect(await a.versions("plain", plain.id)).toHaveLength(100);
+    const all = await a.versions("plain", plain.id);
+    expect(all).toHaveLength(100);
+    expect(all.every((v) => v.status === "published")).toBe(true);
   });
 
   it("restore into the draft, or save without drafts", async () => {
@@ -129,7 +123,7 @@ describe("versions", () => {
     expect(await a.findById("plain", doc.id)).toMatchObject({ title: "One" });
   });
 
-  it("need a session and the right to update", async () => {
+  it("need a session and the right to update, and hide fields the caller MAY NOT read", async () => {
     const { cms, b } = await twoEditors();
     const page = await cms.create("pages", { title: "P" });
     const [v] = await cms.withDrafts().find("pages");
@@ -139,14 +133,10 @@ describe("versions", () => {
     expect(await status(b.version("pages", page.id, v.id))).toBe(403);
     expect(await status(b.restoreVersion("pages", page.id, "x"))).toBe(403);
     expect(await status(b.version("posts", page.id, "x"))).toBe(404);
-  });
 
-  it("hide fields the caller MAY NOT read", async () => {
-    const { a, b } = await twoEditors();
-    const post = await a.create("posts", { title: "One", notes: "secret" });
-    const [v] = await b.versions("posts", post.id);
-
-    const version = await b.version("posts", post.id, v.id);
+    const post = await cms.create("posts", { title: "One", notes: "secret" });
+    const [own] = await b.versions("posts", post.id);
+    const version = await b.version("posts", post.id, own.id);
     expect(version.data).toMatchObject({ title: "One" });
     expect(version.data).not.toHaveProperty("notes");
   });
@@ -182,13 +172,5 @@ describe("versions", () => {
       name: "One",
       hasDraft: true,
     });
-  });
-
-  it("go with their document", async () => {
-    const { a } = await twoEditors();
-    const post = await a.create("posts", { title: "One" });
-    await a.delete("posts", post.id);
-
-    expect(await a.versions("posts", post.id)).toEqual([]);
   });
 });

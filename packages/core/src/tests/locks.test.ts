@@ -25,7 +25,7 @@ async function twoEditors() {
 afterEach(() => vi.useRealTimers());
 
 describe("edit locks", () => {
-  it("go to the first editor and tell others who holds them", async () => {
+  it("go to the first editor, tell others who holds them, and can be taken over", async () => {
     const { a, b, admin, id } = await twoEditors();
 
     expect(await a.lock("posts", id)).toEqual({
@@ -37,11 +37,8 @@ describe("edit locks", () => {
       mine: false,
       user: { id: admin.id, name: "Admin" },
     });
-  });
-
-  it("can be taken over, and the first editor then learns it", async () => {
-    const { a, b, id } = await twoEditors();
-    await a.lock("posts", id);
+    await b.unlock("posts", id);
+    expect(await b.lock("posts", id)).toMatchObject({ mine: false });
 
     expect(await b.lock("posts", id, { takeover: true })).toMatchObject({
       mine: true,
@@ -50,30 +47,20 @@ describe("edit locks", () => {
     expect(await a.lock("posts", id)).toMatchObject({ mine: false, user: { name: "Ed" } });
   });
 
-  it("free up on unlock and on expiry", async () => {
+  it("free up on unlock and on expiry, also on globals", async () => {
     const { a, b, id } = await twoEditors();
     await a.lock("posts", id);
     await a.unlock("posts", id);
     expect(await b.lock("posts", id)).toMatchObject({ mine: true });
 
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(Date.now() + LOCK_TTL + 1);
-    expect(await a.lock("posts", id)).toMatchObject({ mine: true });
-  });
-
-  it("only free a lock the caller holds", async () => {
-    const { a, b, id } = await twoEditors();
-    await a.lock("posts", id);
-    await b.unlock("posts", id);
-    expect(await b.lock("posts", id)).toMatchObject({ mine: false });
-  });
-
-  it("work on globals", async () => {
-    const { a, b } = await twoEditors();
     expect(await a.lockGlobal("site")).toMatchObject({ mine: true });
     expect(await b.lockGlobal("site")).toMatchObject({ mine: false, user: { name: "Admin" } });
     await a.unlockGlobal("site");
     expect(await b.lockGlobal("site")).toMatchObject({ mine: true });
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + LOCK_TTL + 1);
+    expect(await a.lock("posts", id)).toMatchObject({ mine: true });
   });
 
   it("need a session and the right to update", async () => {

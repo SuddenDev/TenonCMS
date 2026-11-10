@@ -1,20 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  ConflictError,
-  defineCms,
-  defineCollection,
-  defineGlobal,
-  ValidationError,
-} from "../index.ts";
-import { seo } from "../presets/index.ts";
-import { fresh, type Env, testDatabase } from "./setup.ts";
+import { defineCms } from "../index.ts";
+import { testDatabase } from "./setup.ts";
 
-let cms: Env["cms"];
-let client: Env["client"];
-let fetchWithSession: Env["fetchWithSession"];
-beforeEach(() => {
-  ({ cms, client, fetchWithSession } = fresh());
-});
 describe("root hooks", () => {
   const calls: string[] = [];
   const log =

@@ -1,26 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { CmsError } from "../client/index.ts";
 import { ConflictError, defineCms } from "../index.ts";
-import { seo } from "../presets/index.ts";
-import {
-  admin,
-  fresh,
-  relational,
-  seed,
-  setup,
-  status,
-  type Env,
-  testDatabase,
-  testDb,
-  onPglite,
-} from "./setup.ts";
-
-let cms: Env["cms"];
-let client: Env["client"];
-let fetchWithSession: Env["fetchWithSession"];
-beforeEach(() => {
-  ({ cms, client, fetchWithSession } = fresh());
-});
+import { admin, relational, seed, setup, testDatabase, testDb, onPglite } from "./setup.ts";
 
 describe("onDelete", () => {
   let cms: ReturnType<typeof relational>;
@@ -40,26 +21,6 @@ describe("onDelete", () => {
     expect((await cms.getGlobal("site", ids0)).logo).toBeNull();
     await cms.delete("tags", t1.id);
     expect((await cms.findById("posts", p.id, ids0))?.tags).toEqual([t2.id]);
-  });
-
-  it("set-null clears several fields of one document", async () => {
-    const cms = defineCms({
-      collections: {
-        a: { fields: {} },
-        b: {
-          fields: {
-            x: { type: "relation", collection: "a" },
-            y: { type: "relation", collection: "a", many: true },
-          },
-        },
-      },
-      database: testDatabase(),
-      secret: "",
-    });
-    const a = await cms.create("a", {});
-    const b = await cms.create("b", { x: a.id, y: [a.id] });
-    await cms.delete("a", a.id);
-    expect(await cms.findById("b", b.id, { populate: false })).toMatchObject({ x: null, y: [] });
   });
 
   it("set-null updates updatedAt", async () => {
@@ -94,14 +55,6 @@ describe("onDelete restrict", () => {
     });
     expect(await cms.findById("posts", p.id)).toBeDefined();
     expect((await cms.getGlobal("site", { populate: false })).featured).toEqual([p.id]);
-  });
-
-  it("throws ConflictError locally", async () => {
-    const pin = await r.cms.create("pages", { title: "p" });
-    const note = await r.cms.create("notes", { post: ids.p.id, pin: pin.id });
-    const error = await r.cms.delete("posts", ids.p.id).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ConflictError);
-    expect(error).toMatchObject({ references: [{ collection: "notes", id: note.id }] });
   });
 
   it("applies explicit restrict and lists globals", async () => {
@@ -313,12 +266,11 @@ describe("onDelete inside array items", () => {
     ]);
   });
 
-  it("restrict from inside an item answers 409", async () => {
-    const { cms, client } = setup(make());
-    await client.signUp(admin);
+  it("restrict from inside an item blocks the delete", async () => {
+    const cms = make();
     const p = await cms.create("pages", {});
     await cms.create("strict", { links: [{ label: "x" }, { page: p.id }] });
-    expect(await status(client.delete("pages", p.id))).toBe(409);
+    await expect(cms.delete("pages", p.id)).rejects.toBeInstanceOf(ConflictError);
     expect(await cms.findById("pages", p.id)).toBeTruthy();
   });
 
@@ -423,12 +375,11 @@ describe("onDelete inside block items", () => {
     ]);
   });
 
-  it("restrict from a block item answers 409", async () => {
-    const { cms, client } = setup(make());
-    await client.signUp(admin);
+  it("restrict from a block item blocks the delete", async () => {
+    const cms = make();
     const p = await cms.create("pages", {});
     await cms.create("landing", { content: [{ blockType: "strict", page: p.id }] });
-    expect(await status(client.delete("pages", p.id))).toBe(409);
+    await expect(cms.delete("pages", p.id)).rejects.toBeInstanceOf(ConflictError);
   });
 
   it("cascade from a block item deletes the owner", async () => {

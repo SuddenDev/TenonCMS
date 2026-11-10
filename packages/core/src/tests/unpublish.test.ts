@@ -10,6 +10,7 @@ import {
   testDatabase,
   testDb,
   withAdmin,
+  fastAuth,
 } from "./setup.ts";
 
 const editor = { name: "Ed", email: "e@b.co", password: "password123" };
@@ -44,6 +45,7 @@ const make = (database = testDatabase()) =>
     settings: false,
     database,
     secret: "x".repeat(32),
+    auth: fastAuth,
   });
 
 const errors = (promise: Promise<unknown>) =>
@@ -257,6 +259,7 @@ describe("unpublish", () => {
         settings: false,
         database: testDatabase(),
         secret: "x".repeat(32),
+        auth: fastAuth,
       });
       const s = setup(capped);
       await s.client.signUp(admin);

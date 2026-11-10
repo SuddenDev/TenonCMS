@@ -1,26 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { defineCms, defineCollection, defineGlobal } from "../index.ts";
-import { page, seo } from "../presets/index.ts";
-import {
-  admin,
-  fresh,
-  origin,
-  relational,
-  seed,
-  setup,
-  status,
-  tmpDir,
-  type Env,
-  testDatabase,
-} from "./setup.ts";
+import { defineCms, defineCollection, defineGlobal, ValidationError } from "../index.ts";
+import { origin, relational, seed, setup, tmpDir, testDatabase } from "./setup.ts";
 import { local } from "../media/storage/local/index.ts";
-
-let cms: Env["cms"];
-let client: Env["client"];
-let fetchWithSession: Env["fetchWithSession"];
-beforeEach(() => {
-  ({ cms, client, fetchWithSession } = fresh());
-});
 
 describe("relation schema", () => {
   const join = { type: "join", collection: "posts", on: "author" };
@@ -190,44 +171,23 @@ describe("relation schema", () => {
 });
 
 describe("relation writes", () => {
-  let r: ReturnType<typeof setup<ReturnType<typeof relational>>>;
-  let ids: Awaited<ReturnType<typeof seed>>;
-  beforeEach(async () => {
-    r = setup(relational());
-    await r.client.signUp(admin);
-    ids = await seed(r.cms);
-  });
-
-  it("rejects an unknown id", async () => {
-    const { client } = r;
-    expect(await status(client.create("posts", { title: "x", author: "nope" }))).toBe(400);
-    expect(await status(client.create("posts", { title: "x", tags: ["nope"] }))).toBe(400);
-    expect(await status(client.create("posts", { title: "x", seo: { image: "nope" } }))).toBe(400);
-    expect(await status(client.setGlobal("site", { logo: "nope" }))).toBe(400);
-  });
-
-  it("rejects an id from another collection", async () => {
-    expect(await status(r.client.create("posts", { title: "x", author: ids.t1.id }))).toBe(400);
-  });
-
-  it("rejects a self-reference", async () => {
-    const page = await r.cms.create("pages", { title: "p" });
-    expect(await status(r.client.update("pages", page.id, { title: "x", parent: page.id }))).toBe(
-      400,
-    );
-    expect(await r.cms.findById("pages", page.id)).not.toHaveProperty("parent");
-  });
-
-  it("returns ids", async () => {
-    expect(await r.client.create("posts", { title: "x", author: ids.a.id })).toMatchObject({
+  it("reject an unknown id, an id of another collection, a self-reference and duplicates", async () => {
+    const cms = relational();
+    const ids = await seed(cms);
+    const invalid = (write: Promise<unknown>) =>
+      expect(write).rejects.toBeInstanceOf(ValidationError);
+    await invalid(cms.create("posts", { title: "x", author: "nope" }));
+    await invalid(cms.create("posts", { title: "x", tags: ["nope"] }));
+    await invalid(cms.create("posts", { title: "x", seo: { image: "nope" } }));
+    await invalid(cms.setGlobal("site", { logo: "nope" }));
+    await invalid(cms.create("posts", { title: "x", author: ids.t1.id }));
+    await invalid(cms.create("posts", { title: "x", tags: [ids.t1.id, ids.t1.id] }));
+    const page = await cms.create("pages", { title: "p" });
+    await invalid(cms.update("pages", page.id, { title: "x", parent: page.id }));
+    expect(await cms.findById("pages", page.id)).not.toHaveProperty("parent");
+    expect(await cms.create("posts", { title: "x", author: ids.a.id })).toMatchObject({
       author: ids.a.id,
     });
-  });
-
-  it("rejects duplicates over HTTP", async () => {
-    expect(
-      await status(r.client.create("posts", { title: "x", tags: [ids.t1.id, ids.t1.id] })),
-    ).toBe(400);
   });
 });
 
@@ -298,25 +258,20 @@ describe("references inside array items", () => {
     });
 
   it("fails at the positional path of the item with an unknown id", async () => {
-    const { cms, client } = setup(make());
-    await client.signUp(admin);
+    const cms = make();
     const p = await cms.create("pages", {});
-    const error = (links: object[]) =>
-      client.create("menus", { links } as never).catch((e: unknown) => e);
+    const error = (links: object[]) => cms.create("menus", { links } as never).catch((e) => e);
 
     expect(await error([{ page: p.id }, { page: "nope" }])).toMatchObject({
-      status: 400,
-      body: { errors: { "links.1.page": expect.any(String) } },
+      errors: { "links.1.page": expect.any(String) },
     });
     expect(await error([{ also: [p.id] }, {}, { also: [p.id, "nope"] }])).toMatchObject({
-      body: { errors: { "links.2.also": expect.any(String) } },
+      errors: { "links.2.also": expect.any(String) },
     });
     expect(await error([{ image: "nope" }])).toMatchObject({
-      body: { errors: { "links.0.image": expect.any(String) } },
+      errors: { "links.0.image": expect.any(String) },
     });
-    expect(
-      await status(client.create("menus", { links: [{ page: p.id }, {}] } as never)),
-    ).toBeUndefined();
+    await cms.create("menus", { links: [{ page: p.id }, {}] } as never);
   });
 });
 
@@ -348,30 +303,20 @@ describe("references inside block items", () => {
     });
 
   it("fails at the positional path of the block with an unknown id", async () => {
-    const { cms, client } = setup(make());
-    await client.signUp(admin);
+    const cms = make();
     const p = await cms.create("pages", {});
     const error = (content: object[]) =>
-      client.create("landing", { content } as never).catch((e: unknown) => e);
+      cms.create("landing", { content } as never).catch((e) => e);
 
     expect(
       await error([{ blockType: "text" }, { blockType: "hero", image: "nope" }]),
-    ).toMatchObject({
-      status: 400,
-      body: { errors: { "content.1.image": expect.any(String) } },
-    });
+    ).toMatchObject({ errors: { "content.1.image": expect.any(String) } });
     expect(
       await error([
         { blockType: "hero", page: p.id },
         { blockType: "hero", page: "nope" },
       ]),
-    ).toMatchObject({
-      body: { errors: { "content.1.page": expect.any(String) } },
-    });
-    expect(
-      await status(
-        client.create("landing", { content: [{ blockType: "hero", page: p.id }] } as never),
-      ),
-    ).toBeUndefined();
+    ).toMatchObject({ errors: { "content.1.page": expect.any(String) } });
+    await cms.create("landing", { content: [{ blockType: "hero", page: p.id }] } as never);
   });
 });

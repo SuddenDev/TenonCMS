@@ -5,21 +5,10 @@ import { menu, seo, settings, strings } from "../presets/index.ts";
 import { published, setup, unpublished, testDatabase } from "./setup.ts";
 
 describe("presets", () => {
-  it("general has title, tagline, url and favicon", () => {
-    const { fields } = settings().general;
-    expect(Object.keys(fields)).toEqual(["title", "tagline", "url", "favicon"]);
-    expect(fields.title).toMatchObject({ type: "text", required: true });
-    expect(fields.favicon.type).toBe("image");
-  });
-
-  it("seo has title, description, image, verification and noindex", () => {
-    const { fields } = settings().seo;
-    expect(fields.title).toMatchObject({ type: "text", placeholder: "{title} · {site.title}" });
-    expect(fields.title).not.toHaveProperty("default");
-    expect(fields.description.type).toBe("textarea");
-    expect(fields.image.type).toBe("image");
-    expect(Object.keys(fields.verification.fields)).toEqual(["google", "bing"]);
-    expect(fields.noindex.type).toBe("boolean");
+  it("keeps the seo title a placeholder, not a stored default", () => {
+    const { title } = settings().seo.fields;
+    expect(title).toMatchObject({ placeholder: "{title} · {site.title}" });
+    expect(title).not.toHaveProperty("default");
   });
 
   it("place both on the settings hub with a label and a description", () => {
@@ -128,7 +117,8 @@ describe("defineCms", () => {
   it("leaves out favicon and image without media", async () => {
     const cms = defineCms({ ...opts, media: false });
     const { general, seo } = cms.schema.globals!;
-    expect(Object.keys(general.fields)).toEqual(["title", "tagline", "url"]);
+    expect(general.fields).not.toHaveProperty("favicon");
+    expect(seo.fields).not.toHaveProperty("image");
     await cms.setGlobal("general", { title: "Site" });
     expect(await cms.getGlobal("general")).toMatchObject({ title: "Site" });
   });

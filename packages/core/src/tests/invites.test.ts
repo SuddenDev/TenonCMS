@@ -92,9 +92,9 @@ describe("invites", () => {
     expect(await owner.client.invites.list()).toEqual([]);
   });
 
-  it("lists pending invites without tokens", async () => {
-    const { invite, owner } = await env();
-    await invite();
+  it("lists pending invites without tokens and stores only the hash of a token", async () => {
+    const { invite, owner, sql } = await env();
+    const token = tokenOf((await invite()).body.link);
     const list = await json(await call(owner.fetch, "GET", "/invites"));
     expect(list.body).toEqual([
       {
@@ -107,18 +107,13 @@ describe("invites", () => {
         expired: false,
       },
     ]);
-  });
-
-  it("stores only the hash of a token", async () => {
-    const { invite, sql } = await env();
-    const token = tokenOf((await invite()).body.link);
     const [row] = await sql("SELECT * FROM cms_invites");
     expect(Object.values(row)).not.toContain(token);
     expect(row.token_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("lets only admins manage invites", async () => {
-    const { cms, invite, owner } = await env();
+    const { cms, invite } = await env();
     const { body } = await invite();
     const g = setup(cms);
     await call(g.fetch, "POST", "/invites/accept", { token: tokenOf(body.link), ...ed });
@@ -195,7 +190,7 @@ describe("invites", () => {
     expect((await call(owner.fetch, "DELETE", "/invites/missing")).status).toBe(404);
   });
 
-  it("keeps the invite when the password is too short", async () => {
+  it("keeps the invite for a short password or a body that is not JSON", async () => {
     const { invite, guest } = await env();
     const token = tokenOf((await invite()).body.link);
     const g = guest();
@@ -203,6 +198,12 @@ describe("invites", () => {
       (await call(g.fetch, "POST", "/invites/accept", { token, name: "Ed", password: "short" }))
         .status,
     ).toBe(400);
+    const text = await g.fetch(`${origin}/_tenon/invites/accept`, {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: JSON.stringify({ token, ...ed }),
+    });
+    expect(text.status).toBe(415);
     expect((await call(g.fetch, "POST", "/invites/accept", { token, ...ed })).status).toBe(200);
   });
 
@@ -214,17 +215,6 @@ describe("invites", () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
     expect((await json(await call(owner.fetch, "GET", "/invites"))).body).toHaveLength(1);
-  });
-
-  it("accepts only JSON", async () => {
-    const { invite, guest } = await env();
-    const token = tokenOf((await invite()).body.link);
-    const res = await guest().fetch(`${origin}/_tenon/invites/accept`, {
-      method: "POST",
-      headers: { "content-type": "text/plain" },
-      body: JSON.stringify({ token, ...ed }),
-    });
-    expect(res.status).toBe(415);
   });
 
   it("emails the invite", async () => {

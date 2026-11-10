@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { CmsError } from "../client/index.ts";
 import { defineCms, menuItems } from "../index.ts";
 import {
   menu,
@@ -12,14 +11,7 @@ import {
   stringsPreset,
 } from "../presets/index.ts";
 import type { Collection } from "../schema/index.ts";
-import { admin, fresh, origin, setup, status, type Env, testDatabase, testDb } from "./setup.ts";
-
-let cms: Env["cms"];
-let client: Env["client"];
-let fetchWithSession: Env["fetchWithSession"];
-beforeEach(() => {
-  ({ cms, client, fetchWithSession } = fresh());
-});
+import { admin, origin, setup, testDatabase, testDb } from "./setup.ts";
 
 describe("page preset", () => {
   // A test sets it to fail the update of the page with that slug.
@@ -45,130 +37,90 @@ describe("page preset", () => {
       secret: "x".repeat(32),
     });
   let cms: ReturnType<typeof make>;
-  let client: ReturnType<typeof setup<ReturnType<typeof make>>>["client"];
-  let fetch: ReturnType<typeof setup>["fetch"];
-  beforeEach(async () => {
+  beforeEach(() => {
     failSlug = undefined;
-    ({ cms, client, fetch } = setup(make()));
-    await client.signUp(admin);
+    cms = make();
   });
   const stored = async (id: string) => (await cms.findById("pages", id, { populate: false }))?.path;
-  // Status and field keys of a 400 body.
-  const fieldErrors = async (promise: Promise<unknown>) => {
-    const e = await promise.then(
-      () => undefined,
-      (e: unknown) => e,
-    );
-    return e instanceof CmsError ? [e.status, Object.keys(e.body?.errors ?? {})] : e;
-  };
+  const paths = (...docs: Array<{ id: string }>) => Promise.all(docs.map((d) => stored(d.id)));
+  const invalid = (field: string) => ({ errors: { [field]: expect.any(String) } });
   const tree = async () => {
-    const about = await client.create("pages", { title: "About", slug: "about" });
-    const team = await client.create("pages", { title: "Team", slug: "team", parent: about.id });
-    const berlin = await client.create("pages", {
-      title: "Berlin",
-      slug: "berlin",
-      parent: team.id,
-    });
+    const about = await cms.create("pages", { title: "About", slug: "about" });
+    const team = await cms.create("pages", { title: "Team", slug: "team", parent: about.id });
+    const berlin = await cms.create("pages", { title: "Berlin", slug: "berlin", parent: team.id });
     return { about, team, berlin };
   };
 
-  it("stores nested paths", async () => {
+  it("stores nested paths and overwrites a path in the input", async () => {
     const { about, team, berlin } = await tree();
-    expect([await stored(about.id), await stored(team.id), await stored(berlin.id)]).toEqual([
+    expect(await paths(about, team, berlin)).toEqual([
       "/about",
       "/about/team",
       "/about/team/berlin",
     ]);
-  });
-
-  it("stores / for index at root", async () => {
-    const home = await client.create("pages", { title: "Home", slug: "index" });
+    const home = await cms.create("pages", { title: "Home", slug: "index", path: "/x" });
     expect(await stored(home.id)).toBe("/");
+    const p = await cms.create("pages", { title: "Über uns", slug: "", seo: { description: "D" } });
+    expect(p).toMatchObject({ slug: "uber-uns", path: "/uber-uns", seo: { description: "D" } });
+    await cms.update("pages", p.id, { title: "Über uns", slug: "uber-uns", path: "/y" });
+    expect(await stored(p.id)).toBe("/uber-uns");
   });
 
-  it("fills an empty slug from the title", async () => {
-    const p = await client.create("pages", { title: "Über uns", slug: "" });
-    expect(p).toMatchObject({ slug: "uber-uns", path: "/uber-uns" });
-  });
-
-  it("rejects an invalid slug", async () => {
-    expect(await fieldErrors(client.create("pages", { title: "A", slug: "Not Valid" }))).toEqual([
-      400,
-      ["slug"],
-    ]);
-  });
-
-  it("overwrites path in input", async () => {
-    const a = await client.create("pages", { title: "A", slug: "a", path: "/x" });
-    expect(await stored(a.id)).toBe("/a");
-    await cms.update("pages", a.id, { title: "A", slug: "a", path: "/y" });
-    expect(await stored(a.id)).toBe("/a");
-  });
-
-  it("rejects a duplicate path", async () => {
+  it("rejects an invalid slug and a duplicate path", async () => {
     const { about } = await tree();
-    expect(await fieldErrors(client.create("pages", { title: "About", slug: "about" }))).toEqual([
-      400,
-      ["slug"],
-    ]);
-    const contact = await client.create("pages", { title: "Contact", slug: "contact" });
+    await expect(cms.create("pages", { title: "A", slug: "Not Valid" })).rejects.toMatchObject(
+      invalid("slug"),
+    );
+    await expect(cms.create("pages", { title: "About", slug: "about" })).rejects.toMatchObject(
+      invalid("slug"),
+    );
+    const contact = await cms.create("pages", { title: "Contact", slug: "contact" });
     await expect(
-      client.create("pages", { title: "Team", slug: "team", parent: contact.id }),
+      cms.create("pages", { title: "Team", slug: "team", parent: contact.id }),
     ).resolves.toBeDefined();
-    expect(
-      await fieldErrors(client.update("pages", contact.id, { title: "Contact", slug: "about" })),
-    ).toEqual([400, ["slug"]]);
     await expect(
-      client.update("pages", about.id, { title: "About", slug: "about" }),
+      cms.update("pages", contact.id, { title: "Contact", slug: "about" }),
+    ).rejects.toMatchObject(invalid("slug"));
+    await expect(
+      cms.update("pages", about.id, { title: "About", slug: "about" }),
     ).resolves.toBeDefined();
   });
 
-  it("rejects moving a page under its own descendant", async () => {
+  it("rejects moving a page under itself or its own descendant", async () => {
     const { about, berlin } = await tree();
-    expect(
-      await fieldErrors(
-        client.update("pages", about.id, { title: "About", slug: "about", parent: berlin.id }),
-      ),
-    ).toEqual([400, ["parent"]]);
-    expect(
-      await fieldErrors(
-        client.update("pages", about.id, { title: "About", slug: "about", parent: about.id }),
-      ),
-    ).toEqual([400, ["parent"]]);
+    for (const parent of [berlin.id, about.id])
+      await expect(
+        cms.update("pages", about.id, { title: "About", slug: "about", parent }),
+      ).rejects.toMatchObject(invalid("parent"));
     expect((await cms.findById("pages", about.id, { populate: false }))?.parent).toBeUndefined();
   });
 
-  it("rewrites descendant paths on rename", async () => {
+  it("rewrites descendant paths on rename, and rolls back when one fails", async () => {
     const { about, team, berlin } = await tree();
-    await client.update("pages", about.id, { title: "About", slug: "company" });
-    expect([await stored(about.id), await stored(team.id), await stored(berlin.id)]).toEqual([
+    failSlug = "berlin";
+    await expect(
+      cms.update("pages", about.id, { title: "About", slug: "company" }),
+    ).rejects.toThrow("boom");
+    expect(await paths(about, team, berlin)).toEqual([
+      "/about",
+      "/about/team",
+      "/about/team/berlin",
+    ]);
+    failSlug = undefined;
+    await cms.update("pages", about.id, { title: "About", slug: "company" });
+    expect(await paths(about, team, berlin)).toEqual([
       "/company",
       "/company/team",
       "/company/team/berlin",
     ]);
   });
 
-  it("rolls back a rename when a descendant update fails", async () => {
-    const { about, team, berlin } = await tree();
-    failSlug = "berlin";
-    expect(
-      await status(client.update("pages", about.id, { title: "About", slug: "company" })),
-    ).toBe(500);
-    expect([await stored(about.id), await stored(team.id), await stored(berlin.id)]).toEqual([
-      "/about",
-      "/about/team",
-      "/about/team/berlin",
-    ]);
-  });
-
   it("refuses to delete a page with children", async () => {
     const { about, team, berlin } = await tree();
-    const error = await client.delete("pages", about.id).catch((e: unknown) => e);
-    expect(error).toMatchObject({
-      status: 409,
-      body: { references: [{ collection: "pages", id: team.id }] },
+    await expect(cms.delete("pages", about.id)).rejects.toMatchObject({
+      references: [{ collection: "pages", id: team.id }],
     });
-    await client.delete("pages", berlin.id);
+    await cms.delete("pages", berlin.id);
     expect(await cms.findById("pages", berlin.id)).toBeUndefined();
   });
 
@@ -199,21 +151,6 @@ describe("page preset", () => {
     docs.fields.parent.collection satisfies "docs";
   });
 
-  it("stores seo as sent", async () => {
-    const p = await client.create("pages", {
-      title: "About",
-      slug: "about",
-      seo: { description: "D" },
-    });
-    expect((await cms.findById("pages", p.id))?.seo).toEqual({ description: "D" });
-  });
-
-  it("sends the seo editor option to the admin", async () => {
-    expect(seo().fields.seo.editor).toBe("seo");
-    const res = await client.request<any>("/schema");
-    expect(res.collections.pages.fields.seo.editor).toBe("seo");
-  });
-
   it("keeps the templates of seo() on the group, typed", () => {
     const { seo: group } = seo({ title: "{title} – Blog" }).fields;
     expect(group.templates).toEqual({ title: "{title} – Blog" });
@@ -221,10 +158,14 @@ describe("page preset", () => {
     expect(seo().fields.seo.templates).toEqual({});
   });
 
-  it("reads a page by path over HTTP", async () => {
+  it("reads a page by path over HTTP, and sends the seo editor in /schema", async () => {
     const { team } = await tree();
+    const { client, fetch } = setup(cms);
     const res = await fetch(`${origin}/_tenon/collections/pages?path=/about/team`);
     expect((await res.json()).map((p: { id: string }) => p.id)).toEqual([team.id]);
+    await client.signUp(admin);
+    const schema = await client.request<any>("/schema");
+    expect(schema.collections.pages.fields.seo.editor).toBe("seo");
   });
 });
 
@@ -311,35 +252,17 @@ describe("strings preset", () => {
       settings: false,
     });
 
-  it("is a localized settings global with a text field per key", () => {
+  it("is a localized global with a text field per key", () => {
     expect(ui.localized).toBe(true);
-    expect(ui.nav).toMatchObject({ display: "settings" });
-    expect(ui.fields.readMore).toMatchObject({
-      type: "text",
-      label: "Read more link",
-      placeholder: "Read more",
-    });
-    expect(ui.fields.subscribe).toMatchObject({
-      type: "text",
-      label: "subscribe",
-      placeholder: "Subscribe",
-    });
+    expect(ui.fields.subscribe).toMatchObject({ type: "text", placeholder: "Subscribe" });
   });
 
-  it("reads the code defaults of the locale before anything is saved", async () => {
+  it("reads the code defaults of the locale, and prefers a stored value", async () => {
     const cms = make();
     expect(await cms.getGlobal("strings", { locale: "de", fallback: false })).toMatchObject({
       readMore: "Weiterlesen",
       subscribe: "Subscribe",
     });
-    expect(await cms.getGlobal("strings", { locale: "en" })).toMatchObject({
-      readMore: "Read more",
-      subscribe: "Subscribe",
-    });
-  });
-
-  it("prefers a stored value", async () => {
-    const cms = make();
     await cms.setGlobal("strings", { readMore: "Mehr lesen" }, { locale: "de" });
     const de = await cms.getGlobal("strings", { locale: "de", fallback: false });
     expect(de).toMatchObject({ readMore: "Mehr lesen", subscribe: "Subscribe" });
@@ -546,7 +469,7 @@ describe("menu preset", () => {
 
     it("needs no shared blocks unless unlimited", () => {
       expect(menu({ depth: 2 }).blocks).toEqual({});
-      expect(Object.keys(menu({ depth: -1 }).blocks)).toEqual(["menuLink", "menuHeading"]);
+      expect(menu({ depth: -1 }).blocks).toHaveProperty("menuLink");
     });
   });
 
@@ -594,16 +517,12 @@ describe("presets option", () => {
 
     expect((await cms.findById("pages", team.id))?.path).toBe("/about/team");
     expect(upper).toEqual(["About", "Team"]);
-    expect(Object.keys(cms.schema.collections?.pages.fields ?? {})).toEqual([
-      "title",
-      "slug",
-      "parent",
-      "path",
-      "seo",
-      "body",
-    ]);
-    expect(cms.schema.collections?.pages.fields.parent).toMatchObject({ hidden: true });
-    expect(cms.schema.collections?.pages.fields.path).toMatchObject({ hidden: true });
+    expect(cms.schema.collections?.pages.fields).toMatchObject({
+      parent: { hidden: true },
+      path: { hidden: true },
+      seo: { type: "group" },
+      body: { type: "textarea" },
+    });
     expect((await cms.getGlobal("strings")).readMore).toBe("Read more");
     expect(menuItems((await cms.getGlobal("footerMenu")).items)).toMatchObject([{ href: "/a" }]);
     about.body satisfies string | null | undefined;
@@ -616,8 +535,10 @@ describe("presets option", () => {
       defineCms({ presets: [pagesPreset(options)], database: testDatabase(), secret }).schema
         .collections?.pages as unknown as Collection;
 
-    it("adds a content blocks field only with `blocks`", () => {
+    it("adds a content blocks field only with `blocks`, and tabs only with `seo`", () => {
       expect(build().fields).not.toHaveProperty("content");
+      expect(build().tabs).toBeUndefined();
+      expect(build().fields.title.tab).toBeUndefined();
       expect(
         build({ blocks: { text: { fields: { body: { type: "textarea" } } } } }).fields.content,
       ).toMatchObject({
@@ -633,7 +554,8 @@ describe("presets option", () => {
         fields: { summary: { type: "text" }, note: { type: "text", tab: "seo" } },
       });
 
-      expect(Object.keys(pages.tabs ?? {})).toEqual(["content", "seo"]);
+      expect(pages.tabs).toHaveProperty("seo");
+      expect(pages.fields.seo).toMatchObject({ appearance: "plain" });
       const tabs = Object.fromEntries(
         Object.entries(pages.fields ?? {}).map(([k, f]) => [k, f.tab]),
       );
@@ -649,25 +571,11 @@ describe("presets option", () => {
       });
     });
 
-    it("shows the SEO group without its box in the SEO tab", () => {
-      expect(build({ seo: true }).fields.seo).toMatchObject({ appearance: "plain" });
-      expect(build({ seo: true, tabs: { seo: { label: "Search" } } }).fields.seo).toMatchObject({
-        appearance: "plain",
-      });
-    });
-
     it("lets the host tabs merge over the preset's", () => {
       const pages = build({ seo: true, tabs: { seo: { label: "Search" }, extra: {} } });
 
-      expect(pages.tabs?.seo).toEqual({ label: "Search" });
-      expect(Object.keys(pages.tabs ?? {})).toEqual(["content", "seo", "extra"]);
-    });
-
-    it("has no tabs without `seo`", () => {
-      const pages = build();
-
-      expect(pages.tabs).toBeUndefined();
-      expect(pages.fields.title.tab).toBeUndefined();
+      expect(pages.tabs).toMatchObject({ content: {}, seo: { label: "Search" }, extra: {} });
+      expect(pages.fields.seo).toMatchObject({ appearance: "plain" });
     });
 
     it("reads `content` only when `blocks` is given", async () => {

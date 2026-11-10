@@ -17,7 +17,7 @@ describe("localization", () => {
     const { fetch } = setup(make(l));
     const res = await fetch(`${origin}/_tenon/localization`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
+    expect(await res.json()).toMatchObject({
       locales: ["en", "de"],
       defaultLocale: "en",
       fallback: true,

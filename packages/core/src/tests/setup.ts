@@ -60,6 +60,17 @@ export const testDatabase = (): DatabaseOptions =>
       ? sqlite(":memory:")
       : libsql(":memory:");
 
+/**
+ * A cheap password hash for tests. better-auth's scrypt costs about 60 ms per sign-up, user create and sign-in.
+ * Tests of the hash itself MUST use an instance without it.
+ */
+export const fastPassword = {
+  hash: async (password: string) => `test:${password}`,
+  verify: async ({ hash, password }: { hash: string; password: string }) =>
+    hash === `test:${password}`,
+};
+export const fastAuth = { emailAndPassword: { enabled: true, password: fastPassword } };
+
 export const origin = "http://localhost";
 export const base = {
   collections: {
@@ -79,6 +90,7 @@ export const base = {
   globals: { site: { fields: { name: { type: "text" } } } },
   database: testDatabase(),
   secret: "x".repeat(32),
+  auth: fastAuth,
 } as const;
 export const define = (secret: string) => defineCms({ ...base, secret });
 
@@ -272,6 +284,7 @@ export const relational = (
     populate,
     database,
     secret: "x".repeat(32),
+    auth: base.auth,
   });
 
 // Seeds one graph through the local API and returns the ids.
@@ -377,6 +390,7 @@ export function localized(
     database: testDatabase(),
     secret: "x".repeat(32),
     media: false,
+    auth: base.auth,
     ...rest,
   });
   const s = setup(cms);
