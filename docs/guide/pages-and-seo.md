@@ -151,7 +151,7 @@ const doc = await cms.findOne("pages", {
   where: { path: "/about/team" },
   populate: { seo: { image: true } },
 });
-const { title, description, noindex, canonical, alternates, image, verification } = seoMeta(doc, {
+const { title, description, noindex, canonical, alternates, image } = seoMeta(doc, {
   general,
   seo,
 });
@@ -159,15 +159,14 @@ const { title, description, noindex, canonical, alternates, image, verification 
 
 The second argument is optional. It takes the [settings](#settings) globals `general` and `seo`.
 
-| Result         | Value                                                                                                                                                                                                     |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`        | The collection's template, else the site's, else `{title} · {site.title}`, with [placeholders](#placeholders) filled. The page's `seo.title` fills `{title}`, or is the whole title with `seo.fullTitle`. |
-| `description`  | The page's `seo.description`, else the collection's template, else the site's, with placeholders filled. `undefined` when empty.                                                                          |
-| `noindex`      | `true` when the page's or the site's `seo.noindex` is.                                                                                                                                                    |
-| `canonical`    | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`.                                                                       |
-| `alternates`   | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                                                                                               |
-| `image`        | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.                                                                          |
-| `verification` | `{ name, content }` meta tags for the filled `google` and `bing` codes.                                                                                                                                   |
+| Result        | Value                                                                                                                                                                                                     |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`       | The collection's template, else the site's, else `{title} · {site.title}`, with [placeholders](#placeholders) filled. The page's `seo.title` fills `{title}`, or is the whole title with `seo.fullTitle`. |
+| `description` | The page's `seo.description`, else the collection's template, else the site's, with placeholders filled. `undefined` when empty.                                                                          |
+| `noindex`     | `true` when the page's or the site's `seo.noindex` is.                                                                                                                                                    |
+| `canonical`   | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`.                                                                       |
+| `alternates`  | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                                                                                               |
+| `image`       | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.                                                                          |
 
 ### Placeholders
 
@@ -238,7 +237,7 @@ The editor reads the `general` and `seo` globals of the content language and the
 
 ### As tags
 
-`seoHead(doc, settings?)` takes the same arguments and returns the tags: `{ title, meta, links }`. `meta` has `description`, Open Graph (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name` from the `general` title), `twitter:card`, `robots` (`noindex, nofollow`) and the verification tags. `links` has the canonical and `hreflang` links. Tags without a value are left out.
+`seoHead(doc, settings?)` takes the same arguments and returns the tags: `{ title, meta, links }`. `meta` has `description`, Open Graph (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name` from the `general` title), `twitter:card` and `robots` (`noindex, nofollow`). `links` has the canonical and `hreflang` links. Tags without a value are left out.
 
 TanStack Router's `head()` takes them as they are:
 
@@ -255,7 +254,7 @@ head: ({ loaderData }) => {
 
 ### In Nuxt
 
-`useTenonSeo(page)` puts the tags of `seoHead()` into the head: title, description, Open Graph, `robots`, the canonical link, the `hreflang` links and the verification tags. It reads the `general` and `seo` settings itself and registers the page's alternates for the [locale switch](./localization.md).
+`useTenonSeo(page)` puts the tags of `seoHead()` into the head: title, description, Open Graph, `robots`, the canonical link and the `hreflang` links. It reads the `general` and `seo` settings itself and registers the page's alternates for the [locale switch](./localization.md).
 
 ```vue
 <script setup lang="ts">
@@ -380,10 +379,10 @@ const trail = breadcrumbs(page); // [{ title: 'About', path: '/about' }, …, { 
 
 Most sites need a title, a URL and SEO defaults. `defineCms()` adds two globals for that, `general` and `seo`, with no config:
 
-| Global    | Fields                                                                                                                                              |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                                                                               |
-| `seo`     | `title` (template, empty is `{title} · {site.title}`), `description` (template), `image` (social image), `verification.google` / `.bing`, `noindex` |
+| Global    | Fields                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                                              |
+| `seo`     | `title` (template, empty is `{title} · {site.title}`), `description` (template), `image` (social image), `noindex` |
 
 With `localization` and an entry that has a localized group, array or blocks field, a third global, `translations`, holds the default structure setting of each such entry (see [Localization](./localization.md#same-content-structure-in-all-languages)). `settings: { translations: false }` drops it.
 
@@ -409,3 +408,4 @@ defineCms({
 - An omitted key is the default. `false` drops it. A global replaces it and is stored under the same name. Other keys are type errors: add your own settings pages as globals with `nav: { display: "settings" }` (see [Customize the admin](./admin.md)).
 - A host or plugin global named `general` or `seo` throws at startup while that default is on.
 - A replacement is taken as is, so an `image` field in it needs media.
+- Verification codes and tracking IDs are not in the defaults. [Verification and tracking](./tracking.md) adds them to `seo`.

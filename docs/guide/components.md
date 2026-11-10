@@ -185,7 +185,7 @@ const { block, edit } = Astro.props;
 
 ## Seo
 
-`Seo` puts a page's title, description, Open Graph, `robots`, canonical, `hreflang` and verification tags into `<head>`. See [Pages and SEO](./pages-and-seo.md#seo-tags).
+`Seo` puts a page's title, description, Open Graph, `robots`, canonical and `hreflang` tags into `<head>`. See [Pages and SEO](./pages-and-seo.md#seo-tags).
 
 ```astro
 ---

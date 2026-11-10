@@ -83,31 +83,6 @@ export function settings() {
             de: "Suchmaschinen bitten, keine Seite zu indexieren.",
           },
         },
-        verification: {
-          type: "group",
-          separator: true,
-          label: { en: "Verification", de: "Verifizierung" },
-          description: {
-            en: "Codes that prove you own the site.",
-            de: "Codes, die den Besitz der Website bestätigen.",
-          },
-          fields: {
-            google: {
-              type: "text",
-              description: {
-                en: "Google Search Console verification code.",
-                de: "Verifizierungscode der Google Search Console.",
-              },
-            },
-            bing: {
-              type: "text",
-              description: {
-                en: "Bing Webmaster Tools verification code.",
-                de: "Verifizierungscode der Bing Webmaster Tools.",
-              },
-            },
-          },
-        },
       },
     } as const satisfies Global,
   };

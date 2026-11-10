@@ -33,7 +33,6 @@ type SeoSettings = {
     title?: string | null;
     description?: string | null;
     image?: Image;
-    verification?: { google?: string | null; bing?: string | null } | null;
     noindex?: boolean | null;
   } | null;
 };
@@ -85,7 +84,6 @@ function urlOf(image: Image) {
  * - `canonical`: the URL of the document's own locale in `alternates`, else `general.url` joined with the document's `permalink`, else its `path`. `undefined` unless one of them exists.
  * - `alternates`: `{ hreflang, href }[]` for the `<link rel="alternate">` tags, from `doc.alternates` (`x-default` included). Absolute against `general.url` when it is set. Empty without `doc.alternates`.
  * - `image`: URL of the document's `seo.image`, else of the site's. Absolute against `general.url` when it is set. Only a populated media document counts; an id string is ignored.
- * - `verification`: `{ name, content }` meta tags for the filled `seo.verification` fields.
  */
 export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
   const { general, seo, templates } = settings;
@@ -100,7 +98,6 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
   const description = doc.seo?.description || templates?.description || seo?.description;
   const image = urlOf(doc.seo?.image) ?? urlOf(seo?.image);
   const path = doc.permalink || (typeof doc.path === "string" && doc.path ? doc.path : undefined);
-  const { google, bing } = seo?.verification ?? {};
   const alternates = Object.entries(doc.alternates ?? {}).map(([hreflang, href]) => ({
     hreflang,
     href: base && href.startsWith("/") ? join(base, href) : href,
@@ -114,10 +111,6 @@ export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
     canonical: localUrl ?? (base && path ? join(base, path) : undefined),
     alternates,
     image: image && absolute(image, base),
-    verification: [
-      google && { name: "google-site-verification", content: google },
-      bing && { name: "msvalidate.01", content: bing },
-    ].filter((tag) => !!tag),
   };
 }
 
@@ -130,8 +123,7 @@ export type SeoLinkTag =
   | { rel: "alternate"; hreflang: string; href: string };
 
 /**
- * The `<head>` tags of {@link seoMeta}: description, Open Graph, the Twitter card, robots and verification as
- * `meta`, canonical and `hreflang` as `links`. Tags without a value are left out. `og:site_name` is the `general`
+ * The `<head>` tags of {@link seoMeta}: description, Open Graph, the Twitter card and robots as `meta`, canonical and `hreflang` as `links`. Tags without a value are left out. `og:site_name` is the `general`
  * title. TanStack Router's `head()` takes `meta` and `links` as they are; unhead calls `links` `link`.
  */
 export function seoHead(doc: SeoDoc, settings: SeoSettings = {}) {
@@ -156,12 +148,9 @@ export function seoHead(doc: SeoDoc, settings: SeoSettings = {}) {
 
   return {
     title: meta.title,
-    meta: [
-      ...tags.flatMap(([kind, key, content]) =>
-        content ? [{ [kind]: key, content } as SeoMetaTag] : [],
-      ),
-      ...meta.verification,
-    ] as SeoMetaTag[],
+    meta: tags.flatMap(([kind, key, content]) =>
+      content ? [{ [kind]: key, content } as SeoMetaTag] : [],
+    ),
     links,
   };
 }

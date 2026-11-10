@@ -509,7 +509,7 @@ describe("settings", () => {
     const read = async () => {
       const general = await cms.getGlobal("general");
       const title: string | null | undefined = general.title;
-      const google: string | null | undefined = (await cms.getGlobal("seo")).verification?.google;
+      const noindex: boolean | null | undefined = (await cms.getGlobal("seo")).noindex;
       // @ts-expect-error a default has no `other`
       general.other;
     };

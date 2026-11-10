@@ -272,8 +272,8 @@ export function useAlternates(source: () => Alternates | undefined) {
 }
 
 /**
- * Puts the `<head>` tags of `seoMeta()` on the page: title, description, Open Graph, robots, canonical, `hreflang`
- * links and verification. Reads the `general` and `seo` settings and registers the page's alternates for
+ * Puts the `<head>` tags of `seoMeta()` on the page: title, description, Open Graph, robots, canonical and `hreflang`
+ * links. Reads the `general` and `seo` settings and registers the page's alternates for
  * `switchLocale()`. Read the page with `alternates: true` for `hreflang` links; outside the pages preset, with
  * `permalink: true` for its canonical URL. Pass the collection's `templates` of `seo()` to use them.
  * @returns The reactive `seoMeta()` result, once the settings are read.

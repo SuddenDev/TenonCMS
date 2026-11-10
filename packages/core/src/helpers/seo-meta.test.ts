@@ -8,7 +8,6 @@ it("seoMeta falls back to the title", () => {
     noindex: false,
     canonical: undefined,
     image: undefined,
-    verification: [],
     alternates: [],
   };
   expect(seoMeta({ title: "About", seo: null })).toEqual(empty);
@@ -189,19 +188,6 @@ it("seoMeta picks the image", () => {
   expect(seoMeta({}).image).toBeUndefined();
 });
 
-it("seoMeta lists the verification tags", () => {
-  expect(seoMeta({}, { seo: { verification: { google: "g", bing: "b" } } }).verification).toEqual([
-    { name: "google-site-verification", content: "g" },
-    { name: "msvalidate.01", content: "b" },
-  ]);
-  expect(seoMeta({}, { seo: { verification: { google: "", bing: "b" } } }).verification).toEqual([
-    { name: "msvalidate.01", content: "b" },
-  ]);
-  expect(seoMeta({}, { seo: { verification: { google: "", bing: "" } } }).verification).toEqual([]);
-  expect(seoMeta({}, { seo: { verification: null } }).verification).toEqual([]);
-  expect(seoMeta({}, {}).verification).toEqual([]);
-});
-
 it("seoMeta falls back to the site's description, not the tagline", () => {
   const general = { title: "Site", tagline: "T" };
   expect(seoMeta({ title: "A" }, { general }).description).toBeUndefined();
@@ -215,7 +201,7 @@ it("seoHead lists the head tags of seoMeta", () => {
   const doc = { title: "Hi", path: "/hi", locale: "en", alternates: { en: "/hi", de: "/de/hi" } };
   const head = seoHead(
     { ...doc, seo: { description: "D", image, noindex: true } },
-    { general: { title: "Acme", url: "https://a.co" }, seo: { verification: { google: "g" } } },
+    { general: { title: "Acme", url: "https://a.co" } },
   );
   expect(head).toEqual({
     title: "Hi · Acme",
@@ -229,7 +215,6 @@ it("seoHead lists the head tags of seoMeta", () => {
       { property: "og:site_name", content: "Acme" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "noindex, nofollow" },
-      { name: "google-site-verification", content: "g" },
     ],
     links: [
       { rel: "canonical", href: "https://a.co/hi" },
