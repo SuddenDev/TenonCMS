@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import type { Field } from "@/shared/api";
 import { itemFields } from "../../../../../../core/src/schema/traversal/item-fields";
-import { active, structureKey } from "@/modules/documents/fields";
+import { active, focusKey, structureKey } from "@/modules/documents/fields";
 import { blockOf, itemTitle, type Item, nestedLists } from "@/modules/documents/items";
 import { injectItemTree, useItemNames } from "@/modules/documents/composables/useItemTree";
 import Icon from "@/shared/components/Icon.vue";
@@ -59,6 +59,20 @@ const outline = ref(false);
 const structure = inject(structureKey, undefined);
 const untranslated = computed(() => !!structure?.value.untranslated.has(props.item.id));
 
+// The site's `edit()` on the item itself scrolls to its row. The list opens the row; a field in it focuses itself.
+// Watches the element too: a row that mounts with a matching path has no element yet when setup runs.
+const row = useTemplateRef<{ $el: HTMLElement }>("row");
+const focus = inject(focusKey, undefined);
+watch(
+  () => [focus?.value, row.value] as const,
+  ([target, el]) => {
+    if (!focus || target !== props.path || !el) return;
+    focus.value = null;
+    el.$el.scrollIntoView({ block: "start", behavior: "smooth" });
+  },
+  { flush: "post" },
+);
+
 // Computed only once the "Move to" menu renders.
 const targets = computed(() =>
   tree.targets({ path: props.path, item: props.item, field: props.field }),
@@ -66,7 +80,7 @@ const targets = computed(() =>
 </script>
 
 <template>
-  <Collapsible :open="open" @update:open="emit('update:open', $event)">
+  <Collapsible ref="row" :open="open" @update:open="emit('update:open', $event)">
     <div class="flex items-center gap-1 p-2">
       <span
         class="text-muted-foreground flex size-8 shrink-0 cursor-grab items-center justify-center"

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, useId } from "vue";
+import { computed, inject, ref, useId, watch } from "vue";
 import type { Field, Layout } from "@/shared/api";
 import { text } from "@/shared/i18n";
+import { focusKey } from "@/modules/documents/fields";
 import type { Section } from "@/modules/documents/layout";
 import Icon from "@/shared/components/Icon.vue";
 import FieldSeparator from "./FieldSeparator.vue";
@@ -17,6 +18,8 @@ const props = defineProps<{
   fields: [string, Field][];
   layout: Layout;
   failed?: boolean;
+  /** The dot path of the owner with a trailing `.`, empty at the top. */
+  prefix?: string;
 }>();
 defineSlots<{
   field(props: { name: string; field: Field }): any;
@@ -27,6 +30,19 @@ const box = computed(() =>
 );
 const opened = ref(!box.value?.collapsed);
 const id = useId();
+
+// A closed box opens for a field in it that is to be focused. The field focuses itself once it mounts.
+const focus = inject(focusKey, undefined);
+watch(
+  () => focus?.value,
+  (target) => {
+    const prefix = props.prefix ?? "";
+    if (!target?.startsWith(prefix)) return;
+    const name = target.slice(prefix.length).split(".")[0];
+    if (props.fields.some(([n]) => n === name)) opened.value = true;
+  },
+  { immediate: true },
+);
 
 // The narrow form stacks every field. Literal classes, so Tailwind finds them.
 const widths: Record<string, string> = {
@@ -47,7 +63,7 @@ const widths: Record<string, string> = {
     class="border-border overflow-hidden rounded-lg border"
     @update:open="(v) => (opened = v)"
   >
-    <FieldSet :aria-labelledby="id" class="min-w-0 gap-0">
+    <FieldSet :aria-labelledby="id" class="gap-0">
       <div class="">
         <CollapsibleTrigger
           v-if="box?.collapsible"

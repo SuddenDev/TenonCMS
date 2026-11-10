@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { CONTENT } from "@/shared/options";
 import { useDebounceFn } from "@vueuse/core";
-import { computed, provide, ref, shallowRef, watch } from "vue";
+import { computed, nextTick, provide, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { client, schema, type Fields } from "@/shared/api";
@@ -112,6 +112,9 @@ const send = usePreviewChannel(async (message: PageMessage) => {
     ? `/presentation/collections/${message.collection}/${message.id}`
     : `/presentation/globals/${message.collection}`;
   if (message.collection !== name.value || message.id !== id.value) await router.push(to);
+  // A second click on the same element MUST focus again, so the target changes even when the path does not.
+  focus.value = null;
+  await nextTick();
   focus.value = message.path;
 });
 // An open document follows the page when it shows exactly one routed document. A page without one keeps waiting,

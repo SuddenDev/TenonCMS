@@ -52,7 +52,7 @@ const placeholders = computed(() => {
   <FieldSet
     :disabled="field.readOnly"
     :class="[
-      'min-w-0 gap-6',
+      'gap-6',
       field.appearance !== 'plain' && 'border-border rounded-lg border px-4 pt-4 pb-5',
     ]"
   >

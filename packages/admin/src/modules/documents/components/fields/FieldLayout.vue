@@ -67,6 +67,7 @@ watch(
         :fields="visible(section)"
         :layout="layout"
         :failed="failed(section)"
+        :prefix="prefix"
       >
         <template #field="p"><slot name="field" v-bind="p" /></template>
       </FieldSection>
@@ -99,6 +100,7 @@ watch(
             :fields="visible(section)"
             :layout="layout"
             :failed="failed(section)"
+            :prefix="prefix"
           >
             <template #field="p"><slot name="field" v-bind="p" /></template>
           </FieldSection>

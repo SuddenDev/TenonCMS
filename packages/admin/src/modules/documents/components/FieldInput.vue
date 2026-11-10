@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import {
-  type Component,
-  type ComponentPublicInstance,
-  computed,
-  defineAsyncComponent,
-  inject,
-  useTemplateRef,
-  watch,
-} from "vue";
+import { type Component, computed, defineAsyncComponent, inject, useTemplateRef, watch } from "vue";
 import { useFieldDescription } from "@/modules/documents/useFieldDescription";
 import { registryKey } from "@/shared/options";
 import { useAdminLocale } from "@/shared/i18n";
@@ -72,38 +64,46 @@ const field = computed(() =>
     : { ...props.field, readOnly: true },
 );
 
-// Runs after render, so the field's element exists when it mounts with a matching path.
-const box = useTemplateRef<ComponentPublicInstance>("box");
+// Watches the element too: a field that mounts with a matching path has no element yet when setup runs. The wrapper
+// is the element, because an async field renders a placeholder comment until it loads.
+const box = useTemplateRef<HTMLElement>("box");
 const focus = inject(focusKey, undefined);
 watch(
-  () => focus?.value,
-  (target) => {
-    const el = box.value?.$el as HTMLElement | undefined;
+  () => [focus?.value, box.value] as const,
+  ([target, el]) => {
     if (!focus || target !== path.value || !el) return;
 
     focus.value = null;
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
-    el.querySelector<HTMLElement>("input, textarea, [contenteditable=true], select, button")?.focus(
-      {
-        preventScroll: true,
-      },
-    );
+    revealField(el);
   },
-  { immediate: true, flush: "post" },
+  { flush: "post" },
 );
+
+// A row or box that just opened keeps its content `hidden` for a frame or two, and scrolling a hidden element does
+// nothing. So the scroll waits until the field has a box, for at most `frames` frames.
+function revealField(el: HTMLElement, frames = 10) {
+  if (!el.getClientRects().length && frames > 0) {
+    requestAnimationFrame(() => revealField(el, frames - 1));
+    return;
+  }
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.querySelector<HTMLElement>("input, textarea, [contenteditable=true], select, button")?.focus({
+    preventScroll: true,
+  });
+}
 </script>
 
 <template>
-  <component
-    :is="renderer"
-    v-if="field.type !== 'join' && readable"
-    ref="box"
-    v-bind="props"
-    :field="field"
-    :description="description.text"
-    v-model="model"
-    :path="path"
-  />
+  <div v-if="field.type !== 'join' && readable" ref="box">
+    <component
+      :is="renderer"
+      v-bind="props"
+      :field="field"
+      :description="description.text"
+      v-model="model"
+      :path="path"
+    />
+  </div>
   <p v-if="description.error" role="alert" class="text-destructive text-sm">
     {{ description.error.message }}
   </p>
