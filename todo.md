@@ -46,7 +46,8 @@ Each new query is one more to port, and the test app should run on a real deploy
 - [ ] Search: in the admin first (`LIKE` on title fields), later FTS5 / `tsvector` and a shared function. Depends on the database work.
 - [x] Jobs and cron: one protected `POST /jobs/run`, triggered per platform (Cloudflare Cron Triggers, Vercel Cron, an interval on Node).
 - [x] Scheduled publishing, on top of jobs.
-- [ ] Webhooks and cache invalidation: rebuild prerendered pages or purge the CDN on publish.
+- [x] Webhooks: outgoing, in code, on the jobs queue, signed with Standard Webhooks (`docs/guide/webhooks.md`). `debounce` collects changes into one request, on `queue({ key, merge })` of jobs. `examples/vercel` has prerendered posts, a preview route and Deploy buttons through admin `actions` (one-click buttons in the top bar or the content menu). Deferred: media events, webhooks managed in the admin.
+- [ ] Read caching: Tenon sets no `Cache-Control` on content reads. Cache public reads (the Durable Object sits in one region), and purge on publish.
 - [x] Sitemap and robots helper, from `permalink` and `alternates`: `/sitemap.xml` and `/robots.txt` with no config, `sitemap.entries` and `robots.rules` to extend, `cms.sitemap()`, `sitemapXml()` and `robotsTxt()`. A host route wins. The `permalink: true` read option.
 - [ ] Mobile: the admin works well on phones. Start with the content list, which is not usable there yet.
 - [ ] Smaller optimizations.
@@ -90,12 +91,8 @@ From building the House of Cacao site.
   - [ ] A smaller default toolbar.
   - [ ] Maybe a font selector.
 - [ ] Tracking: make Google Analytics, Tag Manager, Facebook Pixel and similar easy to set up, maybe as a field type.
-
-### Presets
-
-- [ ] Navigation menu preset:
-  - [ ] The label comes after the link.
-  - [ ] Link to a file: a button after the link input, or a "File…" option in the combobox that opens the media modal.
+- [ ] Link Field: Link to a file as option that can be disabled by host config. I was considering an "allowed" field option, that is either `*` , `["internal", "external", "file"]`. Maybe thats overkill? An icon button in the link input (suffix) and a "File…" option in the combobox that opens the media modal.
+- [ ] Link Field: Should this also have an open in new tab co-field predefined?
 
 ### Types
 
