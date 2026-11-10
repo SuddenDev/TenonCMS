@@ -99,14 +99,14 @@ From building the House of Cacao site.
   - [x] Saved formatting the field does not offer is hidden in the editor and removed on the next edit, instead of locking it.
   - [x] A smaller default toolbar: `RICHTEXT_DEFAULTS` plus registered extensions; `allowed: RICHTEXT_FEATURES` for all.
   - Font selector: not planned. A plugin can add one through `admin.richtext.extensions`.
-- [ ] Tracking: make Google Analytics, Tag Manager, Facebook Pixel and similar easy to set up, maybe as a field type. Its own task.
+- [x] Tracking: make Google Analytics, Tag Manager, Facebook Pixel and similar easy to set up. Just added a guide.
 - [x] Link Field: Link to a file as option that can be disabled by host config. I was considering an "allowed" field option, that is either `*` , `["internal", "external", "file"]`. Decided: `allowed`, all on by default, a file stores a media `reference`. An icon button in the link input (suffix) and a "File…" option in the combobox that opens the media modal.
 - [x] Link Field: Should this also have an open in new tab co-field predefined? It has one: the switch in the link input stores `target: '_blank'`.
 
 ### Types
 
 - [ ] Export a type for blocks, like the one for field types.
-- [ ] Generate most of the host's content types (`app/types/cms.ts` in the test app) from the schema.
+- [ ] Generate most of the host's content types (`app/types/cms.ts` in the test app hoc-web) from the schema.
 
 ## 5. Publishing
 
