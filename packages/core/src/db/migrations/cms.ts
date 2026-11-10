@@ -190,6 +190,14 @@ const cmsMigrations: Record<string, Migration> = {
       );
     },
   },
+  "011_cms_jobs_dedupe_key": {
+    async up(db) {
+      await sql`ALTER TABLE cms_jobs ADD COLUMN dedupe_key text`.execute(db);
+      await sql`CREATE INDEX IF NOT EXISTS cms_jobs_dedupe_idx ON cms_jobs (task, dedupe_key)`.execute(
+        db,
+      );
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables of the database's dialect, with its own migration tables. */

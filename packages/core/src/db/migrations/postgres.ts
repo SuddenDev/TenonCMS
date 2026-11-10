@@ -137,4 +137,11 @@ export const postgresMigrations: Record<string, Migration> = {
       await sql`CREATE UNIQUE INDEX cms_jobs_cron_idx ON cms_jobs (cron, task, run_at)`.execute(db);
     },
   },
+  // The Postgres twin of `011_cms_jobs_dedupe_key`.
+  "003_cms_jobs_dedupe_key": {
+    async up(db: Kysely<any>) {
+      await sql`ALTER TABLE cms_jobs ADD COLUMN dedupe_key text`.execute(db);
+      await sql`CREATE INDEX cms_jobs_dedupe_idx ON cms_jobs (task, dedupe_key)`.execute(db);
+    },
+  },
 };

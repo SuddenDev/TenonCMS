@@ -10,6 +10,8 @@ Background work in the host app: a job queue in our own table (`cms_jobs`) and a
 
 Inside a hook the insert uses the transaction of the write (`databaseForScope()`), so a rollback removes the job, and the clock wakes through `afterCommit()` (`core.jobs.wake(at)`). Outside a transaction it inserts on `core.db()` and wakes at once.
 
+With `key`, `findKeyedJob()` first looks for the oldest queued job of the task under that key (`FOR UPDATE` on Postgres, so a runner skips it until the write commits). One that waits wins: `queue()` returns its id, writes `merge(queued, next)` as its payload when `merge` is set, and inserts nothing. Two concurrent first calls on Postgres both insert; the key saves work and guarantees nothing.
+
 `cms.jobs.run()` flows through:
 
 `operations/run-jobs.operation.ts` → `db/queries/jobs/claim-job.query.ts` → `operations/execute-job.ts` → `db/queries/jobs/finish-job.query.ts`

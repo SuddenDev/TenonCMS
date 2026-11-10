@@ -5,7 +5,7 @@ import type { JobsApi } from "./types.ts";
 
 /** `cms.jobs` of one scope. `run()` is not part of it: only the instance has it, never a hook's `cms`. */
 export const jobsApi = (core: Core, scope: Scope): JobsApi => ({
-  queue: trackWrite(scope, (task, payload, { runAt, maxAttempts } = {}) =>
-    queueJob(core, scope, task, payload, { runAt, maxAttempts }),
+  queue: trackWrite(scope, (task, payload, { runAt, maxAttempts, key, merge } = {}) =>
+    queueJob(core, scope, task, payload, { runAt, maxAttempts, key, merge }),
   ),
 });

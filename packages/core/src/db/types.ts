@@ -107,6 +107,8 @@ export interface Database {
     error: string | null;
     /** The cron pattern that seeded the row. */
     cron: string | null;
+    /** The `key` of `queue()`: at most one queued job per task and key. */
+    dedupe_key: string | null;
     /** `collection:<name>` or `global:<name>` for a job that belongs to a document or global. */
     target: string | null;
     /** The document id. `''` for a global. */

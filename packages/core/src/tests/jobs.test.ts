@@ -495,3 +495,30 @@ describe("run now on a failed job", () => {
     expect((await run()).status).toBe(409);
   });
 });
+
+describe("keys", () => {
+  it("keeps one queued job per task and key until it runs", async () => {
+    const { cms } = await onFile();
+    const first = await cms.jobs.queue("greet", 1, { key: "k" });
+    expect(await cms.jobs.queue("greet", 2, { key: "k" })).toEqual(first);
+    expect(await cms.jobs.queue("greet", 3, { key: "other" })).not.toEqual(first);
+    expect(await cms.jobs.queue("greet", 4)).not.toEqual(first);
+
+    await cms.jobs.run();
+    expect(calls.map((c) => c.payload)).toEqual([1, 3, 4]);
+    expect(await cms.jobs.queue("greet", 5, { key: "k" })).not.toEqual(first);
+  });
+
+  it("merges into the payload of the job that waits", async () => {
+    const { cms } = await onFile();
+    const merge = (queued: unknown, next: unknown) => [
+      ...(queued as number[]),
+      ...(next as number[]),
+    ];
+    await cms.jobs.queue("greet", [1], { key: "k", merge });
+    await cms.jobs.queue("greet", [2], { key: "k", merge });
+
+    await cms.jobs.run();
+    expect(calls.map((c) => c.payload)).toEqual([[1, 2]]);
+  });
+});

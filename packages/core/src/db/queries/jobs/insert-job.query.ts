@@ -9,6 +9,7 @@ type NewJob = {
   /** The document or global a scheduled publish belongs to. */
   target?: { key: string; docId: string; locale: string | null };
   createdBy: string | null;
+  dedupeKey?: string;
 };
 
 /**
@@ -32,6 +33,7 @@ export async function insertJob(db: Db, job: NewJob) {
       result: null,
       error: null,
       cron: null,
+      dedupe_key: job.dedupeKey ?? null,
       target: job.target?.key ?? null,
       doc_id: job.target?.docId ?? null,
       locale: job.target?.locale ?? null,

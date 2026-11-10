@@ -60,6 +60,14 @@ export type QueueOptions = {
   runAt?: Date | string | number;
   /** How many runs a failing job gets. Default 3. */
   maxAttempts?: number;
+  /**
+   * Keeps at most one queued job per task and key: while one waits, queueing again returns its id and changes
+   * nothing. Once it runs, the key is free. With a later `runAt`, this collects calls into one run, a debounce with a
+   * fixed window.
+   */
+  key?: string;
+  /** With `key`: the new payload of the job that waits, from its payload and the one of this call. JSON in, JSON out. */
+  merge?: (queued: unknown, next: unknown) => unknown;
 };
 
 /** `cms.jobs` for hooks and server code. */

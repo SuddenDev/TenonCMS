@@ -47,6 +47,28 @@ hooks: {
 
 Queuing a task that is not defined throws.
 
+### One job per key
+
+`key` keeps at most one queued job per task and key. While one waits, queueing again returns its id and changes nothing. Once it runs, the key is free. Together with a later `runAt`, this collects calls into one run:
+
+```ts
+// One rebuild per minute at most, however many writes happen.
+afterChange: [({ cms }) => cms.jobs.queue("rebuild", null, { key: "site", runAt: Date.now() + 60_000 })],
+```
+
+`merge(queued, next)` returns the new payload of the job that waits, for a task that needs every call's data:
+
+```ts
+cms.jobs.queue("reindex", [doc.id], {
+  key: "search",
+  runAt: Date.now() + 30_000,
+  merge: (queued, next) => [...(queued as string[]), ...(next as string[])],
+});
+```
+
+- A key saves work, it is no guarantee. Two writes that queue the first job at the same moment in separate Postgres transactions MAY create two jobs.
+- A job that fails and retries waits under its key again, so new calls join the retry.
+
 ## Run the due jobs
 
 Nothing runs a job until the clock ticks. A tick runs the jobs that are due, one after another, up to 100:

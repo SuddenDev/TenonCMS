@@ -42,7 +42,7 @@ A joined query reads two tables with the same column names, so conditions and `O
 | `queries/versions/`            | Record (draft saves merge), list, read and delete versions.                                         |
 | `queries/jobs/`                | The job queue: insert, claim, finish, requeue, list, delete, next due time.                         |
 
-`cms_jobs` is the job queue. `claimJob()` takes a job with one `UPDATE … RETURNING`: SQLite serializes writers, Postgres adds `FOR UPDATE SKIP LOCKED` (`isPostgres(db)`). Times are milliseconds, `payload` and `result` are JSON text. `target`, `doc_id` and `locale` name the document of a scheduled publish. The unique index on `(cron, task, run_at)` lets two instances seed one cron slot once (`insertCronSlots()`). See [jobs](../jobs/README.md).
+`cms_jobs` is the job queue. `claimJob()` takes a job with one `UPDATE … RETURNING`: SQLite serializes writers, Postgres adds `FOR UPDATE SKIP LOCKED` (`isPostgres(db)`). Times are milliseconds, `payload` and `result` are JSON text. `target`, `doc_id` and `locale` name the document of a scheduled publish. `dedupe_key` is the `key` of `queue()` (`queries/jobs/keyed-job.query.ts`); its index is not unique, because a retry MAY wait under the same key as a newer job. The unique index on `(cron, task, run_at)` lets two instances seed one cron slot once (`insertCronSlots()`). See [jobs](../jobs/README.md).
 
 `cms_documents` holds one JSON row per document; `cms_globals` holds one per global. Both have pending `draft` data and `published_at` (`NULL` before first publication and after an unpublish). Published reads see published rows and `data`. Draft reads see every row and `COALESCE(draft, data)`.
 
