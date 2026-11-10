@@ -35,7 +35,7 @@ One `UPDATE … WHERE id = (SELECT … LIMIT 1) RETURNING *` takes the oldest du
 
 ## Tasks and cron entries
 
-`config/resolve-jobs.ts` merges the tasks at startup: built-in tasks (`tenon:`), then plugins in their order, then the host. It throws for a duplicate name, the reserved `tenon:` prefix, a plugin task without its `<plugin>:` prefix, a cron entry for an unknown task, a plugin that schedules another source's task, an invalid cron pattern (checked with croner) and an unknown role in a task's `access`. The built-in tasks are `tenon:publish` and `tenon:unpublish`, see [schedule](../schedule/README.md).
+`config/resolve-jobs.ts` merges the tasks at startup: built-in tasks (`tenon:`), then plugins in their order, then the host. It throws for a duplicate name, the reserved `tenon:` prefix, a plugin task without its `<plugin>:` prefix, a cron entry for an unknown task, a plugin that schedules another source's task, an invalid cron pattern (checked with croner) and an unknown role in a task's `access`. The built-in tasks are `tenon:publish` and `tenon:unpublish`, see [schedule](../schedule/README.md), and `tenon:webhook` with at least one webhook, see [webhooks](../webhooks/README.md). `visibleTasks()` ties only the schedule tasks to scheduling rights; `tenon:webhook` follows the default rule (admins).
 
 `scheduledTasks` entries are validated and kept on `core.jobs.scheduled`. A pattern MUST have exactly five fields (minute precision): a six-field pattern or a nickname like `@daily` throws at startup.
 

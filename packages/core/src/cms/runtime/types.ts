@@ -13,6 +13,7 @@ import type { Kysely } from "kysely";
 import type { TransactionLifetime } from "./transaction.ts";
 import type { RobotsOptions, SitemapOptions } from "../../seo/config/types.ts";
 import type { ResolvedJobs } from "../../jobs/config/resolve-jobs.ts";
+import type { ResolvedWebhooks } from "../../webhooks/config/resolve-webhooks.ts";
 
 /**
  * The internal context of one `defineCms()` instance. It is not public.
@@ -59,6 +60,8 @@ export type Core = {
    * milliseconds). The default does nothing.
    */
   jobs: ResolvedJobs & { wake: (at: number) => void };
+  /** The checked `webhooks` option, `{}` without it. */
+  webhooks: ResolvedWebhooks;
 
   /**
    * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the

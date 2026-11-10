@@ -43,6 +43,15 @@ export {
   type Task,
   type TaskContext,
 } from "./jobs/index.ts";
+export { verifyWebhook } from "./webhooks/sign.ts";
+export type {
+  Webhook,
+  WebhookBatch,
+  WebhookBody,
+  WebhookChange,
+  WebhookEvent,
+  WebhooksOptions,
+} from "./webhooks/types.ts";
 
 export type { AuthOptions } from "./auth/config/options.ts";
 export type { Role, RoleOptions } from "./users/roles.ts";

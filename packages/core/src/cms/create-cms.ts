@@ -46,6 +46,8 @@ import { scheduleTasks } from "../schedule/tasks.ts";
 import { runJobs } from "../jobs/operations/run-jobs.operation.ts";
 import type { RunResult } from "../jobs/types.ts";
 import { sitemapEntries } from "../seo/sitemap-entries.ts";
+import { resolveWebhooks } from "../webhooks/config/resolve-webhooks.ts";
+import { webhookTasks } from "../webhooks/tasks.ts";
 
 /**
  * Creates a CMS instance.
@@ -90,6 +92,7 @@ export function defineCms<
   sitemap = {},
   robots = {},
   jobs: jobsOption,
+  webhooks: webhooksOption,
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S, L, B, PR>) {
   type T = {
@@ -146,7 +149,11 @@ export function defineCms<
   // check if the schema is valid before proceeding
   checkSchema(schema, populateOption, localization);
   checkAccess(schema, roles);
-  const jobs = resolveJobs(plugins, jobsOption, roles, scheduleTasks);
+  const webhooks = resolveWebhooks(webhooksOption, schema);
+  const jobs = resolveJobs(plugins, jobsOption, roles, {
+    ...scheduleTasks,
+    ...(Object.keys(webhooks).length ? webhookTasks(webhooks) : {}),
+  });
 
   const adminRuntime = mergeAdmin(plugins, admin);
   const knownRoles = new Set(roles.map((r) => r.name));
@@ -220,6 +227,7 @@ export function defineCms<
       sitemap,
       robots,
       jobs: { ...jobs, wake },
+      webhooks,
       localApi: (scope) => createLocalApi(core, scope),
       media,
       admin: adminRuntime,

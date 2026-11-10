@@ -2,11 +2,13 @@ import { type Core, type Stage } from "../../cms/runtime/types.ts";
 import { type ContentTarget, target, isMedia } from "../targets.ts";
 import { type RootHooks } from "../../schema/index.ts";
 import { hookList } from "../../schema/runtime/run-hooks.ts";
+import { webhookHooks } from "../../webhooks/emit-webhooks.ts";
 
 type Hook = (args: any) => unknown;
 
 /**
- * Collects the hooks of one stage in run order: the collection's or global's, then the plugins', then the host's root hooks.
+ * Collects the hooks of one stage in run order: the collection's or global's, then the plugins', then the host's root
+ * hooks, then the hook that queues webhooks, so a webhook sees the final document.
  * @returns The hooks of the stage. None for `media`.
  */
 export function slot(core: Core, name: ContentTarget, stage: Stage): Hook[] {
@@ -17,5 +19,6 @@ export function slot(core: Core, name: ContentTarget, stage: Stage): Hook[] {
     ...hookList<Hook>(own),
     ...core.plugins.flatMap((p) => hookList<Hook>(p.hooks?.[stage])),
     ...hookList<Hook>(core.rootHooks[stage]),
+    ...(webhookHooks(core, name, stage) as Hook[]),
   ];
 }

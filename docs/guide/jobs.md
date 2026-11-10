@@ -142,12 +142,13 @@ A cron job needs a clock that ticks at least as often as the pattern fires. See 
 
 ## Built-in tasks
 
-Core registers two tasks for [scheduled publishing](./drafts.md#scheduling). Their names start with `tenon:`, which no task of yours MAY use.
+Core registers two tasks for [scheduled publishing](./drafts.md#scheduling), and `tenon:webhook` when you define [webhooks](./webhooks.md). Their names start with `tenon:`, which no task of yours MAY use.
 
 | Task              | What it does                                                                                  |
 | ----------------- | --------------------------------------------------------------------------------------------- |
 | `tenon:publish`   | Publishes the draft of a document or global as it is when the job runs. Result: `"published"` |
 | `tenon:unpublish` | Takes a document or global off the published perspective. Result: `"unpublished"`             |
+| `tenon:webhook`   | Sends one [webhook](./webhooks.md) delivery. Result: `{ status }`, or `"removed"`             |
 
 Both give the result `"missing"` for a document that is gone, and the job is done. You queue them with `cms.schedule()` and `cms.scheduleGlobal()`, not with `jobs.queue()`.
 

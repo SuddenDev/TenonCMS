@@ -74,7 +74,7 @@ find, findOne, findById, getGlobal: beforeOperation → beforeRead → populate 
 delete: beforeOperation → beforeDelete → delete + onDelete effects → afterDelete → afterOperation
 ```
 
-- At each stage, field hooks run first (in field order, depth-first into groups), then the collection's or global's, then the plugins', and last the root hooks. A group's own hooks run before its fields'.
+- At each stage, field hooks run first (in field order, depth-first into groups), then the collection's or global's, then the plugins', and last the root hooks. [Webhooks](./webhooks.md) queue after the root hooks of `afterChange` and `afterDelete`. A group's own hooks run before its fields'.
 - Globals have no `beforeOperation` and `afterOperation`.
 - `beforeChange` receives validated data, and its result is validated again, so a hook cannot store invalid data.
 - `afterRead` runs once per read with all documents (a field's `afterRead` once per value). Documents loaded by `populate` run their own collection's `beforeRead` and `afterRead`, once per relation field per hop.

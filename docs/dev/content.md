@@ -17,7 +17,7 @@ Create, update and set-global run these steps in one transaction:
 9. Save, then record the version
 10. `afterChange`, `afterRead`, `afterOperation`
 
-At each hook stage the order is: field hooks, then the collection or global, then plugins, then root hooks.
+At each hook stage the order is: field hooks, then the collection or global, then plugins, then root hooks. `afterChange` and `afterDelete` end with the hook that queues webhooks (`webhooks/`).
 
 - A failure rolls back everything, including nested calls and deletion effects. An unexpected error then runs `afterError` once, at the outermost level.
 - **Draft saves** skip custom validation, uniqueness and reference checks, and `afterChange`. **Publishing** runs the full pipeline over the pending data. **Discard** drops the draft, or deletes a never-published document. **Unpublish** sets `published_at` to `NULL` and keeps `data`; a missing draft becomes a copy of it (`unpublish-document.ts`). It records an `unpublished` version of the content that went offline (always an insert, never merged into a draft version). It takes the `updatedAt` token like a write and compares it with the drafts-perspective source. **Schedule** (`schedule/`) is not a write: it checks `schedule`, then the `update` rule (`guard`), then queues a `tenon:publish` or `tenon:unpublish` job whose payload names the document and locale. The job calls `publish` or `unpublish` as the server when it fires, so it publishes the draft as it is then and runs no access rule.

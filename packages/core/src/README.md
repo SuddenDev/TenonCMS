@@ -16,6 +16,7 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `versions/`     | Version history: list, read and restore past versions.            | [README](versions/README.md)                |
 | `jobs/`         | Tasks, the job queue, `cms.jobs.run()` and the `/jobs` routes.    | [README](jobs/README.md)                    |
 | `schedule/`     | Scheduled publish and unpublish, the `tenon:` tasks.              | [README](schedule/README.md)                |
+| `webhooks/`     | Outgoing webhooks: matching, the `tenon:webhook` task, signing.   | [README](webhooks/README.md)                |
 | `http/`         | Hono application assembly, parsing and errors.                    | [app.ts](http/app.ts)                       |
 | `access/`       | Access rules: decisions, field stripping, `/schema` permissions.  | [README](access/README.md)                  |
 | `schema/`       | Field/hook contracts, inference, validation and traversal.        | [README](schema/README.md)                  |

@@ -1,3 +1,4 @@
+import { scheduleTasks } from "../../schedule/tasks.ts";
 import type { CmsUser } from "../../admin/index.d.ts";
 import { check, decide, guard } from "../../access/rule.ts";
 import { inner, outerScope } from "../../cms/runtime/operation-context.ts";
@@ -52,7 +53,7 @@ export async function visibleTasks(core: Core, s: Inner) {
 
   const tasks: Array<{ name: string; description: string }> = [];
   for (const [name, task] of core.jobs.tasks) {
-    const allowed = name.startsWith("tenon:") ? scheduling : await isTaskAllowed(core, s, name);
+    const allowed = name in scheduleTasks ? scheduling : await isTaskAllowed(core, s, name);
     if (allowed) tasks.push({ name, description: task.meta?.description ?? "" });
   }
   return tasks;

@@ -4,6 +4,7 @@ import type { EmailOptions } from "../../email/types.ts";
 import type { mediaCollection } from "../../media/config/collection.ts";
 import type { MediaOptions } from "../../media/config/options.ts";
 import type { JobsOptions } from "../../jobs/config/define-task.ts";
+import type { WebhooksOptions } from "../../webhooks/types.ts";
 import type { Plugin } from "../../plugins/index.ts";
 import type { settings } from "../../presets/settings.ts";
 import type { RoleOptions } from "../../users/roles.ts";
@@ -220,4 +221,6 @@ export type CmsOptions<
    * route. Plugins add their own tasks.
    */
   jobs?: JobsOptions;
+  /** Outgoing webhooks by name: a POST to each after a matching change of published content, sent by the jobs clock. */
+  webhooks?: WebhooksOptions;
 };
