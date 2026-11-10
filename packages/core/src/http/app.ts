@@ -28,6 +28,7 @@ import { enterEndpoint } from "../preview/endpoints/enter.endpoint.ts";
 import { exitEndpoint } from "../preview/endpoints/exit.endpoint.ts";
 import { adminBarEndpoint } from "../preview/endpoints/admin-bar.endpoint.ts";
 import { loadEndpoint } from "../admin/endpoints/load.endpoint.ts";
+import { actionEndpoint } from "../admin/endpoints/action.endpoint.ts";
 import { noStore } from "./middleware/no-store.middleware.ts";
 import { handleError } from "./errors.ts";
 import { withPermissions } from "../access/permissions.ts";
@@ -93,6 +94,7 @@ export function createApp(core: Core, site?: string) {
   signedIn.route("/", versionsEndpoint(core));
   signedIn.route("/", jobsEndpoint(core));
   signedIn.route("/", loadEndpoint(core));
+  signedIn.route("/", actionEndpoint(core));
   signedIn.route("/", linkSearchEndpoint(core));
   signedIn.route("/", linkResolveEndpoint(core));
   mountRoutes(signedIn, plugins, "routes");

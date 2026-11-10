@@ -44,10 +44,11 @@ const sizes = {
 } as const;
 const size = computed(() => sizes[menu.layout.value]);
 
-// With `to`, the item is a `RouterLink`; otherwise `type="button"` keeps it from submitting a form.
-const elementProps = computed(() =>
-  props.to ? { as: RouterLink, to: props.to } : { type: "button" },
-);
+// With `to`, the item is a `RouterLink`. A button gets `type="button"`, so it does not submit a form.
+const elementProps = computed(() => {
+  if (props.to) return { as: RouterLink, to: props.to };
+  return props.as === "button" ? { type: "button" } : {};
+});
 </script>
 
 <template>

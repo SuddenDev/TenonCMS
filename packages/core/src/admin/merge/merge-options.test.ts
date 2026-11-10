@@ -24,6 +24,7 @@ describe("admin registration merge", () => {
       logo: "/plugin.svg",
       fields: { color: { mount: { clientRef: "./color" } } },
       pages: { stats: { mount: { clientRef: "./stats" }, title: "Stats" } },
+      actions: {},
     });
     expect(adminBrand(descriptor)).toEqual({ name: "Host", logo: "/plugin.svg" });
   });

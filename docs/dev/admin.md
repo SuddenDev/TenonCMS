@@ -13,7 +13,7 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 
 - Everything crosses the boundary as `mount(el, ctx)`, which returns a cleanup function or `{ update(ctx), unmount() }`. No framework components cross it, so the admin bundles its own Vue and hosts install nothing.
 - Data flows in by `ctx`, out by callbacks. Helpers live under `ctx.tenon`, never at the top level.
-- Slots are fields (by custom type name), pages (by key), bar items, and rich text extensions.
+- Slots are fields (by custom type name), pages (by key), actions (by key), bar items, and rich text extensions.
 - A registration can also have a server `load` function. It runs only on request, gets the signed-in user and a user-scoped `cms`, MUST only read, and MUST return JSON. The loader endpoint accepts registered keys only.
 - The schema sent to the admin never runs a loader. Branding is also served before sign-in, without the rest of the schema.
 
@@ -26,7 +26,7 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 
 ### Layout
 
-- A top app bar holds Content, Visual Editor, host pages that choose `main`, a link to the site, the language menu (only with `localization`), the perspective menu, search and the user menu.
+- A top app bar holds Content, Visual Editor, host pages and the actions and links that choose `main`, a link to the site, the language menu (only with `localization`), the perspective menu, search and the user menu.
 - Content views sit in resizable **panes**: menu, list, document. Panes collapse to a strip when they do not fit and stack on phones.
 - Every collection, global, page and the media library is a menu entry with `nav` defaults. Settings and Users entries are added when they apply.
 - Pages with `nav.display` `main` or `none` open full width.

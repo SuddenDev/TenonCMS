@@ -40,7 +40,7 @@ import { outerScope } from "./runtime/operation-context.ts";
 import { createEmail } from "../email/create-email.ts";
 import { emailTemplates } from "../email/templates.ts";
 import { normalizeRoles } from "../users/roles.ts";
-import { checkAccess } from "../access/check-access.ts";
+import { checkAccess, checkRoles } from "../access/check-access.ts";
 import { resolveJobs } from "../jobs/config/resolve-jobs.ts";
 import { scheduleTasks } from "../schedule/tasks.ts";
 import { runJobs } from "../jobs/operations/run-jobs.operation.ts";
@@ -149,6 +149,9 @@ export function defineCms<
   const jobs = resolveJobs(plugins, jobsOption, roles, scheduleTasks);
 
   const adminRuntime = mergeAdmin(plugins, admin);
+  const knownRoles = new Set(roles.map((r) => r.name));
+  for (const [key, { access }] of adminRuntime.actions)
+    checkRoles(knownRoles, `admin action "${key}"`, { run: access });
   checkRichtextConfig(schema, adminRuntime.richtext);
 
   const count = (o: object) => Object.keys(o).length;

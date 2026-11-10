@@ -10,7 +10,14 @@ import { CONTENT, pagePath, sessionKey } from "@/shared/options";
 export type MenuItem = {
   label: string;
   icon: string;
+  /** The route, or `""` for an action. */
   to: string;
+  /** The key of an admin action: the item is a button that runs it, not a link. */
+  action?: string;
+  /** The URL of a link action. The item opens it in a new tab. */
+  href?: string;
+  /** The question to ask before the action runs. */
+  confirm?: string;
   order: number;
   group?: string;
   description?: string;
@@ -95,6 +102,14 @@ function useEntries() {
         p.nav,
       ),
     ),
+    // `/schema` lists only the actions the user MAY see. They sit in the top bar by default.
+    ...Object.entries(schema.value.admin?.actions ?? {}).map(([key, a]) => {
+      const base = { label: text(a.label) ?? key, order: 30, to: "" };
+      const nav: Nav = { display: "main", ...a.nav };
+      return a.href
+        ? { ...entry({ ...base, icon: "external-link" }, nav), href: a.href }
+        : { ...entry({ ...base, icon: "zap" }, nav), action: key, confirm: text(a.confirm) };
+    }),
   ]);
 }
 
@@ -163,7 +178,7 @@ export type Tool = MenuItem & { active: boolean };
 
 /**
  * The admin's top bar tools: Content (order 5), Visual Editor (order 10) and every entry with
- * `nav.display: "main"`, all sorted by `order`.
+ * `nav.display: "main"`, actions and links included, all sorted by `order`.
  */
 export function useAppBar() {
   const entries = useEntries();
@@ -177,6 +192,6 @@ export function useAppBar() {
     ];
     return tools
       .sort((a, b) => a.order - b.order)
-      .map((t) => ({ ...t, active: [t.to, ...(t.also ?? [])].some(at) }));
+      .map((t) => ({ ...t, active: !!t.to && [t.to, ...(t.also ?? [])].some(at) }));
   });
 }

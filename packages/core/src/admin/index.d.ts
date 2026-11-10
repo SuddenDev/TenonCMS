@@ -1,4 +1,4 @@
-import type { Field, LocalApi } from "tenoncms";
+import type { Field, LocalApi, Rule } from "tenoncms";
 import type { User } from "better-auth";
 import type { IconName } from "./icons";
 
@@ -373,6 +373,56 @@ export type PageRegistration<D = any> = {
   load?: (ctx: PageLoadContext) => Loaded<D> | Promise<Loaded<D>>;
 };
 
+/** What the `run` of an action gets. */
+export type ActionContext = {
+  /** The signed-in user who clicked. */
+  user: CmsUser;
+  /** The local API with that user, so its access rules apply. */
+  cms: LocalApi;
+};
+
+/**
+ * A one-click entry in the admin's navigation: the top bar or the content menu. With `run`, it is a button that runs on
+ * the server when a user clicks; the admin shows the returned text, or the message of a throw, as a toast. With
+ * `href`, it is an external link that opens in a new tab.
+ * @example
+ * actions: {
+ *   deploy: {
+ *     label: 'Deploy',
+ *     nav: { icon: 'rocket' },
+ *     run: async () => {
+ *       await fetch(process.env.DEPLOY_HOOK_URL!, { method: 'POST' })
+ *       return 'Deploy started'
+ *     },
+ *   },
+ *   analytics: { label: 'Analytics', href: 'https://plausible.io/example.com' },
+ * }
+ */
+export type ActionRegistration = {
+  label: Text;
+  /**
+   * Where the entry sits: `display` `main` (the top bar, default) or `content` (the content menu). `group`, `icon`
+   * and `order` work as for pages; the default order is 30.
+   */
+  nav?: Omit<Nav, "display"> & { display?: "main" | "content" };
+  /** Who sees and runs the action: `true`, `false`, a list of roles or a function. Default: admins. */
+  access?: Rule<{}>;
+} & (
+  | {
+      /** A question the admin asks in a dialog before it runs the action, e.g. `Deploy the site now?`. */
+      confirm?: Text;
+      /** Runs on the server on click. MAY return a text for the toast. A throw fails the click with its message. */
+      run: (ctx: ActionContext) => unknown;
+      href?: never;
+    }
+  | {
+      /** An `http` or `https` URL. The admin opens it in a new tab. */
+      href: string;
+      run?: never;
+      confirm?: never;
+    }
+);
+
 /** What `load` of a link or dropdown item may change on its registration. Returning `null` hides the item for the request. */
 export type AdminBarItemOverrides = {
   label?: Text;
@@ -510,6 +560,8 @@ export type AdminOptions = {
   fields?: Record<string, FieldRegistration>;
   /** Extra pages by key. A key a plugin or the host uses twice throws at startup. */
   pages?: Record<string, PageRegistration>;
+  /** One-click buttons in the top bar or the content menu, by key. A key a plugin or the host uses twice throws. */
+  actions?: Record<string, ActionRegistration>;
   /**
    * The admin bar signed-in editors see on the site, with links into the admin.
    * - omitted: the floating bar at bottom-center with the built-in items.
@@ -556,11 +608,22 @@ export type AdminBarItemDescriptor = {
   children?: AdminBarItemDescriptor[];
 };
 
+/** An action as `/schema` sends it: only the actions the user MAY see, without `run` and `access`. */
+export type ActionDescriptor = {
+  label: Text;
+  nav?: ActionRegistration["nav"];
+  confirm?: Text;
+  href?: string;
+};
+
 /**
  * What `GET /schema` sends as `admin`: branding and the active registrations of the plugins and the host,
  * without functions, request data or secrets.
  */
-export type AdminDescriptor = Omit<AdminOptions, "fields" | "pages" | "adminBar" | "richtext"> & {
+export type AdminDescriptor = Omit<
+  AdminOptions,
+  "fields" | "pages" | "actions" | "adminBar" | "richtext"
+> & {
   richtext?: {
     extensions: Record<
       string,
@@ -569,4 +632,5 @@ export type AdminDescriptor = Omit<AdminOptions, "fields" | "pages" | "adminBar"
   };
   fields: Record<string, FieldDescriptor>;
   pages: Record<string, PageDescriptor>;
+  actions: Record<string, ActionDescriptor>;
 };

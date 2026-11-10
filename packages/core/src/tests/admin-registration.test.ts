@@ -37,6 +37,7 @@ describe("admin registration", () => {
       logo: "/logo.svg",
       fields: { color: { mount: { clientRef: "./color.ts" } } },
       pages: { reports: { mount: { clientRef: "reports/admin#mount" } } },
+      actions: {},
     });
     expect(await (await fetch(`${origin}/_tenon/admin-bar?url=/&mode=site`)).json()).toMatchObject({
       position: "bottom-center",

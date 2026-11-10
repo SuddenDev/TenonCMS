@@ -94,6 +94,10 @@ export default {
     saved: "Saved",
     untitled: "(untitled)",
   },
+  actions: {
+    done: "{label}: done",
+    failed: "{label} failed",
+  },
   nav: {
     apiKeys: "API keys",
     content: "Content",

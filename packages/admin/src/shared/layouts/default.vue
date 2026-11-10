@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import LinkedDeletionDialog from "@/shared/components/LinkedDeletionDialog.vue";
+import ActionConfirmDialog from "@/shared/components/ActionConfirmDialog.vue";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
@@ -37,11 +38,13 @@ import {
   type Perspective,
 } from "@/shared";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import { useAction } from "@/shared/composables/useAction";
 
 const { t } = useI18n();
 const route = useRoute();
 const { name, logo, icon } = useBrand();
 const tools = useAppBar();
+const { run, isRunning } = useAction();
 const { perspective, set, switching, error: perspectiveError } = usePerspective();
 useLocaleFromRoute();
 const { locales, defaultLocale, locale, select } = useLocale();
@@ -67,8 +70,23 @@ providePanes(row);
           </SheetTrigger>
           <SheetContent side="left" class="gap-1 p-3">
             <SheetTitle class="px-2 py-1.5">{{ name }}</SheetTitle>
-            <SheetClose v-for="t in tools" :key="t.to" as-child>
+            <SheetClose v-for="t in tools" :key="t.action ?? t.href ?? t.to" as-child>
+              <Button v-if="t.href" as-child variant="ghost" class="justify-start gap-2">
+                <a :href="t.href" target="_blank" rel="noopener noreferrer">
+                  <Icon :name="t.icon" />{{ t.label }}
+                </a>
+              </Button>
               <Button
+                v-else-if="t.action"
+                variant="ghost"
+                class="justify-start gap-2"
+                :disabled="isRunning(t.action)"
+                @click="run(t.action, t.label, t.confirm)"
+              >
+                <Icon :name="t.icon" />{{ t.label }}
+              </Button>
+              <Button
+                v-else
                 as-child
                 :variant="t.active ? 'secondary' : 'ghost'"
                 class="justify-start gap-2"
@@ -91,15 +109,30 @@ providePanes(row);
         </RouterLink>
       </div>
       <nav class="flex flex-1 items-center gap-1 max-sm:hidden">
-        <Button
-          v-for="t in tools"
-          :key="t.to"
-          as-child
-          size="sm"
-          :variant="t.active ? 'secondary' : 'ghost'"
-        >
-          <RouterLink :to="t.to">{{ t.label }}</RouterLink>
-        </Button>
+        <template v-for="t in tools" :key="t.action ?? t.href ?? t.to">
+          <Button v-if="t.href" as-child size="sm" variant="ghost" class="gap-1.5">
+            <a :href="t.href" target="_blank" rel="noopener noreferrer">
+              <Icon :name="t.icon" />{{ t.label }}
+            </a>
+          </Button>
+          <Button
+            v-else-if="t.action"
+            size="sm"
+            variant="ghost"
+            class="gap-1.5"
+            :disabled="isRunning(t.action)"
+            @click="run(t.action, t.label, t.confirm)"
+          >
+            <Icon
+              :name="isRunning(t.action) ? 'loader-circle' : t.icon"
+              :class="isRunning(t.action) && 'animate-spin'"
+            />
+            {{ t.label }}
+          </Button>
+          <Button v-else as-child size="sm" :variant="t.active ? 'secondary' : 'ghost'">
+            <RouterLink :to="t.to">{{ t.label }}</RouterLink>
+          </Button>
+        </template>
       </nav>
       <div class="flex shrink grow-0 items-center gap-1.5">
         <Button as-child variant="ghost" size="sm" class="gap-1.5 text-xs max-sm:hidden">
@@ -168,6 +201,7 @@ providePanes(row);
       {{ perspectiveError }}
     </p>
     <LinkedDeletionDialog />
+    <ActionConfirmDialog />
     <TooltipProvider :delay-duration="300">
       <div ref="row" class="flex min-h-0 flex-1 overflow-x-auto">
         <div v-if="route.meta.full" class="flex min-w-0 flex-1 flex-col">

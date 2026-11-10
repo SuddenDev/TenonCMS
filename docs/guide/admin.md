@@ -169,6 +169,40 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 
 The HTML string is not escaped. Escape untrusted values like `params`, and prefix links with `tenon.base`.
 
+## Actions
+
+`actions` adds one-click buttons or external links to the top bar or the content menu. `run` runs on the server when someone clicks. The admin shows its returned text, or the message of a throw, as a toast. No browser code needed.
+
+```ts
+admin: {
+  actions: {
+    deploy: {
+      label: "Deploy",
+      nav: { icon: "rocket" },
+      confirm: "Deploy the site now?",
+      run: async ({ user, cms }) => {
+        const res = await fetch(process.env.DEPLOY_HOOK_URL!, { method: "POST" });
+        if (!res.ok) throw new Error(`The deploy hook answered ${res.status}`);
+        return "Deploy started";
+      },
+    },
+  },
+}
+```
+
+- `nav.display` is `main` (the top bar, next to Content and Visual Editor, default) or `content` (the content menu). `group`, `icon` and `order` work as for pages. To join the built-in Manage section, use `display: "content"` and its labels: `group: { en: "Manage", de: "Verwaltung" }`.
+- `access` decides who sees and runs it: `true`, `false`, roles or a function, like a task's. Default: admins. `/schema` lists only the actions the user MAY run, and `POST /_tenon/admin/actions/:key` checks the rule again. API keys cannot run actions.
+- `run` gets the user and a `cms` bound to them, so their access rules apply. It MAY return a text (a string or one per language) for the toast. A throw answers 500 with its message.
+- `confirm` (a text) makes the admin ask in a dialog first. Cancel runs nothing.
+- `href` in place of `run` makes the entry an external link: an `http` or `https` URL that opens in a new tab, with the same `nav` and `access`. A link has no `confirm`. `access` only hides the link; the URL itself stays public.
+
+```ts
+actions: { analytics: { label: "Analytics", nav: { icon: "chart-line" }, href: "https://plausible.io/example.com" } }
+```
+
+- While an action runs, its button is disabled. One action sits in one place; register a second key with the same `run` to show it in both.
+- Plugins add actions the same way. A key used twice throws at startup, as do a missing `label`, both or neither of `run` and `href`, an `href` that is not `http(s)`, another `display` and an unknown role.
+
 ## Writing a `mount` function
 
 Every browser slot (field, page, bar item) is one function, `mount(el, ctx)`, exported from a module and registered with `clientRef()`. It gets an empty element and the context, and returns a cleanup. Return `{ update, unmount }` instead to also receive context changes.
