@@ -11,7 +11,7 @@ Every example has its instance in `tenon.config.ts` at the project root and its 
 | `examples/tanstack-start` | No adapter package: `tenonAdmin()`, server routes for the API, the admin, `/sitemap.xml` and `/robots.txt`, server functions in loaders, React admin renderer.                                                                                                                                                               |
 | `examples/standalone`     | Headless: no site. API and admin on Vite and Nitro. Has media with `ipx()` and an `array` field.                                                                                                                                                                                                                             |
 | `examples/cloudflare`     | Astro on Cloudflare: the CMS in a Durable Object, pages read through the client over it. Posts, authors, media in R2 with Cloudflare Images. Secret in `.dev.vars` (copy `.dev.vars.example`).                                                                                                                               |
-| `examples/vercel`         | Astro on Vercel Node functions: Postgres through `postgres()` with `attachDatabasePool()`, media in a private Neon bucket through `s3()` with keys. Port 4323.                                                                                                                                                               |
+| `examples/vercel`         | Astro on Vercel Node functions: Postgres through `postgres()` with `attachDatabasePool()`, media in a private Neon bucket through `s3()` with keys. Prerendered post pages with a per-request preview route and a Deploy button. Port 4323.                                                                                  |
 
 ## Astro in more detail
 
@@ -38,6 +38,9 @@ Every example has its instance in `tenon.config.ts` at the project root and its 
 - `astro build` writes `.vercel/output`. The function (2026-10-29): 39 MB, with `tenoncms`, `kysely`, `pg` and `sharp` traced by nft. No libsql.
 - Smoke test without Vercel: a temp Postgres as `DATABASE_URL` and dummy S3 variables; everything except uploads works. With a real bucket, run `s3.live.test.ts` against it too (`S3_TEST_*` variables).
 - Neon checked on 2026-10-29: `s3.live.test.ts` passes, and an upload through presigned parts, the file and a variant served by core work.
+- `/` and `/posts/[slug]` are prerendered; `getStaticPaths()` imports the config, because `Astro.locals` does not exist there. `/preview/posts/[slug]` renders per request and is the `preview` URL of posts, so the admin's preview shows drafts. Both render `src/components/Post.astro` with `findPost()`.
+- `src/deploy/plugin.ts` is a plugin in the project with two admin actions that share one `run`: Deploy in the top bar (the default) and in the Manage section (`display: "content"` and `group` with the built-in section's labels), plus an Analytics link in the top bar. `run` calls `DEPLOY_HOOK_URL` directly, because Vercel has no job clock. Both ask `confirm` first. Admins only, the default of actions. Without `DEPLOY_HOOK_URL` the plugin is not registered.
+- A build runs migrations against `DATABASE_URL`. Smoke test a build with a temp Postgres, never the deployed database (checked on 2026-11-10: both pages prerendered from a seeded post, the preview route stays a function).
 
 ## Conventions
 

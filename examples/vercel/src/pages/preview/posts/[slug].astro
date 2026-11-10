@@ -1,0 +1,12 @@
+---
+import Post from "../../../components/Post.astro";
+import { findPost } from "../../../lib/find-post";
+
+// The `preview` URL of posts: rendered per request, so the admin's preview shows drafts and re-renders after a save.
+export const prerender = false;
+
+const post = await findPost(Astro.locals.tenon, Astro.params.slug!);
+if (!post) return new Response("Not found", { status: 404 });
+---
+
+<Post post={post} />

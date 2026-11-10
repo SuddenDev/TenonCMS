@@ -1,0 +1,36 @@
+---
+import { edit } from "tenoncms/preview";
+import type { Post } from "../lib/find-post";
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{post.title}</title>
+  </head>
+  <body>
+    <a href="/">All posts</a>
+    <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
+    {post.author && (
+      <p>
+        By <span data-cms={edit("posts", post.id, "author.name")}>{post.author.name}</span>
+      </p>
+    )}
+    {post.hero && (
+      <img
+        data-cms={edit("posts", post.id, "hero")}
+        data-cms-attr="src,srcset,alt"
+        src={post.hero.src}
+        srcset={post.hero.srcset}
+        alt={post.hero.alt ?? ""}
+      />
+    )}
+    <p data-cms={edit("posts", post.id, "body")}>{post.body}</p>
+  </body>
+</html>

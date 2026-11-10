@@ -1,32 +1,18 @@
 ---
-import { edit } from "tenoncms/preview";
+import type { GetStaticPaths } from "astro";
+import cms from "../../../tenon.config";
+import Post from "../../components/Post.astro";
+import { findPost } from "../../lib/find-post";
 
-const post = await Astro.locals.tenon.findOne("posts", { where: { slug: Astro.params.slug! } });
-if (!post) return new Response("Not found", { status: 404 });
+// Built at deploy time. The deploy button in the admin bar rebuilds it; the admin previews drafts on /preview.
+export const prerender = true;
+
+export const getStaticPaths = (async () => {
+  const posts = await cms.find("posts", { select: { slug: true } });
+  return posts.map((post) => ({ params: { slug: post.slug } }));
+}) satisfies GetStaticPaths;
+
+const post = (await findPost(Astro.locals.tenon, Astro.params.slug))!;
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>{post.title}</title>
-  </head>
-  <body>
-    <a href="/">All posts</a>
-    <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
-    {post.author && (
-      <p>
-        By <span data-cms={edit("posts", post.id, "author.name")}>{post.author.name}</span>
-      </p>
-    )}
-    {post.hero && (
-      <img
-        data-cms={edit("posts", post.id, "hero")}
-        data-cms-attr="src,srcset,alt"
-        src={post.hero.src}
-        srcset={post.hero.srcset}
-        alt={post.hero.alt ?? ""}
-      />
-    )}
-    <p data-cms={edit("posts", post.id, "body")}>{post.body}</p>
-  </body>
-</html>
+<Post post={post} />

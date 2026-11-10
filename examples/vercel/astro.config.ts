@@ -18,6 +18,13 @@ export default defineConfig({
       AWS_SECRET_ACCESS_KEY: secret(),
       AWS_REGION: secret(),
       S3_BUCKET: secret(),
+      // A Vercel Deploy Hook (Project Settings → Git → Deploy Hooks). Adds the Deploy buttons to the admin.
+      DEPLOY_HOOK_URL: envField.string({
+        context: "server",
+        access: "secret",
+        url: true,
+        optional: true,
+      }),
     },
   },
 });

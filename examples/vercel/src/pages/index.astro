@@ -1,6 +1,9 @@
 ---
 import { edit } from "tenoncms/preview";
 
+// Built at deploy time, like the post pages.
+export const prerender = true;
+
 const posts = await Astro.locals.tenon.find("posts");
 ---
 

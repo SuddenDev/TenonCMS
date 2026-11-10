@@ -103,6 +103,7 @@ export default defineCms({
 - Rate limits: core keeps them in the database, so instances share them. `auth: { rateLimit: { storage: "memory" } }` turns that off.
 - Leave `site` unset if you use preview deployments. Passkeys only work on the host they were created on.
 - In a monorepo, the build command MUST build the CMS packages first.
+- Prerendered pages read the database at build time, so `DATABASE_URL` MUST be set for builds too. They show the last deploy: give the collection a `preview` URL that renders per request, and redeploy through a [deploy hook](webhooks.md#a-deploy-button). `examples/vercel` does both.
 
 #### With Neon
 
