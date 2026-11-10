@@ -3,6 +3,9 @@ import type { Text } from "../../admin/index.d.ts";
 /** A CMS relation held by a link. `deleted` is owned by the server. */
 export type LinkReference = { collection: string; id: string; deleted?: true };
 
+/** What a link points to: a document with a `permalink`, a typed URL or a media file. */
+export type LinkKind = "internal" | "external" | "file";
+
 /** Where a link opens. The admin offers `_self` and `_blank`. */
 export type LinkTarget = "_self" | "_blank" | "_parent" | "_top";
 

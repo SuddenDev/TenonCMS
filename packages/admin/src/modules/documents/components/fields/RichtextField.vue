@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Imports
-import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
+import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, useId, watch } from "vue";
 import { Editor, EditorContent } from "@tiptap/vue-3";
 import { getSchema, type Extensions } from "@tiptap/core";
+import type { Schema } from "@tiptap/pm/model";
 import { useI18n } from "vue-i18n";
 import { schema, client } from "@/shared/api";
 import { text } from "@/shared/i18n";
@@ -14,6 +15,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/shared/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -31,12 +35,19 @@ import { decorateReferences } from "./richtext/decorate";
 import { useLocale } from "@/shared/composables/useLocale";
 import { controls } from "./richtext/controls";
 import { loadClientRef } from "../../../../../../core/src/admin/browser/lazy-mount";
-import { richtextExtensions } from "../../../../../../core/src/richtext/runtime/extensions";
+import {
+  classPlaces,
+  RICHTEXT_DEFAULTS,
+  richtextExtensions,
+} from "../../../../../../core/src/richtext/runtime/extensions";
 import {
   storedRichtext,
   richtextReferences,
 } from "../../../../../../core/src/richtext/runtime/walk";
-import { checkRichtextContent } from "../../../../../../core/src/richtext/runtime/validation";
+import {
+  checkRichtextContent,
+  pruneRichtext,
+} from "../../../../../../core/src/richtext/runtime/validation";
 import type {
   RichtextBrowserExtension,
   RichtextControl,
@@ -58,6 +69,9 @@ const operationError = ref("");
 let disposed = false;
 const empty: RichtextDocument = { type: "doc", content: [{ type: "paragraph" }] };
 let extensions: Extensions = [];
+let editorSchema: Schema;
+// Marks and attributes the field does not offer are hidden, and removed on the next edit.
+const hidden = ref<string[]>([]);
 
 onMounted(async () => {
   try {
@@ -77,10 +91,15 @@ onMounted(async () => {
     }
     if (disposed) return;
 
-    extensions = richtextExtensions(props.field.allowed, extra);
-    checkRichtextContent(model.value ?? empty, getSchema(extensions));
+    extensions = richtextExtensions(props.field.allowed, extra, {
+      ...classPlaces(props.field.classes),
+      attribute: "data-class",
+    });
+    editorSchema = getSchema(extensions);
+    const { value: document, dropped } = pruneRichtext(model.value ?? empty, editorSchema);
+    checkRichtextContent(document, editorSchema);
+    hidden.value = dropped;
 
-    const document = model.value ?? empty;
     const initial = richtextReferences(document).length
       ? await client.links.resolve(document, { locale: locale.value })
       : document;
@@ -108,6 +127,7 @@ onMounted(async () => {
         },
       },
       onUpdate: ({ editor: e }) => {
+        hidden.value = [];
         model.value = storedRichtext(e.getJSON() as RichtextDocument) as RichtextDocument;
         refreshReferences();
       },
@@ -134,16 +154,18 @@ watch(
   model,
   (value) => {
     const e = editor.value;
+    if (!e) return;
+
+    const next = pruneRichtext(value ?? empty, editorSchema);
     if (
-      !e ||
-      JSON.stringify(storedRichtext(e.getJSON() as RichtextDocument)) ===
-        JSON.stringify(value ?? empty)
+      JSON.stringify(storedRichtext(e.getJSON() as RichtextDocument)) === JSON.stringify(next.value)
     )
       return;
 
     try {
-      checkRichtextContent(value ?? empty, getSchema(extensions));
-      e.commands.setContent(value ?? empty, { emitUpdate: false, errorOnInvalidContent: true });
+      checkRichtextContent(next.value, editorSchema);
+      e.commands.setContent(next.value, { emitUpdate: false, errorOnInvalidContent: true });
+      hidden.value = next.dropped;
 
       referenceSignature = "";
       refreshReferences();
@@ -198,7 +220,15 @@ async function refreshReferences() {
 
 // Toolbar controls
 const pluginControls = ref<{ feature: string; control: RichtextControl }[]>([]);
-const on = (name: string) => !props.field.allowed || props.field.allowed.includes(name);
+// The same default as the server: the short built-in list and every registered extension.
+const features = computed<readonly string[]>(
+  () =>
+    props.field.allowed ?? [
+      ...RICHTEXT_DEFAULTS,
+      ...Object.keys(schema.value.admin?.richtext?.extensions ?? {}),
+    ],
+);
+const on = (name: string) => features.value.includes(name);
 const toolbar = computed(() => {
   return controls.filter((c) => on(c.feature));
 });
@@ -220,6 +250,42 @@ const blockValue = computed(() => {
     ? String(editor.value.getAttributes("heading").level)
     : "paragraph";
 });
+
+// Classes
+const blockClasses = computed(() => props.field.classes?.filter((c) => c.on === "block") ?? []);
+const textClasses = computed(() => props.field.classes?.filter((c) => c.on === "text") ?? []);
+const blockType = () => (editor.value?.isActive("heading") ? "heading" : "paragraph");
+const blockClass = computed(() => editor.value?.getAttributes(blockType()).class ?? null);
+const textClass = computed(() => editor.value?.getAttributes("textClass").class ?? null);
+
+function toggleBlockClass(name: string) {
+  const value = blockClass.value === name ? null : name;
+  editor.value?.chain().focus().updateAttributes(blockType(), { class: value }).run();
+}
+function toggleTextClass(name: string) {
+  const chain = editor.value?.chain().focus();
+  if (textClass.value === name) chain?.unsetMark("textClass").run();
+  else chain?.setMark("textClass", { class: name }).run();
+}
+
+// The admin does not load the site's CSS, so a class shows its `preview` styles, scoped to this editor.
+const scope = useId();
+const previewCss = computed(() =>
+  (props.field.classes ?? [])
+    .filter((c) => c.preview)
+    .map((c) => {
+      const element = c.on === "text" ? "span" : ":is(p, h1, h2, h3, h4, h5, h6)";
+      return `[data-richtext="${scope}"] ${element}[data-class="${CSS.escape(c.name)}"] { ${cssText(c.preview!)} }`;
+    })
+    .join("\n"),
+);
+
+function cssText(style: Record<string, string | number>) {
+  return Object.entries(style)
+    .filter(([, value]) => !/[{}<;]/.test(String(value)))
+    .map(([key, value]) => `${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}: ${value};`)
+    .join(" ");
+}
 
 // Selection
 let selection = { from: 1, to: 1 };
@@ -300,7 +366,9 @@ function table(action: (typeof tableActions)[number]) {
 </script>
 <template>
   <FieldFrame v-bind="props" v-slot="{ id, invalid, required }">
+    <component :is="'style'" v-if="previewCss">{{ previewCss }}</component>
     <div
+      :data-richtext="scope"
       class="border-input overflow-hidden rounded-lg border"
       :aria-invalid="invalid"
       :aria-busy="busy"
@@ -330,6 +398,45 @@ function table(action: (typeof tableActions)[number]) {
                 {{ t("richtext.heading") }} {{ level }}
               </option>
             </select>
+            <DropdownMenu v-if="field.classes?.length">
+              <DropdownMenuTrigger as-child>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  :aria-label="t('richtext.classes')"
+                  :title="t('richtext.classes')"
+                  :aria-pressed="!!(blockClass || textClass)"
+                  :class="(blockClass || textClass) && 'bg-accent'"
+                  ><Icon name="palette"
+                /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" class="min-w-48">
+                <template v-if="blockClasses.length">
+                  <DropdownMenuLabel>{{ t("richtext.blockClass") }}</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    v-for="c in blockClasses"
+                    :key="c.name"
+                    :model-value="blockClass === c.name"
+                    @select="toggleBlockClass(c.name)"
+                  >
+                    <span :style="c.preview">{{ text(c.label) ?? c.name }}</span>
+                  </DropdownMenuCheckboxItem>
+                </template>
+                <DropdownMenuSeparator v-if="blockClasses.length && textClasses.length" />
+                <template v-if="textClasses.length">
+                  <DropdownMenuLabel>{{ t("richtext.textClass") }}</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem
+                    v-for="c in textClasses"
+                    :key="c.name"
+                    :model-value="textClass === c.name"
+                    @select="toggleTextClass(c.name)"
+                  >
+                    <span :style="c.preview">{{ text(c.label) ?? c.name }}</span>
+                  </DropdownMenuCheckboxItem>
+                </template>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               v-for="control in toolbar"
               :key="control.feature"
@@ -470,6 +577,9 @@ function table(action: (typeof tableActions)[number]) {
         </div>
         <p v-if="operationError" class="text-destructive px-4 pt-3 text-xs" role="alert">
           {{ operationError }}
+        </p>
+        <p v-if="hidden.length" class="text-muted-foreground px-4 pt-3 text-xs" role="status">
+          {{ t("richtext.hidden", { names: hidden.join(", ") }) }}
         </p>
         <p v-if="broken" class="text-destructive px-4 pt-3 text-xs" role="status">
           {{ t("richtext.brokenLinks", { count: broken }) }}

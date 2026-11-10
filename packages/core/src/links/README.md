@@ -6,7 +6,7 @@ The one owner of links. Rich text and `link` fields both use it for URL safety, 
 
 `content/writes/prepare-data.ts` → `schema/fields/link.ts` → `writes/prepare-links.ts`
 
-The zod schema of a `link` field drops read decoration (`storedLink()`) and checks the shape and URL (`checkLinkValue()`), drafts included. `prepareLinks()` then requires a collection with a `permalink` and keeps the server-owned `reference.deleted` marker (`keepDeletedMarker()`, also used by rich text). Before saving a published value, `content/writes/persist-document.ts` calls `checkLinkTargets()` (`integrity/check-links.ts`) for every reference in rich text and `link` fields.
+The zod schema of a `link` field drops read decoration (`storedLink()`) and checks the shape and URL (`checkLinkValue()`), drafts included. `prepareLinks()` then checks the field's `allowed` kinds (`linkKind()`), requires a collection with a `permalink` or `media` and keeps the server-owned `reference.deleted` marker (`keepDeletedMarker()`, also used by rich text). Before saving a published value, `content/writes/persist-document.ts` calls `checkLinkTargets()` (`integrity/check-links.ts`) for every reference in rich text and `link` fields.
 
 ## Follow a read
 
@@ -25,6 +25,7 @@ The zod schema of a `link` field drops read decoration (`storedLink()`) and chec
 ```ts
 { reference: { collection: "pages", id: "p1" }, target: "_blank" } // stored
 { href: "https://example.com", suffix: "#team" } // stored
+{ reference: { collection: "media", id: "m1" } } // stored, a file
 { reference: { collection: "pages", id: "p1" }, suffix: "?ref=nav#team", href: "/de/about?ref=nav#team" } // read
 { reference: { collection: "pages", id: "p1" }, href: "/de/about", title: "Über uns" } // read
 { reference: { collection: "pages", id: "p1" }, href: null, broken: true } // read, unavailable
@@ -43,7 +44,7 @@ Both need a session and read in the perspective of the preview cookie.
 | -------------------------- | ----------------------------------------------------------------------------- |
 | `config/types.ts`          | `LinkReference`, `LinkValue`, `LinkRead`, `LinkResolution`, search results.   |
 | `runtime/url.ts`           | `safeLinkUrl()`, `isLinkSuffix()`, `withSuffix()`: the URL rules. No imports. |
-| `runtime/value.ts`         | `checkLinkValue()`, `storedLink()`, `linkKey()`. The admin bundles it.        |
+| `runtime/value.ts`         | `checkLinkValue()`, `storedLink()`, `linkKind()`, `linkKey()`. Browser-safe.  |
 | `runtime/fields.ts`        | Rich text and `link` values inside groups, arrays and blocks.                 |
 | `runtime/held-links.ts`    | Every reference of a value, and the deletion marker rules.                    |
 | `runtime/title-key.ts`     | The field that names a link target.                                           |

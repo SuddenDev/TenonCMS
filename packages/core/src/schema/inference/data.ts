@@ -1,6 +1,6 @@
 import type { RichtextDocument } from "../../richtext/config/types.ts";
 import type { LinkValue } from "../../links/config/types.ts";
-import type { Field, Fields } from "../fields/index.ts";
+import type { Field, Fields, SizeValue } from "../fields/index.ts";
 import type { Keys } from "./common.ts";
 
 type Scalar = {
@@ -45,9 +45,11 @@ export type FieldValue<F extends Field> = F extends {
           : OptionValue<O>
         : F extends { type: "relation" | "image" | "file" }
           ? Ids<F>
-          : F extends { type: keyof Scalar }
-            ? Scalar[F["type"]]
-            : string;
+          : F extends { type: "size" }
+            ? SizeValue<F extends { units: readonly (infer U extends string)[] } ? U : never>
+            : F extends { type: keyof Scalar }
+              ? Scalar[F["type"]]
+              : string;
 
 export type JoinKey<F> = Keys<F, { type: "join" }>;
 export type RequiredKey<F> = Keys<F, { required: true }>;
@@ -125,8 +127,11 @@ export type Image = File & {
 /** A populated `image` or `file`, or several with `many`. */
 export type MediaValue<F, T> = F extends { many: true } ? T[] : T;
 
-/** Field keys that `where` accepts. Rich text, links, groups, arrays, blocks, joins and `many` relations and selects are not filterable. */
+/** Field keys that `where` accepts. Rich text, links, sizes, groups, arrays, blocks, joins and `many` relations and selects are not filterable. */
 export type FilterKey<F extends Fields> = Exclude<
   keyof F,
-  Keys<F, { type: "group" | "array" | "blocks" | "join" | "richtext" | "link" } | { many: true }>
+  Keys<
+    F,
+    { type: "group" | "array" | "blocks" | "join" | "richtext" | "link" | "size" } | { many: true }
+  >
 >;

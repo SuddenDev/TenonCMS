@@ -2,6 +2,11 @@ import type { Messages } from "./index";
 
 export default {
   richtext: {
+    blockClass: "Absatzklasse",
+    textClass: "Textklasse",
+    classes: "Klassen",
+    hidden:
+      "Formatierung, die dieses Feld nicht anbietet, ist ausgeblendet: {names}. Beim Bearbeiten wird sie entfernt.",
     toolbar: "Textformatierung",
     block: "Textstil",
     paragraph: "Absatz",
@@ -515,6 +520,8 @@ export default {
     used: "Die Inhaltsstruktur von {locale} gilt in jeder Sprache.",
   },
   links: {
+    enterUrl: "URL eingeben …",
+    file: "Datei …",
     broken: "Defekter Link",
     newTab: "In neuem Tab öffnen",
     addSuffix: "Suffix",
@@ -695,6 +702,13 @@ export default {
   slug: {
     changeParent: "Übergeordnete Seite ändern",
     topLevel: "Oberste Ebene",
+  },
+  number: {
+    increase: "Erhöhen",
+    decrease: "Verringern",
+  },
+  size: {
+    unit: "Einheit",
   },
   seo: {
     checks: "{n}/{max} Prüfungen bestanden",

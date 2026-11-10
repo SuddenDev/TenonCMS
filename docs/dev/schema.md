@@ -41,7 +41,7 @@ A few helpers walk the fields of a document, so every feature agrees on what a p
 
 ## Links and display
 
-- `link` (`fields/link.ts`) stores `{ reference }` or `{ href }` with an optional `target`. Its zod schema first drops read decoration (`storedLink()`), then checks the shape and URL (`checkLinkValue()`), drafts included. Both live in `links/runtime/value.ts`, which the admin bundles.
+- `link` (`fields/link.ts`) stores `{ reference }` or `{ href }` with an optional `target`. A `media` reference is a file. `allowed` is checked in `prepareLinks()`, not in zod, because drafts skip the zod checks that depend on `on`. Its zod schema first drops read decoration (`storedLink()`), then checks the shape and URL (`checkLinkValue()`), drafts included. Both live in `links/runtime/value.ts`, which the admin bundles.
 - `link` is not filterable (`filterable()`, `FilterKey`) and not in the `unique` types. A read types it `LinkRead` when the field populates, else `LinkValue`.
 - `appearance: "tree"` on `array` and `blocks` is admin only. The server ignores it.
 

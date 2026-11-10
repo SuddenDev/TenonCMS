@@ -2,7 +2,10 @@
 import { undoDepth } from "@tiptap/pm/history";
 import { afterEach, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
-import { richtextExtensions } from "../../../../../../../core/src/richtext/runtime/extensions";
+import {
+  RICHTEXT_FEATURES,
+  richtextExtensions,
+} from "../../../../../../../core/src/richtext/runtime/extensions";
 import { storedRichtext } from "../../../../../../../core/src/richtext/runtime/walk";
 import type { RichtextDocument } from "../../../../../../../core/src/richtext/config/types";
 import { decorateReferences } from "./decorate";
@@ -40,7 +43,7 @@ it("decorates media and links without persisting URLs or moving selection", () =
       { type: "image", attrs: { reference: { collection: "media", id: "image" } } },
     ],
   };
-  editor = new Editor({ extensions: richtextExtensions(), content: value });
+  editor = new Editor({ extensions: richtextExtensions(RICHTEXT_FEATURES), content: value });
   editor.commands.setTextSelection(3);
   const history = undoDepth(editor.state);
   const decorated = structuredClone(value);
@@ -60,7 +63,7 @@ it("decorates media and links without persisting URLs or moving selection", () =
 
 it("preserves relation identities when content is copied as HTML", () => {
   editor = new Editor({
-    extensions: richtextExtensions(),
+    extensions: richtextExtensions(RICHTEXT_FEATURES),
     content: {
       type: "doc",
       content: [
@@ -116,7 +119,7 @@ it("resolves an image and file link to the same media independently", () => {
       },
     ],
   };
-  editor = new Editor({ extensions: richtextExtensions(), content: document });
+  editor = new Editor({ extensions: richtextExtensions(RICHTEXT_FEATURES), content: document });
   decorateReferences(editor, document);
 
   expect(editor.getJSON().content?.[0].content?.[0].marks?.[0].attrs?.href).toBe("/original.png");

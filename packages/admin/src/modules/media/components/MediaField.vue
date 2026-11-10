@@ -4,15 +4,8 @@ import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { client, type Field, type MediaRead } from "@/shared/api";
 import { uploadFiles } from "../uploads";
-import MediaLibrary from "./MediaLibrary.vue";
+import MediaPicker from "./MediaPicker.vue";
 import MediaThumb from "./MediaThumb.vue";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import Icon from "@/shared/components/Icon.vue";
 
@@ -24,8 +17,6 @@ const { t } = useI18n();
 const ids = computed(() => (model.value == null ? [] : ([] as string[]).concat(model.value)));
 const docs = ref<Record<string, MediaRead | null>>({});
 const open = ref(false);
-const folder = ref(props.field.folder ?? "");
-const picked = ref<string[]>([]);
 const fileInput = ref<HTMLInputElement>();
 
 watch(
@@ -49,15 +40,10 @@ function move(i: number, by: number) {
   [list[i], list[i + by]] = [list[i + by], list[i]];
   set(list);
 }
-function choose() {
-  picked.value = [...ids.value];
-  open.value = true;
-}
 // Keeps the order of files already chosen and appends new ones.
-function confirm() {
-  const kept = ids.value.filter((id) => picked.value.includes(id));
-  set([...kept, ...picked.value.filter((id) => !kept.includes(id))]);
-  open.value = false;
+function confirm(picked: string[]) {
+  const kept = ids.value.filter((id) => picked.includes(id));
+  set([...kept, ...picked.filter((id) => !kept.includes(id))]);
 }
 
 async function upload(files: FileList | null) {
@@ -119,7 +105,7 @@ async function upload(files: FileList | null) {
       </li>
     </ul>
     <div class="flex flex-wrap gap-2">
-      <Button type="button" variant="outline" :disabled="field.readOnly" @click="choose">
+      <Button type="button" variant="outline" :disabled="field.readOnly" @click="open = true">
         {{ t("media.choose") }}
       </Button>
       <Button
@@ -144,43 +130,6 @@ async function upload(files: FileList | null) {
         "
       />
     </div>
-    <Dialog v-model:open="open">
-      <DialogContent
-        class="flex h-[min(85svh,52rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
-        :aria-describedby="undefined"
-        :show-close-button="false"
-      >
-        <DialogTitle class="sr-only">{{
-          t(field.many ? "media.chooseFiles" : "media.chooseFile")
-        }}</DialogTitle>
-        <MediaLibrary
-          v-model:folder="folder"
-          v-model:selected="picked"
-          :pick="field"
-          class="min-h-0 flex-1"
-        >
-          <template #actions-end>
-            <DialogClose as-child>
-              <Button type="button" variant="ghost" size="icon" :aria-label="t('common.close')">
-                <Icon name="x" />
-              </Button>
-            </DialogClose>
-          </template>
-        </MediaLibrary>
-        <DialogFooter
-          class="border-border m-0 shrink-0 items-center rounded-b-xl border-t px-6 py-4 sm:flex-row"
-        >
-          <span class="text-muted-foreground mr-auto text-sm" role="status">{{
-            t("media.selectedCount", { count: picked.length })
-          }}</span>
-          <Button type="button" variant="outline" @click="open = false">{{
-            t("common.cancel")
-          }}</Button>
-          <Button type="button" @click="confirm">
-            {{ t("media.select") }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <MediaPicker v-model:open="open" :field="field" :selected="ids" @select="confirm" />
   </div>
 </template>

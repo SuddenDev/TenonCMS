@@ -15,6 +15,8 @@ import {
   type Fields,
   type Layout,
   type NumberField,
+  type SizeField,
+  type LinkField,
   type Preview,
   type SelectField,
   type Schema,
@@ -22,6 +24,7 @@ import {
 import { dataSchema } from "./build-data-schema.ts";
 import { checkLayout } from "./check-layout.ts";
 import { optionValue } from "../fields/select.ts";
+import { linkKinds } from "../../links/runtime/value.ts";
 import { isRef, isText } from "../../admin/describe/registration-checks.ts";
 
 type Collections = Record<string, Collection>;
@@ -57,7 +60,7 @@ const uniqueTypes = [
  * @throws {Error} For a populate depth above the limit, a relation or join that does not fit, a condition on an unknown
  * field, `unique` where it cannot apply, an invalid `pattern`, a `preview` placeholder on an unknown field,
  * a `localized` option or `localization` config that does not fit, `schedule` without drafts, array or block items or row limits that do not
- * fit, select options or number options that do not fit, or an admin layout that names unknown tabs or fieldsets.
+ * fit, select, number, size or link options that do not fit, or an admin layout that names unknown tabs or fieldsets.
  */
 export function checkSchema(
   schema: Schema,
@@ -72,7 +75,7 @@ export function checkSchema(
   for (const owner of owners(schema)) {
     checkRelations(collections, owner);
     checkJoins(collections, owner);
-    checkFields(owner.fields, owner.fields, owner.name, !owner.global);
+    checkFields(owner.fields, owner.fields, owner.name, !owner.global, "media" in collections);
     checkLayout(owner.fields, owner, owner.name);
     checkPreview(collections, owner, localization?.routing === false);
     checkLocalized(owner, !!localization);
@@ -236,11 +239,27 @@ function checkNumber(f: NumberField, at: string) {
     fail(`slider "${at}" needs min and max`);
 }
 
+function checkSize(f: SizeField, at: string) {
+  if (!f.units.length) fail(`size "${at}" has no units`);
+  const repeated = f.units.find((unit, i) => f.units.indexOf(unit) !== i);
+  if (repeated) fail(`size "${at}" repeats unit "${repeated}"`);
+  if (f.step !== undefined && !(f.step > 0)) fail(`size "${at}" needs a positive step`);
+}
+
+function checkLink(f: LinkField, at: string, media: boolean) {
+  if (!f.allowed) return;
+  if (!f.allowed.length) fail(`link "${at}" allows nothing`);
+  const unknown = f.allowed.find((kind) => !linkKinds.includes(kind));
+  if (unknown) fail(`link "${at}" allows unknown "${unknown}"`);
+  if (f.allowed.includes("file") && !media) fail(`link "${at}" allows files, but media is off`);
+}
+
 function checkFields(
   fields: Fields,
   root: Fields,
   where: string,
   top: boolean,
+  media: boolean,
   seen = new Set<Block>(),
 ) {
   for (const [key, f] of Object.entries(fields)) {
@@ -262,6 +281,8 @@ function checkFields(
       fail(`"${at}" cannot be unique`);
     if (f.type === "select") checkOptions(f, at);
     if (f.type === "number") checkNumber(f, at);
+    if (f.type === "size") checkSize(f, at);
+    if (f.type === "link") checkLink(f, at, media);
     for (const path of conditionPaths(f.condition ?? {})) {
       const rooted = path.startsWith("/");
       const crossed = crossedList(rooted ? root : fields, rooted ? path.slice(1) : path);
@@ -272,15 +293,15 @@ function checkFields(
       const target = path.startsWith("/") ? fieldAt(root, path.slice(1)) : fieldAt(fields, path);
       if (!target) fail(`condition on "${at}" names unknown field "${path}"`);
     }
-    if (f.type === "group") checkFields(f.fields, root, at, false, seen);
+    if (f.type === "group") checkFields(f.fields, root, at, false, media, seen);
     if (f.type === "array") {
       checkItems(f, at);
-      checkFields(f.fields, root, at, false, seen);
+      checkFields(f.fields, root, at, false, media, seen);
     }
     if (f.type === "blocks") {
       checkItems(f, at);
       for (const [name, b] of unseenBlocks(f, seen))
-        checkFields(b.fields, root, `${at}.${name}`, false, seen);
+        checkFields(b.fields, root, `${at}.${name}`, false, media, seen);
     }
   }
 }

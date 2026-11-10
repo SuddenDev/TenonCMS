@@ -6,6 +6,7 @@ import { textSchema } from "./text.ts";
 import { dateSchema } from "./date.ts";
 import { datetimeSchema } from "./datetime.ts";
 import { numberSchema } from "./number.ts";
+import { sizeSchema } from "./size.ts";
 import { booleanSchema } from "./boolean.ts";
 import { selectSchema } from "./select.ts";
 import { slugSchema } from "./slug.ts";
@@ -35,6 +36,8 @@ export function fieldSchema(
       return datetimeSchema();
     case "number":
       return numberSchema(field, on);
+    case "size":
+      return sizeSchema(field, on);
     case "boolean":
       return booleanSchema();
     case "select":

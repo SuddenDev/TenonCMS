@@ -87,16 +87,21 @@ From building the House of Cacao site.
 
 ### Fields
 
-- [ ] Size field: a number with a unit (`px`, `vh`, …).
-- [ ] Textarea: a `rows` option, and keep empty lines.
+- [x] Size field: a number with a unit (`px`, `vh`, …). `type: 'size'` stores `{ value, unit }`; `units` is required and types `unit`.
+- [x] Textarea: a `rows` option, and keep empty lines. Empty lines need `white-space: pre-line` on the site.
+- [x] Number field appearances: chevrons (default), `plain` and `stepper`, next to `slider`.
+- [x] Text field `prefix` and `suffix`, like `https://` and `.com`.
 - [ ] Rich text:
-  - [ ] Extend Tiptap from the config (extensions, toolbar).
-  - [ ] Blocks or classes inside rich text.
-  - [ ] A smaller default toolbar.
-  - [ ] Maybe a font selector.
-- [ ] Tracking: make Google Analytics, Tag Manager, Facebook Pixel and similar easy to set up, maybe as a field type.
-- [ ] Link Field: Link to a file as option that can be disabled by host config. I was considering an "allowed" field option, that is either `*` , `["internal", "external", "file"]`. Maybe thats overkill? An icon button in the link input (suffix) and a "File…" option in the combobox that opens the media modal.
-- [ ] Link Field: Should this also have an open in new tab co-field predefined?
+  - [ ] Extend Tiptap from the config (extensions, toolbar). `admin.richtext.extensions` exists, and its `client` is typed through `.client.ts` imports.
+    - [x] `allowed` autocompletes the built-in names; unknown names throw at startup.
+    - [ ] Check plugin feature names at compile time. Needs `admin` (and plugins) as a generic of `defineCms()`.
+  - [x] Classes: `classes: [{ name, label, on: 'block' | 'text', preview }]`, stored as `attrs.class` and a `textClass` mark, applied from a palette menu.
+  - [x] Saved formatting the field does not offer is hidden in the editor and removed on the next edit, instead of locking it.
+  - [x] A smaller default toolbar: `RICHTEXT_DEFAULTS` plus registered extensions; `allowed: RICHTEXT_FEATURES` for all.
+  - Font selector: not planned. A plugin can add one through `admin.richtext.extensions`.
+- [ ] Tracking: make Google Analytics, Tag Manager, Facebook Pixel and similar easy to set up, maybe as a field type. Its own task.
+- [x] Link Field: Link to a file as option that can be disabled by host config. I was considering an "allowed" field option, that is either `*` , `["internal", "external", "file"]`. Decided: `allowed`, all on by default, a file stores a media `reference`. An icon button in the link input (suffix) and a "File…" option in the combobox that opens the media modal.
+- [x] Link Field: Should this also have an open in new tab co-field predefined? It has one: the switch in the link input stores `target: '_blank'`.
 
 ### Types
 

@@ -14,6 +14,24 @@ export type RichtextNode = {
 };
 /** The stored Tiptap document. */
 export type RichtextDocument = RichtextNode & { type: "doc" };
+/** A built-in feature name, see `RICHTEXT_FEATURES`. */
+export type RichtextFeature = (typeof import("../runtime/extensions.ts").RICHTEXT_FEATURES)[number];
+
+/**
+ * A CSS class the editor MAY apply. `block` goes on a paragraph or heading (`attrs.class`), `text` on the selected
+ * text (a `textClass` mark). `name` is the stored class and MAY hold several, like `'text-lg font-bold'`.
+ */
+export type RichtextClass = {
+  name: string;
+  label?: Text;
+  on: "block" | "text";
+  /**
+   * Admin only: CSS that shows the class in the editor and in its menu, because the admin does not load the site's CSS.
+   * Property names in camelCase, like Vue's `style`: `{ color: '#c2410c', fontWeight: 600 }`.
+   */
+  preview?: Record<string, string | number>;
+};
+
 /** One plugin toolbar action. */
 export type RichtextControl = {
   label: Text;

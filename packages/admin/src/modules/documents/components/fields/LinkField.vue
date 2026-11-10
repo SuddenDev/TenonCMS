@@ -5,15 +5,17 @@ import { client, schema } from "@/shared/api";
 import { text } from "@/shared/i18n";
 import { useLocale } from "@/shared/composables/useLocale";
 import type { LinkTargets } from "../../../../../../core/src/links/config/types";
-import { linkHost, urlFromText } from "@/modules/documents/links";
+import { linkHost, offersFile, urlFromText } from "@/modules/documents/links";
 import { isLinkSuffix } from "../../../../../../core/src/links/runtime/url";
 import { injectLinks } from "@/modules/documents/composables/useLinks";
 import type { FieldProps } from "./types";
 import FieldFrame from "./FieldFrame.vue";
+import MediaPicker from "@/modules/media/components/MediaPicker.vue";
 import Icon from "@/shared/components/Icon.vue";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Switch } from "@/shared/components/ui/switch";
+import { InputGroupAddon, InputGroupButton } from "@/shared/components/ui/input-group";
 import {
   Combobox,
   ComboboxAnchor,
@@ -32,10 +34,31 @@ const { t } = useI18n();
 const { locale } = useLocale();
 const links = injectLinks();
 
+const allows = computed(() => {
+  const allowed = props.field.allowed;
+  const on = (kind: "internal" | "external" | "file") => !allowed || allowed.includes(kind);
+  return {
+    internal: on("internal"),
+    external: on("external"),
+    file: on("file") && !!schema.value.media,
+  };
+});
+const picking = ref(false);
+
 const query = ref("");
 const groups = ref<LinkTargets>([]);
 const loading = ref(false);
 const url = computed(() => urlFromText(query.value));
+// Waits for the search, so the entry does not flash while results load.
+const fileOffered = computed(
+  () =>
+    allows.value.file &&
+    !loading.value &&
+    offersFile(
+      query.value,
+      groups.value.reduce((n, g) => n + g.items.length, 0),
+    ),
+);
 let timer: ReturnType<typeof setTimeout> | undefined;
 let requests = 0;
 
@@ -47,6 +70,7 @@ const broken = computed(() => !!model.value?.reference?.deleted || !!resolved.va
 
 function search() {
   clearTimeout(timer);
+  if (!allows.value.internal) return;
   const request = ++requests;
   loading.value = true;
 
@@ -73,10 +97,11 @@ const target = () => (model.value?.target ? { target: model.value.target } : {})
 function pick(value: unknown) {
   if (typeof value !== "string") return;
 
-  const [kind, a, b] = JSON.parse(value) as [string, string, string?];
-  if (kind === "url") model.value = { href: a, ...target() };
+  const [kind, a, b] = JSON.parse(value) as [string, string?, string?];
+  if (kind === "file") picking.value = true;
+  else if (kind === "url") model.value = { href: a, ...target() };
   else {
-    const reference = { collection: a, id: b! };
+    const reference = { collection: a!, id: b! };
     const label = groups.value
       .find((g) => g.collection === a)
       ?.items.find((i) => i.id === b)?.label;
@@ -84,6 +109,11 @@ function pick(value: unknown) {
     model.value = { reference, ...target() };
   }
   query.value = "";
+}
+
+function pickFile(ids: string[]) {
+  const id = ids.at(-1);
+  if (id) model.value = { reference: { collection: "media", id }, ...target() };
 }
 
 // The suffix input shows while a suffix exists or until it is left empty. Clearing the text must not close it.
@@ -144,7 +174,13 @@ function setNewTab(on: boolean) {
         class="border-input dark:bg-input/30 aria-invalid:border-destructive flex min-h-9 items-center gap-2 rounded-md border py-1.5 pr-1 pl-3 shadow-xs"
       >
         <Icon
-          :name="model.reference ? 'file-text' : 'link'"
+          :name="
+            model.reference?.collection === 'media'
+              ? 'paperclip'
+              : model.reference
+                ? 'file-text'
+                : 'link'
+          "
           class="text-muted-foreground shrink-0"
         />
         <div class="flex min-w-0 flex-1 flex-col">
@@ -236,6 +272,17 @@ function setNewTab(on: boolean) {
           <Icon name="x" />
         </Button>
       </div>
+      <Button
+        v-else-if="!allows.internal && !allows.external"
+        :id="id"
+        type="button"
+        variant="outline"
+        class="self-start"
+        :disabled="field.readOnly"
+        @click="picking = true"
+      >
+        <Icon name="paperclip" />{{ t("media.chooseFile") }}
+      </Button>
       <Combobox
         v-else
         ignore-filter
@@ -251,15 +298,31 @@ function setNewTab(on: boolean) {
             v-model="query"
             :aria-invalid="invalid"
             :disabled="field.readOnly"
-            :placeholder="t('links.search')"
-          />
+            :placeholder="t(allows.internal ? 'links.search' : 'links.enterUrl')"
+          >
+            <InputGroupAddon
+              v-if="allows.file"
+              align="inline-end"
+              class="border-none bg-transparent pr-1"
+            >
+              <InputGroupButton
+                size="icon-xs"
+                :disabled="field.readOnly"
+                :aria-label="t('media.chooseFile')"
+                :title="t('media.chooseFile')"
+                @click="picking = true"
+              >
+                <Icon name="paperclip" />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </ComboboxInput>
         </ComboboxAnchor>
         <ComboboxList>
           <ComboboxViewport>
-            <ComboboxEmpty v-if="!url">
+            <ComboboxEmpty v-if="allows.internal && !(url && allows.external)">
               {{ t(loading ? "common.loading" : "common.noMatches") }}
             </ComboboxEmpty>
-            <ComboboxItem v-if="url" :value="JSON.stringify(['url', url])">
+            <ComboboxItem v-if="url && allows.external" :value="JSON.stringify(['url', url])">
               <Icon name="link" />
               <span class="truncate">{{ t("links.use", { url }) }}</span>
             </ComboboxItem>
@@ -276,6 +339,10 @@ function setNewTab(on: boolean) {
                 {{ item.label }}
               </ComboboxItem>
             </ComboboxGroup>
+            <ComboboxItem v-if="fileOffered" :value="JSON.stringify(['file'])">
+              <Icon name="paperclip" />
+              {{ t("links.file") }}
+            </ComboboxItem>
           </ComboboxViewport>
         </ComboboxList>
       </Combobox>
@@ -287,6 +354,13 @@ function setNewTab(on: boolean) {
         tabindex="-1"
         aria-hidden="true"
         class="sr-only"
+      />
+      <MediaPicker
+        v-if="allows.file"
+        v-model:open="picking"
+        :field="{ type: 'file' }"
+        :selected="model?.reference?.collection === 'media' ? [model.reference.id] : []"
+        @select="pickFile"
       />
       <label class="flex items-center gap-2 text-sm">
         <Switch

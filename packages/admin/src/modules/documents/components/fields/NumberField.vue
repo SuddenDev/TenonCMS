@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FieldProps } from "./types";
 import FieldFrame from "./FieldFrame.vue";
-import { Input } from "@/shared/components/ui/input";
+import NumberInput from "./NumberInput.vue";
 import { Slider } from "@/shared/components/ui/slider";
 
 const props = defineProps<FieldProps<"number">>();
@@ -9,7 +9,7 @@ const model = defineModel<any>();
 </script>
 
 <template>
-  <FieldFrame v-bind="props" v-slot="{ id, attrs, invalid }">
+  <FieldFrame v-bind="props" v-slot="{ id, attrs, required, invalid }">
     <div v-if="field.appearance === 'slider'" class="flex min-h-9 items-center gap-4">
       <Slider
         :id="id"
@@ -26,13 +26,24 @@ const model = defineModel<any>();
         model ?? "–"
       }}</output>
     </div>
-    <Input
+    <NumberInput
       v-else
       :id="id"
-      v-model.number="model"
-      type="number"
-      v-bind="attrs"
-      :aria-invalid="invalid"
+      v-model="model"
+      :min="field.min"
+      :max="field.max"
+      :step="field.step"
+      :placeholder="attrs.placeholder"
+      :disabled="field.readOnly"
+      :required="required"
+      :invalid="invalid"
+      :controls="
+        field.appearance === 'stepper'
+          ? 'stepper'
+          : field.appearance === 'plain'
+            ? 'none'
+            : 'chevrons'
+      "
     />
   </FieldFrame>
 </template>

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { defineCms, LinkedContentError, ValidationError } from "../index.ts";
-import { admin, base, setup } from "./setup.ts";
+import { admin, base, setup, tmpDir } from "./setup.ts";
+import { png } from "./fixtures.ts";
+import { local } from "../media/storage/local/index.ts";
 
 const make = () =>
   defineCms({
@@ -266,6 +268,75 @@ describe("link deletion", () => {
 
     await expect(cms.update("articles", article.id, { cta: stored!.cta })).resolves.toBeDefined();
     await expect(cms.publishGlobal("menu", { locale: "de" })).resolves.toBeDefined();
+  });
+});
+
+describe("file links", () => {
+  const withFiles = () =>
+    defineCms({
+      ...base,
+      settings: false,
+      media: { storage: local({ dir: tmpDir() }) },
+      collections: {
+        pages: { permalink: "/{slug}", fields: { slug: { type: "slug" } } },
+        articles: {
+          fields: {
+            cta: { type: "link" },
+            download: { type: "link", allowed: ["file"] },
+            nav: { type: "link", allowed: ["internal", "external"] },
+          },
+        },
+      },
+    });
+
+  it("resolves a media reference to the file URL", async () => {
+    const cms = withFiles();
+    const file = await cms.media.upload(png, { filename: "menu.png", mimeType: "image/png" });
+
+    const article = await cms.create("articles", {
+      cta: { reference: { collection: "media", id: file.id }, target: "_blank" },
+    });
+
+    expect((await cms.findById("articles", article.id))?.cta).toMatchObject({
+      href: expect.stringContaining("menu"),
+      target: "_blank",
+    });
+    await expect(cms.media.delete(file.id)).rejects.toBeInstanceOf(LinkedContentError);
+  });
+
+  it("rejects the kinds that `allowed` leaves out", async () => {
+    const cms = withFiles();
+    const page = await cms.create("pages", { slug: "about" });
+    const file = await cms.media.upload(png, { filename: "menu.png", mimeType: "image/png" });
+
+    await expect(
+      cms.create("articles", { download: to(page.id) }, { draft: true }),
+    ).rejects.toMatchObject({ errors: { download: "Links to documents are not allowed" } });
+    await expect(
+      cms.create("articles", { download: { href: "https://example.com" } }),
+    ).rejects.toMatchObject({ errors: { download: "Links to URLs are not allowed" } });
+    await expect(
+      cms.create("articles", { nav: { reference: { collection: "media", id: file.id } } }),
+    ).rejects.toMatchObject({ errors: { nav: "Links to files are not allowed" } });
+    await expect(
+      cms.create("articles", {
+        download: { reference: { collection: "media", id: file.id } },
+        nav: to(page.id),
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  it("throws at startup for an empty or unknown `allowed` and for files without media", () => {
+    const define = (allowed: string[], media?: false) => () =>
+      defineCms({
+        ...base,
+        media,
+        collections: { a: { fields: { l: { type: "link", allowed: allowed as never } } } },
+      });
+
+    expect(define([])).toThrow(/link "a.l" allows nothing/);
+    expect(define(["pages"])).toThrow(/link "a.l" allows unknown "pages"/);
+    expect(define(["file"], false)).toThrow(/link "a.l" allows files, but media is off/);
   });
 });
 

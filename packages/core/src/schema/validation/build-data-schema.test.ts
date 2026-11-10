@@ -430,3 +430,29 @@ describe("number step", () => {
       expect(s.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
   });
 });
+
+describe("size", () => {
+  const s = dataSchema({
+    gap: { type: "size", units: ["px", "rem"], min: 0, step: 0.5 },
+    height: { type: "size", units: ["vh"], required: true },
+  });
+
+  it("accepts a number with a listed unit", () => {
+    expect(
+      s.safeParse({ gap: { value: 1.5, unit: "rem" }, height: { value: 100, unit: "vh" } }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an unknown unit, a missing value and the number checks", () => {
+    const height = { value: 1, unit: "vh" };
+    for (const gap of [
+      { value: 1, unit: "vh" },
+      { unit: "px" },
+      { value: -1, unit: "px" },
+      { value: 0.2, unit: "px" },
+      "10px",
+    ])
+      expect(s.safeParse({ gap, height }).success, JSON.stringify(gap)).toBe(false);
+    expect(s.safeParse({ gap: null }).success).toBe(false);
+  });
+});

@@ -2,6 +2,10 @@
 // escaped as literals, e.g. `{'@'}`.
 export default {
   richtext: {
+    blockClass: "Block class",
+    textClass: "Text class",
+    classes: "Classes",
+    hidden: "Formatting this field does not offer is hidden: {names}. Editing removes it.",
     toolbar: "Text formatting",
     block: "Text style",
     paragraph: "Paragraph",
@@ -493,6 +497,8 @@ export default {
     used: "The {locale} content structure is used in every language.",
   },
   links: {
+    enterUrl: "Enter a URL…",
+    file: "File…",
     broken: "Broken link",
     newTab: "Open in new tab",
     addSuffix: "suffix",
@@ -666,6 +672,13 @@ export default {
   slug: {
     changeParent: "Change parent page",
     topLevel: "Top level",
+  },
+  number: {
+    increase: "Increase",
+    decrease: "Decrease",
+  },
+  size: {
+    unit: "Unit",
   },
   seo: {
     checks: "{n}/{max} checks are passing",

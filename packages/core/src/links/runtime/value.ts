@@ -1,5 +1,5 @@
 // This file MUST import only `url.ts` and types. The admin bundles it.
-import type { LinkReference, LinkValue } from "../config/types.ts";
+import type { LinkKind, LinkReference, LinkValue } from "../config/types.ts";
 import { isLinkSuffix, safeLinkUrl } from "./url.ts";
 
 const TARGETS = ["_self", "_blank", "_parent", "_top"];
@@ -55,6 +55,12 @@ export function storedLink(value: unknown): unknown {
     : ref;
   return { reference, ...target };
 }
+
+export const linkKinds: readonly LinkKind[] = ["internal", "external", "file"];
+
+/** What a checked link value points to. */
+export const linkKind = (value: LinkValue): LinkKind =>
+  "href" in value ? "external" : value.reference.collection === "media" ? "file" : "internal";
 
 /** The key of a link target in maps and sets. */
 export const linkKey = (reference: Pick<LinkReference, "collection" | "id">) =>

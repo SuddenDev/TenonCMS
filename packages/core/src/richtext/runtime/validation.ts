@@ -2,7 +2,7 @@ import type { Schema } from "@tiptap/pm/model";
 import { richtextSchema, RICHTEXT_FEATURES } from "./extensions.ts";
 import { walkRichtext } from "./walk.ts";
 import { safeLinkUrl } from "../../links/runtime/url.ts";
-import type { RichtextDocument, RichtextRegistration } from "../config/types.ts";
+import type { RichtextClass, RichtextDocument, RichtextRegistration } from "../config/types.ts";
 
 /** Accepts web URLs, email, telephone, relative paths and fragments. The rules of every link, see `safeLinkUrl()`. */
 export const safeRichtextUrl = safeLinkUrl;
@@ -53,6 +53,7 @@ function walkAttributes(attrs?: Record<string, any>) {
         })))
   )
     throw new Error("Unsafe image srcset");
+  if (attrs.class != null && typeof attrs.class !== "string") throw new Error("Invalid class");
   if (attrs.target != null && !["_self", "_blank", "_parent", "_top"].includes(attrs.target))
     throw new Error("Invalid link target");
   if (attrs.level != null && ![1, 2, 3, 4, 5, 6].includes(attrs.level))
@@ -84,16 +85,34 @@ function walkAttributes(attrs?: Record<string, any>) {
     throw new Error("Invalid rich text reference");
 }
 
-/** Validates changed content using the active field's feature policy. */
+type RichtextPolicy = {
+  allowed?: readonly string[];
+  classes?: readonly RichtextClass[];
+  required?: boolean;
+};
+
+/** Validates changed content using the active field's feature policy and classes. */
 export function validateRichtext(
   value: unknown,
-  field: { allowed?: readonly string[]; required?: boolean },
+  field: RichtextPolicy,
   registrations: Record<string, RichtextRegistration> = {},
 ) {
   checkRichtextShape(value);
-  const schema = richtextSchema(field.allowed, registrations);
-  const meaningful = checkRichtextContent(value, schema);
+  const meaningful = checkRichtextContent(value, richtextSchema(field, registrations));
+  requireListedClasses(value, field.classes);
   if (field.required && !meaningful) throw new Error("Rich text is required");
+}
+
+// The schema only knows that a class attribute exists. The names come from the field.
+function requireListedClasses(value: RichtextDocument, classes: readonly RichtextClass[] = []) {
+  walkRichtext(value, (node) => {
+    const name = node.attrs?.class;
+    if (name == null) return;
+
+    const on = node.type === "textClass" ? "text" : "block";
+    if (!classes.some((c) => c.on === on && c.name === name))
+      throw new Error(`Unknown class "${name}"`);
+  });
 }
 
 /** Checks every type and attribute before schema parsing can discard unsupported content. */
@@ -117,17 +136,53 @@ export function checkRichtextContent(value: unknown, schema: Schema) {
   return meaningful;
 }
 
-/** Checks feature names once during configuration assembly. */
-export function checkRichtextAllowed(
-  allowed: readonly string[] | undefined,
+/**
+ * A copy of `value` without the marks and attributes that `schema` lacks, so content with formatting the field does not
+ * offer stays editable. Unknown nodes stay, because dropping them would lose content.
+ * @returns The copy, and the names of the dropped marks and attributes.
+ */
+export function pruneRichtext(value: RichtextDocument, schema: Schema) {
+  // A JSON copy, because `structuredClone` throws on the admin's reactive proxies.
+  const copy: RichtextDocument = JSON.parse(JSON.stringify(value));
+  const dropped = new Set<string>();
+
+  walkRichtext(copy, (node) => {
+    node.marks = node.marks?.filter((mark) => !!schema.marks[mark.type] || !dropped.add(mark.type));
+    const spec = schema.nodes[node.type] ?? schema.marks[node.type];
+    for (const key of Object.keys(node.attrs ?? {}))
+      if (spec && !Object.hasOwn(spec.spec.attrs ?? {}, key)) {
+        dropped.add(key);
+        delete node.attrs![key];
+      }
+
+    if (!node.marks?.length) delete node.marks;
+    if (node.attrs && !Object.keys(node.attrs).length) delete node.attrs;
+  });
+
+  return { value: copy, dropped: [...dropped] };
+}
+
+/** Checks feature names and classes once during configuration assembly. */
+export function checkRichtextField(
+  field: RichtextPolicy,
   registrations: Record<string, RichtextRegistration>,
 ) {
-  for (const name of allowed ?? [])
+  for (const name of field.allowed ?? [])
     if (
       !(RICHTEXT_FEATURES as readonly string[]).includes(name) &&
       !Object.hasOwn(registrations, name)
     )
       throw new Error(`tenoncms: unknown rich text feature "${name}"`);
 
-  richtextSchema(allowed, registrations);
+  const seen = new Set<string>();
+  for (const { name, on } of field.classes ?? []) {
+    if (on !== "block" && on !== "text")
+      throw new Error(`tenoncms: rich text class "${name}" needs \`on: 'block'\` or \`'text'\``);
+    if (typeof name !== "string" || !/^\S+(?: \S+)*$/.test(name))
+      throw new Error(`tenoncms: invalid rich text class "${name}"`);
+    if (seen.has(`${on}:${name}`)) throw new Error(`tenoncms: duplicate rich text class "${name}"`);
+    seen.add(`${on}:${name}`);
+  }
+
+  richtextSchema(field, registrations);
 }

@@ -125,6 +125,18 @@ describe("defineCms checks", () => {
     ).not.toThrow();
   });
 
+  it("throws for size units that are empty or repeated and for a step that is not positive", () => {
+    expect(define({ c: { fields: { s: { type: "size", units: [] } } } })).toThrow(
+      /size "c.s" has no units/,
+    );
+    expect(define({ c: { fields: { s: { type: "size", units: ["px", "px"] } } } })).toThrow(
+      /size "c.s" repeats unit "px"/,
+    );
+    expect(define({ c: { fields: { s: { type: "size", units: ["px"], step: 0 } } } })).toThrow(
+      /size "c.s" needs a positive step/,
+    );
+  });
+
   describe("layout", () => {
     const tabs = { main: {}, seo: {} };
     const fieldsets = { meta: {} };

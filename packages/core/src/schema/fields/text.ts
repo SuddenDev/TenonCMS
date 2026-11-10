@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Text } from "../../admin/index.d.ts";
 import type { Base } from "./common.ts";
 
 /** Options of `text` and `textarea`. */
@@ -22,6 +23,12 @@ export type TextField = Base &
   TextOptions & {
     /** `text`: one line. `textarea`: several lines. */
     type: "text" | "textarea";
+    /** `text` only, admin only: a fixed text in front of the input, like `https://`. Not stored. */
+    prefix?: Text;
+    /** `text` only, admin only: a fixed text after the input, like `.com`. Not stored. */
+    suffix?: Text;
+    /** `textarea` only, admin only: the height of the empty input in lines. It grows with the content. Default `8`. */
+    rows?: number;
   };
 
 // Browsers compile the HTML `pattern` attribute with the `v` flag. The server MUST match them.

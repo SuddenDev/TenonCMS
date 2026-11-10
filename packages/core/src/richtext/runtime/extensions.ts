@@ -1,4 +1,4 @@
-import { Extension, flattenExtensions, getSchema, type Extensions } from "@tiptap/core";
+import { Extension, Mark, flattenExtensions, getSchema, type Extensions } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
 import TextAlign from "@tiptap/extension-text-align";
@@ -8,7 +8,7 @@ import Superscript from "@tiptap/extension-superscript";
 import { TableKit } from "@tiptap/extension-table";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import Image from "@tiptap/extension-image";
-import type { RichtextRegistration } from "../config/types.ts";
+import type { RichtextClass, RichtextRegistration } from "../config/types.ts";
 
 /** Built-in feature names accepted by a field's `allowed` list. */
 export const RICHTEXT_FEATURES = [
@@ -33,6 +33,58 @@ export const RICHTEXT_FEATURES = [
   "link",
   "image",
 ] as const;
+
+/** The features of a field without `allowed`. Registered extensions are on too. */
+export const RICHTEXT_DEFAULTS = [
+  "heading",
+  "bold",
+  "italic",
+  "link",
+  "bulletList",
+  "orderedList",
+  "blockquote",
+] as const;
+
+/**
+ * Where a field's `classes` go. Renderers take both, so any stored class renders. `attribute` is the HTML attribute
+ * that shows the class, default `class`. The admin uses `data-class`, so a host class cannot style the admin.
+ */
+export type ClassPlaces = { block?: boolean; text?: boolean; attribute?: "class" | "data-class" };
+
+export const classPlaces = (classes: readonly RichtextClass[] = []): ClassPlaces => ({
+  block: classes.some((c) => c.on === "block"),
+  text: classes.some((c) => c.on === "text"),
+});
+
+const classAttribute = (attribute: string) => ({
+  class: {
+    default: null,
+    parseHTML: (element: HTMLElement) => element.getAttribute(attribute),
+    renderHTML: (attrs: Record<string, any>) => (attrs.class ? { [attribute]: attrs.class } : {}),
+  },
+});
+
+const BlockClass = Extension.create({
+  name: "blockClass",
+  addOptions: () => ({ attribute: "class" }),
+  addGlobalAttributes() {
+    return [
+      { types: ["paragraph", "heading"], attributes: classAttribute(this.options.attribute) },
+    ];
+  },
+});
+
+const TextClass = Mark.create({
+  name: "textClass",
+  addOptions: () => ({ attribute: "class" }),
+  addAttributes() {
+    return classAttribute(this.options.attribute);
+  },
+  parseHTML() {
+    return [{ tag: `span[${this.options.attribute}]` }];
+  },
+  renderHTML: ({ HTMLAttributes }) => ["span", HTMLAttributes, 0],
+});
 
 const References = Extension.create({
   name: "cmsReferences",
@@ -61,12 +113,17 @@ const References = Extension.create({
   },
 });
 
-/** Builds the editor extensions, retaining the structural dependencies of allowed features. */
+/**
+ * Builds the editor extensions, retaining the structural dependencies of allowed features.
+ * @param allowed The field's features. `undefined` means {@link RICHTEXT_DEFAULTS} and every key of `extra`.
+ */
 export function richtextExtensions(
   allowed?: readonly string[],
   extra: Record<string, Extensions> = {},
+  classes: ClassPlaces = {},
 ): Extensions {
-  const on = (name: string) => !allowed || allowed.includes(name);
+  const features = allowed ?? [...RICHTEXT_DEFAULTS, ...Object.keys(extra)];
+  const on = (name: string) => features.includes(name);
   // A filter, not a loop with an `if`: Nitro's Rolldown build folds that `if` and leaves a `for` without a body.
   const starter: Record<string, false> = Object.fromEntries(
     [
@@ -111,6 +168,9 @@ export function richtextExtensions(
   if (on("table")) extensions.push(TableKit.configure({ table: { resizable: false } }));
   if (on("taskList")) extensions.push(TaskList, TaskItem.configure({ nested: true }));
   if (on("image")) extensions.push(Image);
+  const attribute = classes.attribute ?? "class";
+  if (classes.block) extensions.push(BlockClass.configure({ attribute }));
+  if (classes.text) extensions.push(TextClass.configure({ attribute }));
 
   for (const [key, value] of Object.entries(extra)) if (on(key)) extensions.push(...value);
 
@@ -128,18 +188,19 @@ export function richtextExtensions(
 
 /** Builds a DOM-free schema from the same definitions the editor uses. */
 export function richtextSchema(
-  allowed?: readonly string[],
+  field: { allowed?: readonly string[]; classes?: readonly RichtextClass[] },
   registrations: Record<string, RichtextRegistration> = {},
 ) {
   return getSchema(
     richtextExtensions(
-      allowed,
+      field.allowed,
       Object.fromEntries(
         Object.entries(registrations).map(([key, value]) => [
           key,
           Array.isArray(value.schema) ? value.schema : [value.schema],
         ]),
       ),
+      classPlaces(field.classes),
     ),
   );
 }

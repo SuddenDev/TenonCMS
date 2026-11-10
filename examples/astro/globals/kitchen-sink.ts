@@ -1,5 +1,6 @@
 import { priceDescription } from "./kitchen-sink.client";
 import { defineGlobal } from "tenoncms";
+import { RICHTEXT_FEATURES } from "tenoncms/richtext";
 
 // Every field type and layout option once. A global MUST NOT hold a join or a `unique` field:
 // `authors.posts` is the join of this example.
@@ -58,6 +59,21 @@ export const kitchenSink = defineGlobal({
       tab: "text",
       label: { en: "Rich text", de: "Formatierter Text" },
       description: "Tiptap JSON with internal links and media relations.",
+      allowed: RICHTEXT_FEATURES,
+      classes: [
+        {
+          name: "lead",
+          label: { en: "Lead", de: "Einleitung" },
+          on: "block",
+          preview: { fontSize: "1.2em" },
+        },
+        {
+          name: "highlight",
+          label: { en: "Highlight", de: "Hervorhebung" },
+          on: "text",
+          preview: { color: "#c2410c", fontWeight: 600 },
+        },
+      ],
     },
     intro: { type: "textarea", tab: "text", minLength: 10, description: "At least 10 characters." },
     code: {
@@ -69,6 +85,7 @@ export const kitchenSink = defineGlobal({
       width: "1/3",
     },
     shortName: { type: "text", tab: "text", minLength: 2, maxLength: 12, width: "1/3" },
+    domain: { type: "text", tab: "text", prefix: "https://", suffix: ".com", width: "1/2" },
     shared: {
       type: "text",
       tab: "text",
@@ -103,6 +120,7 @@ export const kitchenSink = defineGlobal({
     note: {
       type: "textarea",
       tab: ["text", "choices"],
+      rows: 3,
       description: "Shown in two tabs.",
     },
 
@@ -171,7 +189,15 @@ export const kitchenSink = defineGlobal({
     },
 
     // Numbers and dates
-    quantity: { type: "number", tab: "numbers", min: 0, max: 100, width: "1/3" },
+    quantity: {
+      type: "number",
+      tab: "numbers",
+      appearance: "stepper",
+      min: 0,
+      max: 100,
+      width: "1/3",
+    },
+    year: { type: "number", tab: "numbers", appearance: "plain", min: 1900, width: "1/3" },
     price: {
       description: priceDescription,
       type: "number",
@@ -187,6 +213,7 @@ export const kitchenSink = defineGlobal({
       description: "A custom field from the example plugin.",
       width: "1/3",
     },
+    gap: { type: "size", tab: "numbers", units: ["px", "rem", "vh"], min: 0, width: "1/2" },
     volume: {
       type: "number",
       tab: "numbers",
@@ -222,7 +249,8 @@ export const kitchenSink = defineGlobal({
     gallery: { type: "image", tab: "media", many: true, folder: "kitchen-sink" },
     author: { type: "relation", tab: "media", collection: "authors", width: "1/2" },
     posts: { type: "relation", tab: "media", collection: "posts", many: true, width: "1/2" },
-    cta: { type: "link", tab: "media", description: "A page, a post or a URL." },
+    cta: { type: "link", tab: "media", description: "A page, a post, a URL or a file." },
+    download: { type: "link", tab: "media", allowed: ["file"], description: "Files only." },
 
     // Groups and lists
     meta: {

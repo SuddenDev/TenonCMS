@@ -1,7 +1,7 @@
 import { type Fields } from "../index.ts";
 
 /**
- * Checks whether `where` accepts `key`. Rich text, links, groups, arrays, blocks, joins and `many` relations, images, files and selects are not filterable.
+ * Checks whether `where` accepts `key`. Rich text, links, sizes, groups, arrays, blocks, joins and `many` relations, images, files and selects are not filterable.
  * @returns `false` for an unknown key too.
  */
 export function filterable(fields: Fields, key: string) {
@@ -12,6 +12,7 @@ export function filterable(fields: Fields, key: string) {
   return (
     field.type !== "richtext" &&
     field.type !== "link" &&
+    field.type !== "size" &&
     field.type !== "group" &&
     field.type !== "array" &&
     field.type !== "blocks" &&

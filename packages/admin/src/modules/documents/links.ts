@@ -14,6 +14,15 @@ export function urlFromText(text: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Whether the link list offers "File…": the text names a file (`file`, `Datei`), or nothing matches and the text is
+ * not a URL.
+ */
+export function offersFile(text: string, matches: number) {
+  if (/\b(file|datei)/i.test(text)) return true;
+  return !matches && !urlFromText(text);
+}
+
 /** The host of a web URL, like `example.com`. Other URLs stay as they are. */
 export function linkHost(href: string) {
   return /^https?:\/\//i.test(href) ? URL.parse(href)?.host || href : href;

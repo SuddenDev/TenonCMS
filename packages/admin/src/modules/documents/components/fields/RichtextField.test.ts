@@ -91,3 +91,22 @@ it("preserves unsupported plugin JSON without mounting a destructive editor", as
   expect(root.querySelector('[role="alert"]')?.textContent).toContain("original JSON is preserved");
   expect(value.value).toEqual(unsupported);
 });
+
+it("hides saved formatting the field does not offer and stays editable", async () => {
+  const colored: RichtextDocument = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Hello", marks: [{ type: "textStyle", attrs: { color: "red" } }] },
+        ],
+      },
+    ],
+  };
+  const value = await render(colored);
+
+  expect(root.querySelector('[role="textbox"]')?.getAttribute("contenteditable")).toBe("true");
+  expect(root.querySelector('[role="status"]')?.textContent).toContain("textStyle");
+  expect(value.value).toEqual(colored);
+});

@@ -27,7 +27,7 @@ defineCms({
 
 - `depth` is how many levels of children a menu has below the top. `0` (default) is a flat list, `1` allows one level, `-1` is unlimited. A heading counts as a level, so a flat menu has no headings.
 - The two blocks are:
-  - `menuLink`: `label` (text, optional), `link` (a [`link` field](./schema.md#links), required) and `children` (links and headings).
+  - `menuLink`: `link` (a [`link` field](./schema.md#links), required), `label` (text, optional) and `children` (links and headings).
   - `menuHeading`: `label` (text, required) and `children` (links).
 - `fields.items` is a `blocks` field with `appearance: "tree"`. `blockType` stores `link` and `heading`.
 - A link MAY hold links directly. A heading is never required.

@@ -24,9 +24,13 @@ summary: { type: 'richtext', allowed: ['bold', 'italic', 'link'] }
 plain: { type: 'richtext', allowed: [] }
 ```
 
-Omitting `allowed` enables every built-in and registered plugin feature. The feature names are `heading`, `bold`, `italic`, `underline`, `strike`, `subscript`, `superscript`, `code`, `codeBlock`, `bulletList`, `orderedList`, `taskList`, `blockquote`, `horizontalRule`, `textAlign`, `color`, `highlight`, `table`, `link`, `image`, and plugin registration keys. Paragraphs, text, line breaks, undo/redo and pane expansion are always available. List and table dependencies are automatic. Rich text cannot be used in `where` or as a unique field.
+Omitting `allowed` enables `RICHTEXT_DEFAULTS` and every registered plugin feature. Renderers enable every feature and both class places, so stored content renders whatever the field allows. The feature names are `heading`, `bold`, `italic`, `underline`, `strike`, `subscript`, `superscript`, `code`, `codeBlock`, `bulletList`, `orderedList`, `taskList`, `blockquote`, `horizontalRule`, `textAlign`, `color`, `highlight`, `table`, `link`, `image`, and plugin registration keys. Paragraphs, text, line breaks, undo/redo and pane expansion are always available. List and table dependencies are automatic. Rich text cannot be used in `where` or as a unique field.
 
-Changed published content must fit the enabled schema. Drafts keep the CMS's loose validation, with structural and URL safety checks. Publishing validates their schema and targets. Unsupported saved content stays read-only in the editor, with its original JSON intact. Unchanged published values can pass through unrelated writes after a configuration change. Restore the extension or explicitly migrate content to edit it again.
+Changed published content must fit the enabled schema. Drafts keep the CMS's loose validation, with structural and URL safety checks. Publishing validates their schema and targets. In the editor, `pruneRichtext()` hides saved marks and attributes the field does not offer, and the next edit removes them. Unsupported saved nodes stay read-only, with their original JSON intact. Unchanged published values can pass through unrelated writes after a configuration change. Restore the extension or explicitly migrate content to edit it again.
+
+## Classes
+
+A field's `classes` add `attrs.class` to paragraphs and headings (`block`) and a `textClass` mark (`text`). The schema only knows that the attribute exists; `validateRichtext()` checks the names against the field. `checkRichtextField()` checks the list at startup. The admin editor renders classes as `data-class` (`ClassPlaces.attribute`), so a host class cannot style the admin.
 
 ## Relations and URLs
 

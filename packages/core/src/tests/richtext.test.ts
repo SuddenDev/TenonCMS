@@ -243,7 +243,11 @@ it("retains media restrictions and rolls back broken markers when deletion fails
     ...base,
     settings: false,
     media: { storage: local({ dir: tmpDir() }) },
-    collections: { articles: { fields: { body: { type: "richtext" }, hero: { type: "image" } } } },
+    collections: {
+      articles: {
+        fields: { body: { type: "richtext", allowed: ["image"] }, hero: { type: "image" } },
+      },
+    },
   });
   const media = await cms.media.upload(png, { filename: "test.png", mimeType: "image/png" });
   const body = {

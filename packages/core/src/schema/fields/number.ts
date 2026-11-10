@@ -11,8 +11,11 @@ export type NumberField = Base<number> & {
   max?: number;
   /** The value MUST be `min` (or `0`) plus a whole multiple of `step`, like the HTML `step` attribute. Positive. */
   step?: number;
-  /** How the admin shows the input. `'slider'` needs `min` and `max`. Default `'input'`. */
-  appearance?: "input" | "slider";
+  /**
+   * How the admin shows the input. Default `'input'`: a text box with up and down chevrons. `'plain'` has no buttons,
+   * `'stepper'` puts minus and plus beside the number, and `'slider'` needs `min` and `max`.
+   */
+  appearance?: "input" | "plain" | "stepper" | "slider";
 };
 
 /**

@@ -48,6 +48,27 @@ describe("select types", () => {
   });
 });
 
+describe("size types", () => {
+  const fields = {
+    gap: { type: "size", units: ["px", "rem"], required: true },
+    height: { type: "size", units: ["vh"] },
+  } as const satisfies Fields;
+
+  it("infers the listed units", () => {
+    expectTypeOf<Data<typeof fields>["gap"]>().toEqualTypeOf<{
+      value: number;
+      unit: "px" | "rem";
+    }>();
+    expectTypeOf<Data<typeof fields>["height"]>().toEqualTypeOf<
+      { value: number; unit: "vh" } | null | undefined
+    >();
+  });
+
+  it("does not filter a size", () => {
+    expectTypeOf<FilterKey<typeof fields>>().toEqualTypeOf<never>();
+  });
+});
+
 describe("group types", () => {
   const fields = {
     seo: { type: "group", fields: { title: { type: "text" }, noindex: { type: "boolean" } } },

@@ -91,3 +91,11 @@
 .cms-richtext-content li[data-type="taskItem"] > div {
   flex: 1;
 }
+.cms-richtext-content :is(p, h1, h2, h3, h4, h5, h6)[data-class] {
+  border-left: 2px dashed var(--primary);
+  padding-left: 0.75em;
+}
+.cms-richtext-content span[data-class] {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}

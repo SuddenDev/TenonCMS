@@ -6,14 +6,36 @@ A `richtext` field stores a standard Tiptap JSON document. There is no HTML copy
 body: { type: 'richtext' }
 summary: { type: 'richtext', allowed: ['bold', 'italic', 'link'] }
 plain: { type: 'richtext', allowed: [] }
+everything: { type: 'richtext', allowed: RICHTEXT_FEATURES } // from "tenoncms/richtext"
 ```
 
-- Without `allowed`, every built-in and plugin feature is on.
+- Without `allowed`, the field has `heading`, `bold`, `italic`, `link`, `bulletList`, `orderedList`, `blockquote` (`RICHTEXT_DEFAULTS`) and every registered extension. List the others in `allowed`.
+- `allowed` autocompletes the built-in names. An unknown name throws at startup.
 - Features: `heading`, `bold`, `italic`, `underline`, `strike`, `subscript`, `superscript`, `code`, `codeBlock`, `bulletList`, `orderedList`, `taskList`, `blockquote`, `horizontalRule`, `textAlign`, `color`, `highlight`, `table`, `link`, `image`, and the keys that plugins register.
 - Paragraphs, text, line breaks and undo/redo are always on. List and table dependencies are automatic.
 - A rich text field cannot be used in `where` or as `unique`.
 - Changed published content MUST fit the enabled features. Drafts only get structure and URL safety checks. Publishing runs the full check.
-- Saved content that the schema no longer allows stays read-only in the editor, with its JSON intact. Unrelated writes still pass it through.
+- Saved formatting the field does not offer (a mark or an attribute, like a pasted color) is hidden in the editor, with a note, and removed on the next edit. The site still renders it until then.
+- Saved content of a type the field does not offer, like a table, stays read-only in the editor, with its JSON intact, because removing it would lose content. Unrelated writes still pass it through.
+
+## Classes
+
+`classes` lets editors apply your CSS classes: `block` ones to a paragraph or heading, `text` ones to the selected text. A palette button in the toolbar opens a menu with both lists; picking an active class again removes it.
+
+```ts
+body: {
+  type: 'richtext',
+  classes: [
+    { name: 'lead', label: { en: 'Lead', de: 'Einleitung' }, on: 'block' },
+    { name: 'text-brand font-bold', label: 'Brand', on: 'text', preview: { color: '#c2410c' } },
+  ],
+}
+```
+
+- A block class is stored as `attrs.class` on the node, a text class as a `textClass` mark: `{ type: 'textClass', attrs: { class: 'text-brand font-bold' } }`.
+- The renderers write it as `class`: `<p class="lead">`, `<span class="text-brand font-bold">`. Style it in your site's CSS.
+- `name` MAY hold several classes, separated by single spaces. A name that the field does not list for its place is a field error.
+- The admin does not load your CSS. It marks classed blocks with a dashed line and classed text with a dotted underline. `preview` adds CSS (camelCase, like Vue's `style`) that the editor and the menu show for that class.
 
 ## Links and images
 
@@ -73,7 +95,7 @@ import { Richtext } from "tenoncms/react";
 
 ## Add features from a plugin
 
-A plugin or the host adds `admin.richtext.extensions`. Each entry has a `schema` (a Tiptap extension without DOM code) and a `client` (a `clientRef()` to the browser part):
+A plugin or the host adds `admin.richtext.extensions`. Each entry has a `schema` (a Tiptap extension without DOM code) and a `client`, the browser part. In the host, import it from a `.client.ts` module, so it is typed as `RichtextBrowserExtension` ([browser exports](./admin.md)). A plugin uses `clientRef()`:
 
 ```ts
 admin: {

@@ -87,3 +87,21 @@ it("rejects unsafe URLs before emitting HTML", () => {
     );
   }
 });
+
+it("renders block and text classes", () => {
+  const html = renderRichtext({
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        attrs: { class: "lead" },
+        content: [
+          { type: "text", text: "Hi", marks: [{ type: "textClass", attrs: { class: "brand" } }] },
+        ],
+      },
+    ],
+  });
+
+  expect(html).toContain('<p class="lead">');
+  expect(html).toContain('<span class="brand">Hi</span>');
+});

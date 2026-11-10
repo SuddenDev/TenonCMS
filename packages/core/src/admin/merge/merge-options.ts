@@ -94,7 +94,8 @@ export function mergeAdmin(plugins: readonly Plugin[], host: AdminOptions = {}):
     addBarItems(barItems, admin.adminBar, source, source === HOST);
   }
 
-  if (Object.keys(richtext).length) richtextSchema(undefined, richtext);
+  if (Object.keys(richtext).length)
+    richtextSchema({ allowed: [...RICHTEXT_FEATURES, ...Object.keys(richtext)] }, richtext);
 
   return {
     descriptor,

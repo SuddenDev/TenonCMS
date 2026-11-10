@@ -14,6 +14,7 @@ import type { Fieldset, Layout, Placement, Tab } from "./layout.ts";
 import type { NumberField } from "./number.ts";
 import type { RelationField } from "./relation.ts";
 import type { SelectField, SelectOption } from "./select.ts";
+import type { SizeField, SizeValue } from "./size.ts";
 import type { SlugField } from "./slug.ts";
 import type { TextField } from "./text.ts";
 
@@ -43,6 +44,8 @@ export type {
   RelationField,
   SelectField,
   SelectOption,
+  SizeField,
+  SizeValue,
   SlugField,
   TextField,
   RichtextField,
@@ -56,6 +59,7 @@ export type Field =
   | DateField
   | DateTimeField
   | NumberField
+  | SizeField
   | BooleanField
   | SelectField
   | CustomField

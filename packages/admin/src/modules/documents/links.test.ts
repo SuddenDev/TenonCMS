@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Fields } from "../../../../core/src/schema";
-import { linkReferences, linkHost, urlFromText } from "./links";
+import { linkReferences, linkHost, offersFile, urlFromText } from "./links";
 
 describe("urlFromText", () => {
   it("keeps URLs, paths and fragments", () => {
@@ -52,5 +52,21 @@ describe("linkReferences", () => {
         items: [{ link: { href: "/x" }, box: { link: { reference: b } } }, { link: null }],
       }),
     ).toEqual([a, b]);
+  });
+});
+
+describe("offersFile", () => {
+  it("offers a file for a file word, even with matches", () => {
+    for (const text of ["file", "Datei", "my files", "dateien"])
+      expect(offersFile(text, 3)).toBe(true);
+    expect(offersFile("profile", 0)).toBe(true);
+    expect(offersFile("profile", 2)).toBe(false);
+  });
+
+  it("offers a file when nothing matches and the text is not a URL", () => {
+    expect(offersFile("menu", 0)).toBe(true);
+    expect(offersFile("menu", 1)).toBe(false);
+    for (const text of ["https://example.com", "mailto:a@b.co", "tel:123", "/about", "example.com"])
+      expect(offersFile(text, 0)).toBe(false);
   });
 });

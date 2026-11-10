@@ -9,6 +9,7 @@ import type { FieldProps } from "./fields/types";
 import TextField from "./fields/TextField.vue";
 import TextareaField from "./fields/TextareaField.vue";
 import NumberField from "./fields/NumberField.vue";
+import SizeField from "./fields/SizeField.vue";
 import DateField from "./fields/DateField.vue";
 import SlugField from "./fields/SlugField.vue";
 import SelectField from "./fields/SelectField.vue";
@@ -43,6 +44,7 @@ const fields: Record<string, Component> = {
   textarea: TextareaField,
   richtext: defineAsyncComponent(() => import("./fields/RichtextField.vue")),
   number: NumberField,
+  size: SizeField,
   date: DateField,
   datetime: DateField,
   slug: SlugField,

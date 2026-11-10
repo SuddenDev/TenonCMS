@@ -73,6 +73,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | ------------------ | -------------------------------------------- | ----------------------------------------- |
 | `text`, `textarea` | A string                                     |                                           |
 | `number`           | A number                                     |                                           |
+| `size`             | A number with a CSS unit, `{ value, unit }`  | [Sizes](#sizes)                           |
 | `boolean`          | `true` or `false`                            |                                           |
 | `date`             | A calendar date, `2026-10-17`                | [Dates](#dates)                           |
 | `datetime`         | A UTC timestamp, `2026-10-17T12:00:00.000Z`  | [Dates](#dates)                           |
@@ -88,28 +89,32 @@ Each database has its own entry and driver, so you install only the one you use:
 
 ## Field options
 
-| Option                              | Types                                                                                           | What it does                                           |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `label`, `description`              | all                                                                                             | Label and help text in the admin                       |
-| `placeholder`                       | `text`, `textarea`, `number`, `date`, `datetime`                                                | Shown in the empty input                               |
-| `required`                          | all but `join`                                                                                  | The value MUST be present                              |
-| `default`                           | all but `join`                                                                                  | Value on `create` when the field is `undefined`        |
-| `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                              | Length, and a regular expression for the whole value   |
-| `min`, `max`                        | `number`                                                                                        | Number range                                           |
-| `fields`                            | `group`, `array`                                                                                | The fields of the group, or of each item               |
-| `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name, or shared names   |
-| `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                  |
-| `itemLabels`                        | `array`, `blocks`                                                                               | `{ singular, plural, title }` item labels in the admin |
-| `appearance`                        | `array`, `blocks`                                                                               | `"tree"`: edit the items as a tree in the admin        |
-| `appearance`                        | `group`                                                                                         | `"plain"`: show the fields without box and heading     |
-| `validate`                          | all but `join`                                                                                  | Your own check, on the server                          |
-| `condition`                         | all                                                                                             | The field applies only when this matches               |
-| `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value               |
-| `private`                           | all                                                                                             | Keep the value out of public HTTP reads                |
-| `readOnly`                          | all but `join`                                                                                  | The admin shows the input disabled                     |
-| `hidden`                            | all                                                                                             | The admin does not show the input                      |
-| `separator`                         | all                                                                                             | A line above the field; a text adds a heading below it |
-| `hooks`                             | all but `join`                                                                                  | See [Hooks](./hooks.md)                                |
+| Option                              | Types                                                                                           | What it does                                                                                     |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `label`, `description`              | all                                                                                             | Label and help text in the admin                                                                 |
+| `placeholder`                       | `text`, `textarea`, `number`, `size`, `date`, `datetime`                                        | Shown in the empty input                                                                         |
+| `required`                          | all but `join`                                                                                  | The value MUST be present                                                                        |
+| `default`                           | all but `join`                                                                                  | Value on `create` when the field is `undefined`                                                  |
+| `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                              | Length, and a regular expression for the whole value                                             |
+| `prefix`, `suffix`                  | `text`                                                                                          | Fixed text before and after the input, like `https://`                                           |
+| `rows`                              | `textarea`                                                                                      | Height of the empty input in lines (default `8`)                                                 |
+| `min`, `max`, `step`                | `number`, `size`                                                                                | Number range and step                                                                            |
+| `units`                             | `size`                                                                                          | The CSS units to pick from; the first is preselected                                             |
+| `fields`                            | `group`, `array`                                                                                | The fields of the group, or of each item                                                         |
+| `blocks`                            | `blocks`                                                                                        | The item types, keyed by block name, or shared names                                             |
+| `minRows`, `maxRows`                | `array`, `blocks`                                                                               | Fewest and most items                                                                            |
+| `itemLabels`                        | `array`, `blocks`                                                                               | `{ singular, plural, title }` item labels in the admin                                           |
+| `appearance`                        | `array`, `blocks`                                                                               | `"tree"`: edit the items as a tree in the admin                                                  |
+| `appearance`                        | `group`                                                                                         | `"plain"`: show the fields without box and heading                                               |
+| `appearance`                        | `number`                                                                                        | `"plain"` (no buttons), `"stepper"` (− and +), `"slider"` (needs `min`, `max`); default chevrons |
+| `validate`                          | all but `join`                                                                                  | Your own check, on the server                                                                    |
+| `condition`                         | all                                                                                             | The field applies only when this matches                                                         |
+| `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value                                                         |
+| `private`                           | all                                                                                             | Keep the value out of public HTTP reads                                                          |
+| `readOnly`                          | all but `join`                                                                                  | The admin shows the input disabled                                                               |
+| `hidden`                            | all                                                                                             | The admin does not show the input                                                                |
+| `separator`                         | all                                                                                             | A line above the field; a text adds a heading below it                                           |
+| `hooks`                             | all but `join`                                                                                  | See [Hooks](./hooks.md)                                                                          |
 
 The admin receives the schema as JSON. Browser field descriptions can use [typed `.client.ts` imports](admin.md#reactive-field-descriptions), which the build replaces with references. Other function behavior follows these rules:
 
@@ -196,6 +201,20 @@ slug: { type: 'slug', from: 'title', unique: true }
 
 A `date` stores a calendar date. A `datetime` stores a UTC ISO timestamp. The admin shows both in the interface language and edits date-times in the browser's time zone, with a time input that includes seconds.
 
+## Sizes
+
+A `size` stores a number with one of its `units`. `min`, `max` and `step` check the number. The unit type comes from the list:
+
+```ts
+gap: { type: 'size', units: ['px', 'rem'], min: 0 },
+```
+
+```vue
+<section :style="{ gap: page.gap && `${page.gap.value}${page.gap.unit}` }" />
+```
+
+A `size` is not filterable and cannot be `unique`.
+
 ## Groups
 
 A `group` nests fields under one key and renders as one section in the admin:
@@ -220,29 +239,33 @@ seo: {
 
 ## Links
 
-A `link` field points to a document of a collection with a `permalink`, or to a URL. Menus use it, see [Menus](./menus.md).
+A `link` field points to a document of a collection with a `permalink`, to a URL or to a media file. Menus use it, see [Menus](./menus.md).
 
 ```ts
 cta: { type: "link" }
 cta: { type: "link", required: true }
+download: { type: "link", allowed: ["file"] }
 ```
+
+`allowed` limits what it MAY point to: `"internal"` (a document with a `permalink`), `"external"` (a typed URL) and `"file"` (a media file). The default is all three; without media, the admin offers no files.
 
 It stores one of these, with an optional `target` (`_self`, `_blank`, `_parent`, `_top`) and an optional `suffix`:
 
 ```ts
 { reference: { collection: "pages", id: "p1" }, target: "_blank" }
 { reference: { collection: "pages", id: "p1" }, suffix: "?ref=nav#team" }
+{ reference: { collection: "media", id: "m1" } }
 { href: "https://example.com" }
 ```
 
 - A `suffix` is a query and anchor that a read appends to `href`, for a reference and for a URL. It starts with `?` or `#` and has no whitespace. A `#` suffix replaces the fragment of the URL, a `?` suffix replaces its query and fragment.
 
 - An `href` follows the rich text rules: HTTP(S), `mailto:`, `tel:`, relative paths and fragments. Executable schemes are rejected.
-- A bad shape, a bad `href` or a collection without a `permalink` is a field error at its path, like `items.0.children.2.link`, also in drafts.
+- A bad shape, a bad `href`, a kind that `allowed` leaves out or a collection without a `permalink` is a field error at its path, like `items.0.children.2.link`, also in drafts.
 - Publishing checks that the target exists. Drafts keep the loose checks.
 - It works at every depth in groups and lists. It is not filterable and cannot be `unique`.
 
-A populated read adds the target's `permalink` as `href`, in the read's locale and perspective, with the locale prefix of `routing`, and its title as `title`. This also holds in a collection or global that is not localized. Preview URLs are never used.
+A populated read adds the target's `permalink` (or the file's URL) as `href`, in the read's locale and perspective, with the locale prefix of `routing`, and its title as `title`. This also holds in a collection or global that is not localized. Preview URLs are never used.
 
 ```ts
 { reference: { collection: "pages", id: "p1" }, href: "/de/about", title: "Über uns" }
@@ -252,4 +275,4 @@ A populated read adds the target's `permalink` as `href`, in the read's locale a
 - `populate: false` returns the stored value. A write ignores `href`, `title` and `broken` next to a `reference`, so a read value can be saved back.
 - Deleting a linked document throws `LinkedContentError` (409, `LINKED_CONTENT`), like [rich text](./richtext.md#deleting-linked-content). `{ allowBrokenLinks: true }` deletes it and marks `reference.deleted: true` in every value that pointed to it.
 
-In the admin, one input searches titles across collections with a `permalink` and takes a typed URL ("Use https://…"). A second input sets the `suffix`, and a switch opens the link in a new tab.
+In the admin, one input searches titles across collections with a `permalink` and takes a typed URL ("Use https://…"). "File…" in the list and the clip button in the input open the media library. A second input sets the `suffix`, and a switch opens the link in a new tab.
