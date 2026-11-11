@@ -78,8 +78,8 @@ From building the House of Cacao site.
 ### Admin
 
 - [ ] Search in the blocks modal.
-- [ ] Media modal: view sizes (grid and list), and multi-select with Shift and Cmd/Ctrl.
-- [ ] Cmd/Ctrl+S shows a toast: "Tenon saves your changes automatically".
+- [x] Media modal: view sizes (grid and list), and multi-select with Shift and Cmd/Ctrl. Shortcuts through `defineShortcuts()` (a port of Nuxt UI's).
+- [x] Cmd/Ctrl+S shows a toast: "Tenon saves your changes automatically". Without drafts it saves.
 - [ ] Duplicate a collection item, from the list and from the "…" menu.
 - [ ] Blocks and array tree: put "expand all / collapse all" on the same line as the label.
 - [ ] Hide the Astro and Nuxt devtools inside the admin and the live preview, if possible.
@@ -112,6 +112,7 @@ From building the House of Cacao site.
 
 - [ ] Export and import: backups of all data (collections, globals, media, config), moving between databases, seeding.
 - [ ] Field renames: a small content migration (`renameField`), because a renamed field orphans its stored JSON.
+- [ ] Make Redirect a first class setting that gets used automatically if path / permalink changes. Every change of path in hooks should create a new entry that can be delted by the user.
 - [ ] OpenAPI spec, generated from the zod schemas and `/schema`.
 - [ ] CLI for starters (`create-tenon`): framework, database, deploy target, sample content. Needs export and import.
 - [ ] Docs, then npm.

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { CONTENT } from "@/shared/options";
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { client, type Field, type MediaRead } from "@/shared/api";
+import { moveItem } from "@/modules/documents/items";
 import { uploadFiles } from "../uploads";
 import MediaPicker from "./MediaPicker.vue";
 import MediaThumb from "./MediaThumb.vue";
@@ -35,10 +36,53 @@ watch(
 function set(list: string[]) {
   model.value = props.field.many ? list : (list.at(-1) ?? null);
 }
-function move(i: number, by: number) {
-  const list = [...ids.value];
-  [list[i], list[i + by]] = [list[i + by], list[i]];
-  set(list);
+
+// The dragged position, and where it would drop. `at` is `null` where the drop changes nothing.
+const dragged = ref<number | null>(null);
+const at = ref<number | null>(null);
+const list = ref<HTMLElement>();
+
+function dragStart(e: DragEvent, i: number) {
+  const row = (e.target as HTMLElement).closest("li");
+  if (row) e.dataTransfer?.setDragImage(row, 0, 0);
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = "move";
+    // Firefox starts a drag only with data.
+    e.dataTransfer.setData("application/x-tenon-media", ids.value[i]!);
+  }
+  dragged.value = i;
+}
+
+// Other drags, like a block of an outer list, pass through.
+function dragOver(e: DragEvent, i: number) {
+  const from = dragged.value;
+  if (from === null) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const index = e.clientY < r.top + r.height / 2 ? i : i + 1;
+  at.value = index === from || index === from + 1 ? null : index;
+}
+
+function drop(e: DragEvent) {
+  const from = dragged.value;
+  if (from === null) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (at.value !== null) set(moveItem(ids.value, from, at.value > from ? at.value - 1 : at.value));
+  dragEnd();
+}
+
+function dragEnd() {
+  dragged.value = at.value = null;
+}
+
+// The arrow keys on the handle move the file and keep the focus on it.
+async function shift(i: number, by: number) {
+  if (!ids.value[i + by]) return;
+  set(moveItem(ids.value, i, i + by));
+  await nextTick();
+  list.value?.querySelectorAll<HTMLElement>("[data-handle]")[i + by]?.focus();
 }
 // Keeps the order of files already chosen and appends new ones.
 function confirm(picked: string[]) {
@@ -58,50 +102,58 @@ async function upload(files: FileList | null) {
   <div class="flex flex-col gap-3" :aria-invalid="invalid">
     <ul
       v-if="ids.length"
+      ref="list"
       class="border-border divide-border divide-y overflow-hidden rounded-md border"
+      @drop="drop"
     >
-      <li v-for="(id, i) in ids" :key="id" class="flex items-center gap-3 p-3">
-        <MediaThumb :doc="docs[id]" sizes="3rem" class="size-12" />
-        <RouterLink
-          :to="{
-            path: docs[id]?.folder ? `${CONTENT}/media/${docs[id].folder}` : `${CONTENT}/media`,
-            query: { file: id },
-          }"
-          class="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
+      <template v-for="(id, i) in ids" :key="id">
+        <li v-if="at === i" class="p-1" @dragover.prevent.stop>
+          <div class="border-ring bg-accent h-16 rounded-sm border-2 border-dashed" />
+        </li>
+        <li
+          class="flex items-center gap-3 p-3 data-[dragging=true]:opacity-50"
+          :class="field.many && !field.readOnly && 'pl-1'"
+          :data-dragging="dragged === i"
+          @dragover="dragOver($event, i)"
         >
-          {{ docs[id]?.filename ?? (docs[id] === null ? t("media.missingFile") : "…") }}
-        </RouterLink>
-        <template v-if="field.many">
+          <span
+            v-if="field.many && !field.readOnly"
+            data-handle
+            role="button"
+            tabindex="0"
+            draggable="true"
+            class="text-muted-foreground focus-visible:ring-ring/50 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md outline-none focus-visible:ring-3"
+            :aria-label="t('media.reorder', { name: docs[id]?.filename ?? id })"
+            @dragstart="dragStart($event, i)"
+            @dragend="dragEnd"
+            @keydown.up.prevent="shift(i, -1)"
+            @keydown.down.prevent="shift(i, 1)"
+          >
+            <Icon name="grip-vertical" />
+          </span>
+          <MediaThumb :doc="docs[id]" sizes="3rem" class="size-12" />
+          <RouterLink
+            :to="{
+              path: docs[id]?.folder ? `${CONTENT}/media/${docs[id].folder}` : `${CONTENT}/media`,
+              query: { file: id },
+            }"
+            class="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
+          >
+            {{ docs[id]?.filename ?? (docs[id] === null ? t("media.missingFile") : "…") }}
+          </RouterLink>
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
-            :disabled="i === 0"
-            :aria-label="t('common.moveUp')"
-            @click="move(i, -1)"
+            size="sm"
+            :disabled="field.readOnly"
+            @click="set(ids.filter((x) => x !== id))"
           >
-            <Icon name="arrow-up" />
+            {{ t("common.remove") }}
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            :disabled="i === ids.length - 1"
-            :aria-label="t('common.moveDown')"
-            @click="move(i, 1)"
-          >
-            <Icon name="arrow-down" />
-          </Button>
-        </template>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          :disabled="field.readOnly"
-          @click="set(ids.filter((x) => x !== id))"
-        >
-          {{ t("common.remove") }}
-        </Button>
+        </li>
+      </template>
+      <li v-if="at === ids.length" class="p-1" @dragover.prevent.stop>
+        <div class="border-ring bg-accent h-16 rounded-sm border-2 border-dashed" />
       </li>
     </ul>
     <div class="flex flex-wrap gap-2">

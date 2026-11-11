@@ -3,7 +3,10 @@ import { can } from "@/shared/access";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { client, CmsError, schema, type MediaRead } from "@/shared/api";
-import { childFolders, fits, type MediaRules } from "@/modules/media/media";
+import { childFolders, fits, selectRange, type MediaRules } from "@/modules/media/media";
+import { useActiveElement, useStorage } from "@vueuse/core";
+import { defineShortcuts } from "@/shared/composables/defineShortcuts";
+import { ToggleGroup, ToggleGroupItem } from "@/shared/components/ui/toggle-group";
 import { uploadFiles } from "../uploads";
 import Icon from "@/shared/components/Icon.vue";
 import MediaActions from "./MediaActions.vue";
@@ -60,6 +63,13 @@ const dropTarget = ref<HTMLElement>();
 const fileHandler = useFileHandler({ onFilesReady: upload });
 const { error: fileError, openFileDialog, openDirectoryDialog } = fileHandler;
 const { isOverDropZone, isReading, error: dropError } = useDropZone(dropTarget, fileHandler);
+const view = useStorage<"grid" | "list">("tenon-media-view", "grid", undefined, {
+  onError: () => {},
+});
+const list = computed(() => view.value === "list");
+const many = computed(() => !props.pick || !!props.pick.many);
+// The last clicked file or folder, where Shift+click starts its range.
+const anchor = ref<string>();
 const pickerAccept = computed(() =>
   (props.pick?.accept ?? (props.pick?.type === "image" ? ["image/*"] : [])).join(","),
 );
@@ -127,16 +137,68 @@ watch(folder, () => {
   selectedFolders.value = [];
 });
 
-function selectFolder(path: string) {
-  selectedFolders.value = selectedFolders.value.includes(path)
-    ? selectedFolders.value.filter((folder) => folder !== path)
-    : [...selectedFolders.value, path];
+const isSelecting = (e: MouseEvent) => e.shiftKey || e.metaKey || e.ctrlKey;
+
+function selectFolder(path: string, e?: MouseEvent) {
+  if (e?.shiftKey) {
+    const order = visibleFolders.value.map((folder) => folder.path);
+    selectedFolders.value = selectRange(order, selectedFolders.value, anchor.value, path);
+  } else
+    selectedFolders.value = selectedFolders.value.includes(path)
+      ? selectedFolders.value.filter((folder) => folder !== path)
+      : [...selectedFolders.value, path];
+  anchor.value = path;
 }
 
+function clickFolder(path: string, e: MouseEvent) {
+  if (!props.pick && isSelecting(e)) selectFolder(path, e);
+  else folder.value = path;
+}
+
+function selectFile(d: MediaRead, e: MouseEvent) {
+  if (!many.value || !e.shiftKey) return choose(d);
+  const order = currentFiles.value.filter(allowed).map((file) => file.id);
+  selected.value = selectRange(order, selected.value, anchor.value, d.id);
+  anchor.value = d.id;
+}
+
+function clickFile(d: MediaRead, e: MouseEvent) {
+  if (props.pick || isSelecting(e)) selectFile(d, e);
+  else emit("open", d.id);
+}
+
+/** Pickers keep selections from other folders, so they add the folder's allowed files. */
 function selectAll() {
-  selected.value = currentFiles.value.map((file) => file.id);
+  const ids = currentFiles.value.filter(allowed).map((file) => file.id);
+  if (props.pick) return void (selected.value = [...new Set([...selected.value, ...ids])]);
+  selected.value = ids;
   selectedFolders.value = visibleFolders.value.map((folder) => folder.path);
 }
+
+function clearSelection() {
+  selected.value = [];
+  selectedFolders.value = [];
+}
+
+const focused = useActiveElement();
+const selectionCount = computed(() => selected.value.length + selectedFolders.value.length);
+// Shortcuts stay off while focus is in a dialog or sheet above the library.
+const hasFocus = computed(
+  () =>
+    !focused.value ||
+    focused.value === document.body ||
+    !!dropTarget.value?.contains(focused.value),
+);
+defineShortcuts(() => {
+  if (!hasFocus.value || selectionBusy.value) return {};
+  const removeSelected = !props.pick && selectionCount.value > 0 && (() => actions.value?.remove());
+  return {
+    meta_a: many.value && selectAll,
+    escape: !props.pick && selectionCount.value > 0 && clearSelection,
+    meta_backspace: removeSelected,
+    delete: removeSelected,
+  };
+});
 
 function completedFolders(action: "move" | "delete", roots: string[], destination: string) {
   localFolders.value = localFolders.value.flatMap((path) => {
@@ -200,8 +262,9 @@ function newFolder(input: string) {
 function choose(d: MediaRead) {
   if (!allowed(d)) return;
   if (selected.value.includes(d.id)) selected.value = selected.value.filter((id) => id !== d.id);
-  else if (props.pick && !props.pick.many) selected.value = [d.id];
+  else if (!many.value) selected.value = [d.id];
   else selected.value = [...selected.value, d.id];
+  anchor.value = d.id;
 }
 
 // New folders exist only until their first upload, so they go with it.
@@ -271,6 +334,21 @@ async function upload(files: Iterable<FileWithPath> | null | undefined) {
       </div>
 
       <div class="-mr-2 flex flex-wrap items-center justify-end gap-2">
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          required
+          :model-value="view"
+          :aria-label="t('media.view')"
+          @update:model-value="(value) => (view = value === 'list' ? 'list' : 'grid')"
+        >
+          <ToggleGroupItem value="grid" :aria-label="t('media.grid')">
+            <Icon name="layout-grid" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="list" :aria-label="t('media.list')">
+            <Icon name="list" />
+          </ToggleGroupItem>
+        </ToggleGroup>
         <slot name="actions" />
         <Button
           v-if="uploads"
@@ -303,7 +381,7 @@ async function upload(files: Iterable<FileWithPath> | null | undefined) {
 
     <div
       data-slot="media-library-content"
-      class="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6"
+      class="@container min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6"
     >
       <slot name="status" />
       <p v-if="dropError || fileError" class="text-destructive text-sm" role="alert">
@@ -334,7 +412,14 @@ async function upload(files: Iterable<FileWithPath> | null | undefined) {
         class="flex flex-col gap-3"
       >
         <h2 class="text-muted-foreground text-xs font-medium">{{ t("media.folders") }}</h2>
-        <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-3">
+        <ul
+          class="select-none"
+          :class="
+            list
+              ? 'flex flex-col gap-1'
+              : 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-2 @2xl:gap-3'
+          "
+        >
           <MediaFolderItem
             v-for="f in visibleFolders"
             :key="f.path"
@@ -342,8 +427,8 @@ async function upload(files: Iterable<FileWithPath> | null | undefined) {
             :selected="selectedFolders.includes(f.path)"
             :pick="!!pick"
             :disabled="selectionBusy"
-            @open="folder = f.path"
-            @select="selectFolder(f.path)"
+            @open="clickFolder(f.path, $event)"
+            @select="selectFolder(f.path, $event)"
             @rename="startRename(f.path)"
             @move="actions?.move([], [f.path])"
             @delete="actions?.remove([], [f.path])"
@@ -357,17 +442,25 @@ async function upload(files: Iterable<FileWithPath> | null | undefined) {
         class="flex flex-col gap-3"
       >
         <h2 class="text-muted-foreground text-xs font-medium">{{ t("media.files") }}</h2>
-        <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-3">
+        <ul
+          class="select-none"
+          :class="
+            list
+              ? 'flex flex-col gap-1'
+              : 'grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2 @2xl:grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] @2xl:gap-3'
+          "
+        >
           <MediaFileItem
             v-for="d in currentFiles"
             :key="d.id"
             :doc="d"
             :selected="selected.includes(d.id)"
             :allowed="allowed(d)"
+            :list="list"
             :pick="!!pick"
             :disabled="selectionBusy"
-            @open="pick ? choose(d) : emit('open', d.id)"
-            @select="choose(d)"
+            @open="clickFile(d, $event)"
+            @select="selectFile(d, $event)"
             @rename="startRename(d)"
             @move="actions?.move([d.id], [])"
             @delete="actions?.remove([d.id], [])"

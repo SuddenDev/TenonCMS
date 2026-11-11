@@ -73,3 +73,20 @@ export function fileIcon(mimeType: string) {
   if (mimeType === "application/pdf" || mimeType.startsWith("text/")) return "file-text";
   return "file";
 }
+
+/**
+ * Adds the keys from `anchor` to `target` in `order` to a selection, as Shift+click does.
+ * @returns The selection plus the range, or plus only `target` when `anchor` is not in `order`.
+ */
+export function selectRange(
+  order: string[],
+  selected: string[],
+  anchor: string | undefined,
+  target: string,
+) {
+  const from = anchor === undefined ? -1 : order.indexOf(anchor);
+  const to = order.indexOf(target);
+  const range =
+    from < 0 || to < 0 ? [target] : order.slice(Math.min(from, to), Math.max(from, to) + 1);
+  return [...new Set([...selected, ...range])];
+}

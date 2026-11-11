@@ -2,6 +2,8 @@
 import { DeletionCancelled } from "@/shared/linked-deletion";
 import { computed, provide, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { toast } from "vue-sonner";
+import { defineShortcuts } from "@/shared/composables/defineShortcuts";
 import { CmsError, type Data, type Field, type Fields, type Layout } from "@/shared/api";
 import { onLocaleFlush } from "@/shared/composables/useLocale";
 import { active, structureKey, normalize } from "@/modules/documents/fields";
@@ -199,6 +201,18 @@ const unpublish = () =>
 
 // The schedule dialog's Publish now runs the same publish as the button.
 defineExpose({ publish });
+
+// Cmd/Ctrl+S saves now. A draft saves on its own anyway, so the toast says so.
+defineShortcuts(() => ({
+  meta_s: (drafts || !!props.save) && {
+    usingInput: true,
+    handler: () => {
+      if (!drafts) return void (busy.value || submit());
+      void autosave.flush();
+      toast(t("documents.autosaves"), { id: "autosaves" });
+    },
+  },
+}));
 
 async function discard() {
   const message = t(

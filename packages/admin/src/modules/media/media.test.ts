@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { childFolders, fileType, formatSize } from "./media";
+import { childFolders, fileType, formatSize, selectRange } from "./media";
 
 it.each([
   ["image/jpeg", "image"],
@@ -39,5 +39,18 @@ describe("formatSize", () => {
     expect(formatSize(1536, "en")).toBe("1.5 KB");
     expect(formatSize(1536, "de")).toBe("1,5 KB");
     expect(formatSize(12 * 1024 ** 2, "de")).toBe("12 MB");
+  });
+});
+
+describe("selectRange", () => {
+  const order = ["a", "b", "c", "d"];
+
+  it("adds the range in either direction to the selection", () => {
+    expect(selectRange(order, ["a"], "d", "b")).toEqual(["a", "b", "c", "d"]);
+    expect(selectRange(order, [], "b", "c")).toEqual(["b", "c"]);
+  });
+
+  it("adds only the target without an anchor in the list", () => {
+    expect(selectRange(order, ["a"], "elsewhere", "c")).toEqual(["a", "c"]);
   });
 });

@@ -12,7 +12,13 @@ defineProps<{
   pick?: boolean;
   disabled?: boolean;
 }>();
-const emit = defineEmits<{ open: []; select: []; rename: []; move: []; delete: [] }>();
+const emit = defineEmits<{
+  open: [event: MouseEvent];
+  select: [event: MouseEvent];
+  rename: [];
+  move: [];
+  delete: [];
+}>();
 const { t } = useI18n();
 </script>
 
@@ -23,7 +29,7 @@ const { t } = useI18n();
         :model-value="selected"
         :disabled="disabled"
         :aria-label="t('media.selectFolder', { name: folder.name })"
-        @update:model-value="emit('select')"
+        @click="emit('select', $event)"
       />
     </div>
     <Button
@@ -33,7 +39,7 @@ const { t } = useI18n();
       :class="pick ? 'px-3' : 'pr-10 pl-9.5'"
       :title="folder.name"
       :disabled="disabled"
-      @click="emit('open')"
+      @click="emit('open', $event)"
     >
       <Icon name="folder" class="text-muted-foreground" />
       <span class="truncate">{{ folder.name }}</span>
