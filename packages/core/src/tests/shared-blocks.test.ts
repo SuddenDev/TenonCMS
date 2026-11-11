@@ -1,8 +1,11 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { ConflictError, defineCms, defineCollection } from "../index.ts";
+import type { BlockOf } from "../client/index.ts";
+import { type Block, ConflictError, defineCms, defineCollection } from "../index.ts";
 import { admin, setup, testDatabase } from "./setup.ts";
 
 const options = { database: testDatabase, secret: "x".repeat(32), media: false } as const;
+
+const hero = { fields: { heading: { type: "text" } } } as const satisfies Block;
 
 const make = () =>
   defineCms({
@@ -28,7 +31,7 @@ const make = () =>
           content: {
             type: "blocks",
             blocks: {
-              hero: { fields: { heading: { type: "text" } } },
+              hero,
               section: "section",
               note: "text",
             },
@@ -97,6 +100,10 @@ describe("shared blocks", () => {
       const inner = item.children![0];
       if (inner.blockType === "section") expectTypeOf(inner.owner).toEqualTypeOf<string>();
     }
+    expectTypeOf<BlockOf<typeof page.content>["blockType"]>().toEqualTypeOf<
+      "hero" | "section" | "note"
+    >();
+    expectTypeOf<BlockOf<typeof page.content, "note">["body"]>().toEqualTypeOf<string>();
     expect(item).toMatchObject({ blockType: "hero", heading: "Hi" });
 
     const schema = (await client.getSchema()) as any;

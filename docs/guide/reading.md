@@ -132,6 +132,18 @@ import type { DocumentOf, GlobalOf } from "tenoncms/client";
 
 const options = { where: { path: "/" }, select: { title: true, blocks: true } } as const;
 type Page = DocumentOf<"pages", typeof options>;
-type Block = NonNullable<Page["blocks"]>[number];
 type Nav = GlobalOf<"navigation">;
 ```
+
+`BlockOf` types the items of a `blocks` value from such a read, narrowed by `blockType`. It works on any `blocks` value: in a global, a group or another block.
+
+```ts
+import type { BlockOf } from "tenoncms/client";
+
+type Block = BlockOf<Page["blocks"]>;
+type Hero = BlockOf<Page["blocks"], "hero">;
+type Section = BlockOf<Page["blocks"], "section">;
+type SectionChild = BlockOf<Section["children"]>;
+```
+
+`Image`, `File` and `LinkRead` from `tenoncms` type a populated `image`, `file` and `link` field.

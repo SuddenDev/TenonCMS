@@ -100,3 +100,16 @@ export type GlobalOf<
   O = {},
   C extends { schema: Schema } = RegisteredCms,
 > = ReadGlobal<C, K, O>;
+
+/**
+ * The items of a `blocks` value `V` from a read, narrowed to the block types `T`. All items without `T`.
+ * @example
+ * type Hero = BlockOf<Page['content'], 'hero'>
+ */
+export type BlockOf<V, T extends BlockTypeOf<V> = BlockTypeOf<V>> = Extract<
+  ItemOf<V>,
+  { blockType: T }
+>;
+
+type ItemOf<V> = NonNullable<V> extends readonly (infer I)[] ? I : never;
+type BlockTypeOf<V> = ItemOf<V> extends { blockType: infer T extends string } ? T : never;

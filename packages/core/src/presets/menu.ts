@@ -1,5 +1,6 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
 import type { Block, BlocksField, Fields, Global, GlobalHooks } from "../schema/index.ts";
+import type { Replace } from "../schema/inference/common.ts";
 
 type MenuBlockName<K> = `menu${Capitalize<K & string>}`;
 
@@ -29,7 +30,6 @@ export function menu<const B extends MenuBlocks = {}, const D extends number = 0
   const depth = options.depth ?? 0;
   if (depth < 0) return shared as Menu<B, D>;
 
-  // ponytail: finite menus are typed loosely. Exact types per depth need a type-level counter.
   const host = options.blocks ?? {};
   const { menuLink, menuHeading } = shared.blocks as Record<"menuLink" | "menuHeading", Block>;
   const withChildren = (block: Block, children: BlockMap): Block => ({
@@ -56,9 +56,36 @@ export function menu<const B extends MenuBlocks = {}, const D extends number = 0
 }
 
 type SharedMenu<B extends MenuBlocks> = ReturnType<typeof sharedMenu<B>>;
-type Menu<B extends MenuBlocks, D extends number> = D extends -1
+
+/** Finite depths with exact types. A deeper or non-literal depth types the items loosely. */
+type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+type Shared = SharedMenu<{}>["blocks"];
+type WithChildren<Bl extends Shared[keyof Shared], C> = Replace<
+  Bl,
+  "fields",
+  Replace<Bl["fields"], "children", Replace<Bl["fields"]["children"], "blocks", C>>
+>;
+
+// The type-level twins of `linksAt()` and `itemsAt()`.
+type LinksAt<B, D extends number> = B & {
+  link: D extends 0
+    ? Replace<Shared["menuLink"], "fields", Omit<Shared["menuLink"]["fields"], "children">>
+    : WithChildren<Shared["menuLink"], ItemsAt<B, Prev[D]>>;
+};
+type ItemsAt<B, D extends number> = D extends 0
+  ? LinksAt<B, D>
+  : LinksAt<B, D> & { heading: WithChildren<Shared["menuHeading"], LinksAt<B, Prev[D]>> };
+
+type Menu<B extends MenuBlocks, D extends number> = `${D}` extends `-${string}`
   ? SharedMenu<B>
-  : { blocks: {}; fields: { items: BlocksField } };
+  : {
+      blocks: {};
+      fields: {
+        items: D extends Prev[number]
+          ? Replace<SharedMenu<B>["fields"]["items"], "blocks", ItemsAt<B, D>>
+          : BlocksField;
+      };
+    };
 
 /** The unlimited menu: `menuLink` and `menuHeading` as blocks that contain themselves by name. */
 function sharedMenu<const B extends MenuBlocks>(blocks: B | undefined) {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 import { defineCms, menuItems } from "../index.ts";
 import {
   menu,
@@ -465,6 +465,37 @@ describe("menu preset", () => {
       await expect(
         cms.setGlobal("mainMenu", { items: [heading([heading([link()])])] }),
       ).rejects.toBeDefined();
+    });
+
+    it("types a finite menu read level by level", async () => {
+      const button = { fields: { style: { type: "text" } } } as const;
+      const preset = menu({ depth: 1, blocks: { button } });
+      const cms = defineCms({
+        globals: { nav: { fields: { ...preset.fields } } },
+        database: testDatabase(),
+        secret: "x".repeat(32),
+        media: false,
+      });
+      await cms.setGlobal("nav", {
+        items: [{ blockType: "heading", label: "H", children: [{ blockType: "button" }] }],
+      });
+      const { items } = await cms.getGlobal("nav");
+
+      type Item = NonNullable<typeof items>[number];
+      expectTypeOf<Item["blockType"]>().toEqualTypeOf<"link" | "button" | "heading">();
+      const heading = items![0]!;
+      if (heading.blockType === "heading") {
+        const child = heading.children![0]!;
+        expectTypeOf(child.blockType).toEqualTypeOf<"link" | "button">();
+        if (child.blockType === "link") {
+          // @ts-expect-error depth 1 ends below the heading
+          void child.children;
+        }
+      }
+      expect(menuItems(items)[0]).toMatchObject({
+        type: "heading",
+        children: [{ type: "button" }],
+      });
     });
 
     it("needs no shared blocks unless unlimited", () => {

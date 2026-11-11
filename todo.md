@@ -105,8 +105,8 @@ From building the House of Cacao site.
 
 ### Types
 
-- [ ] Export a type for blocks, like the one for field types.
-- [ ] Generate most of the host's content types (`app/types/cms.ts` in the test app hoc-web) from the schema.
+- [x] Export a type for blocks, like the one for field types: `Block` from `tenoncms`, for `satisfies Block`.
+- [x] Generate most of the host's content types (`app/types/cms.ts` in the test app hoc-web) from the schema: `DocumentOf`, `GlobalOf` and `BlockOf` from `tenoncms/client`, and finite `menu()` reads typed level by level.
 
 ## 5. Publishing
 

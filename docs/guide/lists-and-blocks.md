@@ -68,7 +68,16 @@ items: { type: "blocks", appearance: "tree", blocks: { link: "menuLink", heading
 
 ## Nested and shared blocks
 
-A block can have its own `blocks` fields, so items nest. A `columns` block with a `left` and a `right` list works with plain objects. Reuse a block in several places by importing the same object.
+A block can have its own `blocks` fields, so items nest. A `columns` block with a `left` and a `right` list works with plain objects. Reuse a block in several places by importing the same object. `satisfies Block` checks a block in its own file and keeps its exact types, like `satisfies Field` for a field:
+
+```ts
+import type { Block } from "tenoncms";
+
+export const hero = {
+  label: "Hero",
+  fields: { headline: { type: "text", required: true } },
+} as const satisfies Block;
+```
 
 Only a block that contains itself, like a `section` inside a `section`, needs a name: an object cannot point to itself while you define it. Put such blocks in `defineCms({ blocks })` and write the name where the block object would go:
 

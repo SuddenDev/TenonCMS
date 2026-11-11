@@ -10,6 +10,7 @@ export type { ImageProvider, ImagesOptions, MediaOptions, Storage } from "./medi
 export { defineCollection, defineGlobal } from "./schema/index.ts";
 export { formatMask } from "./schema/fields/format-mask.ts";
 export type {
+  Block,
   Collection,
   CollectionHooks,
   GlobalHooks,

@@ -26,6 +26,7 @@ defineCms({
 `menuPreset({ name: "mainMenu", depth: 2, localized: true })` in `defineCms({ presets })` does the same in one line. See [Presets in one line](./pages-and-seo.md#presets-in-one-line).
 
 - `depth` is how many levels of children a menu has below the top. `0` (default) is a flat list, `1` allows one level, `-1` is unlimited. A heading counts as a level, so a flat menu has no headings.
+- Reads are typed level by level, so `blockType` narrows at every depth. A depth above 9, or one that is not a literal, types the items loosely.
 - The two blocks are:
   - `menuLink`: `link` (a [`link` field](./schema.md#links), required), `label` (text, optional) and `children` (links and headings).
   - `menuHeading`: `label` (text, required) and `children` (links).
