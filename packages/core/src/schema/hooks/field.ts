@@ -27,6 +27,18 @@ export type Validate<V> = {
   validate(value: V | null | undefined, args: FieldArgs): Awaitable<true | string>;
 }["validate"];
 
+/**
+ * Any validator that follows Standard Schema, like a zod, valibot or arktype schema. Only its issues are used:
+ * the stored value stays the input, so transforms and coercion change nothing. See https://standardschema.dev.
+ */
+export type StandardSchema = {
+  readonly "~standard": {
+    validate(
+      value: unknown,
+    ): Awaitable<{ readonly issues?: ReadonlyArray<{ readonly message: string }> }>;
+  };
+};
+
 /** Hooks of one field. A hook MAY return a new value; `undefined` keeps the old one. */
 export type FieldHooks<V> = {
   /** Runs on unvalidated input, before schema validation. */

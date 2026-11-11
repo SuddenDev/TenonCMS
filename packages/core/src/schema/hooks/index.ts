@@ -3,7 +3,7 @@ import type { ApiKeyCaller } from "../../api-keys/types.ts";
 import type { LocalApi } from "../../cms/api/local-api.ts";
 
 export type { CollectionHooks } from "./collection.ts";
-export type { FieldArgs, FieldHooks, Validate } from "./field.ts";
+export type { FieldArgs, FieldHooks, StandardSchema, Validate } from "./field.ts";
 export type { GlobalHooks } from "./global.ts";
 export type {
   MediaApi,

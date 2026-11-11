@@ -1,7 +1,9 @@
 ---
+import { formatMask } from "tenoncms";
 import { edit } from "tenoncms/preview";
 import Richtext from "tenoncms/richtext/astro";
 import Header from "../../components/Header.astro";
+import { PHONE_MASK } from "../../../globals/kitchen-sink";
 
 export const prerender = false;
 
@@ -16,6 +18,7 @@ const rows: [string, unknown][] = [
   ["status", sink.status],
   ["code", sink.code],
   ["shortName", sink.shortName],
+  ["phone", formatMask(sink.phone, PHONE_MASK)],
   ["shared", sink.shared],
   ["length", sink.length],
   ["note", sink.note],

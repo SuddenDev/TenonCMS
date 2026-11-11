@@ -27,6 +27,12 @@ export type TextField = Base &
     prefix?: Text;
     /** `text` only, admin only: a fixed text after the input, like `.com`. Not stored. */
     suffix?: Text;
+    /**
+     * `text` only, admin only: an input mask, like `'#### #### #### ####'`. `#` is a digit, `@` a letter, `*` either.
+     * The admin shows the masked value and stores only the typed characters. `minLength`, `maxLength` and `pattern`
+     * check that stored value, so only the server checks them. See https://beholdr.github.io/maska/.
+     */
+    mask?: string;
     /** `textarea` only, admin only: the height of the empty input in lines. It grows with the content. Default `8`. */
     rows?: number;
   };

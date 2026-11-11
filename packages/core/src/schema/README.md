@@ -19,7 +19,7 @@ It checks the `localization` config (not empty, no duplicates, `defaultLocale` i
 
 `runtime/apply-defaults.ts` → `runtime/fill-slugs.ts` → `runtime/run-field-hooks.ts` → `validation/parse-data.ts` → `runtime/validate-fields.ts`
 
-`applyDefaults()` and `fillSlugs()` fill missing values in place. `runFieldHooks()` runs one stage of field hooks, a group's or list's own before its fields'. All three walk array and block items with positional paths (`links.2.label`). `parseData()` builds `dataSchema()` from the actual data, because conditions depend on it and a block item's fields depend on its `blockType`, and throws a `ValidationError` by field path. It fills a missing item `id`, drafts included. `validateFields()` runs the custom `validate` functions of active fields. The pipeline parses again after `beforeChange`, so hooks cannot store invalid data.
+`applyDefaults()` and `fillSlugs()` fill missing values in place. `runFieldHooks()` runs one stage of field hooks, a group's or list's own before its fields'. All three walk array and block items with positional paths (`links.2.label`). `parseData()` builds `dataSchema()` from the actual data, because conditions depend on it and a block item's fields depend on its `blockType`, and throws a `ValidationError` by field path. It fills a missing item `id`, drafts included. `validateFields()` runs the custom `validate` functions and Standard Schemas of active fields. The pipeline parses again after `beforeChange`, so hooks cannot store invalid data.
 
 ## Files
 
@@ -65,4 +65,4 @@ Defaults, slugs, custom validators, field hooks and reference checks share one `
 
 Browser code MUST import field and schema contracts with `import type`, so zod stays on the server. `condition.ts` MUST stay import-free. The `inference/` types run nothing; after a change there, check both `pnpm typecheck` and the tsdown d.ts build, because the read types sit close to TS2589 and to tsdown's memory limit.
 
-`fields/richtext.ts` declares the standard Tiptap JSON field. The [richtext module](../richtext/README.md) owns its shared schema, feature policy and Tiptap decoration. `fields/link.ts` declares the `link` field. The [links module](../links/README.md) owns the value checks, resolution and integrity of both. `appearance: "tree"` on `array` and `blocks` is admin only.
+`fields/richtext.ts` declares the standard Tiptap JSON field. The [richtext module](../richtext/README.md) owns its shared schema, feature policy and Tiptap decoration. `fields/link.ts` declares the `link` field. The [links module](../links/README.md) owns the value checks, resolution and integrity of both. `appearance: "tree"` on `array` and `blocks` is admin only. `fields/format-mask.ts` formats a stored `text` value with its `mask` through maska, like the admin input; `tenoncms` and `tenoncms/client` export it.

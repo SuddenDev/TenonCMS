@@ -112,7 +112,7 @@ From building the House of Cacao site.
 
 - [ ] Export and import: backups of all data (collections, globals, media, config), moving between databases, seeding.
 - [ ] Field renames: a small content migration (`renameField`), because a renamed field orphans its stored JSON.
-- [ ] OpenAPI spec, generated from the zod schemas and `/schema`. Generated SDKs (hey-api) build on it for consumers without TypeScript; TypeScript hosts keep `createClient()`.
+- [ ] OpenAPI spec, generated from the zod schemas and `/schema`.
 - [ ] CLI for starters (`create-tenon`): framework, database, deploy target, sample content. Needs export and import.
 - [ ] Docs, then npm.
 
@@ -122,3 +122,4 @@ From building the House of Cacao site.
 - [ ] Presence: who is editing a document.
 - [ ] SvelteKit adapter.
 - [ ] Trash / soft delete.
+- [ ] Generated SDKs (hey-api) build on it for consumers without TypeScript; TypeScript hosts keep `createClient()`.

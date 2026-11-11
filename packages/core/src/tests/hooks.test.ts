@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   ConflictError,
   defineCms,
@@ -376,6 +377,7 @@ describe("hooks", () => {
           fields: {
             title: { type: "text", hooks: { afterRead: [log("f")] } },
             hooks: { type: "text" },
+            email: { type: "text", validate: z.email() },
             status: {
               type: "select",
               options: ["draft", "live"],

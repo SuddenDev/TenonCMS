@@ -1,7 +1,7 @@
 import type { Text, BrowserValue, FieldDescription } from "../../admin/index.d.ts";
 import type { FieldAccess } from "../../access/types.ts";
 import type { Condition } from "../condition.ts";
-import type { FieldHooks, Fn, HookArgs, Validate } from "../hooks/index.ts";
+import type { FieldHooks, Fn, HookArgs, StandardSchema, Validate } from "../hooks/index.ts";
 import type { Placement } from "./layout.ts";
 
 /** Options of every field, joins included. */
@@ -44,8 +44,9 @@ export type Base<V = string, S = V> = Common & {
   /**
    * Server only. Returns `true`, or an error message for this field. Runs after the type checks and before `beforeChange` hooks.
    * All messages of a write come back together in one `ValidationError`. Skipped when `condition` is false.
+   * A {@link StandardSchema} such as `z.email()` works too. It skips `null`, missing and `""` values, and its first issue is the message.
    */
-  validate?: Validate<S>;
+  validate?: Validate<S> | StandardSchema;
   /**
    * No other document of the collection MAY have the same value. Checked after `beforeChange` hooks; a collision is a
    * `ValidationError` with `Already used`. `null` and missing values never collide. Case-sensitive.

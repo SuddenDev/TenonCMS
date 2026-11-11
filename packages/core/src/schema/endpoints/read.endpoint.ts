@@ -60,15 +60,15 @@ export function readEndpoint(
 }
 
 // Hooks are functions. `JSON.stringify` turns them into `null` inside arrays, so they are dropped here. `access`
-// holds functions too; the endpoint sends the caller's permissions instead.
+// holds functions too; the endpoint sends the caller's permissions instead. `validate` MAY be a Standard Schema object.
 // Only the options of a field, block, collection or global are touched: a field, block, tab or fieldset MAY be named
-// `hooks`, `access`, `preview` or `permalink`. `JSON.stringify` drops other functions, like `validate`, itself.
+// `hooks`, `access`, `validate`, `preview` or `permalink`. `JSON.stringify` drops other functions itself.
 // The admin only needs to know that a preview exists (`preview` or `permalink`), so either form is sent as `true`.
 // A shared block is sent once, in `blocks`, and by name everywhere else, so a block inside itself ends.
 const publicValue = (names: Map<object, string>) =>
   function (this: any, key: string, value: any) {
     if (typeof this?.type !== "string" && !isObject(this?.fields)) return value;
-    if (key === "hooks" || key === "access") return undefined;
+    if (key === "hooks" || key === "access" || key === "validate") return undefined;
     if (key === "permalink") return undefined;
     if (key === "preview") return !!value || undefined;
     if (this.type === "blocks" && key === "blocks")

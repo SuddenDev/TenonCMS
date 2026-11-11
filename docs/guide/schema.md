@@ -97,6 +97,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | `default`                           | all but `join`                                                                                  | Value on `create` when the field is `undefined`                                                  |
 | `minLength`, `maxLength`, `pattern` | `text`, `textarea`                                                                              | Length, and a regular expression for the whole value                                             |
 | `prefix`, `suffix`                  | `text`                                                                                          | Fixed text before and after the input, like `https://`                                           |
+| `mask`                              | `text`                                                                                          | An input mask in the admin, like `#### ####`; stores the raw value                               |
 | `rows`                              | `textarea`                                                                                      | Height of the empty input in lines (default `8`)                                                 |
 | `min`, `max`, `step`                | `number`, `size`                                                                                | Number range and step                                                                            |
 | `units`                             | `size`                                                                                          | The CSS units to pick from; the first is preselected                                             |
@@ -107,7 +108,7 @@ Each database has its own entry and driver, so you install only the one you use:
 | `appearance`                        | `array`, `blocks`                                                                               | `"tree"`: edit the items as a tree in the admin                                                  |
 | `appearance`                        | `group`                                                                                         | `"plain"`: show the fields without box and heading                                               |
 | `appearance`                        | `number`                                                                                        | `"plain"` (no buttons), `"stepper"` (− and +), `"slider"` (needs `min`, `max`); default chevrons |
-| `validate`                          | all but `join`                                                                                  | Your own check, on the server                                                                    |
+| `validate`                          | all but `join`                                                                                  | Your own check or a Standard Schema, on the server                                               |
 | `condition`                         | all                                                                                             | The field applies only when this matches                                                         |
 | `unique`                            | top-level `text`, `textarea`, `number`, `date`, `datetime`, `select`, `slug`, single `relation` | No two documents MAY have the same value                                                         |
 | `private`                           | all                                                                                             | Keep the value out of public HTTP reads                                                          |
@@ -137,6 +138,21 @@ Built-in checks are `required`, `minLength`, `maxLength`, `pattern`, `min`, `max
 
 - `pattern` is a string, not a `RegExp`. It MUST match the whole value (`^…$` is implied) and compiles with the `v` flag, like the HTML `pattern` attribute. A `<textarea>` has no `pattern` attribute, so there only the server checks it.
 
+### Masks
+
+`mask` formats a `text` input while the editor types. `#` is a digit, `@` a letter and `*` either; other characters are fixed. The admin uses [maska](https://beholdr.github.io/maska/).
+
+```ts
+phone: { type: 'text', mask: '+49 ### #######', pattern: '\\d{10}' },
+```
+
+- The field stores only the typed characters: `+49 151 1234567` is stored as `1511234567`. The fixed `+49` is not stored.
+- A change of the mask later shows old values in the new format. The stored data stays the same.
+- A mask is not a check. The editor can stop before the mask is full, and the API takes any string. Add `pattern`, `minLength` or `maxLength` for the raw value, like `\d{10}` above. Only the server checks them, because the input holds the masked value.
+- Format the value on your site with `formatMask(phone, '+49 ### #######')` from `tenoncms` or `tenoncms/client`. It gives the same result as the admin input.
+
+### Custom checks
+
 `validate` returns `true` or an error message. It runs after the type checks and before `beforeChange` hooks. It does not run on the second validation after them, or on `onDelete` updates. All messages of one write come back in a single 400.
 
 ```ts
@@ -144,6 +160,16 @@ end: { type: 'date', validate: (value, { siblingData }) => !value || value >= si
 ```
 
 It receives `data`, `siblingData`, `originalDoc`, `operation`, `path`, `cms` and `user`, like field hooks.
+
+`validate` also takes any [Standard Schema](https://standardschema.dev), such as a zod, valibot or arktype schema:
+
+```ts
+email: { type: 'text', validate: z.email('Not an email') },
+```
+
+- `null`, missing and `""` values skip it, like the built-in checks. Add `required` to demand a value.
+- The first issue's message is the field's error.
+- The stored value stays the input. Transforms and coercion change nothing.
 
 ## Conditions
 

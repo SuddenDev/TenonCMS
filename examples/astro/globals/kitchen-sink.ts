@@ -2,6 +2,9 @@ import { priceDescription } from "./kitchen-sink.client";
 import { defineGlobal } from "tenoncms";
 import { RICHTEXT_FEATURES } from "tenoncms/richtext";
 
+// The page formats the stored phone number with the same mask.
+export const PHONE_MASK = "+49 ### #######";
+
 // Every field type and layout option once. A global MUST NOT hold a join or a `unique` field:
 // `authors.posts` is the join of this example.
 export const kitchenSink = defineGlobal({
@@ -85,6 +88,14 @@ export const kitchenSink = defineGlobal({
       width: "1/3",
     },
     shortName: { type: "text", tab: "text", minLength: 2, maxLength: 12, width: "1/3" },
+    phone: {
+      type: "text",
+      tab: "text",
+      mask: PHONE_MASK,
+      pattern: "\\d{10}",
+      description: "A mask. Stores only the digits; the pattern checks them.",
+      width: "1/3",
+    },
     domain: { type: "text", tab: "text", prefix: "https://", suffix: ".com", width: "1/2" },
     shared: {
       type: "text",

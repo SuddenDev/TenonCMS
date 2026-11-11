@@ -8,6 +8,7 @@ export type {
 } from "./cms/config/options.ts";
 export type { ImageProvider, ImagesOptions, MediaOptions, Storage } from "./media/index.ts";
 export { defineCollection, defineGlobal } from "./schema/index.ts";
+export { formatMask } from "./schema/fields/format-mask.ts";
 export type {
   Collection,
   CollectionHooks,

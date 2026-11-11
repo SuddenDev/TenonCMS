@@ -47,7 +47,7 @@ A few helpers walk the fields of a document, so every feature agrees on what a p
 
 ## Conditions and JSON
 
-Anything the admin evaluates MUST be JSON: conditions, the built-in checks and plain defaults. They run in both places. `validate`, function defaults and hooks run on the server only, so the schema sent to the admin has them stripped.
+Anything the admin evaluates MUST be JSON: conditions, the built-in checks and plain defaults. They run in both places. `validate` (a function or a Standard Schema), function defaults and hooks run on the server only, so the schema sent to the admin has them stripped. `/schema` drops `validate` by key, because a Standard Schema is an object that `JSON.stringify` would send.
 
 ## Hook contracts
 

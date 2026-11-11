@@ -1,6 +1,6 @@
 # client
 
-`tenoncms/client`: a typed HTTP client for `/_tenon`, with the same method names as the local API. It runs in the browser and imports types only. It does not render previews; that is `tenoncms/preview` (`src/preview/`). The admin uses this client too, so there is only one HTTP client.
+`tenoncms/client`: a typed HTTP client for `/_tenon`, with the same method names as the local API. It runs in the browser and imports types only, besides the import-free helpers and `formatMask()` (maska). It does not render previews; that is `tenoncms/preview` (`src/preview/`). The admin uses this client too, so there is only one HTTP client.
 
 ## Follow a read
 

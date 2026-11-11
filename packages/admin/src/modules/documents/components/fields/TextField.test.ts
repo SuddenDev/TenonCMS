@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { expect, it } from "vitest";
-import { createApp, h } from "vue";
+import { createApp, h, nextTick } from "vue";
 import { i18n } from "@/shared/i18n";
 import TextField from "./TextField.vue";
 
@@ -40,4 +40,34 @@ it("shows a fixed prefix and suffix around the input", () => {
   expect(group?.firstElementChild?.textContent).toBe("https://");
   expect(group?.lastElementChild?.textContent).toBe(".com");
   expect(group?.querySelector("input")).not.toBeNull();
+});
+
+it("shows a masked value and stores the raw one", async () => {
+  const saved: unknown[] = [];
+  const root = document.createElement("div");
+  createApp({
+    render: () =>
+      h(TextField, {
+        name: "card",
+        field: { type: "text", mask: "#### ####", pattern: "\\d{8}", maxLength: 8 } as never,
+        root: {},
+        siblings: { fields: {}, data: {} },
+        modelValue: "1234",
+        "onUpdate:modelValue": (v: unknown) => saved.push(v),
+      }),
+  })
+    .use(i18n)
+    .mount(root);
+  const input = root.querySelector("input")!;
+
+  expect(input.value).toBe("1234");
+  expect(input.hasAttribute("pattern")).toBe(false);
+  expect(input.hasAttribute("maxlength")).toBe(false);
+
+  input.value = "1234567x89";
+  input.dispatchEvent(new Event("input"));
+  await nextTick();
+
+  expect(input.value).toBe("1234 5678");
+  expect(saved.at(-1)).toBe("12345678");
 });

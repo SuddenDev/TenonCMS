@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { defineCms } from "../index.ts";
 import { admin, origin, published, setup, testDatabase, testDb, onPglite } from "./setup.ts";
 
@@ -148,6 +149,7 @@ describe("validate", () => {
               },
             },
             url: { type: "text", condition: { kind: "link" }, validate: () => "Always wrong" },
+            email: { type: "text", validate: z.email("Not an email") },
           },
           hooks: { beforeChange: [() => void calls.push("beforeChange")] },
         },
@@ -177,6 +179,17 @@ describe("validate", () => {
     expect(calls).not.toContain("beforeChange");
     await cms.create("events", { seo: { title: "T" } });
     expect(calls).toContainEqual(["seo.title", "create", "T"]);
+  });
+
+  it("accepts a Standard Schema and skips empty values", async () => {
+    const cms = make();
+    await expect(cms.create("events", { email: "nope" })).rejects.toMatchObject({
+      errors: { email: "Not an email" },
+    });
+    await expect(cms.create("events", { email: "a@b.de" })).resolves.toMatchObject({
+      email: "a@b.de",
+    });
+    await expect(cms.create("events", { email: "" })).resolves.toMatchObject({ email: "" });
   });
 
   it("skips fields whose condition is false", async () => {
