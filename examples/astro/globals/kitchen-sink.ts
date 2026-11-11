@@ -92,6 +92,7 @@ export const kitchenSink = defineGlobal({
       type: "text",
       tab: "text",
       mask: PHONE_MASK,
+      placeholder: "+49 123 4567890",
       pattern: "\\d{10}",
       description: "A mask. Stores only the digits; the pattern checks them.",
       width: "1/3",
