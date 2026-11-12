@@ -98,6 +98,8 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     discard: (name: string, id: string, options: Discard = {}) =>
       request("DELETE", `${doc(name, id)}/draft`, undefined, options),
 
+    duplicate: (name: string, id: string) => request("POST", `${doc(name, id)}/duplicate`),
+
     copyLocale: (name: string, id: string, { from, to }: { from: string; to: string }) =>
       request("POST", `${doc(name, id)}/locales/${enc(to)}/copy`, { from }),
 

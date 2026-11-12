@@ -265,6 +265,22 @@ describe("preview", () => {
     expect(click("footer")).toEqual({ prevented: false, sent: undefined });
   });
 
+  it("hides the host's dev toolbars in the admin's iframe, not in a preview tab", async () => {
+    document.body.innerHTML = `<astro-dev-toolbar></astro-dev-toolbar><div id="nuxt-devtools-container"></div>`;
+    const hidden = () =>
+      [...document.body.children].map((el) => getComputedStyle(el).display === "none");
+    window.name = "tenon-preview";
+    stop = preview();
+    await vi.dynamicImportSettled();
+    expect(hidden()).toEqual([true, true]);
+    stop();
+
+    window.name = "tenon-preview-posts:1";
+    stop = preview();
+    await vi.dynamicImportSettled();
+    expect(hidden()).toEqual([false, false]);
+  });
+
   it("tells whether the page runs in the live preview", () => {
     expect(isLivePreview()).toBe(false);
     window.name = "tenon-preview";

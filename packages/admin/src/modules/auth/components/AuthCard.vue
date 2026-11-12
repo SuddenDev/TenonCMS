@@ -24,7 +24,7 @@ defineProps<{
   /** Shows the title and description. Otherwise only screen readers get them. */
   heading?: boolean;
 }>();
-const { name, logo, icon } = useBrand();
+const { name, loginLogo, icon } = useBrand();
 const { locale, locales } = useAdminLocale();
 const { t } = useI18n();
 </script>
@@ -32,8 +32,8 @@ const { t } = useI18n();
 <template>
   <main class="flex min-h-svh w-full flex-col items-center justify-center gap-4 p-6 md:p-10">
     <div class="mb-2 flex items-center gap-2 px-6">
-      <Themed :src="logo ?? icon" :alt="name" class="h-8 max-w-48 object-contain" />
-      <span v-if="!logo" class="font-medium">{{ name }}</span>
+      <Themed :src="loginLogo ?? icon" :alt="name" class="h-8 max-w-48 object-contain" />
+      <span v-if="!loginLogo" class="font-medium">{{ name }}</span>
     </div>
     <Card class="w-full max-w-sm gap-6 py-5">
       <CardHeader class="px-5" :class="!heading && 'sr-only'">

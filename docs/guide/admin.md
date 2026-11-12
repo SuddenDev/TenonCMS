@@ -120,6 +120,12 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 
 - `name` shows in the top bar, on the login and in the page title (default `tenoncms`).
 - `logo` (top bar and login) and `icon` (the tile beside the name when there is no logo) are URLs, or `{ light, dark }` pairs that follow the admin's theme.
+- `logo` MAY also set one image per place: `header` (the top bar) and `login`. A place without one shows the icon and the name. The site's admin bar uses the `header` logo when there is no `icon`.
+
+  ```ts
+  logo: { header: "/icon-wide.svg", login: { light: "/logo-light.svg", dark: "/logo-dark.svg" } },
+  ```
+
 - The admin links these files and does not bundle them. Put them in your `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
 - The favicon is `favicon` if set, else `icon`, else your `favicon.svg`, `.ico` or `.png` in the public folder. `favicon` takes a URL or a `{ light, dark }` pair.
 

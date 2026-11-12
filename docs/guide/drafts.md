@@ -44,7 +44,9 @@ await cms.discardGlobal("general");
 - A publish runs every check and hook of an update on the draft. If one fails, it throws a `ValidationError` and the draft stays.
 - Hooks see `draft: true` on a draft save and `false` otherwise.
 
-`drafts: false` on a collection or global turns this off. Then `{ draft: true }`, `unpublish`, `schedule` and `discard` throw a `ValidationError`. The media library has no drafts.
+`cms.duplicate("posts", id)` (`client.duplicate`, `POST /_tenon/collections/posts/:id/duplicate`) copies a document and every language into a new draft. The title gets " (copy)" and every slug and unique text value gets `-copy` (then `-copy-2`, …), so the copy saves without edits. Other unique values are cleared. The admin offers it in the document's "…" menu and in the list.
+
+`drafts: false` on a collection or global turns this off. Then `{ draft: true }`, `unpublish`, `schedule` and `discard` throw a `ValidationError`, and a duplicate is saved, not drafted. The media library has no drafts.
 
 ## Unpublishing
 

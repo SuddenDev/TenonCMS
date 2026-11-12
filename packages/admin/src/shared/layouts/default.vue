@@ -42,7 +42,7 @@ import { useAction } from "@/shared/composables/useAction";
 
 const { t } = useI18n();
 const route = useRoute();
-const { name, logo, icon } = useBrand();
+const { name, headerLogo, icon } = useBrand();
 const tools = useAppBar();
 const { run, isRunning } = useAction();
 const { perspective, set, switching, error: perspectiveError } = usePerspective();
@@ -101,7 +101,12 @@ providePanes(row);
           </SheetContent>
         </Sheet>
         <RouterLink to="/" class="flex items-center gap-2">
-          <Themed v-if="logo" :src="logo" :alt="name" class="h-7 max-w-40 object-contain" />
+          <Themed
+            v-if="headerLogo"
+            :src="headerLogo"
+            :alt="name"
+            class="h-7 max-w-40 object-contain"
+          />
           <template v-else>
             <Themed :src="icon" class="size-7 object-contain" />
             <span class="text-sm font-medium">{{ name }}</span>

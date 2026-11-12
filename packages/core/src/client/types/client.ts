@@ -200,6 +200,17 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   ): Promise<Doc<CollectionFields<C, K>> | null>;
 
   /**
+   * Copies a document into a new one, every locale, as a draft (saved with `drafts: false`). The title gets ` (copy)`;
+   * a slug or unique text value gets `-copy` (then `-copy-2`, …). Throws a `CmsError` with status `404` for a missing document.
+   * Needs a session.
+   * `POST /_tenon/collections/:collection/:id/duplicate`
+   */
+  duplicate<K extends keyof Collections<C> & string>(
+    collection: K,
+    id: string,
+  ): Promise<Doc<CollectionFields<C, K>>>;
+
+  /**
    * Fills the localized fields of `to` with those of `from`, as a draft in `to` (straight to the data with
    * `drafts: false`). It replaces the pending draft of `to`. Throws a `CmsError` with status `400` for an unknown or
    * equal locale, or a collection that is not localized. Needs a session.

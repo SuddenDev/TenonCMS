@@ -184,7 +184,7 @@ export type AdminBarContext = {
   mode: "site" | "preview-tab";
   /** Items to show, composed and sorted. */
   items: AdminBarItem[];
-  /** Branding from the active admin configuration. */
+  /** Branding from the active admin configuration. `logo` is the one of the top bar. */
   name?: string;
   logo?: Themed;
   icon?: Themed;
@@ -230,6 +230,12 @@ export type PageHeader<D = unknown> = (crumbs: Crumb[], ctx: PageContext<D>) => 
  * The admin links them and does not bundle them.
  */
 export type Themed = string | { light: string; dark: string };
+
+/** Where the admin shows its logo: the top bar or the login. */
+export type LogoPlace = "header" | "login";
+
+/** One logo for every place, or one per place. */
+export type Logo = Themed | Partial<Record<LogoPlace, Themed>>;
 
 /** The eight supported floating bar positions. */
 export type AdminBarPosition =
@@ -537,8 +543,13 @@ export type AdminOptions = {
   richtext?: import("tenoncms/richtext").RichtextOptions;
   /** Name of the CMS in the sidebar, the login and the page title. Defaults to `tenoncms`. */
   name?: string;
-  /** Wide logo for the sidebar header and the login. Defaults to the icon, then to a placeholder. */
-  logo?: Themed;
+  /**
+   * Wide logo for the top bar and the login. One logo for both, or one per place. A place without a logo shows
+   * the icon and the name.
+   * @example
+   * logo: { login: "/logo.svg" }
+   */
+  logo?: Logo;
   /** Square icon for the collapsed sidebar. Also the favicon unless `favicon` is set. */
   icon?: Themed;
   /**

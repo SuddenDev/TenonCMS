@@ -7,6 +7,7 @@ import type {
 } from "../../admin/index.d.ts";
 import { lazyMount, loadClientRef } from "../../admin/browser/lazy-mount.ts";
 import { currentAdminLocale } from "../../admin/browser/locale.ts";
+import { logoAt } from "../../admin/browser/logo.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
 import type { Unsubscribe } from "../config/types.ts";
 import {
@@ -74,7 +75,7 @@ export function startAdminBar(
   const context = (): AdminBarContext => ({
     position: answer!.position,
     name: answer!.branding?.name,
-    logo: answer!.branding?.logo,
+    logo: logoAt(answer!.branding?.logo, "header"),
     icon: answer!.branding?.icon,
     dismiss: () => {
       if (mode === "preview-tab") {

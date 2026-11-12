@@ -60,3 +60,9 @@
 @theme inline {
   --font-heading: var(--font-sans);
 }
+
+/* The host's dev toolbars cover the admin's own bars. */
+astro-dev-toolbar,
+#nuxt-devtools-container {
+  display: none !important;
+}

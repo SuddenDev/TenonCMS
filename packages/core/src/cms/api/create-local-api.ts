@@ -17,6 +17,7 @@ import { publishLocal } from "../../collections/operations/local/publish.local.t
 import { unpublishLocal } from "../../collections/operations/local/unpublish.local.ts";
 import { discardLocal } from "../../collections/operations/local/discard.local.ts";
 import { copyLocaleLocal } from "../../collections/operations/local/copy-locale.local.ts";
+import { duplicateLocal } from "../../collections/operations/local/duplicate.local.ts";
 import { removeLocaleLocal } from "../../collections/operations/local/remove-locale.local.ts";
 import { deleteLocal } from "../../collections/operations/local/delete.local.ts";
 import { getGlobalLocal } from "../../globals/operations/local/get.local.ts";
@@ -52,6 +53,7 @@ export function createLocalApi(core: Core, scope: Scope): LocalApi {
     unpublish: trackWrite(scope, unpublishLocal(core, scope)),
     schedule: trackWrite(scope, scheduleLocal(core, scope)),
     discard: trackWrite(scope, discardLocal(core, scope)),
+    duplicate: trackWrite(scope, duplicateLocal(core, scope)),
     copyLocale: trackWrite(scope, copyLocaleLocal(core, scope)),
     removeLocale: trackWrite(scope, removeLocaleLocal(core, scope)),
     setSyncStructure: trackWrite(scope, setSyncStructureLocal(core, scope)),

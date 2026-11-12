@@ -7,7 +7,8 @@ import { useHead } from "@unhead/vue";
 import { computed, provide, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { text } from "@/shared/i18n";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { toast } from "vue-sonner";
 import { client, schema } from "@/shared/api";
 import { can } from "@/shared/access";
 import { keepPaneKey, reloadKey, titleField } from "@/modules/documents/fields";
@@ -24,10 +25,17 @@ import {
   type PaneSort,
 } from "@/shared";
 import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { ago } from "@/shared/utils";
 
 const { t, locale: adminLocale } = useI18n();
 const route = useRoute();
+const router = useRouter();
 const name = route.params.name as string;
 const collection = computed(() => schema.value.collections?.[name]);
 const { locale } = useLocale();
@@ -105,6 +113,16 @@ watch(
   },
 );
 provide(keepPaneKey, (id) => (kept = id));
+
+async function duplicate(id: string) {
+  try {
+    const created = await client.duplicate(name, id);
+    load();
+    await router.push(`${CONTENT}/collections/${name}/${created.id}`);
+  } catch (e) {
+    toast.error((e as Error).message);
+  }
+}
 </script>
 
 <template>
@@ -131,18 +149,41 @@ provide(keepPaneKey, (id) => (kept = id));
       <PaneMenu :layout="layout">
         <PaneMenuSkeleton v-if="loading" />
         <template v-else>
+          <!-- The row is no link: a link MUST NOT hold the menu button. The title's link covers the row. -->
           <PaneMenuItem
-            class="[&_[data-slot=pane-menu-item-end]]:opacity-100"
             v-for="doc in rows"
             :key="doc.id"
-            :to="`${CONTENT}/collections/${name}/${doc.id}`"
+            as="div"
+            class="relative [&_[data-slot=pane-menu-item-end]]:opacity-100"
             :icon="collection.nav?.icon ?? 'file-text'"
-            :label="doc.title"
             :subtitle="ago(doc.updatedAt, adminLocale)"
             :active="route.params.id === doc.id"
           >
+            <RouterLink
+              :to="`${CONTENT}/collections/${name}/${doc.id}`"
+              class="focus-visible:after:ring-ring/50 after:absolute after:inset-0 after:rounded-sm focus-visible:outline-none focus-visible:after:ring-2"
+            >
+              {{ doc.title }}
+            </RouterLink>
             <template #end>
-              <span class="flex items-center gap-2">
+              <span class="relative flex items-center gap-2">
+                <DropdownMenu v-if="can(collection, 'create')">
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      :aria-label="t('documents.actions')"
+                      class="transition-opacity data-[state=open]:opacity-100 pointer-fine:opacity-0 pointer-fine:group-focus-within/pane-menu-item:opacity-100 pointer-fine:group-hover/pane-menu-item:opacity-100"
+                    >
+                      <Icon name="ellipsis" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem @select="duplicate(doc.id)">
+                      <Icon name="copy" />{{ t("documents.duplicate") }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <span v-if="!doc.translated" class="text-muted-foreground text-xs">
                   {{ t("common.notTranslated") }}
                 </span>

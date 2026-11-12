@@ -65,6 +65,8 @@ const expandAll = () =>
   parents(model.value, field.value, path()).forEach((i) => tree.open.add(i.id));
 const collapseAll = () =>
   parents(model.value, field.value, path()).forEach((i) => tree.open.delete(i.id));
+// `ListField` shows the buttons on the line of its label.
+defineExpose({ expandAll, collapseAll });
 
 // Opens the rows above `target`, the dot path of an item or a field inside one.
 function reveal(target: string) {
@@ -98,14 +100,6 @@ watch(
 
 <template>
   <div class="flex flex-col gap-3">
-    <div v-if="model.length" class="-mt-1 flex justify-end gap-1">
-      <Button type="button" variant="ghost" size="xs" @click="expandAll">
-        <Icon name="chevrons-up-down" />{{ t("items.expandAll") }}
-      </Button>
-      <Button type="button" variant="ghost" size="xs" @click="collapseAll">
-        <Icon name="chevrons-down-up" />{{ t("items.collapseAll") }}
-      </Button>
-    </div>
     <div class="border-border rounded-md border p-1">
       <ItemOutline tree :field="field" :items="model" :path="path()" :errors="errors" />
     </div>

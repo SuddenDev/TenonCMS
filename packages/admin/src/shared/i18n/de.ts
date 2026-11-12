@@ -358,6 +358,7 @@ export default {
   documents: {
     actions: "Dokumentaktionen",
     document: "Dokument",
+    duplicate: "Duplizieren",
     history: "Verlauf",
     notPublished: "Noch nicht veröffentlicht",
     unpublishedChanges: "Unveröffentlichte Änderungen",
@@ -547,6 +548,7 @@ export default {
     noTargets: "Kein anderer Ort nimmt dieses Element auf",
     numbered: "{label} {n}",
     outline: "Gliederung von {name}",
+    search: "Suchen…",
     unknownBlock: "Unbekannter Block {type}",
   },
   locales: {

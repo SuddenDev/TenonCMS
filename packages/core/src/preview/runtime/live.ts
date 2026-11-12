@@ -17,9 +17,14 @@ const STYLE =
   "[data-cms-edit] [data-cms]:hover{outline:2px dashed #3b82f6;outline-offset:2px;cursor:pointer}" +
   "[data-cms-highlight]{outline:2px solid #3b82f6!important;outline-offset:2px;background:rgb(59 130 246/.08)}";
 
+// The host's dev toolbars cover the page in the admin's iframe.
+const DEVTOOLS_STYLE = "astro-dev-toolbar,#nuxt-devtools-container{display:none!important}";
+
 // The elements of excluded entries get no outline. A click on one goes to the bound element around it.
-const editStyle = (excluded: string | null) =>
-  STYLE + (excluded ? `[data-cms-edit] :is(${excluded}):hover{outline:none;cursor:inherit}` : "");
+const editStyle = (excluded: string | null, framed: boolean) =>
+  STYLE +
+  (framed ? DEVTOOLS_STYLE : "") +
+  (excluded ? `[data-cms-edit] :is(${excluded}):hover{outline:none;cursor:inherit}` : "");
 
 // Live preview: drafts from the admin patch bound elements, and edit clicks go back to the admin.
 export const startLive = (name: string, morph: boolean, admin: string | false): Unsubscribe => {
@@ -28,8 +33,9 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
   const channel = openChannel(admin);
   const rerender = createRerender(() => active);
   let excluded: string | null = null;
+  const framed = name === "tenon-preview";
   const style = document.createElement("style");
-  style.textContent = editStyle(excluded);
+  style.textContent = editStyle(excluded, framed);
   document.head.append(style);
 
   // The bar's switch and the admin's `mode` message both go through `setEditMode()`; the last one wins.
@@ -62,7 +68,7 @@ export const startLive = (name: string, morph: boolean, admin: string | false): 
     } else if (message.type === "mode") {
       if (message.exclude) {
         excluded = excludedSelector(message.exclude);
-        style.textContent = editStyle(excluded);
+        style.textContent = editStyle(excluded, framed);
       }
       setEditMode(message.edit);
     } else if (message.type === "highlight") {

@@ -66,6 +66,17 @@ describe("page preset", () => {
     expect(await stored(p.id)).toBe("/uber-uns");
   });
 
+  it("duplicates a page under the same parent with a free slug", async () => {
+    const { team } = await tree();
+    const copy = (await cms.duplicate("pages", team.id))!;
+    expect(copy).toMatchObject({
+      title: "Team (copy)",
+      slug: "team-copy",
+      path: "/about/team-copy",
+    });
+    expect(await cms.duplicate("pages", team.id)).toMatchObject({ slug: "team-copy-2" });
+  });
+
   it("rejects an invalid slug and a duplicate path", async () => {
     const { about } = await tree();
     await expect(cms.create("pages", { title: "A", slug: "Not Valid" })).rejects.toMatchObject(

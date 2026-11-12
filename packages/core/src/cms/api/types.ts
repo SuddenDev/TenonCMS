@@ -205,6 +205,16 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
   ): Promise<CollectionDoc<T, K> | undefined>;
 
   /**
+   * Copies a document into a new one, every locale, as a draft (a save with `drafts: false`), in one transaction. The
+   * title gets ` (copy)`; a slug or unique text value gets `-copy` (then `-copy-2`, …) until it is free, and other unique values
+   * are cleared. Reads and writes run as the caller. Returns `undefined` if the source does not exist.
+   */
+  duplicate<K extends keyof Collections<T> & string>(
+    collection: K,
+    id: string,
+  ): Promise<CollectionDoc<T, K> | undefined>;
+
+  /**
    * Fills the localized fields of `to` with those of `from`, as a draft (straight to the data with `drafts: false`).
    * It replaces the pending draft of `to`. `from` is read without fallback. Throws a `ValidationError` for an unknown
    * or equal locale, or when the collection is not localized. Returns `undefined` if the document does not exist.

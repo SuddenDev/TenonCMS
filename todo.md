@@ -77,13 +77,13 @@ From building the House of Cacao site.
 
 ### Admin
 
-- [ ] Search in the blocks modal.
+- [x] Search in the blocks modal.
 - [x] Media modal: view sizes (grid and list), and multi-select with Shift and Cmd/Ctrl. Shortcuts through `defineShortcuts()` (a port of Nuxt UI's).
 - [x] Cmd/Ctrl+S shows a toast: "Tenon saves your changes automatically". Without drafts it saves.
-- [ ] Duplicate a collection item, from the list and from the "…" menu.
-- [ ] Blocks and array tree: put "expand all / collapse all" on the same line as the label.
-- [ ] Hide the Astro and Nuxt devtools inside the admin and the live preview, if possible.
-- [ ] Admin option for the logo parts: choose which one shows where (for example the icon in the header, the full logo in the admin).
+- [x] Duplicate a collection item, from the list and from the "…" menu. `cms.duplicate()` copies every locale into a new draft; the title gets " (copy)", slugs and unique text `-copy`.
+- [x] Blocks and array tree: put "expand all / collapse all" on the same line as the label.
+- [x] Hide the Astro and Nuxt devtools inside the admin and the live preview, if possible. CSS in the admin and in the preview iframe.
+- [x] Admin option for the logo parts: choose which one shows where (for example the icon in the header, the full logo in the admin). `logo: { header, login }`.
 
 ### Fields
 

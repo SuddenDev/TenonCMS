@@ -36,11 +36,12 @@ import type {
 } from "../../../../../core/src/content/writes/sync-structure";
 
 // The "…" menu of a document or global. Every language action asks first and then emits.
-// `history`: offers the version history. `languages`: the states from `localeStatus()`; without them the language
+// `history`: offers the version history. `duplicate`: offers a copy of the document. `languages`: the states from `localeStatus()`; without them the language
 // group is hidden. `locale`: the active language.
 // `structure`: offers the Structure submenu. `dryRun` gives the counts of a switch to one structure before it asks.
 const props = defineProps<{
   history?: boolean;
+  duplicate?: boolean;
   languages?: ReturnType<typeof localeStatus>;
   locale?: string;
   defaultLocale?: string;
@@ -50,6 +51,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   history: [];
+  duplicate: [];
   copy: [from: string, to: string];
   remove: [locale: string];
   discardAll: [];
@@ -108,20 +110,23 @@ async function chooseStructure(sync: SyncChoice) {
 </script>
 
 <template>
-  <DropdownMenu v-if="history || languages">
+  <DropdownMenu v-if="history || duplicate || languages">
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" size="icon-sm" :aria-label="t('documents.actions')" :disabled="busy">
         <Icon name="ellipsis" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="min-w-48">
-      <DropdownMenuGroup v-if="history">
+      <DropdownMenuGroup v-if="history || duplicate">
         <DropdownMenuLabel>{{ t("documents.document") }}</DropdownMenuLabel>
-        <DropdownMenuItem @select="emit('history')">
+        <DropdownMenuItem v-if="history" @select="emit('history')">
           <Icon name="history" />{{ t("documents.history") }}
         </DropdownMenuItem>
+        <DropdownMenuItem v-if="duplicate" @select="emit('duplicate')">
+          <Icon name="copy" />{{ t("documents.duplicate") }}
+        </DropdownMenuItem>
       </DropdownMenuGroup>
-      <DropdownMenuSeparator v-if="history && languages" />
+      <DropdownMenuSeparator v-if="(history || duplicate) && languages" />
       <DropdownMenuGroup v-if="languages">
         <DropdownMenuLabel>{{ t("locales.group") }}</DropdownMenuLabel>
         <DropdownMenuSub>

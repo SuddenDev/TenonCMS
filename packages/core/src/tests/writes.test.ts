@@ -4,6 +4,7 @@ import {
   admin,
   base,
   fresh,
+  localized,
   origin,
   published,
   status,
@@ -174,4 +175,56 @@ it("preserves unlocalized fields named like locale metadata across updates", asy
   const input = { locale: "custom", locales: "all", sharedDraft: true };
   const doc = await cms.create("pages", input);
   expect(await cms.update("pages", doc.id, {})).toMatchObject(input);
+});
+
+describe("duplicate", () => {
+  it("copies a document into a new draft with (copy) in the title", async () => {
+    const post = await cms.create("posts", { title: "Hello", views: 3, seo: { title: "S" } });
+    expect(await status(client.duplicate("posts", post.id))).toBe(401);
+    await client.signUp(admin);
+
+    const copy = await client.duplicate("posts", post.id);
+    expect(copy).toMatchObject({ title: "Hello (copy)", views: 3, seo: { title: "S" } });
+    expect(copy).toMatchObject({ publishedAt: null, hasDraft: true });
+    expect(copy.id).not.toBe(post.id);
+    expect(await cms.findById("posts", post.id)).toMatchObject({ title: "Hello" });
+  });
+
+  it("answers 404 for a missing document", async () => {
+    await client.signUp(admin);
+    expect(await status(client.duplicate("posts", "missing"))).toBe(404);
+  });
+
+  it("copies every locale and suffixes unique fields until the value is free", async () => {
+    const { cms, client } = localized();
+    const post = await cms.create("posts", { title: "Hello", slug: "hello", views: 1 });
+    await cms.update("posts", post.id, { title: "Hallo", slug: "hallo" }, {
+      locale: "de",
+    } as never);
+    await client.signUp(admin);
+
+    const first = await client.duplicate("posts", post.id);
+    const read = (id: string, locale: string) =>
+      cms.withDrafts().findById("posts", id, { locale, fallback: false } as never);
+    expect(await read(first.id, "en")).toMatchObject({ title: "Hello (copy)", slug: "hello-copy" });
+    expect(await read(first.id, "de")).toMatchObject({
+      title: "Hallo (copy)",
+      slug: "hallo-copy",
+      views: 1,
+      hasDraft: true,
+    });
+
+    const second = await client.duplicate("posts", post.id);
+    expect(await read(second.id, "en")).toMatchObject({ slug: "hello-copy-2" });
+  });
+
+  it("saves the copy without drafts", async () => {
+    const { cms, client } = localized();
+    const note = await cms.create("notes", { text: "Hello" });
+    await client.signUp(admin);
+    expect(await client.duplicate("notes", note.id)).toMatchObject({
+      text: "Hello (copy)",
+      hasDraft: false,
+    });
+  });
 });

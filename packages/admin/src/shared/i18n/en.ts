@@ -345,6 +345,7 @@ export default {
   documents: {
     actions: "Document actions",
     document: "Document",
+    duplicate: "Duplicate",
     history: "History",
     notPublished: "Not published yet",
     unpublishedChanges: "Unpublished changes",
@@ -524,6 +525,7 @@ export default {
     noTargets: "No other place takes this item",
     numbered: "{label} {n}",
     outline: "Outline of {name}",
+    search: "Search…",
     unknownBlock: "Unknown block {type}",
   },
   locales: {

@@ -286,6 +286,19 @@ async function translate(action: () => Promise<void>) {
   }
 }
 
+// Saves the pending edit first, so the copy has it.
+async function duplicate() {
+  error.value = "";
+  try {
+    await flush();
+    const created = await client.duplicate(props.name, docId.value);
+    reload();
+    await router.push(`${CONTENT}/collections/${props.name}/${created.id}`);
+  } catch (e) {
+    error.value = (e as Error).message;
+  }
+}
+
 const copy = (from: string, to: string) =>
   translate(async () => {
     await tr.copy(from, to);
@@ -367,10 +380,12 @@ async function remove() {
       </Button>
       <DocActions
         :history="!isNew && editable && !history"
+        :duplicate="!isNew && !history && can(collection, 'create')"
         :languages="readOnly ? undefined : languages"
         :locale="tr.active.value"
         :default-locale="defaultLocale"
         @history="openHistory"
+        @duplicate="duplicate"
         @copy="copy"
         @remove="removeLocale"
         @discard-all="discardAll"

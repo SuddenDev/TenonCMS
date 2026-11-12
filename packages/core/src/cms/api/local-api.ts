@@ -69,6 +69,8 @@ export type LocalApi = {
     options: ScheduleOptions,
   ): Promise<{ id: string } | undefined>;
   discard(collection: string, id: string, options?: DiscardOptions): Promise<Row | undefined>;
+  /** Copies a document and every locale into a new draft. Returns `undefined` if the source does not exist. */
+  duplicate(collection: string, id: string): Promise<Row | undefined>;
   /** Fills the localized fields of `to` with those of `from`, as a draft. Replaces the pending draft of `to`. */
   copyLocale(
     collection: string,
