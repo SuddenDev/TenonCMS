@@ -5,7 +5,12 @@
     "correctness": "error"
   },
   "rules": {
-    "no-unused-vars": ["error", { "ignoreRestSiblings": true }]
+    "no-unused-vars": [
+      "error",
+      {
+        "ignoreRestSiblings": true
+      }
+    ]
   },
   "overrides": [
     {
@@ -13,6 +18,12 @@
       "rules": {
         "no-unused-vars": "off",
         "no-unused-expressions": "off"
+      }
+    },
+    {
+      "files": ["templates/**/*.config.ts"],
+      "rules": {
+        "no-unused-vars": "off"
       }
     }
   ],

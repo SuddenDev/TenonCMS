@@ -173,3 +173,14 @@ curl -s -b $J -X POST -H 'content-type: application/json' -d '{}' $B/_tenon/expo
 ```
 
 Expect `{"etag":"1"}`, the same counts, no file left under `.uploads/.tenon/`, and `{"url":"/_tenon/export"}` (with S3: a presigned bucket URL that downloads `tenon-<date>.zip`).
+
+## CLI
+
+Run the bin from the build: `node ../../packages/cli/dist/index.mjs` (below: `tenon`). Never point a restore at a database you want to keep: use `DATABASE_URL` with a copy.
+
+1. Local, in `examples/standalone`: `tenon backup --dry-run --yes`, then `tenon backup --yes --out /tmp/b.zip`.
+2. `cp cms.db /tmp/copy.db`, then `DATABASE_URL=file:/tmp/copy.db tenon restore /tmp/b.zip --dry-run` and the same with `--yes`. The copy keeps its users and has no sessions.
+3. In `examples/astro`, `tenon backup --dry-run --yes` loads `astro:env`. In `examples/cloudflare` it fails with the `--url` hint.
+4. Remote: run the example on a fresh `DATABASE_URL`, sign up, create an API key with `backup` read and update, then `TENON_API_KEY=… tenon backup --url http://localhost:3200 --yes --out /tmp/r.zip` and `tenon restore /tmp/r.zip --url … --yes`.
+5. Device login: `XDG_CONFIG_HOME=/tmp/cfg tenon login http://localhost:3200 --no-open`, open the printed link as a signed-in user and approve. `tenon backup --url …` then works without a key, and `tenon logout …` ends it.
+6. Scaffold: `pnpm tarball`, then `pnpm smoke:templates astro node [database] [storage]` (any combination of `templates/index.json`). CI runs the jobs of `scripts/template-matrix.mjs`: each target with its defaults, plus every other database and storage once.

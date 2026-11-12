@@ -1,0 +1,8 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { durableObject } from \"tenoncms/cloudflare\";"],
+      "options": ["database: durableObject(),"]
+    }
+  }
+}

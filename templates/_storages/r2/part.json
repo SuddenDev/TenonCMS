@@ -1,0 +1,15 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": [
+        "import { env } from \"cloudflare:workers\";",
+        "import { cloudflare } from \"tenoncms/media/cloudflare\";",
+        "import { r2 } from \"tenoncms/media/r2\";"
+      ],
+      "options": [
+        "// The bindings are in wrangler.jsonc.",
+        "media: { storage: r2(env.MEDIA), images: { provider: cloudflare({ binding: env.IMAGES }) } },"
+      ]
+    }
+  }
+}

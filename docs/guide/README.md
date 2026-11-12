@@ -8,11 +8,12 @@ Building or changing tenoncms itself? See the [developer docs](../dev/README.md)
 
 **Get started**
 
-| Guide                            | What it covers                               |
-| -------------------------------- | -------------------------------------------- |
-| [Your first site](first-site.md) | Step by step from empty project to deploy    |
-| [Framework setup](frameworks.md) | Astro, Nuxt, TanStack Start, any Vite host   |
-| [Schema and fields](schema.md)   | Field types, options, validation, conditions |
+| Guide                            | What it covers                                  |
+| -------------------------------- | ----------------------------------------------- |
+| [Your first site](first-site.md) | Step by step from empty project to deploy       |
+| [Framework setup](frameworks.md) | Astro, Nuxt, TanStack Start, any Vite host      |
+| [Schema and fields](schema.md)   | Field types, options, validation, conditions    |
+| [The CLI](cli.md)                | `npm create tenoncms`, backup, restore, upgrade |
 
 **Model your content**
 

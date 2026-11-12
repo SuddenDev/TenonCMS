@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@astrojs/vercel": "^11.0.17",
+    "@vercel/functions": "^3.10.4",
+    "pg": "^8.23.1"
+  }
+}

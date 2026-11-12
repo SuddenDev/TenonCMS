@@ -1,0 +1,23 @@
+---
+import { edit } from "tenoncms/preview";
+
+const post = await Astro.locals.tenon.findOne("posts", { where: { slug: Astro.params.slug! } });
+if (!post) return new Response(null, { status: 404 });
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{post.title}</title>
+  </head>
+  <body>
+    <p>
+      <a href="/">All posts</a>
+    </p>
+    <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
+    <p data-cms={edit("posts", post.id, "body")} style="white-space: pre-wrap">
+      {post.body}
+    </p>
+  </body>
+</html>

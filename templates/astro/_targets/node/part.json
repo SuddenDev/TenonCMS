@@ -1,0 +1,8 @@
+{
+  "files": {
+    "astro.config.ts": {
+      "imports": ["import node from \"@astrojs/node\";"],
+      "options": ["adapter: node({ mode: \"standalone\" }),"]
+    }
+  }
+}

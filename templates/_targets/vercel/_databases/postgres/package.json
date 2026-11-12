@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@vercel/functions": "^3.10.4",
+    "pg": "^8.23.1"
+  }
+}

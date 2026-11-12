@@ -10,7 +10,7 @@
   "type": "module",
   "scripts": {
     "prepare": "husky",
-    "build:packages": "pnpm --filter tenoncms build && pnpm --filter @tenoncms/plugins build && pnpm --filter @tenoncms/admin build && pnpm --filter @tenoncms/cli build",
+    "build:packages": "pnpm --filter tenoncms build && pnpm --filter @tenoncms/plugins build && pnpm --filter @tenoncms/admin build && pnpm --filter @tenoncms/cli --filter create-tenoncms build",
     "tarball": "pnpm build:packages && pnpm --filter tenoncms --filter @tenoncms/cli pack --pack-destination dist",
     "dev:astro": "pnpm build:packages && CMS_URL=http://localhost:4321 pnpm --parallel --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter example-astro dev",
     "dev:astro-pglite": "pnpm build:packages && CMS_URL=http://localhost:4322 pnpm --parallel --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter example-astro-pglite dev",
@@ -20,12 +20,13 @@
     "dev:standalone": "pnpm build:packages && CMS_URL=http://localhost:3200 pnpm --parallel --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter example-standalone dev",
     "build": "pnpm build:packages && pnpm --filter \"./examples/*\" build",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
-    "test": "pnpm --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter @tenoncms/cli test",
-    "test:full": "pnpm --filter tenoncms test:full && pnpm --filter @tenoncms/plugins --filter @tenoncms/admin --filter @tenoncms/cli test",
+    "test": "pnpm --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter create-tenoncms --filter @tenoncms/cli test",
+    "test:full": "pnpm --filter tenoncms test:full && pnpm --filter @tenoncms/plugins --filter @tenoncms/admin --filter create-tenoncms --filter @tenoncms/cli test",
     "fmt": "oxfmt && prettier --write \"**/*.astro\"",
     "fmt:check": "oxfmt --check && prettier --check \"**/*.astro\"",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "smoke:templates": "node scripts/smoke-template.mjs"
   },
   "devDependencies": {
     "husky": "^9.1.7",

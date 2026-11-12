@@ -1,0 +1,7 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "options": ["// Files in ./.uploads.", "media: true,"]
+    }
+  }
+}

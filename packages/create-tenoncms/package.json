@@ -1,0 +1,42 @@
+{
+  "name": "create-tenoncms",
+  "version": "0.24.0",
+  "description": "Create a project with tenoncms",
+  "license": "MIT",
+  "author": {
+    "name": "Dominik Tampe",
+    "email": "hello@dtampe.com",
+    "url": "https://dtampe.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SuddenDev/TenonCMS.git",
+    "directory": "packages/create-tenoncms"
+  },
+  "bin": {
+    "create-tenoncms": "./dist/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "test -f dist/index.mjs || (echo \"Run pnpm build:packages in the repository root first.\" && exit 1)"
+  },
+  "dependencies": {
+    "@clack/prompts": "1.8.1",
+    "giget": "3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "tsdown": "^0.23.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

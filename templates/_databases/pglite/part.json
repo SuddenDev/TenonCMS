@@ -1,0 +1,19 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": [
+        "import { PGlite } from \"@electric-sql/pglite\";",
+        "import { pglite } from \"tenoncms/pglite\";"
+      ],
+      "options": ["database: pglite(new PGlite($DATABASE_DIR)),"]
+    }
+  },
+  "env": [
+    {
+      "name": "DATABASE_DIR",
+      "comment": "The folder of the database, relative to the working directory.",
+      "default": "./.pglite"
+    }
+  ],
+  "ignore": [".pglite"]
+}

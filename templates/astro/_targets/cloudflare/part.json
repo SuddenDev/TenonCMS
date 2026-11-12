@@ -1,0 +1,9 @@
+{
+  "files": {
+    "astro.config.ts": {
+      "imports": ["import cloudflare from \"@astrojs/cloudflare\";"],
+      "options": ["adapter: cloudflare(),"]
+    }
+  },
+  "ignore": [".wrangler", ".dev.vars", "worker-configuration.d.ts"]
+}

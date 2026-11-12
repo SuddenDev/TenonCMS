@@ -1,0 +1,8 @@
+{
+  "files": {
+    "astro.config.ts": {
+      "imports": ["import vercel from \"@astrojs/vercel\";"],
+      "options": ["adapter: vercel(),"]
+    }
+  }
+}

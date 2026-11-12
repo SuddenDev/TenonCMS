@@ -1,0 +1,15 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { sqlite } from \"tenoncms/sqlite\";"],
+      "options": ["database: sqlite($DATABASE_PATH),"]
+    }
+  },
+  "env": [
+    {
+      "name": "DATABASE_PATH",
+      "comment": "The SQLite file, relative to the working directory. Use an absolute path in production.",
+      "default": "./cms.db"
+    }
+  ]
+}

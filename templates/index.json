@@ -1,0 +1,56 @@
+{
+  "frameworks": {
+    "astro": {
+      "label": "Astro",
+      "envModule": "astro:env/server",
+      "targets": ["node", "vercel", "cloudflare"]
+    },
+    "nuxt": { "label": "Nuxt", "targets": ["node", "vercel"] },
+    "tanstack": { "label": "TanStack Start", "targets": ["node", "vercel"] },
+    "standalone": {
+      "label": "Standalone",
+      "hint": "headless: API and admin only",
+      "targets": ["node", "vercel"]
+    }
+  },
+  "templates": {
+    "minimal": {
+      "label": "Minimal",
+      "hint": "one collection and two pages",
+      "frameworks": ["astro", "nuxt", "tanstack", "standalone"]
+    }
+  },
+  "targets": {
+    "node": {
+      "label": "Node",
+      "hint": "a server you run",
+      "databases": ["libsql", "postgres", "pglite", "sqlite"],
+      "storages": ["local", "s3"]
+    },
+    "vercel": {
+      "label": "Vercel",
+      "hint": "serverless functions",
+      "databases": ["libsql", "postgres"],
+      "storages": ["s3"]
+    },
+    "cloudflare": {
+      "label": "Cloudflare",
+      "hint": "Workers",
+      "envFile": ".dev.vars",
+      "databases": ["durable-object"],
+      "storages": ["r2"]
+    }
+  },
+  "databases": {
+    "libsql": { "label": "SQLite / Turso", "hint": "a local file, or Turso by URL" },
+    "postgres": { "label": "Postgres", "hint": "e.g. Neon or your own server" },
+    "pglite": { "label": "PGlite", "hint": "Postgres in a folder, no server" },
+    "sqlite": { "label": "node:sqlite", "hint": "a file, without a native dependency" },
+    "durable-object": { "label": "Durable Object", "hint": "SQLite inside Cloudflare" }
+  },
+  "storages": {
+    "local": { "label": "Local disk", "hint": "./.uploads" },
+    "s3": { "label": "S3-compatible bucket", "hint": "AWS, R2, Neon, MinIO…" },
+    "r2": { "label": "R2", "hint": "with Cloudflare Images" }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "start": "node --env-file-if-exists=.env ./dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.9",
+    "@libsql/client": "^0.18.0"
+  }
+}

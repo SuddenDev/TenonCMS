@@ -1,0 +1,23 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": [
+        "import { attachDatabasePool } from \"@vercel/functions\";",
+        "import { postgres } from \"tenoncms/postgres\";"
+      ],
+      "setup": [
+        "const database = postgres($DATABASE_URL);",
+        "// Fluid compute suspends idle instances. Their idle clients MUST close first.",
+        "attachDatabasePool(database.pool);"
+      ],
+      "options": ["database,"]
+    }
+  },
+  "env": [
+    {
+      "name": "DATABASE_URL",
+      "comment": "The pooled connection string, e.g. from Neon.",
+      "example": "postgres://postgres:postgres@localhost:5432/cms"
+    }
+  ]
+}

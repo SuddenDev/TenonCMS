@@ -1,0 +1,25 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { libsql } from \"tenoncms/libsql\";"],
+      "options": [
+        "database: libsql({",
+        "  url: $DATABASE_URL,",
+        "  authToken: $DATABASE_AUTH_TOKEN,",
+        "}),"
+      ]
+    }
+  },
+  "env": [
+    {
+      "name": "DATABASE_URL",
+      "comment": "A local file in development. On Vercel, Turso's URL (libsql://<db>-<org>.turso.io): a function's files do not persist.",
+      "example": "file:./cms.db"
+    },
+    {
+      "name": "DATABASE_AUTH_TOKEN",
+      "comment": "Turso's token. A file needs none.",
+      "optional": true
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { postgres } from \"tenoncms/postgres\";"],
+      "options": ["database: postgres($DATABASE_URL),"]
+    }
+  },
+  "env": [
+    {
+      "name": "DATABASE_URL",
+      "comment": "The connection string.",
+      "example": "postgres://postgres:postgres@localhost:5432/cms"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { s3 } from \"tenoncms/media/s3\";"],
+      "options": [
+        "media: {",
+        "  storage: s3({",
+        "    bucket: $S3_BUCKET,",
+        "    region: $AWS_REGION,",
+        "    endpoint: $AWS_ENDPOINT_URL_S3,",
+        "    accessKeyId: $AWS_ACCESS_KEY_ID,",
+        "    secretAccessKey: $AWS_SECRET_ACCESS_KEY,",
+        "  }),",
+        "},"
+      ]
+    }
+  },
+  "env": [
+    {
+      "name": "AWS_ENDPOINT_URL_S3",
+      "comment": "Any S3-compatible bucket.",
+      "example": "https://s3.example.test",
+      "url": true
+    },
+    { "name": "AWS_ACCESS_KEY_ID", "example": "" },
+    { "name": "AWS_SECRET_ACCESS_KEY", "example": "" },
+    { "name": "AWS_REGION", "example": "eu-central-1" },
+    { "name": "S3_BUCKET", "example": "uploads" }
+  ]
+}

@@ -7,31 +7,34 @@ Packages:
 - `packages/core` publishes as `tenoncms`
 - `packages/plugins` (private): the bundled plugins
 - `packages/admin` (private): the Vue admin
+- `packages/cli` publishes as `@tenoncms/cli`: the `tenon` bin (backup, restore, upgrade, login)
+- `packages/create-tenoncms` publishes as `create-tenoncms`: the scaffolder. Its starters live in `templates/`
 - `examples/{astro,astro-pglite,nuxt,tanstack-start,standalone,cloudflare}`
 
 ## Where to look
 
 Read the doc for an area before you change it. Update it in the same change.
 
-| Area                                                   | Read                                                         |
-| ------------------------------------------------------ | ------------------------------------------------------------ |
-| What a host sees (features and options)                | [docs/guide/](docs/guide/README.md)                          |
-| Developer docs index                                   | [docs/dev/](docs/dev/README.md)                              |
-| Architecture, `defineCms()`, module map                | [docs/dev/core.md](docs/dev/core.md)                         |
-| Field types, type inference, validation                | [docs/dev/schema.md](docs/dev/schema.md)                     |
-| Reads, writes, population, integrity                   | [docs/dev/content.md](docs/dev/content.md)                   |
-| Media                                                  | [docs/dev/media.md](docs/dev/media.md)                       |
-| Client, HTTP, auth, users, database                    | [docs/dev/server.md](docs/dev/server.md)                     |
-| Plugins                                                | [docs/dev/plugins.md](docs/dev/plugins.md)                   |
-| Live preview, admin bar                                | [docs/dev/preview.md](docs/dev/preview.md)                   |
-| Admin (core contract and Vue app)                      | [docs/dev/admin.md](docs/dev/admin.md)                       |
-| Astro, Nuxt, Vite, Cloudflare adapters                 | [docs/dev/integrations.md](docs/dev/integrations.md)         |
-| Examples                                               | [docs/dev/examples.md](docs/dev/examples.md)                 |
-| Why it is built this way                               | [docs/dev/design-decisions.md](docs/dev/design-decisions.md) |
-| Known traps (check when something behaves strangely)   | [docs/dev/gotchas.md](docs/dev/gotchas.md)                   |
-| Curl smoke tests for adapters, media, locales, invites | [docs/dev/smoke-tests.md](docs/dev/smoke-tests.md)           |
-| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)   |
-| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                       |
+| Area                                                   | Read                                                                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| What a host sees (features and options)                | [docs/guide/](docs/guide/README.md)                                                                          |
+| Developer docs index                                   | [docs/dev/](docs/dev/README.md)                                                                              |
+| Architecture, `defineCms()`, module map                | [docs/dev/core.md](docs/dev/core.md)                                                                         |
+| Field types, type inference, validation                | [docs/dev/schema.md](docs/dev/schema.md)                                                                     |
+| Reads, writes, population, integrity                   | [docs/dev/content.md](docs/dev/content.md)                                                                   |
+| Media                                                  | [docs/dev/media.md](docs/dev/media.md)                                                                       |
+| Client, HTTP, auth, users, database                    | [docs/dev/server.md](docs/dev/server.md)                                                                     |
+| Plugins                                                | [docs/dev/plugins.md](docs/dev/plugins.md)                                                                   |
+| Live preview, admin bar                                | [docs/dev/preview.md](docs/dev/preview.md)                                                                   |
+| Admin (core contract and Vue app)                      | [docs/dev/admin.md](docs/dev/admin.md)                                                                       |
+| Astro, Nuxt, Vite, Cloudflare adapters                 | [docs/dev/integrations.md](docs/dev/integrations.md)                                                         |
+| Examples                                               | [docs/dev/examples.md](docs/dev/examples.md)                                                                 |
+| Why it is built this way                               | [docs/dev/design-decisions.md](docs/dev/design-decisions.md)                                                 |
+| Known traps (check when something behaves strangely)   | [docs/dev/gotchas.md](docs/dev/gotchas.md)                                                                   |
+| The `tenon` CLI and `create-tenoncms`                  | [docs/guide/cli.md](docs/guide/cli.md), `packages/cli/README.md`, [templates/README.md](templates/README.md) |
+| Curl smoke tests for adapters, media, locales, invites | [docs/dev/smoke-tests.md](docs/dev/smoke-tests.md)                                                           |
+| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)                                                   |
+| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                                                                       |
 
 ## Commands
 

@@ -1,0 +1,28 @@
+---
+import { edit } from "tenoncms/preview";
+
+const posts = await Astro.locals.tenon.find("posts");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My site</title>
+  </head>
+  <body>
+    <h1>Posts</h1>
+    <ul>
+      {posts.map((post) => (
+        <li>
+          <a href={`/posts/${post.slug}`} data-cms={edit("posts", post.id, "title")}>
+            {post.title}
+          </a>
+        </li>
+      ))}
+    </ul>
+    <p>
+      <a href="/admin">Admin</a>
+    </p>
+  </body>
+</html>
