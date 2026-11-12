@@ -101,7 +101,7 @@ function startResize(e: PointerEvent) {
             <Icon name="chevron-left" />
           </Button>
           <slot name="title">
-            <h2 v-if="!collapsible" class="w-full min-w-0 truncate text-sm font-medium">
+            <h2 v-if="!collapsible" class="w-full min-w-0 truncate pl-1 text-[0.8rem] font-medium">
               {{ title }}
             </h2>
             <div v-else class="w-full min-w-0">

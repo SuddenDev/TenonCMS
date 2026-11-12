@@ -1,4 +1,5 @@
 import { API_BASE } from "../../../client/index.ts";
+import { attachment } from "../../../http/attachment.ts";
 import { encodeKey, type Storage } from "../types.ts";
 import { createClient } from "./client.ts";
 import { encodePath, tag, unescapeXml } from "./encoding.ts";
@@ -78,6 +79,12 @@ export function s3(options: S3Options): Storage {
       const total = res.headers.get("content-range")?.split("/")[1];
       return { body: res.body, size: Number(total ?? res.headers.get("content-length")) };
     },
+
+    downloadUrl: (key, filename, expiresIn) =>
+      client.presign("GET", key, {
+        "X-Amz-Expires": expiresIn,
+        "response-content-disposition": attachment(filename),
+      }),
 
     async put(key, data, mimeType) {
       await client.send("PUT", key, {

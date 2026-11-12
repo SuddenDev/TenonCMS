@@ -37,7 +37,7 @@ At each hook stage the order is: field hooks, then the collection or global, the
 
 1. `beforeOperation`, then the access check (a failing rule throws before anything loads)
 2. Load rows in the right perspective. A `where` from the read rule narrows the query.
-3. `beforeRead`, on the loaded documents
+3. Stored keys that are no field are dropped (`dropUnknownKeys()`): a removed or renamed field keeps its value in the row until the next save, and an archive of an older schema imports it as is. Then `beforeRead`, on the loaded documents
 4. Populate relations
 5. `afterRead`, then removal of fields the caller cannot read
 6. Media URLs, `alternates`, `permalink`, then the `select` of relation fields, then the read's `select`, then `afterOperation`

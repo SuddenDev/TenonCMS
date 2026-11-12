@@ -49,6 +49,7 @@ import type { RunResult } from "../jobs/types.ts";
 import { sitemapEntries } from "../seo/sitemap-entries.ts";
 import { resolveWebhooks } from "../webhooks/config/resolve-webhooks.ts";
 import { webhookTasks } from "../webhooks/tasks.ts";
+import { reportError, runInit, runSeeds } from "../lifecycle/run-lifecycle.ts";
 
 /**
  * Creates a CMS instance.
@@ -94,6 +95,10 @@ export function defineCms<
   robots = {},
   jobs: jobsOption,
   webhooks: webhooksOption,
+  seed,
+  onInit,
+  afterImport,
+  afterError,
   ...own
 }: CmsOptions<C, G, A, P, PL, M, S, L, B, PR>) {
   type T = {
@@ -204,13 +209,37 @@ export function defineCms<
 
   /** The part of an instance bound to one database: connection, auth and the HTTP app. */
   function bindDatabase(database: DatabaseOptions, wake: (at: number) => void = () => {}) {
-    const { db, auth, getSession, getApiKey } = createRuntime<A>(
-      database,
-      secret,
-      host,
-      localized,
-      coreAuth,
-    );
+    const {
+      db: connect,
+      auth,
+      getSession,
+      getApiKey,
+    } = createRuntime<A>(database, secret, host, localized, coreAuth);
+
+    // Every query waits for the seeds and `onInit`. They run on `starting`, which reads the database without
+    // waiting, or they would wait on themselves.
+    let ready: Promise<void> | undefined;
+    const start = async () => {
+      await connect();
+      const cms = starting.localApi(outerScope({ user: null }, true));
+      for (const [source, run] of [
+        ["seed", runSeeds],
+        ["init", runInit],
+      ] as const)
+        try {
+          await run(starting);
+        } catch (error) {
+          await reportError(starting, { error, source }, cms);
+          throw error;
+        }
+    };
+    const db = async () => {
+      await (ready ??= start().catch((error: unknown) => {
+        ready = undefined;
+        throw error;
+      }));
+      return connect();
+    };
 
     const core: Core = {
       schema,
@@ -233,6 +262,13 @@ export function defineCms<
       localApi: (scope) => createLocalApi(core, scope),
       media,
       admin: adminRuntime,
+      lifecycle: { seed, onInit, afterImport, afterError },
+      localized,
+    };
+    const starting: Core = {
+      ...core,
+      db: connect,
+      localApi: (scope) => createLocalApi(starting, scope),
     };
     return { core, auth, app: createApp(core, site) };
   }

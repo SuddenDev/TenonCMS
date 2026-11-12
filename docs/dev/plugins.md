@@ -7,9 +7,10 @@ Code: `packages/core/src/plugins/` for the contract, `packages/plugins/` for the
 
 A plugin is a plain object. It can bring collections, globals, hooks, media hooks, routes, middleware and admin registrations (fields, pages, bar items, rich text extensions). A plugin can also have no schema at all.
 
-- Plugin names use `[a-z0-9-]`. Reserved: `account`, `admin`, `auth`, `auth-status`, `collections`, `globals`, `invites`, `jobs`, `localization`, `media`, `preview`, `schema`.
+- Plugin names use `[a-z0-9-]`. Reserved: `account`, `admin`, `auth`, `auth-status`, `collections`, `globals`, `invites`, `jobs`, `localization`, `media`, `preview`, `schema`, `export`, `import`.
 - Plugin collections and globals merge into the schema before it is checked. A name the host or another plugin already uses throws. Admin options merge after that: plugins first, then the host.
 - Hooks stay with the plugin. They run after the collection's own hooks and before root hooks.
+- Lifecycle hooks (`seed`, `onInit`, `afterImport`, `afterError`) run before the host's, in plugin order. A plugin's seed marker is its name in `cms_seeds`, so it runs once per database even where content exists. See [lifecycle](../../packages/core/src/lifecycle/README.md).
 - `jobs: { tasks, scheduledTasks }` has the shape of the host's option without `secret`. A task name MUST start with `<plugin.name>:`, and `scheduledTasks` MAY name the plugin's own tasks only. `resolveJobs()` merges built-in tasks (`tenon:`), then plugins in their order, then the host, and a duplicate name throws, like a duplicate collection. A plugin task is admin-only unless it sets `access`. See [jobs](../../packages/core/src/jobs/README.md).
 
 ## Routes

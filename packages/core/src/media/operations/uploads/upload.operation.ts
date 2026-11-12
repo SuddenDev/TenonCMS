@@ -6,6 +6,7 @@ import { complete } from "./complete.operation.ts";
 import { create } from "./create.operation.ts";
 import { putPart } from "./put-part.operation.ts";
 import { findUpload } from "./upload-row.ts";
+import { putToUrl } from "../../storage/write-file.ts";
 
 /** `cms.media.upload()`: steps 1 to 4 without HTTP. With `partUrl` storage, parts go to the presigned URLs. */
 export async function upload(
@@ -36,11 +37,4 @@ export async function upload(
     await abort(core, scope, row).catch(() => {});
     throw error;
   }
-}
-
-// PUTs part `n` to a presigned URL and returns the storage's ETag.
-async function putToUrl(url: string, part: Uint8Array, n: number) {
-  const res = await fetch(url, { method: "PUT", body: part as BodyInit });
-  if (!res.ok) throw new Error(`Uploading part ${n} failed: ${res.status}`);
-  return { etag: res.headers.get("etag") ?? "" };
 }

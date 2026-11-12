@@ -17,7 +17,7 @@ declare module "vue-router" {
     panes?: boolean;
     /** The view is a page of its own: full width, without the menu or panes. The top bar stays. */
     full?: boolean;
-    /** The header of a host page. Defaults to its title as text. */
+    /** The header above a view without panes. Defaults to none. */
     pageHeader?: PageDescriptor["pageHeader"];
     /** Key of the host page this route shows. */
     page?: string;

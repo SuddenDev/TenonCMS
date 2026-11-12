@@ -104,6 +104,7 @@ export default {
   },
   nav: {
     apiKeys: "API keys",
+    backup: "Backup",
     content: "Content",
     dark: "Dark",
     file: "File",
@@ -299,6 +300,43 @@ export default {
     secretText: "Copy the key now. It is not shown again.",
   },
 
+  backup: {
+    download: "Export",
+    downloadText:
+      "Download all content as a ZIP file: entries, settings, translations, version history and media files.",
+    includeMedia: "Include media files",
+    downloadAction: "Download ZIP",
+    restore: "Import",
+    restoreText: "Load a ZIP file from an export of this or another site.",
+    notIncluded: "Users and API keys are not part of an export. An import leaves them as they are.",
+    file: "Export file",
+    choose: "Choose file…",
+    noFile: "No file chosen",
+    mode: "How to import",
+    modes: {
+      replace: "Replace all content",
+      merge: "Add and overwrite",
+      missing: "Add only new entries",
+    },
+    modeHints: {
+      replace: "Deletes all current content, then loads the file.",
+      merge: "Adds new entries. Entries that exist here and in the file are overwritten.",
+      missing: "Adds entries that are not here yet. Existing entries stay as they are.",
+    },
+    preparing: "Preparing…",
+    uploading: "Uploading… {percent} %",
+    importing: "Importing…",
+    restoreAction: "Import",
+    confirmTitle: "Import this file?",
+    confirm: {
+      replace: "All current content will be deleted and replaced. This cannot be undone.",
+      merge:
+        "Existing entries that are also in the file will be overwritten. This cannot be undone.",
+      missing: "Entries that are not here yet will be added.",
+    },
+    tooLarge: "This file is too big to upload here.",
+    restored: "Imported {documents} entries and {media} media files",
+  },
   account: {
     settings: "Account settings",
     profile: "Profile",

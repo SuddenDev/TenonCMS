@@ -264,7 +264,7 @@ it("aborts resources and releases an existing multipart reservation when assembl
       )
     ).status,
   ).toBe(500);
-  expect(readdirSync(join(dir, ".tmp"))).toEqual([]);
+  expect(existsSync(join(dir, ".tmp"))).toBe(false);
   expect(
     (
       await env.fetchWithSession(

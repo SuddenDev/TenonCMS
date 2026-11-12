@@ -29,6 +29,7 @@ Server code   ---------> scoped local API ---^
 - Config is assembled in a fixed order: merge plugins, add the settings globals, add media, then check the whole schema. Invalid config throws at startup.
 - `requireConfig()` checks `secret`, `database` and `media.storage` at startup and throws one error that lists every missing or invalid value, so a bad deploy fails at boot, not on the first admin request. `libsql()`, `s3()`, `local()` and the other factories report their own missing options in `problems` instead of throwing. A build that loads the config (prerendering) needs these values too.
 - Database and auth are lazy. Nothing connects at import time.
+- The first query of a database opens the start gate in `bindDatabase()`: connect and migrate, then `runSeeds()`, then `runInit()` (`lifecycle/`). `core.db()` waits for the gate. The lifecycle hooks run on a copy of `core` whose `db` skips the gate, or they would wait on themselves. A failed gate is dropped, so the next query tries again. `auth()` only waits for the connection.
 - `withDatabase(cms, database, { wake }?)` builds a copy of the instance on another database, with its own connection, migrations, auth and HTTP app. Schema, options, media and email stay shared. The Cloudflare adapter gives each Durable Object a copy bound to its storage. `wake(at)` runs after a write queues a job that is due at `at`, so a host with a clock of its own can re-arm it.
 - Tasks and cron entries merge at startup (`resolveJobs()`): built-in tasks (`schedule/tasks.ts`), plugins, then the host. The instance has `jobs.run()`; the `cms` of hooks does not, see the [gotchas](gotchas.md#server-data-and-http).
 
@@ -46,6 +47,8 @@ Server code   ---------> scoped local API ---^
 | `jobs/`                        | Tasks, the job queue, the clock tick (`cms.jobs.run()`), `/jobs`   |
 | `schedule/`                    | `schedule()`: scheduled publish and unpublish, the `tenon:` tasks  |
 | `versions/`                    | Version history: list, read, restore                               |
+| `transfer/`                    | `cms.export()` / `cms.import()`: the ZIP archive and its routes    |
+| `lifecycle/`                   | `seed`, `onInit`, `afterImport`, `afterError`                      |
 | `http/`                        | The Hono app and its route order                                   |
 | `client/`                      | The typed browser client                                           |
 | `db/`                          | Tables, migrations, SQL                                            |

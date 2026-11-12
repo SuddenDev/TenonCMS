@@ -1,6 +1,7 @@
 import type { ConflictOptions, DeleteOptions } from "../../errors.ts";
 import type { EmailApi } from "../../email/types.ts";
 import type { JobsApi } from "../../jobs/types.ts";
+import type { LocalApi } from "./local-api.ts";
 import type { ScheduleOptions } from "../../schedule/types.ts";
 import type {
   AppliedStructure,
@@ -349,4 +350,9 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
 
   /** The job queue. */
   jobs: JobsApi;
+
+  /** {@inheritDoc LocalApi.export} */
+  export: LocalApi["export"];
+  /** {@inheritDoc LocalApi.import} */
+  import: LocalApi["import"];
 };

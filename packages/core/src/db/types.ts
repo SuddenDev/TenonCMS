@@ -119,6 +119,11 @@ export interface Database {
     created_at: number;
     updated_at: number;
   };
+  /** One row per seed that ran on this database: the plugin's name, or `''` for the host. */
+  cms_seeds: {
+    name: string;
+    seeded_at: number;
+  };
   cms_invites: {
     id: string;
     email: string;

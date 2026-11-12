@@ -9,7 +9,7 @@ type Uploads = Pick<Storage, "createUpload" | "putPart" | "complete" | "abort">;
 
 /**
  * Uploads streamed through the server. Every part is written into one temp file under `.tmp/` at its offset, so parts
- * MAY come out of order. Completion renames the temp file to its key.
+ * MAY come out of order. Completion renames the temp file to its key. An empty `.tmp/` is removed.
  */
 export function localUploads(disk: Disk): Uploads {
   const tmp = (uploadId: string) => disk.path(`.tmp/${uploadId}`);
@@ -30,10 +30,12 @@ export function localUploads(disk: Disk): Uploads {
       const { size } = await stat(tmp(uploadId));
       await disk.parent(disk.path(key));
       await rename(tmp(uploadId), disk.path(key));
+      await disk.prune(tmp(uploadId));
       return { size };
     },
     async abort(_key, uploadId) {
       await rm(tmp(uploadId), { force: true });
+      await disk.prune(tmp(uploadId));
     },
   };
 }

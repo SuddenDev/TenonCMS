@@ -110,7 +110,7 @@ From building the House of Cacao site.
 
 ## 5. Publishing
 
-- [ ] Export and import: backups of all data (collections, globals, media, config), moving between databases, seeding.
+- [x] Export and import: backups of all data (collections, globals, media, config), moving between databases, seeding. `cms.export()` / `cms.import()`, the Backup page, `seed` and the lifecycle hooks. Users stay out; a CLI comes with `create-tenon`.
 - [ ] Field renames: a small content migration (`renameField`), because a renamed field orphans its stored JSON.
 - [ ] Make Redirect a first class setting that gets used automatically if path / permalink changes. Every change of path in hooks should create a new entry that can be delted by the user.
 - [ ] OpenAPI spec, generated from the zod schemas and `/schema`.

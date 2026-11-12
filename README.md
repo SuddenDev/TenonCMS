@@ -172,6 +172,7 @@ Working:
 - Admin in English and German, with custom fields, pages and bar items
 - Users with roles, invites and access rules; better-auth options pass through
 - Plugins (`redirects`, and `example` to copy from), SMTP email
+- Backup and restore of all content as one ZIP file, seeding and lifecycle hooks, see [Backup](docs/guide/backup.md) and [Lifecycle hooks](docs/guide/lifecycle.md)
 - Astro, Nuxt and TanStack Start; SQLite via libsql (file or Turso), Postgres, PGlite
 
 Roadmap, roughly in order:

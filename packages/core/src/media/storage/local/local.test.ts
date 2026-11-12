@@ -31,7 +31,7 @@ describe("local", () => {
   it("writes parts out of order and twice, then moves the file into place", async () => {
     expect(await upload("a/b/file.txt")).toEqual({ size: 10 });
     expect(await readFile(join(dir, "a/b/file.txt"), "utf8")).toBe("aaaabbbbcc");
-    expect(await readdir(join(dir, ".tmp"))).toEqual([]);
+    expect(existsSync(join(dir, ".tmp"))).toBe(false);
   });
 
   it("stops a part at maxBytes", async () => {
@@ -52,7 +52,7 @@ describe("local", () => {
       parts: 1,
     });
     await storage.abort("x.txt", uploadId);
-    expect(await readdir(join(dir, ".tmp"))).toEqual([]);
+    expect(existsSync(join(dir, ".tmp"))).toBe(false);
   });
 
   it("gets a file or a range of it", async () => {

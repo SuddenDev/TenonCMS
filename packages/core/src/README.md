@@ -15,6 +15,8 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `locks/`        | Edit locks for the admin: claim, renew, take over, free.          | [README](locks/README.md)                   |
 | `versions/`     | Version history: list, read and restore past versions.            | [README](versions/README.md)                |
 | `jobs/`         | Tasks, the job queue, `cms.jobs.run()` and the `/jobs` routes.    | [README](jobs/README.md)                    |
+| `transfer/`     | `cms.export()` / `cms.import()`: the ZIP archive and its routes.  | [README](transfer/README.md)                |
+| `lifecycle/`    | `seed`, `onInit`, `afterImport` and `afterError`.                 | [README](lifecycle/README.md)               |
 | `schedule/`     | Scheduled publish and unpublish, the `tenon:` tasks.              | [README](schedule/README.md)                |
 | `webhooks/`     | Outgoing webhooks: matching, the `tenon:webhook` task, signing.   | [README](webhooks/README.md)                |
 | `http/`         | Hono application assembly, parsing and errors.                    | [app.ts](http/app.ts)                       |

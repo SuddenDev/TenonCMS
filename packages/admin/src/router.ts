@@ -32,6 +32,7 @@ import Jobs from "@/modules/jobs/views/Jobs.vue";
 import ApiKeys from "@/modules/api-keys/views/ApiKeys.vue";
 import ApiKeyEdit from "@/modules/api-keys/views/ApiKeyEdit.vue";
 import NewApiKey from "@/modules/api-keys/views/NewApiKey.vue";
+import Backup from "@/modules/backup/views/Backup.vue";
 
 const { t } = i18n.global;
 const empty = { render: () => null };
@@ -130,17 +131,22 @@ export function createAdminRouter(base: string) {
         { path: ":id", component: ApiKeyEdit, meta: { panes: true } },
       ],
     },
+    {
+      path: "/backup",
+      component: Backup,
+      meta: { admin: true, breadcrumb: () => t("nav.backup") },
+    },
     // Not `admin`: editors see the jobs of the tasks they MAY access.
     {
       path: "/jobs",
       component: Jobs,
-      meta: { pageHeader: false, breadcrumb: () => t("nav.jobs") },
+      meta: { breadcrumb: () => t("nav.jobs") },
     },
     { path: "/", redirect: CONTENT },
     {
       path: CONTENT,
       component: placeholder,
-      meta: { pageHeader: false, breadcrumb: () => t("nav.content"), root: true },
+      meta: { breadcrumb: () => t("nav.content"), root: true },
     },
     {
       path: `${CONTENT}/settings`,
@@ -152,7 +158,6 @@ export function createAdminRouter(base: string) {
       path: `${CONTENT}/media`,
       component: Media,
       meta: {
-        pageHeader: false,
         breadcrumb: (r) =>
           String(r.params.folder || t("nav.media"))
             .split("/")
@@ -198,7 +203,7 @@ export function createAdminRouter(base: string) {
     {
       path: "/:pathMatch(.*)*",
       component: NotFound,
-      meta: { full: true, pageHeader: false },
+      meta: { full: true },
     },
   ];
   return createRouter({

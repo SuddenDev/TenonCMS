@@ -360,8 +360,8 @@ export type PageRegistration<D = any> = {
   /**
    * The visible header area above the page: for pages with `nav.display` `content` or `settings` the header of
    * the page's pane, otherwise a bar above the page.
-   * - `true`: the `title` as text (default).
-   * - `false`: no header.
+   * - `false`: no header (default).
+   * - `true`: the `title` as text.
    * - `Crumb[]`: these breadcrumbs.
    * - `clientRef()` of a {@link PageHeader}: gets the breadcrumbs of the route and the page context, and returns
    *   an HTML string or breadcrumbs. Links in the HTML under `tenon.base` open without a reload. The admin

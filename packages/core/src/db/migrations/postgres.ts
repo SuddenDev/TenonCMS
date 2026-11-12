@@ -144,4 +144,13 @@ export const postgresMigrations: Record<string, Migration> = {
       await sql`CREATE INDEX cms_jobs_dedupe_idx ON cms_jobs (task, dedupe_key)`.execute(db);
     },
   },
+  // The Postgres twin of `012_cms_seeds`.
+  "004_cms_seeds": {
+    async up(db: Kysely<any>) {
+      await sql`CREATE TABLE cms_seeds (
+        name text PRIMARY KEY,
+        seeded_at bigint NOT NULL
+      )`.execute(db);
+    },
+  },
 };

@@ -6,6 +6,8 @@ import { runHooks } from "../../schema/runtime/run-hooks.ts";
 import { type Operation } from "../../schema/index.ts";
 import { runFieldHooks } from "../../schema/runtime/run-field-hooks.ts";
 import { stripDenied } from "../../access/field-access.ts";
+import { metaKeys } from "../population/validate-select.ts";
+import { dropUnknownKeys } from "../reads/drop-unknown-keys.ts";
 
 /**
  * Runs field `afterRead` hooks per document, then the collection's or global's once for the batch, then removes what
@@ -37,7 +39,8 @@ export async function afterRead(
 }
 
 /**
- * Runs the `beforeRead` hooks of the collection or global on the loaded documents.
+ * Drops the stored keys of the loaded documents that are no field, in place: values of removed or renamed fields stay
+ * stored until the next save. Then runs the `beforeRead` hooks of the collection or global, so keys they add stay.
  * @returns The documents the hooks return.
  */
 export function beforeRead(
@@ -47,6 +50,9 @@ export function beforeRead(
   docs: Record<string, any>[],
   operation: Operation,
 ) {
+  const { fields } = target(core, name);
+  for (const doc of docs) dropUnknownKeys(fields, doc, metaKeys(true));
+
   const args = hookArgs(s, name, { operation });
   return runHooks(slot(core, name, "beforeRead"), "docs", docs, args);
 }

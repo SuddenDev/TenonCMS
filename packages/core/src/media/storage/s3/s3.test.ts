@@ -70,6 +70,13 @@ describe("s3", () => {
     expect(url.searchParams.get("X-Amz-Signature")).toBeTruthy();
   });
 
+  it("presigns download URLs that save under a filename", async () => {
+    const url = new URL(await s3(options).downloadUrl!("x.zip", "tenon.zip", 3600));
+    expect(url.pathname).toBe("/b/x.zip");
+    expect(url.searchParams.get("response-content-disposition")).toContain("tenon.zip");
+    expect(url.searchParams.get("X-Amz-Expires")).toBe("3600");
+  });
+
   it("completes with parts sorted by number, then reads the size", async () => {
     const { calls, fetch } = fake((c) =>
       c.method === "HEAD" ? new Response(null, { headers: { "content-length": "42" } }) : undefined,

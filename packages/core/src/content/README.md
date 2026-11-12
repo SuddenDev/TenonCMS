@@ -38,6 +38,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 | `lifecycle/collect-hooks.ts`                          | Hook order: collection or global, then plugins, then root. None for media.                                                                 |
 | `lifecycle/hook-args.ts`                              | The arguments every hook gets.                                                                                                             |
 | `lifecycle/run-read-hooks.ts`                         | `beforeRead` and `afterRead`, shared by reads, writes and population.                                                                      |
+| `reads/drop-unknown-keys.ts`                          | `dropUnknownKeys()`: removes stored keys that are no field before `beforeRead`, inside groups and items too.                               |
 | `reads/`                                              | Load documents and globals, check read options and run read processing.                                                                    |
 | `reads/loc-of.ts`                                     | `locOf()`: the locale descriptor (`Loc`) of a read, with structure fields and their default sync state, or `undefined` when not localized. |
 | `reads/merge-locale.ts`                               | `mergeLocale()`: shared fields plus the locale row, then the default row, then `null`; lists from the shared structure when synced.        |

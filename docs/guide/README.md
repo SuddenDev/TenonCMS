@@ -50,5 +50,7 @@ Building or changing tenoncms itself? See the [developer docs](../dev/README.md)
 | [Email](email.md)                            | SMTP and custom adapters, templates                         |
 | [Jobs](jobs.md)                              | Tasks, the queue, the clock route, access, retries          |
 | [Webhooks](webhooks.md)                      | Outgoing webhooks, payloads, signatures, deploy hooks       |
+| [Lifecycle hooks](lifecycle.md)              | `seed`, `onInit`, `afterImport`, `afterError`               |
+| [Backup and restore](backup.md)              | `cms.export()`, `cms.import()`, the Backup page             |
 | [Customize the admin](admin.md)              | Branding, custom fields and pages                           |
 | [Plugins](plugins.md)                        | Using, writing and publishing plugins                       |

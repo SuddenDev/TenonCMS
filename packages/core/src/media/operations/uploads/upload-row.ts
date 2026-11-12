@@ -17,7 +17,7 @@ export const DAY = 24 * 60 * 60 * 1000;
 
 /**
  * The upload `id` of the scope's user or API key, or `undefined` for an unknown, expired or foreign one. Parts,
- * completion and abort all load the upload here.
+ * completion and abort all load the upload here. Uploads into a dot folder are archives of an import, never media.
  * @throws {ForbiddenError} 403 for an API key without `create` on media.
  */
 export async function findUpload(core: Core, scope: Scope, id: string) {
@@ -27,6 +27,7 @@ export async function findUpload(core: Core, scope: Scope, id: string) {
     .selectFrom("cms_uploads")
     .selectAll()
     .where("id", "=", id)
+    .where("folder", "not like", ".%")
     .executeTakeFirst();
 
   const mine = row && row.user_id === actorId(scope);

@@ -78,6 +78,9 @@ Each of these cost a debugging round. Check here when something behaves strangel
 ## Server, data and HTTP
 
 - PGlite has one connection, like `:memory:` libsql. The same rule applies.
+- `seed` and `onInit` run inside the start gate, and the seeds inside one transaction. They MUST use the `cms` they get. The instance from `defineCms()` waits for the gate, so calling it from a seed never returns.
+- `onInit` runs on every cold start. On serverless that can be every request, so it MUST be cheap and safe to repeat.
+- `cms.import()` skips hooks, validation and webhooks on purpose. Derived data (a search index, a redirect cache) is rebuilt in `afterImport`, not in `afterChange`.
 - better-auth's migrations take no lock. Several instances on one fresh Postgres database (serverless cold starts) failed with `relation "session" already exists` until `migrate()` ran them inside its locked transaction. Keep them there.
 - Vercel caps a request body at 4.5 MB. `s3()` is not affected: the browser uploads parts straight to the bucket. Storages that stream parts through the server (`local()`, `r2()`) would hit it, but `local()` fails there anyway, because the filesystem is read-only. Responses stream, so served files are not capped.
 - On Postgres, raw SQL MUST quote better-auth's camelCase columns (`"updatedAt"`) and compare its booleans with `true` / `false`. `WHERE 1` and `IS ?` fail; use `TRUE` and `IS NOT DISTINCT FROM`.

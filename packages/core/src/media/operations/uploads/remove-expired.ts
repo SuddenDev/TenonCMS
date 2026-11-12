@@ -6,7 +6,11 @@ import { DAY, deleteUpload } from "./upload-row.ts";
 
 const log = consola.withTag("tenon");
 
-/** Aborts uploads older than a day and deletes their rows. A failed abort is logged; the row goes anyway. */
+/**
+ * Aborts uploads older than a day, deletes a file already assembled at their key, and deletes their rows. Such a
+ * file has no document: completing a media upload deletes its row in the same transaction. A failure is logged; the
+ * row goes anyway.
+ */
 export async function removeExpired(storage: Storage, db: Kysely<Database>) {
   const expired = await db
     .selectFrom("cms_uploads")
@@ -16,6 +20,7 @@ export async function removeExpired(storage: Storage, db: Kysely<Database>) {
 
   for (const row of expired) {
     await storage.abort(row.key, row.adapter_upload_id).catch((e) => log.error(e));
+    await storage.delete(row.key).catch((e) => log.error(e));
     await deleteUpload(db, row.id);
   }
 }

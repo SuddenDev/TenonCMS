@@ -30,7 +30,8 @@ import { adminBarEndpoint } from "../preview/endpoints/admin-bar.endpoint.ts";
 import { loadEndpoint } from "../admin/endpoints/load.endpoint.ts";
 import { actionEndpoint } from "../admin/endpoints/action.endpoint.ts";
 import { noStore } from "./middleware/no-store.middleware.ts";
-import { handleError } from "./errors.ts";
+import { errorHandler } from "./errors.ts";
+import { transferEndpoint } from "../transfer/endpoints/transfer.endpoint.ts";
 import { withPermissions } from "../access/permissions.ts";
 import { seoRoutes } from "../seo/endpoints/routes.ts";
 import { jobsEndpoint } from "../jobs/endpoints/jobs.endpoint.ts";
@@ -90,6 +91,7 @@ export function createApp(core: Core, site?: string) {
   signedIn.route("/", passwordEndpoint(core));
   signedIn.route("/", invitesEndpoint(core, site));
   signedIn.route("/", apiKeysEndpoint(core));
+  signedIn.route("/", transferEndpoint(core));
   signedIn.route("/", locksEndpoint(core));
   signedIn.route("/", versionsEndpoint(core));
   signedIn.route("/", jobsEndpoint(core));
@@ -102,7 +104,7 @@ export function createApp(core: Core, site?: string) {
   signedIn.route("/", globals.previews);
 
   const api = new Hono<Env>().basePath(API_BASE);
-  api.onError(handleError);
+  api.onError(errorHandler(core));
   api.notFound((c) => c.json({ message: "Not Found" }, 404));
 
   api.use(withCms(core), ...pluginMiddleware(plugins, "publicMiddleware"));
@@ -130,7 +132,7 @@ export function createApp(core: Core, site?: string) {
   api.route("/", signedIn);
 
   const app = new Hono<Env>();
-  app.onError(handleError);
+  app.onError(errorHandler(core));
   app.notFound((c) => c.json({ message: "Not Found" }, 404));
   app.route("/", seoRoutes(core, site));
   app.route("/", api);

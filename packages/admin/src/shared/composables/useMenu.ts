@@ -126,8 +126,9 @@ export function useSettings() {
 
 /**
  * The sidebar sections: items with `nav.display` `content` or unset, each in its `group` (default
- * `Content`). Sorted by `order`; equal orders keep their definition order. A Settings entry under
- * `Admin` is added when any item is shown on the Settings page, a Jobs entry when the user MAY see a task, and a Users entry for admins.
+ * `Content`). Sorted by `order`; equal orders keep their definition order. The `Manage` section holds
+ * Backup (90), Users (100) and API keys (110) for admins, Jobs (120) when the user MAY see a task, and
+ * Settings (130) when any item is shown on the Settings page.
  */
 export function useMenu() {
   const entries = useEntries();
@@ -141,7 +142,7 @@ export function useMenu() {
         label: t("nav.settings"),
         icon: "settings",
         group: t("nav.manage"),
-        order: 100,
+        order: 130,
         to: `${CONTENT}/settings`,
         also: targets,
       });
@@ -150,7 +151,7 @@ export function useMenu() {
         label: t("nav.jobs"),
         icon: "list-checks",
         group: t("nav.manage"),
-        order: 90,
+        order: 120,
         to: "/jobs",
       });
     if (session?.user.value?.role === "admin")
@@ -159,15 +160,22 @@ export function useMenu() {
           label: t("nav.users"),
           icon: "users",
           group: t("nav.manage"),
-          order: 110,
+          order: 100,
           to: "/users",
         },
         {
           label: t("nav.apiKeys"),
           icon: "key-round",
           group: t("nav.manage"),
-          order: 120,
+          order: 110,
           to: "/api-keys",
+        },
+        {
+          label: t("nav.backup"),
+          icon: "database-backup",
+          group: t("nav.manage"),
+          order: 90,
+          to: "/backup",
         },
       );
     return groupMenu(items, t("nav.content"));

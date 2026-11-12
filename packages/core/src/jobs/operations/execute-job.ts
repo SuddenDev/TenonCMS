@@ -4,6 +4,7 @@ import type { Core } from "../../cms/runtime/types.ts";
 import type { JobRow } from "../../db/types.ts";
 import { deleteOlderCronRuns } from "../../db/queries/jobs/delete-jobs.query.ts";
 import { finishJob, type Outcome } from "../../db/queries/jobs/finish-job.query.ts";
+import { reportError } from "../../lifecycle/run-lifecycle.ts";
 
 const BACKOFF = 60_000;
 
@@ -37,6 +38,11 @@ async function outcomeOf(core: Core, job: JobRow): Promise<Outcome> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     consola.withTag("tenon").error(`Job ${job.id} (${job.task}) failed: ${message}`);
+    await reportError(core, {
+      error,
+      source: "job",
+      job: { id: job.id, task: job.task, attempts: job.attempts, maxAttempts: job.max_attempts },
+    });
     return job.attempts < job.max_attempts
       ? {
           status: "queued",

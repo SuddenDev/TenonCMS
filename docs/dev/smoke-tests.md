@@ -148,3 +148,28 @@ export DATABASE_URL=postgres://postgres:pw@localhost:55432/postgres
 ```
 
 Point an example's `database` at `postgres(process.env.DATABASE_URL!)` (add `pg` to it), start it, and run the curl calls above. Expect the same codes. Then `docker stop tenon-pg`; `--rm` deletes the data.
+
+## Export and import
+
+Run after a change to `transfer/` or an adapter's body handling. Sign up as above (cookie jar `$J`), then:
+
+```sh
+curl -s -b $J -o backup.zip -w '%{http_code} %{content_type}\n' $B/_tenon/export
+unzip -l backup.zip
+curl -s -b $J -X POST -H 'content-type: application/zip' --data-binary @backup.zip "$B/_tenon/import?mode=merge"
+curl -s -b $J -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' -d '{}' $B/_tenon/import
+```
+
+Expect `200 application/zip`, a list with `manifest.json`, `documents.ndjson` and `media/…`, then counts like `{"cms_documents":12,…,"media":3}`, and `415`. Without the cookie, both routes answer `401`.
+
+The staged path, as the admin uses it (local storage: one part, ETag `1`):
+
+```sh
+SIZE=$(wc -c < backup.zip | tr -d ' ')
+ID=$(curl -s -b $J -H 'content-type: application/json' -d "{\"size\":$SIZE}" $B/_tenon/import/uploads | jq -r .id)
+curl -s -b $J -X PUT -H 'content-type: application/octet-stream' --data-binary @backup.zip "$B/_tenon/import/uploads/$ID/parts/1"
+curl -s -b $J -H 'content-type: application/json' -d '{"parts":[{"n":1,"etag":"1"}]}' "$B/_tenon/import/uploads/$ID/complete?mode=merge"
+curl -s -b $J -X POST -H 'content-type: application/json' -d '{}' $B/_tenon/export
+```
+
+Expect `{"etag":"1"}`, the same counts, no file left under `.uploads/.tenon/`, and `{"url":"/_tenon/export"}` (with S3: a presigned bucket URL that downloads `tenon-<date>.zip`).

@@ -198,6 +198,14 @@ const cmsMigrations: Record<string, Migration> = {
       );
     },
   },
+  "012_cms_seeds": {
+    async up(db) {
+      await sql`CREATE TABLE IF NOT EXISTS cms_seeds (
+        name text PRIMARY KEY,
+        seeded_at integer NOT NULL
+      )`.execute(db);
+    },
+  },
 };
 
 /** The Kysely migrator for the CMS tables of the database's dialect, with its own migration tables. */

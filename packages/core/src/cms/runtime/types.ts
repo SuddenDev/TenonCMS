@@ -6,7 +6,7 @@ import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import type { EmailApi, EmailTemplates } from "../../email/types.ts";
 import type { Role } from "../../users/roles.ts";
 import { type Plugin } from "../../plugins/index.ts";
-import { type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
+import { type Fields, type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
 import type { BetterAuthOptions } from "better-auth";
 import type { Database } from "../../db/types.ts";
 import type { Kysely } from "kysely";
@@ -14,6 +14,7 @@ import type { TransactionLifetime } from "./transaction.ts";
 import type { RobotsOptions, SitemapOptions } from "../../seo/config/types.ts";
 import type { ResolvedJobs } from "../../jobs/config/resolve-jobs.ts";
 import type { ResolvedWebhooks } from "../../webhooks/config/resolve-webhooks.ts";
+import type { LifecycleHooks } from "../../lifecycle/types.ts";
 
 /**
  * The internal context of one `defineCms()` instance. It is not public.
@@ -62,6 +63,17 @@ export type Core = {
   jobs: ResolvedJobs & { wake: (at: number) => void };
   /** The checked `webhooks` option, `{}` without it. */
   webhooks: ResolvedWebhooks;
+  /** The host's `seed`, `onInit`, `afterImport` and `afterError`. Plugins hold their own. */
+  lifecycle: LifecycleHooks;
+  /**
+   * The localized keys of every `collection:<name>` / `global:<name>` (`null` when not localized), the default
+   * locale, and the fields of each entry. Stored rows are synced to it at startup.
+   */
+  localized: {
+    current: Record<string, string[] | null>;
+    defaultLocale: string;
+    fields: Record<string, Fields>;
+  };
 
   /**
    * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the

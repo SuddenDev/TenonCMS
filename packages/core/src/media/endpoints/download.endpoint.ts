@@ -11,6 +11,7 @@ import { SAFE, serveFile } from "./serve-file.ts";
 import { scope } from "./request-context.ts";
 import { collectionTarget } from "../../content/targets.ts";
 import { readable } from "../../access/read.ts";
+import { attachment } from "../../http/attachment.ts";
 
 /**
  * Registers downloads of originals with range support or a streamed ZIP, behind `media.access.read`.
@@ -44,12 +45,4 @@ export function downloadEndpoint(core: Core) {
       },
     });
   });
-}
-
-function attachment(filename: string) {
-  const encoded = encodeURIComponent(filename).replace(
-    /[!'()*]/g,
-    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
-  return `attachment; filename*=UTF-8''${encoded}`;
 }

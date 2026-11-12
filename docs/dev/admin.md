@@ -30,6 +30,7 @@ Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an 
 - Content views sit in resizable **panes**: menu, list, document. Panes collapse to a strip when they do not fit and stack on phones.
 - Every collection, global, page and the media library is a menu entry with `nav` defaults. Settings and Users entries are added when they apply.
 - Pages with `nav.display` `main` or `none` open full width.
+- A view without panes has no header, unless its route sets `meta.pageHeader` (host pages: `pageHeader`). The header is the same bar in both layouts.
 
 ### Behavior worth knowing
 

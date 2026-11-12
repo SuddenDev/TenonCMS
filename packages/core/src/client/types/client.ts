@@ -17,6 +17,7 @@ import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.
 import type { Lock } from "../../locks/types.ts";
 import type { CronEntry, Job, JobFilter } from "../../jobs/types.ts";
 import type { ScheduleOptions } from "../../schedule/types.ts";
+import type { ImportCounts } from "../../transfer/format.ts";
 import type {
   AppliedStructure,
   StructureCounts,
@@ -24,7 +25,7 @@ import type {
 } from "../../content/writes/sync-structure.ts";
 import type { Version, VersionWithData } from "../../versions/types.ts";
 import type { MediaClient } from "./media.ts";
-import type { FindOptions } from "./options.ts";
+import type { FindOptions, ImportOptions } from "./options.ts";
 import type {
   CollectionFields,
   Collections,
@@ -637,6 +638,24 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     /** Deletes a job that is not running. A running job is a 409. `DELETE /_tenon/jobs/:id` */
     cancel(id: string): Promise<void>;
   };
+
+  /**
+   * All content as a ZIP archive, for admins. `media: false` leaves the media files out. The archive is held in memory;
+   * for big sites, open {@link Client.exportLink} instead. `GET /_tenon/export`
+   */
+  export(options?: { media?: boolean }): Promise<Blob>;
+  /**
+   * A link that downloads the archive, for admins. With S3 storage the archive is written into the bucket first and
+   * the link is valid for 12 hours, so a host's response size limit does not apply. Otherwise it is `GET /_tenon/export`.
+   * `POST /_tenon/export`
+   */
+  exportLink(options?: { media?: boolean }): Promise<string>;
+  /**
+   * Restores an archive of `export()`, for admins. See `cms.import()` for `mode`. With media storage, the archive is
+   * uploaded into it in parts first, like a media file, so a host's request size limit does not apply.
+   * `POST /_tenon/import/uploads`, without media `POST /_tenon/import`
+   */
+  import(archive: Blob, options?: ImportOptions): Promise<ImportCounts>;
 
   /**
    * The preview cookie. It holds a {@link Perspective}. While it is `drafts`, reads of the signed-in user see drafts,

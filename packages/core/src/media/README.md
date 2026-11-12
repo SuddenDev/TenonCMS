@@ -8,7 +8,7 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 
 `endpoints/uploads.endpoint.ts` → `operations/uploads/create.operation.ts` → `put-part.operation.ts` → `complete.operation.ts`
 
-`create()` checks size and type, runs `beforeUpload`, reserves a free key in `cms_uploads` and starts the upload in storage. It returns one URL per part: presigned for direct storage (S3), the part route for proxied storage (local). `putPart()` streams one part into storage and enforces its length. `complete()` assembles the file, checks its size and image header, then creates the document, runs `afterUpload` and deletes the upload row in one transaction. On failure the file and the row go. With a `prerender` provider it renders variants after commit. `abort()` drops an unfinished upload. `cms.media.upload()` (`upload.operation.ts`) runs the same steps without HTTP.
+`create()` checks size and type, runs `beforeUpload`, reserves a free key in `cms_uploads` and starts the upload in storage. It returns one URL per part: presigned for direct storage (S3), the part route for proxied storage (local). `putPart()` streams one part into storage and enforces its length. `complete()` assembles the file, checks its size and image header, then creates the document, runs `afterUpload` and deletes the upload row in one transaction. On failure the file and the row go. With a `prerender` provider it renders variants after commit. `abort()` drops an unfinished upload. `cms.media.upload()` (`upload.operation.ts`) runs the same steps without HTTP. A staged import reuses `cms_uploads`, `putPart()` and `abort()` for its archive, in a dot folder that `findUpload()` skips.
 
 ## Follow a move
 
@@ -62,6 +62,7 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `endpoints/serve-file.ts`                         | Range responses, the sandbox headers and the `Cache-Control` of every served file and variant.                     |
 | `endpoints/request-context.ts`                    | Body parsing and the user scope.                                                                                   |
 | `storage/types.ts`                                | Storage adapter contract.                                                                                          |
+| `storage/write-file.ts`                           | `writeFile()`: a stream into storage from the server, in parts when it is long.                                    |
 | `storage/local/index.ts`                          | `local()`, `tenoncms/media/local`: file reads, writes, moves and listing.                                          |
 | `storage/local/disk.ts`                           | Safe paths under the directory and removal of empty folders.                                                       |
 | `storage/local/uploads.ts`                        | Uploads through one temp file per upload under `.tmp/`.                                                            |

@@ -159,7 +159,7 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 
 - The path is `/<key>` unless `route` is set. Routes start with `/`. Nesting and params work, like `route: '/reports/:id'`.
 - A page shown in the content menu or on the Settings page opens under `/content` (`/stats` becomes `/content/stats`) or `/content/settings`. `main` and `none` pages use the route as is and open full width, without the content menu.
-- `title` is the navigation label, the document title and the default header text (default: the key). A page may also have `description` and `nav`.
+- `title` is the navigation label, the document title and the header text with `pageHeader: true` (default: the key). A page may also have `description` and `nav`.
 - A page on a built-in path replaces that view. `route: '/'` with `display: 'main'` replaces the redirect from `/` to `/content` (the admin has no dashboard of its own). `route: '/collections/posts'` replaces the posts list.
 
 ### The page header
@@ -168,8 +168,8 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 
 | Value                       | Result                                                                                                                              |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `true` (default)            | The title as text                                                                                                                   |
-| `false`                     | Nothing                                                                                                                             |
+| `false` (default)           | Nothing                                                                                                                             |
+| `true`                      | The title as text                                                                                                                   |
 | `[{ label, to }]`           | Breadcrumbs                                                                                                                         |
 | `clientRef()` of a function | `(crumbs, { params, query, data, tenon })` returns an HTML string or breadcrumbs. `crumbs` are the route's. It MUST be synchronous. |
 

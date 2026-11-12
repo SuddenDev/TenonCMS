@@ -22,7 +22,9 @@ These keep storage and database from drifting apart. Keep the order.
 
 - An upload is multipart: create, put parts, complete (or abort). A table of uploads in progress reserves the key and binds the upload to its user. Another user's upload or an expired one answers 404.
 - Completing assembles storage, checks size and image headers, writes the document with hooks, and removes the upload row, all in a transaction. Variants are rendered afterwards.
-- Expired uploads are cleaned up when a new upload starts.
+- Expired uploads are cleaned up when a new upload starts, together with a file already assembled at their key.
+- Rows in a dot folder are archives of a staged import ([transfer](../../packages/core/src/transfer/README.md)). Media folders never start with a dot, so the media routes skip them.
+- `writeFile()` writes a stream of unknown length into storage: one `put()`, or a multipart upload from the server. Imports and staged exports use it.
 
 ## Image variants
 

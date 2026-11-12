@@ -21,16 +21,20 @@ export function partLength(row: Row, n: number) {
   return n < parts ? row.part_size : row.size - (parts - 1) * row.part_size;
 }
 
-/** One upload URL per part: presigned for direct storage, the part route for proxied storage. */
+/**
+ * One upload URL per part: presigned for direct storage, `<route>/parts/<n>` for proxied storage.
+ * @param route The upload's path under the API, e.g. `/media/uploads/<id>`.
+ */
 export function partUrls(
   storage: Storage,
-  upload: { id: string; key: string; uploadId: string; parts: number },
+  upload: { key: string; uploadId: string; parts: number },
+  route: string,
 ) {
-  const { id, key, uploadId, parts } = upload;
+  const { key, uploadId, parts } = upload;
   const urlOf = async (n: number) =>
     storage.partUrl
       ? await storage.partUrl(key, uploadId, n, DAY / 1000)
-      : `${API_BASE}/media/uploads/${id}/parts/${n}`;
+      : `${API_BASE}${route}/parts/${n}`;
 
   return Promise.all(
     Array.from({ length: parts }, async (_, i) => ({ n: i + 1, url: await urlOf(i + 1) })),

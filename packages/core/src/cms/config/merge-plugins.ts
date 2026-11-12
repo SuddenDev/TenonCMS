@@ -14,6 +14,8 @@ const reserved = [
   "media",
   "preview",
   "localization",
+  "export",
+  "import",
 ];
 
 /**

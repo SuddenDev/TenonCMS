@@ -15,7 +15,7 @@ withCms → plugins' publicMiddleware → auth/* or open routes
         → session → apiKeyReach → protected routes
 ```
 
-`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes, `/jobs/run` (a bearer secret, mounted only with `jobs.secret`) and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, `user` with a session and `apiKey` with an API key. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session or a key; `apiKeyReach()` lets a key reach only `/schema` there, with `read` on `schema`. `handleError()` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403.
+`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes, `/jobs/run` (a bearer secret, mounted only with `jobs.secret`) and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, `user` with a session and `apiKey` with an API key. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session or a key; `apiKeyReach()` lets a key reach only `/schema` there, with `read` on `schema`. `errorHandler(core)` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403, and hands a 500 to `afterError`.
 
 ## Follow a public read
 
@@ -31,8 +31,9 @@ withCms → plugins' publicMiddleware → auth/* or open routes
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `index.ts`                          | Exports `createApp()`.                                                                                             |
 | `app.ts`                            | `createApp()`: mounts `/sitemap.xml` and `/robots.txt` (`seo/`), then open, content and protected routes in order. |
-| `errors.ts`                         | `notFound()` and `handleError()`, which hides unexpected messages.                                                 |
+| `errors.ts`                         | `notFound()` and `errorHandler()`, which hides unexpected messages.                                                |
 | `parse-body.ts`                     | `parseBody()`: JSON bodies; malformed JSON reads as `undefined`.                                                   |
+| `attachment.ts`                     | `attachment()`: a `content-disposition` that downloads under a file name.                                          |
 | `middleware/types.ts`               | `Env`: the Hono context variables `cms`, `user` and `perspective`.                                                 |
 | `middleware/with-cms.middleware.ts` | `withCms()`: binds the userless local API.                                                                         |
 | `query/read-options.ts`             | `readOptions()`: `populate`, `depth`, `select`, `locale`, `fallback`, `alternates` and `permalink`, or a 400.      |

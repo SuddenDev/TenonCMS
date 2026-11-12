@@ -1,4 +1,5 @@
 import type { FilterKey, Locale, ReadOptions, Schema } from "../../schema/index.ts";
+import type { ImportMode } from "../../transfer/format.ts";
 import type { CollectionFields, Collections } from "./schema.ts";
 
 /** Options of `createClient()`. */
@@ -46,3 +47,6 @@ export type UploadOptions = {
   /** Aborts the upload. Parts in storage are dropped. */
   signal?: AbortSignal;
 };
+
+/** Options of `client.import()`. See `cms.import()` for `mode`. */
+export type ImportOptions = Pick<UploadOptions, "onProgress" | "signal"> & { mode?: ImportMode };

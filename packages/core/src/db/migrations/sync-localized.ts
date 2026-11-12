@@ -1,5 +1,5 @@
 import { consola } from "consola";
-import { type Kysely, type Transaction, sql } from "kysely";
+import { type Kysely, sql } from "kysely";
 import { type Database } from "../types.ts";
 import type { Field, Fields } from "../../schema/index.ts";
 import { withLists } from "../../content/reads/merge-locale.ts";
@@ -55,7 +55,7 @@ function shift(from: Version, to: Version, keys: string[]) {
 }
 
 async function move(
-  trx: Transaction<Database>,
+  trx: Kysely<Database>,
   kind: Kind,
   name: string,
   keys: string[],
@@ -140,56 +140,72 @@ export async function syncLocalized(
   defaultLocale: string,
   fields: Record<string, Fields> = {},
 ) {
-  const stored = await db.selectFrom("cms_schema_state").selectAll().execute();
-  const prev = new Map<string, string[] | null>();
-  let prevDefault: string | undefined;
-  for (const r of stored) {
-    if (r.kind === META.kind) prevDefault = JSON.parse(r.localized!) as string;
-    else prev.set(`${r.kind}:${r.name}`, r.localized === null ? null : JSON.parse(r.localized));
-  }
+  const { messages, previousDefault } = await db
+    .transaction()
+    .execute((trx) => syncLocalizedIn(trx, current, defaultLocale, fields));
+
   const log = consola.withTag("tenon");
-  const messages: string[] = [];
-
-  await db.transaction().execute(async (trx) => {
-    if (stored.length)
-      for (const [id, keys] of Object.entries(current)) {
-        const before = prev.get(id) ?? [];
-        const after = keys ?? [];
-        const [kind, name] = split(id);
-        for (const [list, toLocale] of [
-          [after.filter((k) => !before.includes(k)), true],
-          [before.filter((k) => !after.includes(k)), false],
-        ] as const) {
-          if (!list.length) continue;
-          const counts = await move(trx, kind, name, list, toLocale, defaultLocale, fields[id]);
-          for (const [k, n] of counts)
-            if (n)
-              messages.push(
-                `moved ${name}.${k} to ${toLocale ? "locale rows" : "shared data"} (${n} documents)`,
-              );
-        }
-      }
-    const rows = [
-      ...Object.entries(current).map(([id, keys]) => {
-        const [kind, name] = split(id);
-        return { kind, name, localized: keys && JSON.stringify(keys) };
-      }),
-      { ...META, localized: JSON.stringify(defaultLocale) },
-    ];
-    for (const row of rows)
-      await trx
-        .insertInto("cms_schema_state")
-        .values(row)
-        .onConflict((oc) => oc.columns(["kind", "name"]).doUpdateSet({ localized: row.localized }))
-        .execute();
-  });
-
   for (const m of messages) log.info(m);
-  if (prevDefault !== undefined && prevDefault !== defaultLocale) {
+  if (previousDefault !== undefined && previousDefault !== defaultLocale) {
     const n = await missingDefault(db, current, defaultLocale);
     if (n)
       log.warn(
-        `defaultLocale changed from "${prevDefault}" to "${defaultLocale}": ${n} documents have no "${defaultLocale}" row`,
+        `defaultLocale changed from "${previousDefault}" to "${defaultLocale}": ${n} documents have no "${defaultLocale}" row`,
       );
   }
+}
+
+/**
+ * `syncLocalized()` inside the caller's transaction, without logging. An import runs it after it writes the
+ * archive's state.
+ * @returns What moved, as log lines, and the stored default locale before the sync.
+ */
+export async function syncLocalizedIn(
+  trx: Kysely<Database>,
+  current: Record<string, string[] | null>,
+  defaultLocale: string,
+  fields: Record<string, Fields> = {},
+) {
+  const stored = await trx.selectFrom("cms_schema_state").selectAll().execute();
+  const prev = new Map<string, string[] | null>();
+  let previousDefault: string | undefined;
+  for (const r of stored) {
+    if (r.kind === META.kind) previousDefault = JSON.parse(r.localized!) as string;
+    else prev.set(`${r.kind}:${r.name}`, r.localized === null ? null : JSON.parse(r.localized));
+  }
+  const messages: string[] = [];
+
+  if (stored.length)
+    for (const [id, keys] of Object.entries(current)) {
+      const before = prev.get(id) ?? [];
+      const after = keys ?? [];
+      const [kind, name] = split(id);
+      for (const [list, toLocale] of [
+        [after.filter((k) => !before.includes(k)), true],
+        [before.filter((k) => !after.includes(k)), false],
+      ] as const) {
+        if (!list.length) continue;
+        const counts = await move(trx, kind, name, list, toLocale, defaultLocale, fields[id]);
+        for (const [k, n] of counts)
+          if (n)
+            messages.push(
+              `moved ${name}.${k} to ${toLocale ? "locale rows" : "shared data"} (${n} documents)`,
+            );
+      }
+    }
+  const rows = [
+    ...Object.entries(current).map(([id, keys]) => {
+      const [kind, name] = split(id);
+      return { kind, name, localized: keys && JSON.stringify(keys) };
+    }),
+    { ...META, localized: JSON.stringify(defaultLocale) },
+  ];
+  for (const row of rows)
+    await trx
+      .insertInto("cms_schema_state")
+      .values(row)
+      .onConflict((oc) => oc.columns(["kind", "name"]).doUpdateSet({ localized: row.localized }))
+      .execute();
+
+  return { messages, previousDefault };
 }

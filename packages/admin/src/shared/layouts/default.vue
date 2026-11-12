@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import LinkedDeletionDialog from "@/shared/components/LinkedDeletionDialog.vue";
 import ActionConfirmDialog from "@/shared/components/ActionConfirmDialog.vue";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { Button } from "@/shared/components/ui/button";
@@ -31,6 +31,7 @@ import {
   Icon,
   Pane,
   usePerspective,
+  useBreadcrumbs,
   useAppBar,
   useLocale,
   useLocaleFromRoute,
@@ -52,6 +53,8 @@ const perspectives = [
   { value: "drafts", label: "common.drafts" },
   { value: "published", label: "common.published" },
 ] as const;
+const trail = useBreadcrumbs();
+const pageTitle = computed(() => trail.value.at(-1)?.label ?? t("nav.page"));
 const row = ref<HTMLElement>();
 providePanes(row);
 </script>
@@ -211,18 +214,25 @@ providePanes(row);
       <div ref="row" class="flex min-h-0 flex-1 overflow-x-auto">
         <div v-if="route.meta.full" class="flex min-w-0 flex-1 flex-col">
           <header
-            v-if="route.meta.pageHeader !== false"
+            v-if="route.meta.pageHeader"
             class="border-border flex h-12 shrink-0 items-center border-b px-4"
           >
-            <PageTitle :value="route.meta.pageHeader ?? true" />
+            <PageTitle :value="route.meta.pageHeader" />
           </header>
           <main class="min-h-0 flex-1 overflow-auto"><slot /></main>
         </div>
         <template v-else>
           <MenuPane v-if="route.meta.menu !== false" />
           <slot v-if="route.meta.panes" />
-          <Pane v-else :title="t('nav.page')" :min="448" grow :collapsible="false">
-            <template #header><PageTitle :value="route.meta.pageHeader ?? true" /></template>
+          <Pane v-else :title="pageTitle" :min="448" grow :collapsible="false">
+            <template #header>
+              <header
+                v-if="route.meta.pageHeader"
+                class="border-border flex h-12 shrink-0 items-center border-b px-4"
+              >
+                <PageTitle :value="route.meta.pageHeader" />
+              </header>
+            </template>
             <main class="h-full"><slot /></main>
           </Pane>
         </template>

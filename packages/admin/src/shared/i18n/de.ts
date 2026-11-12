@@ -105,6 +105,7 @@ export default {
   },
   nav: {
     apiKeys: "API-Schlüssel",
+    backup: "Sicherung",
     content: "Inhalte",
     dark: "Dunkel",
     file: "Datei",
@@ -309,6 +310,47 @@ export default {
     secretText: "Kopiere den Schlüssel jetzt. Er wird nicht noch einmal angezeigt.",
   },
 
+  backup: {
+    download: "Exportieren",
+    downloadText:
+      "Lade alle Inhalte als ZIP-Datei herunter: Einträge, Einstellungen, Übersetzungen, Versionsverlauf und Mediendateien.",
+    includeMedia: "Mediendateien einschließen",
+    downloadAction: "ZIP herunterladen",
+    restore: "Importieren",
+    restoreText: "Lade eine ZIP-Datei aus einem Export dieser oder einer anderen Seite.",
+    notIncluded:
+      "Benutzer und API-Schlüssel sind nicht Teil eines Exports. Ein Import lässt sie unverändert.",
+    file: "Exportdatei",
+    choose: "Datei wählen…",
+    noFile: "Keine Datei gewählt",
+    mode: "Art des Imports",
+    modes: {
+      replace: "Alle Inhalte ersetzen",
+      merge: "Hinzufügen und überschreiben",
+      missing: "Nur neue Einträge hinzufügen",
+    },
+    modeHints: {
+      replace: "Löscht alle aktuellen Inhalte und lädt dann die Datei.",
+      merge:
+        "Fügt neue Einträge hinzu. Einträge, die hier und in der Datei vorkommen, werden überschrieben.",
+      missing:
+        "Fügt Einträge hinzu, die es hier noch nicht gibt. Vorhandene Einträge bleiben, wie sie sind.",
+    },
+    preparing: "Wird vorbereitet…",
+    uploading: "Wird hochgeladen… {percent} %",
+    importing: "Wird importiert…",
+    restoreAction: "Importieren",
+    confirmTitle: "Diese Datei importieren?",
+    confirm: {
+      replace:
+        "Alle aktuellen Inhalte werden gelöscht und ersetzt. Das lässt sich nicht rückgängig machen.",
+      merge:
+        "Vorhandene Einträge, die auch in der Datei sind, werden überschrieben. Das lässt sich nicht rückgängig machen.",
+      missing: "Einträge, die es hier noch nicht gibt, werden hinzugefügt.",
+    },
+    tooLarge: "Diese Datei ist zu groß, um sie hier hochzuladen.",
+    restored: "{documents} Einträge und {media} Mediendateien importiert",
+  },
   account: {
     settings: "Kontoeinstellungen",
     profile: "Profil",

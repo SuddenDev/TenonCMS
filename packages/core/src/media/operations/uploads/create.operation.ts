@@ -54,7 +54,7 @@ export async function create(core: Core, scope: Scope, input: Partial<UploadInfo
     return {
       id,
       partSize,
-      parts: await partUrls(storage, { id, key, uploadId, parts }),
+      parts: await partUrls(storage, { key, uploadId, parts }, `/media/uploads/${id}`),
     };
   });
 }

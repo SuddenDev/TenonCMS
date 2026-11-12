@@ -8,10 +8,10 @@ export type Storage = {
   problems?: string[];
   /** Default part size in bytes. */
   partSize: number;
-  /** Starts a multipart upload of `parts` parts. */
+  /** Starts a multipart upload of `parts` parts. Both are unknown when core writes a stream, e.g. an export. */
   createUpload(
     key: string,
-    info: { size: number; mimeType: string; parts: number },
+    info: { size?: number; mimeType: string; parts?: number },
   ): Promise<{ uploadId: string }>;
   /** Direct uploads (S3): a presigned URL the browser PUTs part `n` to. */
   partUrl?(key: string, uploadId: string, n: number, expiresIn: number): Promise<string>;
@@ -47,6 +47,11 @@ export type Storage = {
   move(from: string, to: string): Promise<void>;
   /** Deletes the file at `key`. */
   delete(key: string): Promise<void>;
+  /**
+   * Direct downloads (S3): a presigned URL that downloads `key` as `filename`. Without it, core streams the file. An
+   * export uses it, so a host's response size limit does not apply.
+   */
+  downloadUrl?(key: string, filename: string, expiresIn: number): Promise<string>;
   /** The public URL of a file. */
   url(key: string): string;
 };

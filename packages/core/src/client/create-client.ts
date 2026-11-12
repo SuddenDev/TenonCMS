@@ -5,18 +5,20 @@ import type { SyncChoice, SyncStructureOptions } from "../content/writes/sync-st
 import type { JobFilter } from "../jobs/types.ts";
 import type { ScheduleOptions } from "../schedule/types.ts";
 import type { Schema } from "../schema/index.ts";
-import { API_KEY_HEADER } from "./constants.ts";
+import { API_BASE, API_KEY_HEADER } from "./constants.ts";
+import { CmsError } from "./errors.ts";
 import { createRequest } from "./create-request.ts";
 import { readQuery, type ReadQuery } from "./read-query.ts";
 import type {
   Client,
   ClientOptions,
   DiscardOption,
+  ImportOptions,
   LocaleOption,
   Perspective,
   RegisteredCms,
 } from "./types/index.ts";
-import { createUpload } from "./upload.ts";
+import { createUpload, sendFile } from "./upload.ts";
 
 type FindQuery = ReadQuery & { where?: object; limit?: number };
 const when = (at: ScheduleOptions["at"]) =>
@@ -49,7 +51,8 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
 }: ClientOptions = {}): Client<C> {
   const auth: Record<string, string> = apiKey ? { [API_KEY_HEADER]: apiKey } : {};
   const request = createRequest(baseUrl, fetchFn, auth);
-  const upload = createUpload(request, baseUrl, fetchFn, auth);
+  const uploader = { request, baseUrl, fetchFn, auth };
+  const upload = createUpload(uploader);
 
   const enc = encodeURIComponent;
   const collection = (name: string) => `/collections/${enc(name)}`;
@@ -273,6 +276,45 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       cancel: async (id: string) => {
         await request("DELETE", `/jobs/${enc(id)}`);
       },
+    },
+
+    export: async ({ media = true }: { media?: boolean } = {}) => {
+      const res = await fetchFn(`${baseUrl}${API_BASE}/export${media ? "" : "?media=false"}`, {
+        headers: auth,
+      });
+      if (!res.ok) throw new CmsError(res.status, await res.json().catch(() => null));
+      return res.blob();
+    },
+
+    exportLink: async ({ media = true }: { media?: boolean } = {}) => {
+      const { url } = await request("POST", "/export", {}, { media: media ? undefined : false });
+      return url.startsWith("/") ? `${baseUrl}${url}` : url;
+    },
+
+    import: async (archive: Blob, { mode, onProgress, signal }: ImportOptions = {}) => {
+      // Without media storage, the route is missing and the archive goes in the body.
+      const plan = await request("POST", "/import/uploads", { size: archive.size }).catch((e) => {
+        if (e instanceof CmsError && e.status === 404) return undefined;
+        throw e;
+      });
+      if (plan) {
+        const path = `/import/uploads/${enc(plan.id)}`;
+        return sendFile(uploader, path, archive, plan, { onProgress, signal }, (parts) =>
+          request("POST", `${path}/complete`, { parts }, { mode }),
+        );
+      }
+
+      // `request()` sends JSON only.
+      const res = await fetchFn(`${baseUrl}${API_BASE}/import${mode ? `?mode=${enc(mode)}` : ""}`, {
+        method: "POST",
+        headers: { ...auth, "content-type": "application/zip" },
+        body: archive,
+        signal,
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new CmsError(res.status, data);
+      onProgress?.({ loaded: archive.size, total: archive.size });
+      return data;
     },
 
     preview: {
