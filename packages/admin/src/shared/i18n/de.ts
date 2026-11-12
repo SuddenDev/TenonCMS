@@ -193,6 +193,16 @@ export default {
     requestNewLink: "Neuen Link anfordern",
     backToSignIn: "Zurück zur Anmeldung",
     pleaseWait: "Bitte warten…",
+    device: {
+      title: "CLI anmelden",
+      description: "Die tenon-CLI möchte als {email} handeln.",
+      code: "Prüfe, ob die CLI diesen Code zeigt:",
+      approve: "Erlauben",
+      deny: "Ablehnen",
+      approved: "Erlaubt. Zurück zum Terminal.",
+      denied: "Abgelehnt. Die CLI bleibt abgemeldet.",
+      invalid: "Dieser Code ist nicht mehr gültig. Führe tenon login erneut aus.",
+    },
     invite: {
       title: "Einladung annehmen",
       description: "Du wurdest als {role} eingeladen. Wähle deinen Namen und ein Passwort.",

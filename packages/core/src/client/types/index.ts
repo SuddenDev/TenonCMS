@@ -10,4 +10,11 @@ export type { ClientOptions, FindOptions, ImportOptions, UploadOptions } from ".
 export type { MediaClient } from "./media.ts";
 export type { Invite, InviteResult } from "../../users/types.ts";
 export type { ApiKey, ApiKeyOp, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
-export type { Client, DiscardOption, LocaleOption, Perspective, Session } from "./client.ts";
+export type {
+  Client,
+  DeviceCode,
+  DiscardOption,
+  LocaleOption,
+  Perspective,
+  Session,
+} from "./client.ts";

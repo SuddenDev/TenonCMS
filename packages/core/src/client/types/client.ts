@@ -47,6 +47,18 @@ import type {
 /** What reads of a signed-in user see: `drafts` (unpublished changes) or `published` (what visitors see). */
 export type Perspective = "drafts" | "published";
 
+/** A code of better-auth's device flow, as {@link Client.device} returns it. */
+export type DeviceCode = {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  /** Seconds the code stays valid. */
+  expires_in: number;
+  /** Seconds to wait between two polls of `token()`. */
+  interval: number;
+};
+
 /** The signed-in admin, as returned by `getSession()`. Dates are ISO strings. */
 export type Session = {
   /** The signed-in admin. */
@@ -507,6 +519,27 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
    * `GET /_tenon/localization`
    */
   localization(): Promise<[Locale<C>] extends [never] ? null : Localization<Locale<C>> | null>;
+
+  /**
+   * better-auth's device flow, which `tenon login` uses: the CLI asks for a code, a signed-in user approves it in the
+   * admin at `verification_uri_complete`, then the CLI gets a session token for `Authorization: Bearer`.
+   */
+  device: {
+    /** A new code for the CLI. `POST /_tenon/auth/device/code` */
+    code(): Promise<DeviceCode>;
+    /**
+     * The session token once the code is approved. Until then it throws a `CmsError` 400 whose body's `error` is
+     * `authorization_pending`, `slow_down` (poll less often), `access_denied` or `expired_token`.
+     * `POST /_tenon/auth/device/token`
+     */
+    token(deviceCode: string): Promise<{ access_token: string; expires_in: number }>;
+    /** Claims the code for the signed-in user. It MUST run before `approve()`. `GET /_tenon/auth/device` */
+    verify(userCode: string): Promise<{ user_code: string; status: string }>;
+    /** Lets the CLI that holds the code sign in as the signed-in user. `POST /_tenon/auth/device/approve` */
+    approve(userCode: string): Promise<void>;
+    /** Refuses the code. `POST /_tenon/auth/device/deny` */
+    deny(userCode: string): Promise<void>;
+  };
 
   /**
    * Creates the first admin and signs them in. Throws a `CmsError` with status `403` once an admin exists.

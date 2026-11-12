@@ -24,6 +24,7 @@ import Login from "@/modules/auth/components/Login.vue";
 import PasswordReset from "@/modules/auth/components/PasswordReset.vue";
 import SignUp from "@/modules/auth/components/SignUp.vue";
 import Invite from "@/modules/auth/components/Invite.vue";
+import Device from "@/modules/auth/components/Device.vue";
 import Users from "@/modules/users/views/Users.vue";
 import UserEdit from "@/modules/users/views/UserEdit.vue";
 import InviteEdit from "@/modules/users/views/InviteEdit.vue";
@@ -111,6 +112,8 @@ export function createAdminRouter(base: string) {
     { path: "/reset-password", component: PasswordReset, meta: { auth: true } },
     // Not `guest`: a signed-in user who opens an invite link still sees it.
     { path: "/invite", component: Invite, meta: { auth: true } },
+    // `tenon login` opens it. It signs in first by itself, so it keeps the code across the sign-in.
+    { path: "/device", component: Device, meta: { auth: true } },
     {
       path: "/users",
       component: Users,

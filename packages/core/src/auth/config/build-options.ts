@@ -1,7 +1,10 @@
 import { APIError, type BetterAuthOptions } from "better-auth";
 import { admin } from "better-auth/plugins/admin";
+import { bearer } from "better-auth/plugins/bearer";
+import { deviceAuthorization } from "better-auth/plugins/device-authorization";
 import type { Kysely } from "kysely";
 import { API_BASE } from "../../client/index.ts";
+import { DEVICE_CLIENT_ID } from "../../client/constants.ts";
 import { isPostgres } from "../../db/queries/document-sql.ts";
 import type { Database } from "../../db/types.ts";
 import type { AuthOptions } from "./options.ts";
@@ -61,6 +64,18 @@ export function authOptions<A extends AuthOptions>(
         ? []
         : [admin({ ...userAccess(roles), adminRoles: ["admin"], defaultRole: "editor" })]),
       ...(has("api-key") ? [] : [apiKeys()]),
+      // `tenon login`: the CLI shows a code, a signed-in user approves it in the admin, the CLI gets a session token
+      // and sends it as `Authorization: Bearer`.
+      ...(has("device-authorization")
+        ? []
+        : [
+            deviceAuthorization({
+              // ponytail: assumes the admin at `/admin`. Pass the adapter's admin path once core knows it.
+              verificationUri: "/admin/device",
+              validateClient: (id) => id === DEVICE_CLIENT_ID,
+            }),
+          ]),
+      ...(has("bearer") ? [] : [bearer()]),
       apiKeyRoutesOff(),
       lastAdmin(db),
       passwordLength(),

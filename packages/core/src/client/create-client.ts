@@ -11,7 +11,7 @@ import {
 import type { JobFilter } from "../jobs/types.ts";
 import type { ScheduleOptions } from "../schedule/types.ts";
 import type { Schema } from "../schema/index.ts";
-import { API_BASE, API_KEY_HEADER } from "./constants.ts";
+import { API_BASE, API_KEY_HEADER, DEVICE_CLIENT_ID } from "./constants.ts";
 import { CmsError } from "./errors.ts";
 import { createRequest } from "./create-request.ts";
 import { readQuery, type ReadQuery } from "./read-query.ts";
@@ -221,6 +221,24 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
     },
 
     getSession: () => request("GET", "/auth/get-session"),
+
+    device: {
+      code: () => request("POST", "/auth/device/code", { client_id: DEVICE_CLIENT_ID }),
+      token: (deviceCode: string) =>
+        request("POST", "/auth/device/token", {
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          device_code: deviceCode,
+          client_id: DEVICE_CLIENT_ID,
+        }),
+      verify: (userCode: string) =>
+        request("GET", "/auth/device", undefined, { user_code: userCode }),
+      approve: async (userCode: string) => {
+        await request("POST", "/auth/device/approve", { userCode });
+      },
+      deny: async (userCode: string) => {
+        await request("POST", "/auth/device/deny", { userCode });
+      },
+    },
 
     request: (
       path: string,

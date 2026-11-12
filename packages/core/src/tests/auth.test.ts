@@ -4,7 +4,18 @@ import { passkey } from "@better-auth/passkey";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineCms } from "../index.ts";
 import { clientRef } from "../admin/config.ts";
-import { admin, base, fresh, origin, post, setup, status, type Env, testDb } from "./setup.ts";
+import {
+  admin,
+  base,
+  fresh,
+  origin,
+  post,
+  setup,
+  status,
+  type Env,
+  testDb,
+  withAdmin,
+} from "./setup.ts";
 
 let cms: Env["cms"];
 let client: Env["client"];
@@ -235,5 +246,47 @@ describe("sessions", () => {
       expect((await send()).status).toBeLessThan(300);
       expect(lookups, String(send)).toHaveBeenCalledTimes(1);
     }
+  });
+});
+
+describe("device login", () => {
+  it("gives a CLI a session once a signed-in user approves its code", async () => {
+    const env = await withAdmin();
+    const cli = setup(env.cms);
+
+    const code = await cli.client.device.code();
+    expect(code.verification_uri_complete).toBe(
+      `${origin}/admin/device?user_code=${code.user_code}`,
+    );
+    await env.client.device.verify(code.user_code);
+    await env.client.device.approve(code.user_code);
+    const { access_token } = await cli.client.device.token(code.device_code);
+
+    const bearer = setup(env.cms).client;
+    const res = await env.cms.fetch(
+      new Request(`${origin}/_tenon/auth/get-session`, {
+        headers: { authorization: `Bearer ${access_token}` },
+      }),
+    );
+    expect((await res.json()).user.email).toBe(admin.email);
+    expect(await bearer.getSession()).toBeNull();
+    const schema = await env.cms.fetch(
+      new Request(`${origin}/_tenon/schema`, {
+        headers: { authorization: `Bearer ${access_token}` },
+      }),
+    );
+    expect(schema.status).toBe(200);
+  });
+
+  it("refuses a code nobody approved", async () => {
+    const env = await withAdmin();
+    const code = await setup(env.cms).client.device.code();
+    await env.client.device.verify(code.user_code);
+    await env.client.device.deny(code.user_code);
+
+    await expect(setup(env.cms).client.device.token(code.device_code)).rejects.toMatchObject({
+      status: 400,
+      body: { error: "access_denied" },
+    });
   });
 });
