@@ -1,6 +1,6 @@
 {
   "name": "@tenoncms/cli",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "description": "The tenon CLI: back up, restore and upgrade a tenoncms site",
   "license": "MIT",
   "author": {
