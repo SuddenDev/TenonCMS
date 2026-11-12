@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createClient as createLibsql } from "@libsql/client";
 import { PGlite, type PGliteInterface } from "@electric-sql/pglite";
 import { PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from "kysely";
-import { expect } from "vitest";
+import { expect, onTestFinished } from "vitest";
 import { authOptions } from "../auth/config/build-options.ts";
 import type { AuthOptions } from "../auth/config/options.ts";
 import { CmsError, createClient } from "../client/index.ts";
@@ -33,12 +33,26 @@ const migratedPglite = () =>
     return client;
   })());
 
-/** A clone of the migrated PGlite. It clones on the first query, because the driver's client MUST be synchronous. */
+/**
+ * A clone of the migrated PGlite. It clones on the first query, because the driver's client MUST be synchronous. A
+ * clone made inside a test closes when the test ends: each holds its own WASM memory, which a worker would otherwise
+ * keep until it runs out.
+ */
 function clonePglite() {
-  const clone = migratedPglite().then((client) => client.clone());
+  let clone: Promise<PGliteInterface> | undefined;
+  const open = () => (clone ??= migratedPglite().then((client) => client.clone()));
+  const close = async () => {
+    const client = await clone;
+    if (client && !client.closed) await client.close();
+  };
+  try {
+    onTestFinished(close);
+  } catch {
+    // Outside a test (`beforeAll`, module scope), the clone lives as long as the worker.
+  }
   return {
-    query: async (...args: Parameters<PGlite["query"]>) => (await clone).query(...args),
-    close: async () => (await clone).close(),
+    query: async (...args: Parameters<PGlite["query"]>) => (await open()).query(...args),
+    close,
   } as PGliteInterface;
 }
 

@@ -15,13 +15,18 @@ const alias = (mediaDefault: string) => ({
 
 // `*.workerd.test.ts` runs in workerd, inside the Worker of `src/tests/workerd/`. The `pglite` and `sqlite` projects
 // run the integration suite and the database tests again on PGlite and `node:sqlite`. `pnpm test` runs only `node`,
-// `pnpm test:full` runs every project.
+// `pnpm test:full` runs every project, one after another (`groupOrder`): PGlite alone peaks near 9 GB with three workers,
+// and all four at once ran out of memory on GitHub's 16 GB runners.
 export default defineConfig({
   test: {
     projects: [
       {
         resolve: { alias: alias("media/default.ts") },
-        test: { name: "node", exclude: ["**/node_modules/**", "**/*.workerd.test.ts"] },
+        test: {
+          name: "node",
+          exclude: ["**/node_modules/**", "**/*.workerd.test.ts"],
+          sequence: { groupOrder: 0 },
+        },
       },
       {
         resolve: { alias: alias("media/default.ts") },
@@ -30,6 +35,7 @@ export default defineConfig({
           include: ["src/tests/*.test.ts", "src/db/{migrations,queries}/**/*.test.ts"],
           exclude: ["**/*.workerd.test.ts"],
           env: { CMS_TEST_DB: "pglite" },
+          sequence: { groupOrder: 1 },
           // ponytail: each test clones a migrated PGlite (`setup.ts`), about 0.1 s per instance. Reset one database
           // per file instead if the suite gets too slow.
           testTimeout: 20_000,
@@ -43,6 +49,7 @@ export default defineConfig({
           include: ["src/tests/*.test.ts", "src/db/{migrations,queries}/**/*.test.ts"],
           exclude: ["**/*.workerd.test.ts"],
           env: { CMS_TEST_DB: "sqlite" },
+          sequence: { groupOrder: 2 },
         },
       },
       {
@@ -50,7 +57,11 @@ export default defineConfig({
         plugins: [
           cloudflareTest({ wrangler: { configPath: "./src/tests/workerd/wrangler.jsonc" } }),
         ],
-        test: { name: "workerd", include: ["src/**/*.workerd.test.ts"] },
+        test: {
+          name: "workerd",
+          include: ["src/**/*.workerd.test.ts"],
+          sequence: { groupOrder: 3 },
+        },
       },
     ],
   },
