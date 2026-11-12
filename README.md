@@ -1,52 +1,53 @@
-# Tenon
+# Tenon CMS
 
-A CMS that lives **inside** your Vite-based app. One repo, one deployment, one database file.
+Making your headless cms setup monolithic again. A CMS that lives **inside** your Vite-based app; built on web standards and a stack you already use.
 
-> Status: proof of concept. Works with Astro, Nuxt and TanStack Start on Node. Not published to npm yet.
+> Currently in version 0.X, soon in beta. A real documentation page will follow, but is currently not availble yet.
 
 ## Why
 
-Headless CMSs are framework-agnostic because they talk REST or GraphQL. The price: a second service with its own deployment, Docker setup and a Postgres or MySQL server.
+Headless CMSs work with any framework because they talk REST or GraphQL. The price is a second service with its own deployment and database server.
 
-tenoncms takes the other route, like Pruvious (Nuxt) and Payload 3 (Next.js), but for any framework built on Vite:
+Tenon takes the other route for any framework built on Vite and compatible with Hono.
 
-- **Part of your app.** The admin UI and API are routes in your app. No second service.
-- **Schema in code.** Collections and globals are TypeScript. Types flow into your pages.
-- **Local API.** Server code calls `cms.find('posts')` directly. No HTTP round trip.
-- **SQLite first.** A file on disk, or Turso via libsql. Cloudflare D1 is planned.
-- **Your bundle, your admin.** The admin is a Vue app that your Vite bundles. Add field inputs or styles from one file, or leave it out and go headless.
-- **Web standards.** The core is a [Hono](https://hono.dev) app: `Request` in, `Response` out. Framework adapters are a few lines.
+## Features
 
-## Quickstart
+- **Part of your app.** The admin and the API are routes in your app.
+- **Schema in code.** Collections and globals are TypeScript, and their types flow into your pages.
+- **Local API.** Server code calls `cms.find("posts")` directly, without HTTP.
+- **Your database.** SQLite or Turso, Postgres, PGlite, or a Durable Object on Cloudflare.
+- **Your admin.** A Vue app your Vite bundles. Add fields, pages or styles, or leave it out and go headless.
+- **Web standards.** The core is a [Hono](https://hono.dev) app: `Request` in, `Response` out.
+- **Supported Starter Frameworks.** Astro, Nuxt 4, Tanstack Start, (+ more to come)
+- **Deploy where you want.** Node, Cloudflare Durable Objects, Vercel
+- **Localization.** Supports localization out of the box (content and admin)
+- **Batteries included.** SMTP Interface already configured, image transformations, draft + publishing, jobs & queues, plugin system, presets for marketing pages, framework integrations, data export / import and more.
 
-Requires Node 22.14+ and pnpm 12.
+## Create a project
+
+Needs Node 24 or newer.
 
 ```sh
-pnpm install
-
-cp examples/astro/.env.example examples/astro/.env   # set CMS_SECRET (32+ chars)
-pnpm dev:astro                                        # http://localhost:4321/admin
-
-cp examples/nuxt/.env.example examples/nuxt/.env     # set NUXT_CMS_SECRET (32+ chars)
-pnpm dev:nuxt                                         # http://localhost:3000/admin
-
-cp examples/tanstack-start/.env.example examples/tanstack-start/.env   # set CMS_SECRET (32+ chars)
-pnpm dev:tanstack                                     # http://localhost:3100/admin
-
-cp examples/standalone/.env.example examples/standalone/.env   # set CMS_SECRET (32+ chars)
-pnpm dev:standalone                                   # http://localhost:3200/admin
+npm create tenoncms@latest
 ```
 
-Generate a secret with `openssl rand -hex 32`.
+Follow the wizard, select your preffered framework, database, media storage and starter template (currently only minimal available).
 
-On first visit, choose "Create the admin account". Only the first user can sign up. Admins invite everyone else under **Users**.
+```sh
+cd my-site
+npm run dev
+```
 
-## A first example
+Open `/admin` and create the first admin account. Only the first user can sign up; admins invite everyone else under **Users**.
 
-Define a collection:
+See for more information [The CLI](docs/guide/cli.md).
+
+To add Tenon to an existing app instead, see [Your first site](docs/guide/first-site.md) and [Framework setup](docs/guide/frameworks.md).
+
+## A first collection
 
 ```ts
-// collections/posts.ts
+// cms/collections/posts.ts
 import { defineCollection } from "tenoncms";
 
 export const posts = defineCollection({
@@ -54,145 +55,101 @@ export const posts = defineCollection({
   fields: {
     title: { type: "text", required: true },
     slug: { type: "slug", from: "title", unique: true },
-    publishedAt: { type: "date" },
-    body: { type: "textarea" },
+    body: { type: "richtext" },
   },
 });
 ```
 
-Create the instance in `tenon.config.ts` at the project root:
+Read it from server code, typed from the schema:
 
 ```ts
-import { defineCms } from "tenoncms";
-import { libsql } from "tenoncms/libsql";
-import { posts } from "./collections/posts";
-
-export default defineCms({
-  collections: { posts },
-  database: libsql("file:/absolute/path/cms.db"), // or libsql://… (Turso) with { url, authToken }
-  secret: process.env.CMS_SECRET!, // at least 32 characters
-});
+const [post] = await cms.find("posts", { where: { slug: "hello" }, limit: 1 });
 ```
-
-Read it from server code. Everything is typed from the schema:
-
-```ts
-await cms.find("posts", { where: { slug: "hello" }, limit: 1 });
-```
-
-Then wire your framework: [Framework setup](docs/guide/frameworks.md).
 
 ## Guides
 
-**Get started**
+All guides are listed in [docs/guide](docs/guide/README.md). A few to start with:
 
-| Guide                                       | What it covers                               |
-| ------------------------------------------- | -------------------------------------------- |
-| [Framework setup](docs/guide/frameworks.md) | Astro, Nuxt, TanStack Start, any Vite host   |
-| [Schema and fields](docs/guide/schema.md)   | Field types, options, validation, conditions |
+| Guide                                            | What it covers                                |
+| ------------------------------------------------ | --------------------------------------------- |
+| [Schema and fields](docs/guide/schema.md)        | Field types, options, validation, conditions  |
+| [Reading and writing](docs/guide/reading.md)     | `find`, filters, `select`, the browser client |
+| [Media](docs/guide/media.md)                     | Uploads, storage, responsive images           |
+| [Live preview](docs/guide/live-preview.md)       | The visual editor and the admin bar           |
+| [Auth and access](docs/guide/auth-and-access.md) | Roles, invites, access rules                  |
+| [Backup](docs/guide/backup.md)                   | Export, import, full backups                  |
 
-**Model your content**
+## Roadmap
 
-| Guide                                              | What it covers                                 |
-| -------------------------------------------------- | ---------------------------------------------- |
-| [Relations](docs/guide/relations.md)               | `relation`, `join`, `populate`, `onDelete`     |
-| [Lists and blocks](docs/guide/lists-and-blocks.md) | `array` and `blocks` fields                    |
-| [Rich text](docs/guide/richtext.md)                | `richtext` fields, links, rendering components |
-| [Media](docs/guide/media.md)                       | Uploads, storage, responsive images            |
+| Area                                                                  | Status  |
+| --------------------------------------------------------------------- | ------- |
+| Collections, globals, relations, lists and blocks, inferred types     | Done    |
+| Hooks, validation, conditions, drafts, scheduled publishing, versions | Done    |
+| Localization, pages and SEO, sitemap and robots, menus                | Done    |
+| Live preview, admin bar, components for Vue, React and Astro          | Done    |
+| Rich text (Tiptap), media library with local, S3 and R2 storage       | Done    |
+| Users, roles, invites, access rules, API keys, edit locks             | Done    |
+| Jobs and cron, webhooks, plugins, SMTP email                          | Done    |
+| Postgres and PGlite, Vercel, Cloudflare (Durable Objects)             | Done    |
+| Backup and restore, seeding, `create-tenoncms`, the `tenon` CLI       | Done    |
+| Docs, then the first npm release                                      | Next    |
+| Cloudflare for Nuxt, TanStack Start and standalone                    | Next    |
+| Search in the admin, later full-text search                           | Planned |
+| Redirects created on path changes                                     | Planned |
+| Caching of public reads, purged on publish                            | Planned |
+| The admin on phones                                                   | Planned |
+| Rich text extensions from the config, Vercel image provider           | Planned |
+| OpenAPI spec                                                          | Planned |
+| SvelteKit, multiplayer and presence, trash, content migrations, SDKs  | Later   |
 
-**Work with content**
+## Disclaimer
 
-| Guide                                        | What it covers                                          |
-| -------------------------------------------- | ------------------------------------------------------- |
-| [Reading and writing](docs/guide/reading.md) | `find`, filters, `select`, `update`, the browser client |
-| [Hooks](docs/guide/hooks.md)                 | Stages, order, errors, transactions                     |
-| [Drafts](docs/guide/drafts.md)               | Draft, publish and discard                              |
-| [Localization](docs/guide/localization.md)   | Locales, fallback, `hreflang`, site strings             |
-
-**Build the site**
-
-| Guide                                        | What it covers                                                 |
-| -------------------------------------------- | -------------------------------------------------------------- |
-| [Pages and SEO](docs/guide/pages-and-seo.md) | Nested page paths, `seoMeta()`, `breadcrumbs()`, site settings |
-| [Menus](docs/guide/menus.md)                 | The `menu` preset, the tree editor, `menuItems()`              |
-| [Live preview](docs/guide/live-preview.md)   | `permalink`, `edit()`, the visual editor, the admin bar        |
-
-**Run it**
-
-| Guide                                                   | What it covers                                    |
-| ------------------------------------------------------- | ------------------------------------------------- |
-| [Auth, users and access](docs/guide/auth-and-access.md) | better-auth options, roles, invites, access rules |
-| [Email](docs/guide/email.md)                            | SMTP and custom adapters, templates               |
-| [Customize the admin](docs/guide/admin.md)              | Branding, custom fields and pages                 |
-| [Plugins](docs/guide/plugins.md)                        | Using, writing and publishing plugins             |
-
-## Environment and deployment
-
-- `dev` and `preview` load `.env` in all examples. The examples' `start` scripts pass `--env-file-if-exists=.env` to Node.
-- In production, set variables in your host or process manager.
-- **Use an absolute database path or a `libsql://` URL in production.** A relative `file:` path resolves against the working directory. For example, `nuxt preview` runs from `.output/`, which every build deletes.
-- Build on the same OS and CPU you deploy to. libsql ships a native binary per platform.
-
-## Project layout
-
-```
-packages/core            tenoncms: schema, Hono app, local API, client, auth, presets, adapters
-packages/plugins         bundled plugins (private)
-packages/admin           Vue 3 + Tailwind admin, built into core's dist/admin (private)
-examples/astro           Astro 7 on @astrojs/node
-examples/nuxt            Nuxt 4
-examples/tanstack-start  TanStack Start (React) on Nitro v3
-examples/standalone      Headless: API and admin on Vite + Nitro v3
-```
+This project was rapidly developed using AI tools. That being said: That does not mean, that I did not look at the code or do not understand it. That also does not mean, that I do not care about the code quality or the user and developer experience. If you have any concerns concerns regarding security, code quality or similar, plase feel free to contact me or create issues.
 
 ## Contributing
 
-Commands, rules and architecture notes are in [CLAUDE.md](CLAUDE.md) and `docs/dev/`. Code style: [code-rules.md](code-rules.md).
+Issues and pull requests are welcome. For a bigger change, open an issue first.
 
-| Command                                                           | What it does                                                                 |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `pnpm dev:astro` / `dev:nuxt` / `dev:tanstack` / `dev:standalone` | Build packages, start the example and the admin playground on `:5173/admin/` |
-| `pnpm --filter @tenoncms/admin watch`                             | Rebuild the admin into the example on change                                 |
-| `pnpm build`                                                      | Build packages and all examples                                              |
-| `pnpm test`                                                       | Run the unit and integration tests                                           |
-| `pnpm test:full`                                                  | Also run the integration tests on PGlite, `node:sqlite` and workerd          |
-| `pnpm typecheck`                                                  | Build packages, then type-check everything                                   |
+```sh
+pnpm install
+pnpm dev:astro      # or dev:nuxt, dev:tanstack, dev:standalone
+```
 
-## Status
+Each example needs a `.env` with a secret of 32 or more characters (`CMS_SECRET`, in Nuxt `NUXT_CMS_SECRET`): copy its `.env.example` and set one with `openssl rand -hex 32`. The example runs on its own port (Astro: `http://localhost:4321/admin`), and the admin playground with hot reload on `http://localhost:5173/admin/`.
 
-Working:
+| Command                              | What it does                                                    |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `pnpm test`                          | Unit and integration tests                                      |
+| `pnpm test:full`                     | Also the integration tests on PGlite, `node:sqlite` and workerd |
+| `pnpm typecheck`                     | Builds the packages, then type-checks everything                |
+| `pnpm lint` / `pnpm fmt`             | oxlint and oxfmt; the pre-commit hook runs both                 |
+| `pnpm smoke:templates <fw> <target>` | Scaffolds and builds a starter (run `pnpm tarball` first)       |
 
-- Schema-in-code collections and globals with inferred types, relations, lists and blocks (nested and shared)
-- Hooks, validation, conditions, drafts and publishing, per-locale content
-- Unpublish and scheduled publishing, a job queue with cron, and a Jobs page in the admin, see [Jobs](docs/guide/jobs.md)
-- Page and SEO preset, `/sitemap.xml` and `/robots.txt` with no config, live preview and an admin bar on the site
-- Components for Vue, React and Astro (`Image`, `Picture`, `Link`, `Blocks`, `Richtext`, `Seo`), auto-imported in Nuxt with `useTenonSeo()`
-- Rich text: Tiptap JSON with internal links and images, and Astro, Vue and React renderers
-- Media library: uploads to disk or S3/R2, responsive images
-- Admin in English and German, with custom fields, pages and bar items
-- Users with roles, invites and access rules; better-auth options pass through
-- Plugins (`redirects`, and `example` to copy from), SMTP email
-- Backup and restore of all content as one ZIP file, seeding and lifecycle hooks, see [Backup](docs/guide/backup.md) and [Lifecycle hooks](docs/guide/lifecycle.md)
-- Astro, Nuxt and TanStack Start; SQLite via libsql (file or Turso), Postgres, PGlite
+Before a pull request:
 
-Roadmap, roughly in order:
+- Write a failing test first, then the fix or feature.
+- Run `pnpm typecheck` and `pnpm test`, and `pnpm test:full` for database changes.
+- Update the docs of the area in the same change.
+- Use [conventional commits](https://www.conventionalcommits.org): `feat:`, `fix:`, `docs:`. The release notes are generated from them.
 
-1. ~~Live preview~~ Done, see [Live preview](docs/guide/live-preview.md)
-2. ~~Drafts and published versions~~ Done, see [Drafts](docs/guide/drafts.md)
-3. ~~Media uploads with a storage adapter (local disk, S3/R2)~~ Done, see [Media](docs/guide/media.md)
-4. ~~Rich text~~ Done, see [Rich text](docs/guide/richtext.md) (Tiptap JSON)
-5. ~~Invites and roles, access control~~ Done, see [Auth, users and access](docs/guide/auth-and-access.md)
-6. Cloudflare Workers: D1 driver, per-request bindings
-7. ~~Postgres~~ Done, see [Schema](docs/guide/schema.md) (also PGlite)
-8. SvelteKit adapter
-9. Publish to npm
+Where to read more: [CLAUDE.md](CLAUDE.md) (commands and rules), [docs/dev](docs/dev/README.md) (architecture), [code-rules.md](code-rules.md) (style), [releasing](docs/dev/releasing.md).
 
-Build later, small and in no order: a document type export, e.g. `DocOf<typeof cms, 'posts'>`, so a post as a read needs no `Awaited<ReturnType<…>>`.
+```
+packages/core             tenoncms: schema, API, admin integration, adapters
+packages/admin            the Vue admin, built into core (private)
+packages/plugins          bundled plugins (private)
+packages/cli              @tenoncms/cli: the tenon command
+packages/create-tenoncms  create-tenoncms: the project scaffolder
+templates/                the starters of create-tenoncms
+examples/                 Astro, Astro + PGlite, Nuxt, TanStack Start, standalone, Vercel, Cloudflare
+```
 
-## Inspirations and Credits
+## Credits
 
 - [Pruvious](https://pruvious.com): the Nuxt-integrated CMS this idea comes from
-- [Payload 3](https://payloadcms.com): schema in code, embedded in Next.js, Drizzle adapters
-- [SonicJS](https://sonicjs.com): Hono + D1 + Drizzle, one JSON documents table
-- [Keystatic](https://keystatic.com): clean Astro integration, files in git
-- [Sveltia CMS](https://github.com/sveltia/sveltia-cms): git-based; its field widgets are worth a look
+- [Payload 3](https://payloadcms.com): schema in code, embedded in Next.js
+- [Sanity](https://sanity.io)
+
+## License
+
+[MIT](LICENSE)
