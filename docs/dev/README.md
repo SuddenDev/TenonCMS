@@ -27,3 +27,4 @@ User-facing docs are in [../guide/](../guide/).
 
 - [Gotchas](gotchas.md): traps that cost time. Check here first when something is odd.
 - [Smoke tests](smoke-tests.md): curl checks for adapters, media, locales and invites.
+- [Releasing](releasing.md): `pnpm release`, the publish workflow, trusted publishing and the changelog.

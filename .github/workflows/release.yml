@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  # Installs, tests and packs. It MUST NOT get `id-token: write`: install scripts of dependencies run here.
+  build:
+    name: Build and pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check that the tag matches the version
+        run: |
+          version=$(node -p 'require("./packages/core/package.json").version')
+          test "$GITHUB_REF_NAME" = "v$version" || { echo "Tag $GITHUB_REF_NAME, but packages/core is $version"; exit 1; }
+      - run: pnpm build:packages
+      - run: pnpm test
+      # `pnpm pack` turns `workspace:` ranges into versions.
+      - run: pnpm --filter tenoncms --filter @tenoncms/cli --filter create-tenoncms pack --pack-destination packed
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: packed/*.tgz
+          if-no-files-found: error
+
+  # Publishes the packed files and installs nothing, so no code of a dependency runs with the publish right.
+  publish:
+    name: Publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      # npm trusted publishing and provenance.
+      id-token: write
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packages
+      # A version that is already on npm is skipped, so a failed run can be re-run. A prerelease (1.0.0-beta.1) gets the
+      # dist-tag next.
+      - name: Publish
+        run: |
+          tag=latest
+          case "$GITHUB_REF_NAME" in *-*) tag=next ;; esac
+          for file in *.tgz; do
+            spec=$(tar -xOzf "$file" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0)); `${p.name}@${p.version}`')
+            if npm view "$spec" version >/dev/null 2>&1; then echo "$spec is on npm already"; continue; fi
+            npm publish "$file" --access public --tag "$tag"
+          done
+
+  github-release:
+    name: Write the GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # changelogithub reads the commits since the previous tag.
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npx changelogithub@15.0.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

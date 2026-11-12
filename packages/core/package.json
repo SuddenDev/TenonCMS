@@ -1,10 +1,16 @@
 {
   "name": "tenoncms",
   "version": "0.24.0",
+  "license": "MIT",
   "author": {
     "name": "Dominik Tampe",
     "email": "hello@dtampe.com",
     "url": "https://dtampe.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SuddenDev/TenonCMS.git",
+    "directory": "packages/core"
   },
   "files": [
     "dist"
@@ -194,7 +200,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project node",
     "test:full": "vitest run",
-    "test:watch": "vitest --project node"
+    "test:watch": "vitest --project node",
+    "prepublishOnly": "test -f dist/index.mjs || (echo \"Run pnpm build:packages in the repository root first.\" && exit 1)"
   },
   "dependencies": {
     "@better-auth/api-key": "1.7.14",
