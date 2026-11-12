@@ -23,7 +23,7 @@ function mount() {
       h(MediaField, {
         field: { type: "image", many: true } as never,
         modelValue: value.value,
-        "onUpdate:modelValue": (v: string[]) => (value.value = v),
+        "onUpdate:modelValue": (v: unknown) => (value.value = v as string[]),
       }),
   }).use(i18n);
   app.mount(root);
