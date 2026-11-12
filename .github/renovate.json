@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "group:allNonMajor",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "3 days",
+  "rangeStrategy": "bump",
+  "postUpdateOptions": ["pnpmDedupe"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"]
+  },
+  "ignorePaths": ["**/node_modules/**"],
+  "packageRules": [
+    {
+      "description": "Released from this repository. Templates name them as latest, the workspace as workspace:*.",
+      "matchPackageNames": ["tenoncms", "@tenoncms/**", "create-tenoncms"],
+      "enabled": false
+    },
+    {
+      "description": "The starters of create-tenoncms. CI scaffolds and builds each one, so a PR shows what breaks.",
+      "matchFileNames": ["templates/**"],
+      "groupName": "template dependencies",
+      "groupSlug": "templates"
+    }
+  ]
+}
