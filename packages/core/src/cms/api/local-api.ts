@@ -3,7 +3,13 @@ import type { EmailApi } from "../../email/types.ts";
 import type { JobsApi } from "../../jobs/types.ts";
 import type { ScheduleOptions } from "../../schedule/types.ts";
 import type { MediaApi } from "../../schema/hooks/media.ts";
-import type { ImportCounts, ImportMode } from "../../transfer/format.ts";
+import type {
+  ArchiveCheck,
+  ArchiveCounts,
+  ExportOptions,
+  ImportCounts,
+  ImportMode,
+} from "../../transfer/format.ts";
 import type {
   AppliedStructure,
   StructureCounts,
@@ -115,15 +121,20 @@ export type LocalApi = {
   ): Promise<Row | StructureCounts | undefined>;
   /**
    * All content as a ZIP archive: documents, globals, locales, versions and, unless `media: false`, the media files.
-   * Users, sessions and jobs are left out. Only admins and server code may export.
+   * `scope: "full"` adds users, accounts, API keys and jobs; sessions are always left out. Only admins, server code
+   * and API keys with `read` on `backup` may export.
    */
-  export(options?: { media?: boolean }): Promise<ReadableStream<Uint8Array>>;
+  export(options?: ExportOptions): Promise<ReadableStream<Uint8Array>>;
+  /** What {@link LocalApi.export} with the same options would hold: rows per table, media files and bytes. */
+  exportSummary(options?: ExportOptions): Promise<ArchiveCounts>;
   /**
    * Writes an archive of `export()` with its ids and times. Runs no hooks, validation or webhooks, then `afterImport`.
    * `mode`: `merge` (default) overwrites rows with the same id, `missing` only adds new ones, `replace` deletes all
-   * content first. Only admins and server code may import.
+   * content first. A `full` archive needs `replace`, and signs everyone out. `dryRun` checks the archive and writes
+   * nothing. Only admins, server code and API keys with `update` on `backup` may import.
    */
-  import(archive: Blob, options?: { mode?: ImportMode }): Promise<ImportCounts>;
+  import(archive: Blob, options: { mode?: ImportMode; dryRun: true }): Promise<ArchiveCheck>;
+  import(archive: Blob, options?: { mode?: ImportMode; dryRun?: false }): Promise<ImportCounts>;
   /** Returns a copy of this API whose reads use the drafts perspective: unpublished documents and pending drafts. */
   withDrafts(): LocalApi;
   /** The job queue. Inside a hook, a queued job joins the write's transaction. */

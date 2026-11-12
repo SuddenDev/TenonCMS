@@ -1,6 +1,17 @@
 export { createClient } from "./create-client.ts";
 export { CmsError } from "./errors.ts";
-export { API_BASE, LOCK_TTL } from "./constants.ts";
+export { API_BASE, API_KEY_HEADER, LOCK_TTL } from "./constants.ts";
+// `format.ts` imports only `read-zip.ts`, which has no imports.
+export { readArchiveManifest } from "../transfer/format.ts";
+export type {
+  ArchiveCheck,
+  ArchiveCounts,
+  ArchiveScope,
+  ExportOptions,
+  ImportCounts,
+  ImportMode,
+  Manifest,
+} from "../transfer/format.ts";
 export type { Lock } from "../locks/types.ts";
 export type { Version, VersionWithData } from "../versions/types.ts";
 export type { CronEntry, Job, JobFilter, JobStatus } from "../jobs/types.ts";

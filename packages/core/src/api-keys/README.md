@@ -8,7 +8,7 @@ API key management. A key is its own caller: a grid of operations per target (`c
 
 `endpoints/api-keys.endpoint.ts` → `operations/create-api-key.operation.ts` → better-auth's `createApiKey()` → `db/queries/api-keys/find-api-keys.query.ts`
 
-The endpoint runs behind `session` and `apiKeyReach()`, so a key cannot manage keys, and requires the `admin` role. It validates the body with zod: the grid MUST only name targets of the schema, each with its operations (`apiKeyTargets()`), so a key never holds a name the schema lacks. `createApiKey()` drops empty grants and calls better-auth without a request, which passes `apiKeyRoutesOff()` and MAY set `permissions`. The caller is stored as the creator (`referenceId`); the key does not act as them. The response holds the key once and answers `no-store`.
+The endpoint runs behind `session` and `apiKeyReach()`, so a key cannot manage keys, and requires the `admin` role. It validates the body with zod: the grid MUST only name targets of the schema, each with its operations (`apiKeyTargets()`), so a key never holds a name the schema lacks. `backup` (`read` to export, `update` to import) lets a key reach the transfer routes; see `transfer/README.md`. `createApiKey()` drops empty grants and calls better-auth without a request, which passes `apiKeyRoutesOff()` and MAY set `permissions`. The caller is stored as the creator (`referenceId`); the key does not act as them. The response holds the key once and answers `no-store`.
 
 ## Files
 

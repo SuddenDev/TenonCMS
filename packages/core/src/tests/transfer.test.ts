@@ -270,6 +270,114 @@ describe("export and import over HTTP", () => {
   });
 });
 
+describe("full backup", () => {
+  const fullArchive = async (cms: { export(o: { scope: "full" }): Promise<ReadableStream> }) =>
+    new Response(await cms.export({ scope: "full" })).blob();
+  const manifestOf = async (archive: Blob) =>
+    JSON.parse(await new Response((await readZip(archive)).get("manifest.json")!.stream()).text());
+  const editor = { email: "e@b.co", password: "password123", name: "E", role: "editor" };
+
+  it("restores users, accounts and API keys, and clears sessions", async () => {
+    const a = await withAdmin(relational());
+    await seed(a.cms);
+    await a.create(editor);
+    const { key } = await a.client.apiKeys.create({
+      name: "CI",
+      permissions: { backup: ["read"] },
+    });
+    const archive = await fullArchive(a.cms);
+
+    const b = await withAdmin(relational());
+    await b.cms.import(archive, { mode: "replace" });
+
+    expect(await b.cms.find("posts")).toEqual(await a.cms.find("posts"));
+    expect(await b.client.getSession()).toBeNull();
+    await b.client.signIn({ email: editor.email, password: editor.password });
+    const res = await b.cms.fetch(
+      new Request(`${origin}/_tenon/export/summary`, { headers: { "x-api-key": key } }),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("needs mode replace", async () => {
+    const a = await withAdmin(relational());
+    const b = await withAdmin(relational());
+
+    await expect(b.cms.import(await fullArchive(a.cms))).rejects.toMatchObject({
+      errors: { archive: expect.stringContaining("replace") },
+    });
+  });
+
+  it("checks an archive without writing it", async () => {
+    const a = await withAdmin(relational());
+    await seed(a.cms);
+    const b = await withAdmin(relational());
+    const tag = await b.cms.create("tags", { name: "stays" });
+
+    const check = await b.cms.import(await fullArchive(a.cms), { mode: "replace", dryRun: true });
+
+    expect(check.errors).toEqual([]);
+    expect(check.writes?.tables.cms_documents).toBe(5);
+    expect(check.deletes.tables.cms_documents).toBe(1);
+    expect(await b.cms.findById("tags", tag.id)).toBeDefined();
+  });
+
+  it("refuses another database dialect or other migrations", async () => {
+    const a = await withAdmin(relational());
+    const manifest = await manifestOf(await fullArchive(a.cms));
+    const b = await withAdmin(relational());
+
+    const check = (m: object) => b.client.checkImport(m as never, { mode: "replace" });
+
+    expect((await check(manifest)).errors).toEqual([]);
+    expect((await check({ ...manifest, dialect: "other" })).errors).toEqual([
+      expect.stringContaining("other"),
+    ]);
+    expect(
+      (await check({ ...manifest, migrations: [...manifest.migrations, "999_x"] })).errors,
+    ).toEqual([expect.stringContaining("999_x")]);
+  });
+
+  it("summarizes what an export holds", async () => {
+    const a = await withAdmin(relational());
+    await seed(a.cms);
+
+    const summary = await a.cms.exportSummary({ scope: "full" });
+
+    expect(summary.tables).toMatchObject({ cms_documents: 5, user: 1, account: 1 });
+    expect(summary.tables).not.toHaveProperty("session");
+    expect((await a.cms.exportSummary()).tables).not.toHaveProperty("user");
+  });
+
+  it("lets an API key with the backup permission export, and import only with update", async () => {
+    const a = await withAdmin(relational());
+    const keyWith = async (backup: ("read" | "update")[]) =>
+      (await a.client.apiKeys.create({ name: backup.join() || "none", permissions: { backup } }))
+        .key;
+    const call = async (key: string, path: string, init: RequestInit = {}) =>
+      (
+        await a.cms.fetch(
+          new Request(`${origin}/_tenon${path}`, {
+            ...init,
+            headers: { "x-api-key": key, "content-type": "application/zip" },
+          }),
+        )
+      ).status;
+    const reader = await keyWith(["read"]);
+    const none = await a.client.apiKeys.create({
+      name: "posts",
+      permissions: { "collection:posts": ["read"] },
+    });
+
+    expect(await call(reader, "/export")).toBe(200);
+    expect(await call(reader, "/import?mode=replace", { method: "POST", body: "x" })).toBe(403);
+    expect(
+      await call(await keyWith(["update"]), "/import?mode=replace", { method: "POST", body: "x" }),
+    ).toBe(400);
+    expect(await call(none.key, "/export")).toBe(403);
+  });
+});
+
 describe("staged export and import", () => {
   const zips = (dir: string) =>
     readdirSync(dir, { recursive: true }).filter((f) => String(f).endsWith(".zip"));

@@ -2,8 +2,8 @@ import { API_BASE } from "../../client/constants.ts";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
 import type { Storage } from "../../media/storage/types.ts";
 import { writeFile } from "../../media/storage/write-file.ts";
-import { requireAdmin } from "../access.ts";
-import { EXPORTS, ZIP, archiveName } from "../format.ts";
+import { requireBackup } from "../access.ts";
+import { EXPORTS, type ExportOptions, ZIP, archiveName, exportQuery } from "../format.ts";
 import { exportContent } from "./export.operation.ts";
 
 // How long a download link of a staged export works, in milliseconds.
@@ -14,14 +14,14 @@ const LINK_LIFETIME = 12 * 60 * 60 * 1000;
  * storage first, so the download skips the host's response size limit. Staged exports older than the link's lifetime
  * are deleted here. Otherwise the link is `GET /export`, which streams the archive.
  */
-export async function stageExport(core: Core, scope: Scope, { media = true } = {}) {
-  requireAdmin(scope);
+export async function stageExport(core: Core, scope: Scope, options: ExportOptions = {}) {
+  requireBackup(scope, "read");
   const storage = core.media?.storage;
-  if (!storage?.downloadUrl) return `${API_BASE}/export${media ? "" : "?media=false"}`;
+  if (!storage?.downloadUrl) return `${API_BASE}/export${exportQuery(options)}`;
 
   await removeOldExports(storage);
   const key = `${EXPORTS}/${Date.now()}-${crypto.randomUUID()}.zip`;
-  await writeFile(storage, key, await exportContent(core, scope, { media }), ZIP);
+  await writeFile(storage, key, await exportContent(core, scope, options), ZIP);
   return storage.downloadUrl(key, archiveName(), LINK_LIFETIME / 1000);
 }
 

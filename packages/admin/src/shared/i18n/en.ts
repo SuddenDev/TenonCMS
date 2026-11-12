@@ -265,6 +265,9 @@ export default {
     groups: { collections: "Collections", globals: "Globals", api: "API" },
     schema: "Schema",
     schemaDescription: "The collections, globals and fields, with what the key may do.",
+    backup: "Backup",
+    backupDescription:
+      "Read downloads a backup of all data, users included. Update restores one and replaces all data.",
     mediaDescription: "Files and images of the media library.",
     ops: { create: "Create", read: "Read", update: "Update", delete: "Delete" },
     targets: "No access | 1 target | {n} targets",

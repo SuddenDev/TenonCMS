@@ -353,6 +353,8 @@ export type Api<T extends Schema, D extends number, L extends string = string> =
 
   /** {@inheritDoc LocalApi.export} */
   export: LocalApi["export"];
+  /** {@inheritDoc LocalApi.exportSummary} */
+  exportSummary: LocalApi["exportSummary"];
   /** {@inheritDoc LocalApi.import} */
   import: LocalApi["import"];
 };

@@ -11,60 +11,94 @@ import type { Storage } from "../../media/storage/types.ts";
 import { writeFile } from "../../media/storage/write-file.ts";
 import { readZip, type ZipEntry, type ZipSource } from "../read-zip.ts";
 import {
-  FORMAT,
-  FORMAT_VERSION,
+  type ArchiveCheck,
+  EXTRA,
   type ImportCounts,
   type ImportMode,
-  MANIFEST,
   MEDIA,
   type Manifest,
   TABLES,
   TABLE_NAMES,
   type TableName,
+  manifestOf,
 } from "../format.ts";
+import { archiveTargets, checkArchive } from "./check-archive.ts";
+import { sessionTables } from "./full-tables.ts";
 
 type Row = Record<string, unknown>;
 type Rows = Record<TableName, Row[]>;
 
 // Rows per insert. It stays below SQLite's limit of bound parameters.
 const BATCH = 50;
+// Bound parameters per insert of an extra table, whose rows have more columns. SQLite's lowest limit is 999.
+const PARAMETERS = 900;
 
 /**
  * Writes an archive from `exportContent()` into the database, with its ids, times, drafts, locales and versions. Runs
  * no hooks, validation or webhooks, because it restores stored rows. Media files are put into storage before the
  * transaction, so a rollback leaves them as unused files. A file already stored with the same size is skipped, so a
  * failed import can simply run again.
+ * A `full` archive also restores users, accounts, API keys and jobs, and signs everyone out. It needs `replace`.
  * @param mode See {@link ImportMode}. `merge` also replaces the locale rows of each document it overwrites.
+ * @param dryRun Checks the archive and returns {@link ArchiveCheck} instead. Writes nothing, media files included.
  * @returns Rows written per table, and the media files of the archive that are in storage now.
- * @throws {ValidationError} For a file that is not an archive, an entry the schema does not have, or with `merge` and
- * `missing`, rows stored for other localized fields than the config's.
+ * @throws {ValidationError} For a file that is not an archive, or one that {@link checkArchive} refuses.
  */
 export async function importContent(
   core: Core,
   scope: Scope,
   archive: Blob | ZipSource,
-  { mode = "merge" }: { mode?: ImportMode } = {},
-): Promise<ImportCounts> {
+  options: { mode?: ImportMode; dryRun: true },
+): Promise<ArchiveCheck>;
+export async function importContent(
+  core: Core,
+  scope: Scope,
+  archive: Blob | ZipSource,
+  options?: { mode?: ImportMode; dryRun?: false },
+): Promise<ImportCounts>;
+export async function importContent(
+  core: Core,
+  scope: Scope,
+  archive: Blob | ZipSource,
+  { mode = "merge", dryRun = false }: { mode?: ImportMode; dryRun?: boolean } = {},
+): Promise<ImportCounts | ArchiveCheck> {
   const entries = await readArchive(archive);
-  const manifest = await readManifest(entries);
+  const manifest = await manifestOf(entries);
   const rows = await readRows(entries);
-  requireKnownEntries(core, rows);
-  if (mode !== "replace") requireSameLocalized(core, manifest, rows);
+  const extra = await readExtraRows(entries, manifest);
+  const targets = archiveTargets({
+    documents: rows.cms_documents,
+    globals: rows.cms_globals,
+    versions: rows.cms_versions,
+  });
+  const check = await checkArchive(core, await databaseForScope(core, scope), manifest, {
+    mode,
+    targets,
+  });
+  if (dryRun) return check;
+  if (check.errors.length) throw new ValidationError({ archive: check.errors.join(" ") });
 
   const files = await putMedia(core, entries, rows.cms_documents);
 
   const { counts, messages } = await transaction(core, scope, async (inner) => {
     const db = await databaseForScope(core, inner);
+    const counts = { media: files } as ImportCounts;
+    if (extra.length) {
+      for (const table of await sessionTables(core, db))
+        await db.deleteFrom(table as never).execute();
+      for (const { table } of [...extra].reverse()) await db.deleteFrom(table as never).execute();
+      for (const { table, columns, rows } of extra)
+        counts[table] = await insertExtraRows(db, table, columns, rows);
+    }
     if (mode === "replace") await deleteContent(db);
     const keep = mode === "missing" ? await newRows(db, rows) : rows;
     if (mode === "merge") await deleteLocaleRows(db, rows);
     const actors = await knownActors(db);
-    const counts = { media: files } as ImportCounts;
     for (const table of TABLE_NAMES)
       counts[table] = await insertRows(db, table, keep[table].map(withActors(actors)), mode);
 
     const synced =
-      mode === "replace" ? await syncTo(db, core, manifest) : { messages: [] as string[] };
+      mode === "replace" ? await syncTo(db, core, manifest!) : { messages: [] as string[] };
 
     afterCommit(inner, async (s) => {
       if (files && core.media?.images?.provider.prerender) await regenerate(core, s);
@@ -85,63 +119,28 @@ async function readArchive(archive: Blob | ZipSource) {
   }
 }
 
-async function readManifest(entries: Map<string, ZipEntry>) {
-  const entry = entries.get(MANIFEST);
-  const manifest = entry
-    ? (JSON.parse(await new Response(entry.stream()).text()) as Manifest)
-    : undefined;
-  if (manifest?.format !== FORMAT) throw new ValidationError({ archive: "Not a tenon archive" });
-  if (manifest.version > FORMAT_VERSION)
-    throw new ValidationError({
-      archive: `The archive has format version ${manifest.version}, this version reads up to ${FORMAT_VERSION}`,
-    });
-  return manifest;
+async function readEntry(entries: Map<string, ZipEntry>, name: string) {
+  const entry = entries.get(name);
+  const text = entry ? await new Response(entry.stream()).text() : "";
+  return text
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Row);
 }
 
 async function readRows(entries: Map<string, ZipEntry>) {
   const rows = {} as Rows;
-  for (const table of TABLE_NAMES) {
-    const entry = entries.get(TABLES[table].entry);
-    const text = entry ? await new Response(entry.stream()).text() : "";
-    rows[table] = text
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as Row);
-  }
+  for (const table of TABLE_NAMES) rows[table] = await readEntry(entries, TABLES[table].entry);
   return rows;
 }
 
-function requireKnownEntries(core: Core, rows: Rows) {
-  const { collections, globals } = core.schema;
-  const unknown = new Set([
-    ...rows.cms_documents.map((r) => `collection:${r.collection}`),
-    ...rows.cms_globals.map((r) => `global:${r.name}`),
-    ...rows.cms_versions.map((r) => r.target as string),
-  ]);
-  for (const id of unknown) {
-    const [kind, name] = [id.slice(0, id.indexOf(":")), id.slice(id.indexOf(":") + 1)];
-    if ((kind === "collection" ? collections : globals)[name]) unknown.delete(id);
-  }
-  if (unknown.size)
-    throw new ValidationError({
-      archive: `The schema has no ${[...unknown].join(", ")}. Add them, or edit the archive.`,
-    });
-}
-
-// Only `replace` moves stored values between shared and locale rows, so the other modes need the config's layout.
-function requireSameLocalized(core: Core, manifest: Manifest, rows: Rows) {
-  const { current, defaultLocale } = core.localized;
-  const used = new Set([
-    ...rows.cms_documents.map((r) => `collection:${r.collection}`),
-    ...rows.cms_globals.map((r) => `global:${r.name}`),
-  ]);
-  const key = (keys: string[] | null | undefined) => JSON.stringify([...(keys ?? [])].sort());
-  const differs = [...used].filter((id) => key(manifest.localized[id]) !== key(current[id]));
-  const localized = [...used].some((id) => current[id]);
-  if (differs.length || (localized && manifest.defaultLocale !== defaultLocale))
-    throw new ValidationError({
-      archive: `The archive stores other localized fields (${differs.join(", ") || "defaultLocale"}). Import it with mode "replace", or export it again on this config.`,
-    });
+// The extra tables of a `full` archive, in the manifest's order: the user table first.
+async function readExtraRows(entries: Map<string, ZipEntry>, manifest: Manifest | undefined) {
+  if (manifest?.scope !== "full") return [];
+  const extra = [];
+  for (const [table, columns] of Object.entries(manifest.tables ?? {}))
+    extra.push({ table, columns, rows: await readEntry(entries, `${EXTRA}${table}.ndjson`) });
+  return extra;
 }
 
 async function putMedia(core: Core, entries: Map<string, ZipEntry>, documents: Row[]) {
@@ -241,6 +240,22 @@ const withActors = (actors: Set<string>) => (row: Row) => {
       out[column] = null;
   return out;
 };
+
+async function insertExtraRows(
+  db: Kysely<Database>,
+  table: string,
+  columns: string[],
+  rows: Row[],
+) {
+  const batch = Math.max(1, Math.floor(PARAMETERS / columns.length));
+  for (let i = 0; i < rows.length; i += batch) {
+    const values = rows
+      .slice(i, i + batch)
+      .map((r) => Object.fromEntries(columns.map((c) => [c, r[c] ?? null])));
+    await (db as Kysely<any>).insertInto(table).values(values).execute();
+  }
+  return rows.length;
+}
 
 async function insertRows(db: Kysely<Database>, table: TableName, rows: Row[], mode: ImportMode) {
   const { key, columns } = TABLES[table];

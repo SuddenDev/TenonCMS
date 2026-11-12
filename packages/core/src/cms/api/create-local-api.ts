@@ -32,7 +32,11 @@ import {
   setSyncStructureLocal,
 } from "../../collections/operations/local/sync-structure.local.ts";
 import { removeGlobalLocaleLocal } from "../../globals/operations/local/remove-locale.local.ts";
-import { exportLocal, importLocal } from "../../transfer/local/transfer.local.ts";
+import {
+  exportLocal,
+  exportSummaryLocal,
+  importLocal,
+} from "../../transfer/local/transfer.local.ts";
 
 /**
  * Creates a local API whose operations use the supplied CMS core and scope.
@@ -70,7 +74,8 @@ export function createLocalApi(core: Core, scope: Scope): LocalApi {
     removeGlobalLocale: trackWrite(scope, removeGlobalLocaleLocal(core, scope)),
     setGlobalSyncStructure: trackWrite(scope, setGlobalSyncStructureLocal(core, scope)),
     export: exportLocal(core, scope),
-    import: trackWrite(scope, importLocal(core, scope)),
+    exportSummary: exportSummaryLocal(core, scope),
+    import: trackWrite(scope, importLocal(core, scope)) as LocalApi["import"],
     withDrafts: () => core.localApi({ ...scope, perspective: "drafts" }),
     jobs: jobsApi(core, scope),
     media: core.media && mediaApi(core, scope),

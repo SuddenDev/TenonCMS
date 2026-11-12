@@ -2,6 +2,12 @@ import type { RichtextDocument } from "../richtext/config/types.ts";
 import type { LinkReference } from "../links/config/types.ts";
 import type { ConflictOptions, DeleteOptions } from "../errors.ts";
 import type { SyncChoice, SyncStructureOptions } from "../content/writes/sync-structure.ts";
+import {
+  type ExportOptions,
+  type ImportMode,
+  type Manifest,
+  exportQuery,
+} from "../transfer/format.ts";
 import type { JobFilter } from "../jobs/types.ts";
 import type { ScheduleOptions } from "../schedule/types.ts";
 import type { Schema } from "../schema/index.ts";
@@ -278,18 +284,24 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
       },
     },
 
-    export: async ({ media = true }: { media?: boolean } = {}) => {
-      const res = await fetchFn(`${baseUrl}${API_BASE}/export${media ? "" : "?media=false"}`, {
+    export: async (options: ExportOptions = {}) => {
+      const res = await fetchFn(`${baseUrl}${API_BASE}/export${exportQuery(options)}`, {
         headers: auth,
       });
       if (!res.ok) throw new CmsError(res.status, await res.json().catch(() => null));
       return res.blob();
     },
 
-    exportLink: async ({ media = true }: { media?: boolean } = {}) => {
-      const { url } = await request("POST", "/export", {}, { media: media ? undefined : false });
+    exportLink: async (options: ExportOptions = {}) => {
+      const { url } = await request("POST", `/export${exportQuery(options)}`, {});
       return url.startsWith("/") ? `${baseUrl}${url}` : url;
     },
+
+    exportSummary: (options: ExportOptions = {}) =>
+      request("GET", `/export/summary${exportQuery(options)}`),
+
+    checkImport: (manifest: Manifest, { mode }: { mode?: ImportMode } = {}) =>
+      request("POST", "/import/check", { manifest, mode }),
 
     import: async (archive: Blob, { mode, onProgress, signal }: ImportOptions = {}) => {
       // Without media storage, the route is missing and the archive goes in the body.

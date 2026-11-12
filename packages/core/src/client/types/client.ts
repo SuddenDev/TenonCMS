@@ -17,7 +17,14 @@ import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.
 import type { Lock } from "../../locks/types.ts";
 import type { CronEntry, Job, JobFilter } from "../../jobs/types.ts";
 import type { ScheduleOptions } from "../../schedule/types.ts";
-import type { ImportCounts } from "../../transfer/format.ts";
+import type {
+  ArchiveCheck,
+  ArchiveCounts,
+  ExportOptions,
+  ImportCounts,
+  ImportMode,
+  Manifest,
+} from "../../transfer/format.ts";
 import type {
   AppliedStructure,
   StructureCounts,
@@ -640,16 +647,24 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   };
 
   /**
-   * All content as a ZIP archive, for admins. `media: false` leaves the media files out. The archive is held in memory;
-   * for big sites, open {@link Client.exportLink} instead. `GET /_tenon/export`
+   * All content as a ZIP archive, for admins and API keys with `read` on `backup`. `media: false` leaves the media
+   * files out, `scope: "full"` adds users, accounts, API keys and jobs. The archive is held in memory; for big sites,
+   * open {@link Client.exportLink} instead. `GET /_tenon/export`
    */
-  export(options?: { media?: boolean }): Promise<Blob>;
+  export(options?: ExportOptions): Promise<Blob>;
   /**
    * A link that downloads the archive, for admins. With S3 storage the archive is written into the bucket first and
    * the link is valid for 12 hours, so a host's response size limit does not apply. Otherwise it is `GET /_tenon/export`.
    * `POST /_tenon/export`
    */
-  exportLink(options?: { media?: boolean }): Promise<string>;
+  exportLink(options?: ExportOptions): Promise<string>;
+  /** What {@link Client.export} with the same options would hold. `GET /_tenon/export/summary` */
+  exportSummary(options?: ExportOptions): Promise<ArchiveCounts>;
+  /**
+   * Checks an archive's manifest without sending the archive, for a dry run of {@link Client.import}. Rows the
+   * manifest does not list (format version 1) are checked by the import itself. `POST /_tenon/import/check`
+   */
+  checkImport(manifest: Manifest, options?: { mode?: ImportMode }): Promise<ArchiveCheck>;
   /**
    * Restores an archive of `export()`, for admins. See `cms.import()` for `mode`. With media storage, the archive is
    * uploaded into it in parts first, like a media file, so a host's request size limit does not apply.

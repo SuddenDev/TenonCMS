@@ -22,13 +22,13 @@ export const EXPIRY_DAYS = [0, 30, 90, 365] as const;
 /** The columns of the permission grid. */
 export const API_KEY_OPS: ApiKeyOp[] = ["read", "create", "update", "delete"];
 
-/** One row of the permission grid: a collection, a global or `schema`, with the operations it takes. */
+/** One row of the permission grid: a collection, a global, `schema` or `backup`, with the operations it takes. */
 export type GridRow = { target: string; label: string; description?: string; ops: ApiKeyOp[] };
 
 /** Rows of one kind of target, under a headline. */
 export type GridGroup = { title: string; rows: GridRow[] };
 
-/** The collections, the globals and `schema` of the schema, each kind a group. Empty groups are left out. */
+/** The collections, the globals, and `schema` with `backup`, each a group. Empty groups are left out. */
 export function gridGroups(): GridGroup[] {
   const rows = Object.entries(
     apiKeyTargets({
@@ -36,14 +36,14 @@ export function gridGroups(): GridGroup[] {
       globals: schema.value.globals ?? {},
     }),
   ).map(([target, ops]): GridRow => ({ target, ops, ...targetText(target) }));
-  const group = (kind: string, title: string) => ({
+  const group = (kinds: string[], title: string) => ({
     title,
-    rows: rows.filter((r) => r.target.split(":")[0] === kind),
+    rows: rows.filter((r) => kinds.includes(r.target.split(":")[0])),
   });
   return [
-    group("collection", t("apiKeys.groups.collections")),
-    group("global", t("apiKeys.groups.globals")),
-    group("schema", t("apiKeys.groups.api")),
+    group(["collection"], t("apiKeys.groups.collections")),
+    group(["global"], t("apiKeys.groups.globals")),
+    group(["schema", "backup"], t("apiKeys.groups.api")),
   ].filter((g) => g.rows.length);
 }
 
@@ -51,6 +51,8 @@ export function gridGroups(): GridGroup[] {
 function targetText(target: string): { label: string; description?: string } {
   if (target === "schema")
     return { label: t("apiKeys.schema"), description: t("apiKeys.schemaDescription") };
+  if (target === "backup")
+    return { label: t("apiKeys.backup"), description: t("apiKeys.backupDescription") };
   const [kind, name] = target.split(":");
   if (kind === "collection" && name === "media")
     return {

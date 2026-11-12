@@ -275,6 +275,9 @@ export default {
     groups: { collections: "Sammlungen", globals: "Globals", api: "API" },
     schema: "Schema",
     schemaDescription: "Die Sammlungen, Globals und Felder, mit dem, was der Schlüssel darf.",
+    backup: "Backup",
+    backupDescription:
+      "Lesen lädt ein Backup aller Daten, Benutzer eingeschlossen. Ändern stellt eines wieder her und ersetzt alle Daten.",
     mediaDescription: "Dateien und Bilder der Mediathek.",
     ops: { create: "Anlegen", read: "Lesen", update: "Ändern", delete: "Löschen" },
     targets: "Kein Zugriff | 1 Ziel | {n} Ziele",

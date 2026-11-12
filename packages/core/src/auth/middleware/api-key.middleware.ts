@@ -14,18 +14,22 @@ export function csrfUnlessApiKey(): MiddlewareHandler<Env> {
   return (c, next) => (c.req.header(API_KEY_HEADER) ? next() : check(c, next));
 }
 
+const BACKUP_ROUTES = new RegExp(`^${API_BASE}/(export|import)(/|$)`);
+
 /**
- * Limits API key callers on the routes behind `session` to `/schema`, with `read` on `schema`. Every other route there
- * answers 403 to a key, so a key never reaches users, invites, passwords, previews, other keys or the plugins'
- * `routes`, whose handlers expect `c.var.user`. Session callers pass.
+ * Limits API key callers on the routes behind `session` to `/schema` with `read` on `schema`, and to the export and
+ * import routes with any grant on `backup`; those routes check the operation. Every other route there answers 403 to a
+ * key, so a key never reaches users, invites, passwords, previews, other keys or the plugins' `routes`, whose handlers
+ * expect `c.var.user`. Session callers pass.
  * @returns The Hono middleware.
  */
 export function apiKeyReach(): MiddlewareHandler<Env> {
   return async (c, next) => {
     const key = c.var.apiKey;
     if (!key) return next();
-    if (c.req.path !== `${API_BASE}/schema` || !key.permissions.schema?.includes("read"))
-      return c.json({ message: "Forbidden" }, 403);
+    const schema = c.req.path === `${API_BASE}/schema` && key.permissions.schema?.includes("read");
+    const backup = BACKUP_ROUTES.test(c.req.path) && !!key.permissions.backup?.length;
+    if (!schema && !backup) return c.json({ message: "Forbidden" }, 403);
     await next();
   };
 }

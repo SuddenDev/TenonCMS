@@ -8,7 +8,7 @@ import { removeExpired } from "../../media/operations/uploads/remove-expired.ts"
 import { DAY, deleteUpload, type Row } from "../../media/operations/uploads/upload-row.ts";
 import { mediaOf } from "../../media/runtime/create-media-core.ts";
 import type { Storage } from "../../media/storage/types.ts";
-import { requireAdmin } from "../access.ts";
+import { requireBackup } from "../access.ts";
 import { IMPORTS, type ImportMode, ZIP } from "../format.ts";
 import type { ZipSource } from "../read-zip.ts";
 import { importContent } from "./import.operation.ts";
@@ -23,7 +23,7 @@ import { importContent } from "./import.operation.ts";
  * @throws {ValidationError} For a size that is not a positive whole number.
  */
 export async function createImportUpload(core: Core, scope: Scope, input: { size?: unknown }) {
-  requireAdmin(scope);
+  requireBackup(scope, "update");
   const size = input.size;
   if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 1)
     throw new ValidationError({ size: "MUST be the size of the archive in bytes" });
@@ -64,7 +64,7 @@ export async function createImportUpload(core: Core, scope: Scope, input: { size
 
 /** The import upload `id` of the scope's admin, or `undefined` for an unknown, expired or foreign one. */
 export async function findImportUpload(core: Core, scope: Scope, id: string) {
-  requireAdmin(scope);
+  requireBackup(scope, "update");
   const db = await databaseForScope(core, scope);
   const row = await db
     .selectFrom("cms_uploads")

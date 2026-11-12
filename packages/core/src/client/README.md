@@ -36,6 +36,8 @@ Each client keeps its own closures, so two clients with different origins or `fe
 
 The draft methods (`createDraft()`, `updateDraft()`, `publish()`, `unpublish()`, `discard()`, `setGlobalDraft()`, `publishGlobal()`, `unpublishGlobal()`, `discardGlobal()`) call the draft routes. `schedule(name, id, { action, at, locale })` and `scheduleGlobal(name, { action, at, locale })` post to `/collections/:name/:id/schedule` and `/globals/:name/schedule` and return `{ id }`, the job id; `at` MAY be a `Date`, a number or an ISO string. `discard()` returns `null` when it deleted a document that was never published. `preview.enter(perspective?)` and `preview.exit()` set and clear the preview cookie; with `drafts` (the default), reads of the signed-in user see drafts.
 
+`export()`, `exportLink()` and `exportSummary()` take `{ media, scope }`; `checkImport(manifest, { mode })` posts a manifest to `/import/check` for a dry run, and `readArchiveManifest(blob)` (from `transfer/format.ts`, which imports only the import-free `read-zip.ts`) reads it from a file.
+
 A part upload retries a network error, a 5xx, a 408 and a 429 3 times with backoff. Any other 4xx is final.
 
 ## Locales

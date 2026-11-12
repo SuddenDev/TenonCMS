@@ -1,10 +1,14 @@
 // No runtime imports: the client and the admin import this file.
 
-/** An operation a key MAY be granted. A global takes `read` and `update`, `schema` only `read`. */
+/**
+ * An operation a key MAY be granted. A global takes `read` and `update`, `schema` only `read`. `backup` takes `read`
+ * (export) and `update` (import, which replaces content, users included).
+ */
 export type ApiKeyOp = "create" | "read" | "update" | "delete";
 
 /**
- * What a key MAY do, per target: `collection:<name>`, `global:<name>` or `schema`. A missing target grants nothing.
+ * What a key MAY do, per target: `collection:<name>`, `global:<name>`, `schema` or `backup`. A missing target grants
+ * nothing.
  * @example { "collection:posts": ["read", "create"], "global:site": ["read"], schema: ["read"] }
  */
 export type ApiKeyPermissions = Record<string, ApiKeyOp[]>;
@@ -36,8 +40,8 @@ export type NewApiKey = ApiKey & { key: string };
 const ALL: ApiKeyOp[] = ["create", "read", "update", "delete"];
 
 /**
- * Every target a key MAY be granted, with its operations: each collection, each global, and `schema`.
- * @returns The targets in the order of `collections`, then `globals`, then `schema`.
+ * Every target a key MAY be granted, with its operations: each collection, each global, `schema` and `backup`.
+ * @returns The targets in the order of `collections`, then `globals`, then `schema`, then `backup`.
  */
 export function apiKeyTargets(schema: {
   collections: Record<string, unknown>;
@@ -49,5 +53,6 @@ export function apiKeyTargets(schema: {
       Object.keys(schema.globals).map((n) => [`global:${n}`, ["read", "update"]]),
     ),
     schema: ["read"],
+    backup: ["read", "update"],
   };
 }
