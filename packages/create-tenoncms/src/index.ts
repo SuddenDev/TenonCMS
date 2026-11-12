@@ -130,6 +130,7 @@ async function main() {
     target,
     database,
     storage,
+    pm,
     tenonVersion: await latestTenon(),
   });
   spin.stop(`Created ${relative(process.cwd(), dir) || "."}`);

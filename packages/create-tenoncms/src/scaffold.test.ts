@@ -62,6 +62,26 @@ describe("scaffold", () => {
     expect(read(dir, ".gitignore")).toMatch(/^\.pglite$/m);
   });
 
+  it("approves the dependency builds the layers need, for pnpm", async () => {
+    const dir = project();
+    const choices = {
+      name: "a",
+      framework: "astro",
+      template: "minimal",
+      target: "cloudflare",
+      database: "durable-object",
+      storage: "r2",
+    };
+    await scaffold(templates, dir, { ...choices, pm: "pnpm" });
+    expect(read(dir, "pnpm-workspace.yaml")).toMatch(
+      /^allowBuilds:\n {2}esbuild: true\n {2}workerd: true\n$/m,
+    );
+
+    const npm = project();
+    await scaffold(templates, npm, { ...choices, pm: "npm" });
+    expect(existsSync(join(npm, "pnpm-workspace.yaml"))).toBe(false);
+  });
+
   it("takes the target's own version of a database", async () => {
     const dir = project();
     await scaffold(templates, dir, {

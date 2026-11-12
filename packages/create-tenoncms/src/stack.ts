@@ -12,8 +12,16 @@ export type EnvVar = {
 
 type Blocks = { imports?: string[]; setup?: string[]; options?: string[] };
 
-/** `part.json` of a layer: the code it adds per file, its environment variables and `.gitignore` lines. */
-export type Part = { files?: Record<string, Blocks>; env?: EnvVar[]; ignore?: string[] };
+/**
+ * `part.json` of a layer: the code it adds per file, its environment variables, `.gitignore` lines, and `builds`: the
+ * dependencies whose install scripts MUST run. pnpm skips them unless approved.
+ */
+export type Part = {
+  files?: Record<string, Blocks>;
+  env?: EnvVar[];
+  ignore?: string[];
+  builds?: string[];
+};
 
 /** Every project has one. It comes first. */
 export const SECRET_PART: Part = {

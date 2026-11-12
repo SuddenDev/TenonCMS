@@ -24,6 +24,8 @@ export type Choices = {
   target: string;
   database: string;
   storage: string;
+  /** With `pnpm`, the layers' `builds` are approved in `pnpm-workspace.yaml`. */
+  pm?: string;
   /** The version `latest` of `tenoncms` and `@tenoncms/cli` becomes, without a range. `undefined` keeps `latest`. */
   tenonVersion?: string;
 };
@@ -98,6 +100,12 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
   }
   const ignore = parts.flatMap((p) => p.ignore ?? []);
   if (ignore.length) await appendFile(join(dir, ".gitignore"), `${ignore.join("\n")}\n`);
+  const builds = [...new Set(parts.flatMap((p) => p.builds ?? []))].sort();
+  if (choices.pm === "pnpm" && builds.length)
+    await writeFile(
+      join(dir, "pnpm-workspace.yaml"),
+      `allowBuilds:\n${builds.map((name) => `  ${name}: true\n`).join("")}`,
+    );
   const envFile = index.targets[choices.target]?.envFile ?? ".env";
   await writeFile(join(dir, `${envFile}.example`), envExample(parts));
 

@@ -21,6 +21,7 @@ A layer's `part.json` is not copied. It says what the layer adds:
 - `files`: per file, `imports`, `setup` (statements after the imports) and `options` lines. They replace the file's `// @tenon-imports` and `// @tenon-options` lines. `// @tenon-env` (in `astro.config.ts`) gets the env schema.
 - `env`: the variables the code reads as `$NAME`, with `example`, `default`, `optional`, `url` and a `comment`. In Astro (`envModule` in `index.json`) `$NAME` is imported from `astro:env/server`; elsewhere it reads `process.env`.
 - `ignore`: lines for `.gitignore`.
+- `builds`: dependencies whose install scripts MUST run, such as `esbuild` and `workerd`. With pnpm, they go into `allowBuilds` of `pnpm-workspace.yaml`, because pnpm refuses an install with unapproved builds. A local smoke run MAY miss a new one: the store can hold a copy built for the repository. CI starts with an empty store.
 
 Every project gets `secret: $CMS_SECRET`. The variables go into `.env.example` (`envFile` of the target, `.dev.vars` on Cloudflare), and a copy with a random `CMS_SECRET` becomes the real file.
 
