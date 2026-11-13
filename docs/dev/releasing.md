@@ -2,6 +2,8 @@
 
 `tenoncms` and `create-tenoncms` are published together, with one version. Every `package.json` of the workspace carries it, private ones included.
 
+`tenoncms` uses the repository root `README.md`. Its `prepack` script copies it to `packages/core/README.md` for the package archive. The copy is ignored by Git; edit only the root README.
+
 ## A release
 
 Commit and push the release changes first. The working tree MUST be clean before running:

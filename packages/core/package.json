@@ -205,6 +205,7 @@
     "test": "vitest run --project node",
     "test:full": "vitest run",
     "test:watch": "vitest --project node",
+    "prepack": "cp ../../README.md README.md",
     "prepublishOnly": "test -f dist/index.mjs || (echo \"Run pnpm build:packages in the repository root first.\" && exit 1)"
   },
   "dependencies": {

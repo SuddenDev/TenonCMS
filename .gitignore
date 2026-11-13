@@ -9,3 +9,4 @@ dist
 uploads
 !packages/core/src/media/operations/uploads/
 .uploads
+/packages/core/README.md
