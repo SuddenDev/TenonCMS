@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 import { checkSiteStyles } from "./check-site-styles.ts";
 import { collectClientRefs } from "./collect-client-refs.ts";
 import type { ClientRef, Resolver } from "./types.ts";
@@ -16,8 +16,20 @@ export const REGISTRY_ID = "\0tenon-client-registry";
 export function clientReferences(entry = "./tenon.config.ts", projectRoot?: string): Plugin {
   let root = "";
   let config = "";
+  let server: ViteDevServer | undefined;
+  const watched = new Set<string>();
   return {
     name: "tenoncms:client-references",
+    configureServer(devServer) {
+      server = devServer;
+    },
+    hotUpdate({ file, modules }) {
+      if (!watched.has(file)) return;
+      const registry = this.environment.moduleGraph.getModuleById(REGISTRY_ID);
+      if (!registry) return;
+      this.environment.moduleGraph.invalidateModule(registry);
+      return [...modules, registry];
+    },
     configResolved(options) {
       root = projectRoot ?? options.root;
       config = resolve(root, entry);
@@ -28,15 +40,19 @@ export function clientReferences(entry = "./tenon.config.ts", projectRoot?: stri
       const resolver: Resolver = async (source, importer) =>
         (await this.resolve(source, importer, { skipSelf: true }))?.id ?? null;
 
-      const refs = await collectClientRefs(root, [config], resolver, (file) =>
-        this.addWatchFile(file),
-      );
+      // Vite treats addWatchFile() as an import. Browser warmup MUST NOT follow server config files.
+      const watch = (file: string) => {
+        if (!server) return this.addWatchFile(file);
+        watched.add(file);
+        server.watcher.add(file);
+      };
+      const refs = await collectClientRefs(root, [config], resolver, watch);
       const siteFiles = Object.values(refs)
         .filter((ref) => ref.site)
         .map((ref) => ref.file);
       await checkSiteStyles(siteFiles, resolver);
 
-      for (const { file } of Object.values(refs)) this.addWatchFile(file);
+      for (const { file } of Object.values(refs)) watch(file);
       return registryModule(refs);
     },
   };

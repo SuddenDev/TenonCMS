@@ -1,6 +1,7 @@
 import { join } from "node:path";
+import { realpath, writeFile } from "node:fs/promises";
 import { build, createServer, type InlineConfig, type Plugin } from "vite";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { clientModules } from "./client-modules.ts";
 import { clientReferences } from "./client-references.ts";
 import { removeProjects, tempProject } from "./test-project.ts";
@@ -121,6 +122,51 @@ it("ignores watched server files in the dev module graph", async () => {
 it("rejects server-only browser entry points", async () => {
   const root = await tempProject({ "entry.server.ts": `export const password = 'private';` });
   await expect(bundle(root, "entry.server.ts")).rejects.toThrow("server-only");
+});
+
+it("keeps watched config dependencies out of browser warmup", async () => {
+  const root = await tempProject({
+    "storage.ts": `import { resolve } from 'node:path'; export const dir = resolve('uploads');`,
+    "extra.client.ts": `export const extra = 'Extra';`,
+    "tenon.config.ts": `import { dir } from './storage.ts'; import { label } from './label.client.ts'; export default { dir, label };`,
+    "label.client.ts": `export const label = 'Label';`,
+  });
+  const server = await createServer({
+    configFile: false,
+    root,
+    logLevel: "silent",
+    plugins: [clientModules(), clientReferences()],
+    server: { middlewareMode: true, ws: false, watch: null },
+    optimizeDeps: { noDiscovery: true },
+  });
+  try {
+    const client = server.environments.client;
+    const pending = ["#tenon/client-registry"];
+    await client.transformRequest(pending[0]!);
+    client.moduleGraph.invalidateAll();
+    const seen = new Set<string>();
+    while (pending.length) {
+      const url = pending.pop()!;
+      if (seen.has(url)) continue;
+      seen.add(url);
+      await client.transformRequest(url);
+      const module = await client.moduleGraph.getModuleByUrl(url);
+      for (const dependency of module?.importedModules ?? []) pending.push(dependency.url);
+    }
+    expect(seen.has("/label.client.ts")).toBe(true);
+    expect(seen.has("/storage.ts")).toBe(false);
+
+    const config = await realpath(join(root, "tenon.config.ts"));
+    await writeFile(config, `export { extra } from './extra.client.ts';`);
+    server.watcher.emit("change", config);
+    await vi.waitFor(async () => {
+      expect((await client.transformRequest("#tenon/client-registry"))?.code).toContain(
+        "./extra.client.ts#extra",
+      );
+    });
+  } finally {
+    await server.close();
+  }
 });
 
 it("checks aliases and lazy imports", async () => {

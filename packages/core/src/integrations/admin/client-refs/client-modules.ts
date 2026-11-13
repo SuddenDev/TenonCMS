@@ -2,7 +2,6 @@ import { isBuiltin } from "node:module";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 import { clientModuleExports, clientModuleId, isClientModule } from "./client-module.ts";
-import { REGISTRY_ID } from "./client-references.ts";
 
 export type ClientModulesOptions = {
   root?: string;
@@ -35,9 +34,7 @@ export function clientModules(options: ClientModulesOptions = {}): Plugin {
       if (server || !importer || source.startsWith("\0")) return;
       // Only modules the browser transforms import for the browser. Vite's dependency scan and the
       // `clientRef()` crawl read server files, such as Astro frontmatter, without transforming them.
-      // Vite dev also adds the crawl's watched files as imports of the registry. `load()` still
-      // rejects a server-only module that the registry loads.
-      if (!browserModules.has(importer) || importer === REGISTRY_ID) return;
+      if (!browserModules.has(importer)) return;
       if (serverOnly(source))
         this.error(`tenoncms: browser module ${importer} imports server-only module ${source}`);
       const target = await this.resolve(source, importer, { skipSelf: true });
