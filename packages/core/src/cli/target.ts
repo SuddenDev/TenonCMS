@@ -14,6 +14,7 @@ import {
   type Manifest,
 } from "../client/index.ts";
 import { readCredential } from "./credentials.ts";
+import { loadNuxtRuntimeConfig } from "./nuxt-runtime-config.ts";
 
 /** Where `tenon backup` reads from and `tenon restore` writes to: a config loaded here, or an instance over HTTP. */
 export type Target = {
@@ -97,15 +98,17 @@ async function packageName() {
 
 /**
  * Loads the host's config through Vite, like its dev server, so TypeScript, its imports and `.client` modules work, as
- * in a server build. `astro:env/*` reads
- * `process.env`, which gets `.env` first. A config that imports other platform modules (`cloudflare:workers`) only
- * runs on its platform.
+ * in a server build. `astro:env/*` reads `process.env`, which gets `.env` first. Next to a `nuxt.config.*`, the global
+ * `useRuntimeConfig()` returns Nuxt's runtime config. A config that imports other platform modules
+ * (`cloudflare:workers`) only runs on its platform.
  */
 async function loadConfig(path: string): Promise<LocalApi> {
   const { loadEnv, runnerImport } = await import("vite");
   const { clientModules } = await import("../integrations/vite/index.ts");
   for (const [key, value] of Object.entries(loadEnv("production", process.cwd(), "")))
     process.env[key] ??= value;
+  const runtimeConfig = await loadNuxtRuntimeConfig(process.cwd());
+  if (runtimeConfig) Object.assign(globalThis, { useRuntimeConfig: () => runtimeConfig });
   const inline = { configFile: false as const, logLevel: "error" as const };
   try {
     const defaults = await astroEnvDefaults((id) => runnerImport(id, inline));

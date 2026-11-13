@@ -45,7 +45,7 @@ describe("fillMarkers", () => {
   });
 
   it("imports the variables it uses from the env module", () => {
-    const text = fillMarkers(config, "tenon.config.ts", parts, "astro:env/server");
+    const text = fillMarkers(config, "tenon.config.ts", parts, { envModule: "astro:env/server" });
     expect(text).toContain(
       'import { DATABASE_AUTH_TOKEN, DATABASE_URL, S3_BUCKET } from "astro:env/server";',
     );
@@ -78,6 +78,22 @@ describe("fillMarkers", () => {
     );
   });
 
+  it("reads Nuxt's useRuntimeConfig()", () => {
+    const text = fillMarkers(config, "tenon.config.ts", parts, { runtimeConfig: true });
+    expect(text).toContain("\n\nconst config = useRuntimeConfig();\n\nexport default");
+    expect(text).toContain(
+      "url: config.databaseUrl, authToken: config.databaseAuthToken || undefined",
+    );
+    expect(text).toContain("bucket: config.s3Bucket");
+  });
+
+  it("writes Nuxt's runtimeConfig, with the defaults", () => {
+    const nuxt = "runtimeConfig: {\n  // @tenon-runtime-config\n},";
+    expect(fillMarkers(nuxt, "nuxt.config.ts", parts, { runtimeConfig: true })).toBe(
+      'runtimeConfig: {\n  databaseUrl: "file:./cms.db",\n  databaseAuthToken: "",\n  s3Bucket: "",\n},',
+    );
+  });
+
   it("rejects a variable no part declares", () => {
     const bad: Part = { files: { "tenon.config.ts": { options: ["x: $NOPE,"] } } };
     expect(() => fillMarkers(config, "tenon.config.ts", [bad])).toThrow(/NOPE/);
@@ -88,6 +104,12 @@ describe("envExample", () => {
   it("lists required variables, and defaults and optional ones commented out", () => {
     expect(envExample(parts)).toBe(
       "# A file.\n# DATABASE_URL=file:./cms.db\n# DATABASE_AUTH_TOKEN=\nS3_BUCKET=uploads\n",
+    );
+  });
+
+  it("prefixes the names for Nuxt", () => {
+    expect(envExample(parts, "NUXT_")).toBe(
+      "# A file.\n# NUXT_DATABASE_URL=file:./cms.db\n# NUXT_DATABASE_AUTH_TOKEN=\nNUXT_S3_BUCKET=uploads\n",
     );
   });
 });

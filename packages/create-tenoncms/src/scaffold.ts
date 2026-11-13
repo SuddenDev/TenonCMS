@@ -3,13 +3,13 @@ import { existsSync } from "node:fs";
 import { appendFile, cp, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { envExample, fillMarkers, SECRET_PART, type Part } from "./stack.ts";
+import { envExample, type EnvSource, fillMarkers, SECRET_PART, type Part } from "./stack.ts";
 
 type Option = { label: string; hint?: string };
 /** `templates/index.json`: what the prompts offer. */
 export type TemplateIndex = {
-  /** `envModule`: where the config imports its environment variables from. Without it, it reads `process.env`. */
-  frameworks: Record<string, Option & { targets: string[]; envModule?: string }>;
+  /** `envModule` or `runtimeConfig`: where the config reads its environment variables. Default: `process.env`. */
+  frameworks: Record<string, Option & EnvSource & { targets: string[] }>;
   templates: Record<string, Option & { frameworks: string[] }>;
   /** `envFile`: the file for local secrets. Default: `.env`. */
   targets: Record<string, Option & { databases: string[]; storages: string[]; envFile?: string }>;
@@ -92,11 +92,11 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
     await cp(layer, dir, { recursive: true, force: true, filter: (src) => !skip.includes(src) });
   }
 
-  const envModule = index.frameworks[choices.framework]?.envModule;
+  const source = index.frameworks[choices.framework] ?? {};
   for (const file of new Set(parts.flatMap((p) => Object.keys(p.files ?? {})))) {
     const path = join(dir, file);
     if (!existsSync(path)) throw new Error(`A part writes to ${file}, but the template has none`);
-    await writeFile(path, fillMarkers(await readFile(path, "utf8"), file, parts, envModule));
+    await writeFile(path, fillMarkers(await readFile(path, "utf8"), file, parts, source));
   }
   const ignore = parts.flatMap((p) => p.ignore ?? []);
   if (ignore.length) await appendFile(join(dir, ".gitignore"), `${ignore.join("\n")}\n`);
@@ -107,7 +107,10 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
       `allowBuilds:\n${builds.map((name) => `  ${name}: true\n`).join("")}`,
     );
   const envFile = index.targets[choices.target]?.envFile ?? ".env";
-  await writeFile(join(dir, `${envFile}.example`), envExample(parts));
+  await writeFile(
+    join(dir, `${envFile}.example`),
+    envExample(parts, source.runtimeConfig ? "NUXT_" : ""),
+  );
 
   pkg.name = choices.name;
   if (pkg.dependencies?.tenoncms === "latest" && choices.tenonVersion)

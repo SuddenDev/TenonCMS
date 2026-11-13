@@ -1,3 +1,4 @@
 {
+  "files": { "nuxt.config.ts": {} },
   "builds": ["esbuild"]
 }

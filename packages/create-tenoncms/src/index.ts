@@ -97,6 +97,7 @@ async function main() {
   );
   const target = await choose(targets, flags.target, "Where will it run?", ask);
   const { databases, storages, envFile = ".env" } = index.targets[target]!;
+  const env = index.frameworks[framework]!.runtimeConfig ? "NUXT_" : "";
   // The target's order: its first database and storage are the defaults.
   const database = await choose(
     Object.fromEntries(databases.map((id) => [id, index.databases[id]!])),
@@ -153,11 +154,12 @@ async function main() {
   ].filter(Boolean);
   p.note(steps.join("\n"), "Next steps");
   if (database === "postgres")
-    p.log.info(`Set DATABASE_URL in ${envFile} to your Postgres database.`);
-  if (storage === "s3") p.log.info(`Set the bucket in ${envFile}: S3_BUCKET and the AWS_* keys.`);
+    p.log.info(`Set ${env}DATABASE_URL in ${envFile} to your Postgres database.`);
+  if (storage === "s3")
+    p.log.info(`Set the bucket in ${envFile}: ${env}S3_BUCKET and the ${env}AWS_* keys.`);
   if (target === "vercel")
     p.log.info(
-      `On Vercel, set the variables of ${envFile} in the project settings.${database === "libsql" ? " DATABASE_URL MUST be a Turso URL there." : ""}`,
+      `On Vercel, set the variables of ${envFile} in the project settings.${database === "libsql" ? ` ${env}DATABASE_URL MUST be a Turso URL there.` : ""}`,
     );
   p.outro("Open /admin to create the first admin user.");
 }

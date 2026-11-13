@@ -18,8 +18,8 @@ It copies these folders into the project, in order. Later files overwrite earlie
 
 A layer's `part.json` is not copied. It says what the layer adds:
 
-- `files`: per file, `imports`, `setup` (statements after the imports) and `options` lines. They replace the file's `// @tenon-imports` and `// @tenon-options` lines. `// @tenon-env` (in `astro.config.ts`) gets the env schema.
-- `env`: the variables the code reads as `$NAME`, with `example`, `default`, `optional`, `url` and a `comment`. In Astro (`envModule` in `index.json`) `$NAME` is imported from `astro:env/server`; elsewhere it reads `process.env`.
+- `files`: per file, `imports`, `setup` (statements after the imports) and `options` lines. They replace the file's `// @tenon-imports` and `// @tenon-options` lines. `// @tenon-env` (in `astro.config.ts`) gets the env schema, `// @tenon-runtime-config` (in `nuxt.config.ts`) the keys of `runtimeConfig`. A file without blocks (`"nuxt.config.ts": {}`) only gets its markers filled.
+- `env`: the variables the code reads as `$NAME`, with `example`, `default`, `optional`, `url` and a `comment`. In Astro (`envModule` in `index.json`) `$NAME` is imported from `astro:env/server`. In Nuxt (`runtimeConfig`) it reads `useRuntimeConfig()`: `$DATABASE_URL` becomes `config.databaseUrl`, its default goes into `nuxt.config.ts`, and the env files name it `NUXT_DATABASE_URL`. Elsewhere it reads `process.env`.
 - `ignore`: lines for `.gitignore`.
 - `builds`: dependencies whose install scripts MUST run, such as `esbuild` and `workerd`. With pnpm, they go into `allowBuilds` of `pnpm-workspace.yaml`, because pnpm refuses an install with unapproved builds. A local smoke run MAY miss a new one: the store can hold a copy built for the repository. CI starts with an empty store.
 

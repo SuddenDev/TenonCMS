@@ -127,7 +127,7 @@ export default defineNuxtConfig({
 });
 ```
 
-`tenon.config.ts` can call `useRuntimeConfig()` for the secret and the database URL.
+`tenon.config.ts` can call `useRuntimeConfig()` for the secret and the database URL, and `create-tenoncms` writes it that way: each key of `runtimeConfig` reads its `NUXT_` variable, so `databaseUrl` reads `NUXT_DATABASE_URL`. The `tenon` CLI loads `nuxt.config.ts` and gives the config the same values.
 
 The module auto-imports `useTenon()`. It has the read methods of the client (`find`, `findOne`, `findById`, `getGlobal`) but returns `useAsyncData` results. `useTenonSeo()` ([Pages and SEO](pages-and-seo.md#in-nuxt)), `useLocale()`, `useAlternates()` ([Localization](localization.md)), `useLivePreview()` ([Live preview](live-preview.md#check-for-the-live-preview)) and `useBlockEdit()` are auto-imported too, and so are the components `TenonImage`, `TenonPicture`, `TenonLink`, `TenonBlocks` and `TenonRichtext` ([Components](components.md)).
 

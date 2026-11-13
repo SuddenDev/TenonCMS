@@ -5,7 +5,7 @@
       "envModule": "astro:env/server",
       "targets": ["node", "vercel", "cloudflare"]
     },
-    "nuxt": { "label": "Nuxt", "targets": ["node", "vercel"] },
+    "nuxt": { "label": "Nuxt", "runtimeConfig": true, "targets": ["node", "vercel"] },
     "tanstack": { "label": "TanStack Start", "targets": ["node", "vercel"] },
     "standalone": {
       "label": "Standalone",
