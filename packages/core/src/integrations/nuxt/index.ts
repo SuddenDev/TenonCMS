@@ -39,6 +39,10 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
   defaults: { entry: "./tenon.config.ts", admin: true },
   setup(options, nuxt) {
     const runtime = createResolver(import.meta.url).resolve("./runtime");
+    if (nuxt.options.dev)
+      nuxt.hook("listen", (_server, listener: { url: string }) => {
+        process.env.__TENON_DEV_ORIGIN = new URL(listener.url).origin;
+      });
 
     // Nuxt forwards aliases to Nitro and to the generated tsconfig paths.
     nuxt.options.alias["#tenon/config"] = resolve(nuxt.options.rootDir, options.entry!);

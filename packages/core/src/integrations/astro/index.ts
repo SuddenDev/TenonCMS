@@ -7,6 +7,7 @@ import { faviconDefine } from "../admin/favicon.ts";
 import { adminPath } from "../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
 import { siteRoutes } from "../admin/seo-routes.ts";
+import { developmentAuth, developmentOrigin } from "../dev-auth.ts";
 
 /** Options of the Astro integration. */
 export type Options = AdapterOptions & {
@@ -39,6 +40,8 @@ export default function tenonCms({
 }: Options = {}): AstroIntegration {
   let entryPath: string;
   let cloudflare = false;
+  let devHost: string | boolean;
+  let devHttps = false;
   return {
     name: "tenoncms",
     hooks: {
@@ -52,6 +55,8 @@ export default function tenonCms({
       }) {
         entryPath = fileURLToPath(new URL(entry, config.root));
         cloudflare = config.adapter?.name === "@astrojs/cloudflare";
+        devHost = config.server.host;
+        devHttps = !!config.vite.server?.https;
         // Serverless hosts freeze the process between requests, so an interval cannot tick there.
         const nodeAdapter = config.adapter?.name === "@astrojs/node";
         const runtime = cloudflare ? "./cloudflare/" : "./";
@@ -95,7 +100,7 @@ export default function tenonCms({
 
         updateConfig({
           vite: {
-            plugins: [clientModules(), clientReferences(entry)],
+            plugins: [developmentAuth(devHost), clientModules(), clientReferences(entry)],
             resolve: { alias: { "#tenon/config": entryPath } },
             define: {
               ...faviconDefine(fileURLToPath(config.publicDir)),
@@ -107,6 +112,10 @@ export default function tenonCms({
             ssr: command === "dev" || cloudflare ? {} : { external: ["tenoncms"] },
           },
         });
+      },
+
+      "astro:server:start"({ address }) {
+        process.env.__TENON_DEV_ORIGIN = developmentOrigin(address, devHttps, devHost);
       },
 
       // Every wake of the CMS object parses the bundle again. Vite leaves server code unminified by default.

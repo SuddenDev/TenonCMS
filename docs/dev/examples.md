@@ -34,7 +34,7 @@ Every example has its instance in `tenon.config.ts` at the project root and its 
   - Set `ENABLE_EXPERIMENTAL_COREPACK=1`, or Vercel ignores `packageManager` and installs with its own pnpm.
 - Set up Neon as in the [guide](../guide/frameworks.md#with-neon): the pooled `DATABASE_URL`, a private bucket and its S3 variables (`AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET`), and `CMS_SECRET`. The same variables in `.env` work locally.
 - Vercel allows the `AWS_*` key names and injects unusable ones when they are unset, so all of them MUST be set.
-- `site` stays unset: better-auth reads the base URL from the request, so preview URLs work. Passkeys bind to the host they were made on.
+- `site` stays unset. Set `TENON_BASE_URL` to the public CMS origin in production. For production and preview hosts together, use `auth.baseURL` with explicit `allowedHosts` and a trusted `fallback` (see [auth options](../guide/auth-and-access.md#auth-options)). Development detects its origin automatically. Passkeys bind to the host they were made on.
 - `astro build` writes `.vercel/output`. The function (2026-10-29): 39 MB, with `tenoncms`, `kysely`, `pg` and `sharp` traced by nft. No libsql.
 - Smoke test without Vercel: a temp Postgres as `DATABASE_URL` and dummy S3 variables; everything except uploads works. With a real bucket, run `s3.live.test.ts` against it too (`S3_TEST_*` variables).
 - Neon checked on 2026-10-29: `s3.live.test.ts` passes, and an upload through presigned parts, the file and a variant served by core work.

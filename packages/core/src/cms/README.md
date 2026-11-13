@@ -33,6 +33,8 @@ Construction happens in this order:
 
 The first `auth()` call initializes the database if needed and creates the shared better-auth instance. `getSession(headers)` uses that instance to resolve a request's session. Database queries and migrations belong to [db](../db/README.md); auth configuration and caller lookup belong to [auth](../auth/README.md).
 
+`fetch(request)` and `withSession(request)` bind the first validated development origin to that database's runtime. This supplies the requestless auth fallback in Workers that cannot inherit the adapter's listener hint. An early auth instance shares the fallback object, so its plugins do not need to initialize again. Production never learns an auth origin from requests; see [auth options](../../../../docs/guide/auth-and-access.md#auth-options).
+
 ## Shared core, caller scope and hook API
 
 These three internal types explain how calls keep the right user, draft perspective and transaction:

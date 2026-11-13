@@ -3,6 +3,7 @@ import { authOptions, type CoreAuth } from "../../auth/config/build-options.ts";
 import type { AuthOptions } from "../../auth/config/options.ts";
 import { apiKeyCaller } from "../../auth/api-key-caller.ts";
 import { createAuth } from "../../auth/create-auth.ts";
+import { developmentRequestOrigin } from "../../auth/config/base-url.ts";
 import { createDb, type DatabaseOptions } from "../../db/create-db.ts";
 import { migrate } from "../../db/migrations/migrate.ts";
 import { syncLocalized } from "../../db/migrations/sync-localized.ts";
@@ -54,7 +55,16 @@ export function createRuntime<A extends AuthOptions>(
   const db = async () => (await connect()).db;
 
   let authInstance: ReturnType<typeof createAuth<ReturnType<typeof authOptions<A>>>> | undefined;
-  const auth = async () => (authInstance ??= createAuth((await connect()).options));
+  let requestOrigin: string | undefined;
+  const bindRequest = (request: Request) => {
+    if (requestOrigin) return;
+    const origin = developmentRequestOrigin(request);
+    if (!origin) return;
+    requestOrigin = origin;
+    const baseURL = authInstance?.options.baseURL;
+    if (!host.baseURL && typeof baseURL === "object") baseURL.fallback ??= origin;
+  };
+  const auth = async () => (authInstance ??= createAuth((await connect()).options, requestOrigin));
 
   // `A` hides `getSession` from the type checker, so it is typed here.
   const getSession = async (headers: Headers) =>
@@ -62,5 +72,5 @@ export function createRuntime<A extends AuthOptions>(
 
   const getApiKey = async (key: string) => apiKeyCaller(await auth(), key);
 
-  return { db, auth, getSession, getApiKey };
+  return { db, auth, getSession, getApiKey, bindRequest };
 }

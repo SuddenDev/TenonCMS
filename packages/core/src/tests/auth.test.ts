@@ -1,7 +1,7 @@
 import { createAuthMiddleware } from "better-auth/api";
 import { admin as adminPlugin, anonymous, twoFactor } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineCms } from "../index.ts";
 import { clientRef } from "../admin/config.ts";
 import {
@@ -22,6 +22,125 @@ let client: Env["client"];
 let fetchWithSession: Env["fetchWithSession"];
 beforeEach(() => {
   ({ cms, client, fetchWithSession } = fresh());
+});
+
+describe("development auth origins", () => {
+  const development = () =>
+    setup(
+      defineCms({
+        ...base,
+        auth: { ...base.auth, advanced: { disableOriginCheck: false } },
+      }),
+    );
+  let cms: ReturnType<typeof development>["cms"];
+  let client: ReturnType<typeof development>["client"];
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("__TENON_DEV_ORIGIN", "http://localhost:4329");
+    ({ cms, client } = development());
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("learns a worker's origin per instance after early auth initialization", async () => {
+    vi.stubEnv("__TENON_DEV_ORIGIN", undefined);
+    await cms.auth();
+    await client.signUp(admin);
+    const key = await client.apiKeys.create({
+      name: "Worker",
+      permissions: { "collection:posts": ["read"] },
+    });
+    expect(key.key).toBeTruthy();
+    expect((await cms.auth()).options.baseURL).toMatchObject({ fallback: origin });
+
+    const second = development().cms;
+    await second.fetch(new Request("http://127.0.0.1:4331/_tenon/auth-status"));
+    expect((await second.auth()).options.baseURL).toMatchObject({
+      fallback: "http://127.0.0.1:4331",
+    });
+  });
+
+  it.each(["http://localhost:4329", "http://127.0.0.1:4329", "http://[::1]:4329"])(
+    "signs in on %s and preserves requestless API key calls",
+    async (url) => {
+      const res = await cms.fetch(
+        new Request(`${url}/_tenon/auth/sign-up/email`, {
+          method: "POST",
+          headers: { "content-type": "application/json", origin: url },
+          body: JSON.stringify(admin),
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.getSetCookie().join(";")).toContain("better-auth.session_token");
+
+      await client.signIn(admin);
+      const { key } = await client.apiKeys.create({
+        name: "Read",
+        permissions: { "collection:posts": ["read"] },
+      });
+      const read = await cms.fetch(
+        new Request(`${url}/_tenon/collections/posts`, {
+          headers: { "x-api-key": key },
+        }),
+      );
+      expect(read.status).toBe(200);
+    },
+  );
+
+  it("accepts invites through the requestless user API", async () => {
+    await client.signUp(admin);
+    const { link } = await client.invites.create({
+      email: "invite@example.com",
+      role: "editor",
+      url: `${origin}/admin/invite`,
+    });
+    const token = new URL(link).searchParams.get("token")!;
+    const guest = setup(cms).client;
+    expect(
+      await guest.invites.accept({ token, name: "Editor", password: "password123" }),
+    ).toMatchObject({ user: { email: "invite@example.com" } });
+    expect(await guest.getSession()).toMatchObject({ user: { role: "editor" } });
+  });
+
+  it("builds reset links on the incoming allowed origin", async () => {
+    let resetURL = "";
+    const cms = defineCms({
+      ...base,
+      auth: {
+        ...base.auth,
+        emailAndPassword: {
+          ...base.auth.emailAndPassword,
+          sendResetPassword: async ({ url }) => {
+            resetURL = url;
+          },
+        },
+      },
+    });
+    const env = setup(cms);
+    await env.client.signUp(admin);
+    const url = "http://127.0.0.1:4330";
+    const res = await cms.fetch(
+      new Request(`${url}/_tenon/auth/request-password-reset`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: url },
+        body: JSON.stringify({ email: admin.email, redirectTo: `${url}/admin/reset-password` }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(resetURL).toMatch(/^http:\/\/127\.0\.0\.1:4330\/_tenon\/auth\/reset-password\//);
+  });
+
+  it("rejects unrelated hosts and cross-origin requests", async () => {
+    const send = (url: string, requestOrigin = url) =>
+      cms.fetch(
+        new Request(`${url}/_tenon/auth/sign-up/email`, {
+          method: "POST",
+          headers: { "content-type": "application/json", origin: requestOrigin },
+          body: JSON.stringify(admin),
+        }),
+      );
+    expect((await send("http://localhost:4329", "https://evil.example")).status).toBe(403);
+    expect((await send("https://evil.example")).status).toBeGreaterThanOrEqual(400);
+  });
 });
 
 describe("database", () => {

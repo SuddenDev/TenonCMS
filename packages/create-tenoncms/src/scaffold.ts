@@ -109,7 +109,9 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
   const envFile = index.targets[choices.target]?.envFile ?? ".env";
   await writeFile(
     join(dir, `${envFile}.example`),
-    envExample(parts, source.runtimeConfig ? "NUXT_" : ""),
+    envExample(parts, source.runtimeConfig ? "NUXT_" : "") +
+      "\n# Public CMS origin. Set in production; development detects the origin automatically\n" +
+      "# TENON_BASE_URL=https://cms.example.com\n",
   );
 
   pkg.name = choices.name;

@@ -10,6 +10,7 @@
 | `config/password-length.ts`             | `passwordLength()`: sign-up's length rules on `/admin/create-user`; `lengthProblem()`.                                         |
 | `sign-up.ts`                            | `signUpStatus()`: `setup` while no user exists, `signUp` when a visitor MAY sign up.                                           |
 | `create-auth.ts`                        | Creates the better-auth provider.                                                                                              |
+| `config/base-url.ts`                    | Resolves the host override, Tenon and Better Auth environment URLs, then dynamic development hosts.                            |
 | `get-caller.ts`                         | `caller()`: the request's user and preview perspective; a cookie alone grants no drafts.                                       |
 | `api-key-caller.ts`                     | `apiKeyCaller()`: verifies an API key and returns `{ id, name, permissions }`.                                                 |
 | `config/api-keys.ts`                    | `apiKeys()`: better-auth's `apiKey()`; `apiKeyRoutesOff()` closes its HTTP routes; `newApiKeySecret()` for rolling.            |

@@ -10,6 +10,7 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 - The admin path is an **adapter option** (default `/admin`), not part of the config, because routes are registered at build time before the config can load.
 - Core must stay external in server builds. libsql loads a native binary with a dynamic require, which a bundler breaks. In dev it stays internal so Vite reloads it. Cloudflare builds bundle it: Workers have no native binaries.
 - Types are added by augmenting the app's types with the config type, so the client and `Astro.locals` are typed.
+- Development auth gets its public listener's origin through the internal `__TENON_DEV_ORIGIN` environment variable. Astro uses `astro:server:start`, Nuxt uses `listen` (before Nitro builds its worker), and Vite uses the HTTP server's `listening` event. Workers that do not inherit the hint bind their first validated development request's origin per CMS instance. Only loopback hosts and the adapter-configured hostname (`import.meta.env.TENON_DEV_HOST`) MAY seed that fallback. `dev-auth.ts` also loads `TENON_BASE_URL` from Vite's env files in development. Explicit auth URLs win; production never uses the development allowlist.
 
 ## Site routes and components
 

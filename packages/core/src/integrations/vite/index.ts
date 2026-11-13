@@ -9,6 +9,7 @@ import { adminHtml } from "../admin/html.ts";
 import { adminPath } from "../admin/path.ts";
 import type { AdminOption } from "../admin/types.ts";
 import { JOBS_TASK, withJobsTask } from "../nitro-jobs.ts";
+import { developmentAuth } from "../dev-auth.ts";
 
 const adminEntry = fileURLToPath(new URL("../../admin/entry.ts", import.meta.url));
 const ADMIN_HTML = "#tenon/admin-html";
@@ -80,6 +81,7 @@ export function tenonAdmin({
   let server: ViteDevServer | undefined;
   let html = "";
   return [
+    developmentAuth(),
     clientModules(),
     clientReferences(configEntry),
     {

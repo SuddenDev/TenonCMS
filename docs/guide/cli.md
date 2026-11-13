@@ -26,6 +26,8 @@ npm create tenoncms my-site -- --framework nuxt --target node --database postgre
 
 It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `CMS_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.
 
+The env example also includes `TENON_BASE_URL`, the public CMS origin to set in production. Leave it commented out in development so the adapter detects the server's current URL. Its name is `TENON_BASE_URL` in every framework, including Nuxt; core reads it directly.
+
 ## Back up
 
 ```sh

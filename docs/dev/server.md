@@ -37,6 +37,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 ## Auth
 
 - Auth is better-auth. The host's `auth` options pass through. Core owns the database, base path and secret.
+- `auth/config/base-url.ts` resolves the origin when the provider is created: explicit `auth.baseURL`, `TENON_BASE_URL`, better-auth's URL environment variables, then the adapter's development origin. `TENON_BASE_URL` MUST be an HTTP(S) origin without credentials, path, query or fragment. Development uses a dynamic host allowlist and the actual listener as the requestless fallback. `site` is independent. See [auth options](../guide/auth-and-access.md#auth-options).
 - The first user becomes `admin`. After that, only an admin session can create users. Sign-up is open only during setup.
 - A readable `tenon-session` cookie mirrors the session cookie. It grants nothing; it only lets the site decide whether to ask for the admin bar.
 - Passkeys are off unless the host adds `passkey()` from `@better-auth/passkey`. Rate limits live in the database unless the host sets `rateLimit.storage`. Users have `language` and `timezone` fields.

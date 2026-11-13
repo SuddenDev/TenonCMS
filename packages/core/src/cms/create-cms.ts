@@ -214,6 +214,7 @@ export function defineCms<
       auth,
       getSession,
       getApiKey,
+      bindRequest,
     } = createRuntime<A>(database, secret, host, localized, coreAuth);
 
     // Every query waits for the seeds and `onInit`. They run on `starting`, which reads the database without
@@ -270,7 +271,7 @@ export function defineCms<
       db: connect,
       localApi: (scope) => createLocalApi(starting, scope),
     };
-    return { core, auth, app: createApp(core, site) };
+    return { core, auth, bindRequest, app: createApp(core, site) };
   }
 
   /* ── Instance ──────────────────────────────────────────────────────────────────────── */
@@ -318,6 +319,7 @@ export function defineCms<
        * with the preview cookie.
        */
       async withSession<S>(this: S, request: Request): Promise<S> {
+        bound.bindRequest(request);
         return createInstance(bound, await caller(core, request), false) as S;
       },
 
@@ -329,6 +331,7 @@ export function defineCms<
 
       /** Handles `/_tenon`, `/sitemap.xml` and `/robots.txt`. Mount it in any framework that speaks Request/Response. */
       fetch(request: Request): Promise<Response> {
+        bound.bindRequest(request);
         return app.fetch(request) as Promise<Response>;
       },
     };

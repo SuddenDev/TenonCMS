@@ -23,6 +23,8 @@ Runtime adapter:
 Each integration points `#tenon/config` at the host's `tenon.config.ts`, mounts `/_tenon` (`cms.fetch`, see `src/http/`), serves the admin page (`src/admin/`) and starts the preview runtime (`src/preview/`). Astro and Nuxt also mount `/sitemap.xml` and `/robots.txt` on the same handler, except a path that `siteRoutes()` finds served by the host (see `src/seo/`).
 `tenoncms/vite` only serves the admin; the host mounts the API itself. (see the tanstack start example)
 
+`dev-auth.ts` supplies development auth with the actual listener URL, including a port selected after a conflict. Astro's `astro:server:start`, Nuxt's `listen`, and Vite's `listening` event set the internal `__TENON_DEV_ORIGIN`. Workers that do not inherit it bind the first validated development request's origin per instance. `dev-auth.ts` defines `import.meta.env.TENON_DEV_HOST` for that check; only loopback hosts and the adapter-configured hostname MAY seed the fallback. Core uses a dynamic development allowlist, with that URL as the requestless fallback. `TENON_BASE_URL` is read from Vite's development env files; production reads the runtime environment. See [auth](../auth/README.md).
+
 ## Job clock
 
 Each adapter starts the clock of `cms.jobs.run()` (see `src/jobs/`), unless its `jobs` option is `false`:
