@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
 import * as p from "@clack/prompts";
-import { CmsError, createClient, type Session } from "tenoncms/client";
+import { CmsError, createClient, type Session } from "../client/index.ts";
 import { readCredential, removeCredential, saveCredential } from "./credentials.ts";
-import { spinning } from "./ui.ts";
+import { answer, canAsk, spinning } from "./ui.ts";
 
-export type LoginFlags = { url?: string; admin?: string; open?: boolean };
+export type LoginFlags = { url?: string; admin?: string; open?: boolean; yes?: boolean };
 
 /**
  * `tenon login <url>`: better-auth's device flow. Shows a code, opens the admin to approve it, polls for the session
@@ -13,7 +13,16 @@ export type LoginFlags = { url?: string; admin?: string; open?: boolean };
  * on use).
  */
 export async function loginCommand(url: string | undefined, flags: LoginFlags) {
-  const origin = requireOrigin(url ?? flags.url);
+  url ??= flags.url ?? process.env.TENON_URL;
+  if (!url && canAsk(flags))
+    url = await answer(
+      p.text({
+        message: "Which site do you want to sign in to?",
+        placeholder: "https://example.com",
+        validate: (v) => (URL.canParse(v ?? "") ? undefined : "Enter the full URL, with https://"),
+      }),
+    );
+  const origin = requireOrigin(url);
   const client = createClient({ baseUrl: origin });
 
   const code = await client.device.code();
@@ -54,7 +63,10 @@ export async function logoutCommand(url: string | undefined, flags: LoginFlags) 
 
 function requireOrigin(url: string | undefined) {
   url ??= process.env.TENON_URL;
-  if (!url) throw new Error("Usage: tenon login <url>, e.g. tenon login http://localhost:4321");
+  if (!url)
+    throw new Error(
+      "Usage: tenon login <url>, e.g. tenon login https://example.com. Backups of the local project need no login.",
+    );
   return new URL(url).origin;
 }
 

@@ -27,7 +27,7 @@ jobs:
       - run: pnpm build:packages
       - run: pnpm test
       # `pnpm pack` turns `workspace:` ranges into versions.
-      - run: pnpm --filter tenoncms --filter @tenoncms/cli --filter create-tenoncms pack --pack-destination packed
+      - run: pnpm --filter tenoncms --filter create-tenoncms pack --pack-destination packed
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages

@@ -176,7 +176,7 @@ Expect `{"etag":"1"}`, the same counts, no file left under `.uploads/.tenon/`, a
 
 ## CLI
 
-Run the bin from the build: `node ../../packages/cli/dist/index.mjs` (below: `tenon`). Never point a restore at a database you want to keep: use `DATABASE_URL` with a copy.
+Run the bin from the build: `node ../../packages/core/dist/cli/index.mjs` (below: `tenon`). Never point a restore at a database you want to keep: use `DATABASE_URL` with a copy.
 
 1. Local, in `examples/standalone`: `tenon backup --dry-run --yes`, then `tenon backup --yes --out /tmp/b.zip`.
 2. `cp cms.db /tmp/copy.db`, then `DATABASE_URL=file:/tmp/copy.db tenon restore /tmp/b.zip --dry-run` and the same with `--yes`. The copy keeps its users and has no sessions.

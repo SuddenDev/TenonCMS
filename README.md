@@ -138,7 +138,6 @@ Where to read more: [CLAUDE.md](CLAUDE.md) (commands and rules), [docs/dev](docs
 packages/core             tenoncms: schema, API, admin integration, adapters
 packages/admin            the Vue admin, built into core (private)
 packages/plugins          bundled plugins (private)
-packages/cli              @tenoncms/cli: the tenon command
 packages/create-tenoncms  create-tenoncms: the project scaffolder
 templates/                the starters of create-tenoncms
 examples/                 Astro, Astro + PGlite, Nuxt, TanStack Start, standalone, Vercel, Cloudflare

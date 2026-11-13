@@ -16,7 +16,6 @@ const root = resolve(import.meta.dirname, "..");
 const { version } = JSON.parse(readFileSync(join(root, "packages/core/package.json"), "utf8"));
 const tarballs = {
   tenoncms: join(root, `dist/tenoncms-${version}.tgz`),
-  "@tenoncms/cli": join(root, `dist/tenoncms-cli-${version}.tgz`),
 };
 // Outside the repository, so pnpm does not treat it as a workspace package.
 const name = [framework, template, target, database, storage].filter(Boolean).join("-");

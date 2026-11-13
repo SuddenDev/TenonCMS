@@ -1,12 +1,8 @@
 # The CLI
 
-Two commands: `npm create tenoncms` starts a project, and `tenon` (the package `@tenoncms/cli`) backs it up, restores it and upgrades it. Both need Node 24 or newer.
+Two commands: `npm create tenoncms` starts a project, and `tenon` backs it up, restores it and upgrades it. Both need Node 24 or newer.
 
-New projects get `@tenoncms/cli` as a dev dependency. In an existing project, add it with the same version as `tenoncms`:
-
-```sh
-npm install --save-dev @tenoncms/cli
-```
+`tenon` comes with the `tenoncms` package, so every project that has `tenoncms` has it: `npx tenon backup`. `npx tenoncms backup` is the same command. Remove `@tenoncms/cli` if a project still has it; it was the old home of the command.
 
 ## Create a project
 
@@ -65,7 +61,7 @@ npx tenon login https://example.com
 npx tenon backup --url https://example.com
 ```
 
-`tenon login` shows a code and opens the admin, where a signed-in user approves it. The session is stored per site in `~/.config/tenon/credentials.json` and lasts as long as a normal session (7 days, renewed on use). `tenon logout <url>` ends it. If your admin is not at `/admin`, pass `--admin <path>`; `--no-open` prints the link instead of opening it.
+`tenon login` asks for the URL if you give none. It shows a code and opens the admin, where a signed-in user approves it. Backups of the local project (no `--url`) need no login. The session is stored per site in `~/.config/tenon/credentials.json` and lasts as long as a normal session (7 days, renewed on use). `tenon logout <url>` ends it. If your admin is not at `/admin`, pass `--admin <path>`; `--no-open` prints the link instead of opening it.
 
 For CI, create an API key with the **Backup** permission instead (`read` to back up, `update` to restore) and pass it as `TENON_API_KEY` or `--api-key`. `TENON_URL` replaces `--url`.
 
@@ -77,4 +73,4 @@ Only admins and keys with that permission can back up or restore.
 npx tenon upgrade
 ```
 
-It compares the installed `tenoncms` and `@tenoncms/cli` with the latest versions on npm and installs them with your package manager after a confirm. Below 1.0, a new minor version MAY break things: read the release notes. `--dry-run` only shows the command.
+It compares the installed `tenoncms` with the latest version on npm and installs it with your package manager after a confirm. Below 1.0, a new minor version MAY break things: read the release notes. `--dry-run` only shows the command.

@@ -1,6 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import * as p from "@clack/prompts";
-import type { ExportOptions } from "tenoncms/client";
+import type { ExportOptions } from "../client/index.ts";
 import { openTarget, type Target, type TargetFlags } from "./target.ts";
 import { answer, archiveFileName, canAsk, formatBytes, formatCounts, spinning } from "./ui.ts";
 

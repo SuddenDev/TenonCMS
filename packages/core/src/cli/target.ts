@@ -3,7 +3,7 @@ import { readFile, rename, rm } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { LocalApi } from "tenoncms";
+import type { LocalApi } from "../index.ts";
 import {
   API_KEY_HEADER,
   type ArchiveCheck,
@@ -12,7 +12,7 @@ import {
   type ExportOptions,
   type ImportCounts,
   type Manifest,
-} from "tenoncms/client";
+} from "../client/index.ts";
 import { readCredential } from "./credentials.ts";
 
 /** Where `tenon backup` reads from and `tenon restore` writes to: a config loaded here, or an instance over HTTP. */
@@ -103,7 +103,7 @@ async function packageName() {
  */
 async function loadConfig(path: string): Promise<LocalApi> {
   const { loadEnv, runnerImport } = await import("vite");
-  const { clientModules } = await import("tenoncms/vite");
+  const { clientModules } = await import("../integrations/vite/index.ts");
   for (const [key, value] of Object.entries(loadEnv("production", process.cwd(), "")))
     process.env[key] ??= value;
   const inline = { configFile: false as const, logLevel: "error" as const };

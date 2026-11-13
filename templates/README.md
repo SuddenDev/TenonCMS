@@ -12,7 +12,7 @@ It copies these folders into the project, in order. Later files overwrite earlie
 4. `_databases/<database>/`, or `_targets/<target>/_databases/<database>/` when the target has its own version (Vercel: a libSQL URL MUST be set, and Postgres attaches its pool).
 5. `_storages/<storage>/`, with the same override.
 
-`package.json` files are merged: a layer adds or replaces `scripts` and dependencies. `tenoncms: "latest"` and `@tenoncms/cli: "latest"` become the current version.
+`package.json` files are merged: a layer adds or replaces `scripts` and dependencies. `tenoncms: "latest"` becomes the current version.
 
 ## part.json
 

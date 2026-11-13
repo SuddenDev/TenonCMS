@@ -13,7 +13,7 @@ Commands
   backup               Write a backup of all data, users and media included, into a ZIP file
   restore <file>       Replace all data with a backup. It cannot be undone
   upgrade              Install the latest tenoncms
-  login <url>          Sign in to a deployed instance, for backup and restore
+  login [url]          Sign in to a deployed instance, for backup and restore. Asks for the URL without one
   logout <url>         Sign out again
 
 Where (backup, restore)

@@ -30,9 +30,9 @@ describe("upgrade", () => {
   it("builds the add command of each package manager", () => {
     expect(addCommand("npm", ["tenoncms@1.0.0"])).toEqual(["npm", ["install", "tenoncms@1.0.0"]]);
     expect(addCommand("pnpm", ["a@1", "b@2"])).toEqual(["pnpm", ["add", "a@1", "b@2"]]);
-    expect(addCommand("bun", ["@tenoncms/cli@1.0.0"], true)).toEqual([
+    expect(addCommand("bun", ["tenoncms@1.0.0"], true)).toEqual([
       "bun",
-      ["add", "--dev", "@tenoncms/cli@1.0.0"],
+      ["add", "--dev", "tenoncms@1.0.0"],
     ]);
   });
 });

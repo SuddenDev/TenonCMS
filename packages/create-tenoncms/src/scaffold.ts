@@ -26,7 +26,7 @@ export type Choices = {
   storage: string;
   /** With `pnpm`, the layers' `builds` are approved in `pnpm-workspace.yaml`. */
   pm?: string;
-  /** The version `latest` of `tenoncms` and `@tenoncms/cli` becomes, without a range. `undefined` keeps `latest`. */
+  /** The version `latest` of `tenoncms` becomes, without a range. `undefined` keeps `latest`. */
   tenonVersion?: string;
 };
 
@@ -60,7 +60,7 @@ export async function readIndex(root: string): Promise<TemplateIndex> {
  * Copies the layers into `dir`: the template, the shared target, the framework's target, then the database and the
  * storage. A target MAY have its own version of a database or storage in `_databases/` or `_storages/`. Later files
  * overwrite earlier ones; `package.json` files are merged instead. Then fills the markers of the copied files with each
- * layer's `part.json`, names the package, pins `tenoncms` and `@tenoncms/cli`, and writes the env file with a new
+ * layer's `part.json`, names the package, pins `tenoncms`, and writes the env file with a new
  * `CMS_SECRET`.
  */
 export async function scaffold(root: string, dir: string, choices: Choices) {
@@ -110,11 +110,8 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
   await writeFile(join(dir, `${envFile}.example`), envExample(parts));
 
   pkg.name = choices.name;
-  // `tenoncms` and `@tenoncms/cli` are released together, with the same version.
-  for (const deps of [pkg.dependencies, pkg.devDependencies])
-    for (const name of ["tenoncms", "@tenoncms/cli"])
-      if (deps?.[name] === "latest" && choices.tenonVersion)
-        deps[name] = `^${choices.tenonVersion}`;
+  if (pkg.dependencies?.tenoncms === "latest" && choices.tenonVersion)
+    pkg.dependencies.tenoncms = `^${choices.tenonVersion}`;
   await writeFile(join(dir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
   await writeEnvFiles(dir);
 }

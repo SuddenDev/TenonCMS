@@ -4,10 +4,9 @@ An embeddable CMS for Vite-based frameworks. It runs inside the host app (same r
 
 Packages:
 
-- `packages/core` publishes as `tenoncms`
+- `packages/core` publishes as `tenoncms`, with the `tenon` bin in `src/cli/` (backup, restore, upgrade, login)
 - `packages/plugins` (private): the bundled plugins
 - `packages/admin` (private): the Vue admin
-- `packages/cli` publishes as `@tenoncms/cli`: the `tenon` bin (backup, restore, upgrade, login)
 - `packages/create-tenoncms` publishes as `create-tenoncms`: the scaffolder. Its starters live in `templates/`
 - `examples/{astro,astro-pglite,nuxt,tanstack-start,standalone,cloudflare}`
 
@@ -15,26 +14,26 @@ Packages:
 
 Read the doc for an area before you change it. Update it in the same change.
 
-| Area                                                   | Read                                                                                                         |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| What a host sees (features and options)                | [docs/guide/](docs/guide/README.md)                                                                          |
-| Developer docs index                                   | [docs/dev/](docs/dev/README.md)                                                                              |
-| Architecture, `defineCms()`, module map                | [docs/dev/core.md](docs/dev/core.md)                                                                         |
-| Field types, type inference, validation                | [docs/dev/schema.md](docs/dev/schema.md)                                                                     |
-| Reads, writes, population, integrity                   | [docs/dev/content.md](docs/dev/content.md)                                                                   |
-| Media                                                  | [docs/dev/media.md](docs/dev/media.md)                                                                       |
-| Client, HTTP, auth, users, database                    | [docs/dev/server.md](docs/dev/server.md)                                                                     |
-| Plugins                                                | [docs/dev/plugins.md](docs/dev/plugins.md)                                                                   |
-| Live preview, admin bar                                | [docs/dev/preview.md](docs/dev/preview.md)                                                                   |
-| Admin (core contract and Vue app)                      | [docs/dev/admin.md](docs/dev/admin.md)                                                                       |
-| Astro, Nuxt, Vite, Cloudflare adapters                 | [docs/dev/integrations.md](docs/dev/integrations.md)                                                         |
-| Examples                                               | [docs/dev/examples.md](docs/dev/examples.md)                                                                 |
-| Why it is built this way                               | [docs/dev/design-decisions.md](docs/dev/design-decisions.md)                                                 |
-| Known traps (check when something behaves strangely)   | [docs/dev/gotchas.md](docs/dev/gotchas.md)                                                                   |
-| The `tenon` CLI and `create-tenoncms`                  | [docs/guide/cli.md](docs/guide/cli.md), `packages/cli/README.md`, [templates/README.md](templates/README.md) |
-| Curl smoke tests for adapters, media, locales, invites | [docs/dev/smoke-tests.md](docs/dev/smoke-tests.md)                                                           |
-| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)                                                   |
-| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                                                                       |
+| Area                                                   | Read                                                                                                                  |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| What a host sees (features and options)                | [docs/guide/](docs/guide/README.md)                                                                                   |
+| Developer docs index                                   | [docs/dev/](docs/dev/README.md)                                                                                       |
+| Architecture, `defineCms()`, module map                | [docs/dev/core.md](docs/dev/core.md)                                                                                  |
+| Field types, type inference, validation                | [docs/dev/schema.md](docs/dev/schema.md)                                                                              |
+| Reads, writes, population, integrity                   | [docs/dev/content.md](docs/dev/content.md)                                                                            |
+| Media                                                  | [docs/dev/media.md](docs/dev/media.md)                                                                                |
+| Client, HTTP, auth, users, database                    | [docs/dev/server.md](docs/dev/server.md)                                                                              |
+| Plugins                                                | [docs/dev/plugins.md](docs/dev/plugins.md)                                                                            |
+| Live preview, admin bar                                | [docs/dev/preview.md](docs/dev/preview.md)                                                                            |
+| Admin (core contract and Vue app)                      | [docs/dev/admin.md](docs/dev/admin.md)                                                                                |
+| Astro, Nuxt, Vite, Cloudflare adapters                 | [docs/dev/integrations.md](docs/dev/integrations.md)                                                                  |
+| Examples                                               | [docs/dev/examples.md](docs/dev/examples.md)                                                                          |
+| Why it is built this way                               | [docs/dev/design-decisions.md](docs/dev/design-decisions.md)                                                          |
+| Known traps (check when something behaves strangely)   | [docs/dev/gotchas.md](docs/dev/gotchas.md)                                                                            |
+| The `tenon` CLI and `create-tenoncms`                  | [docs/guide/cli.md](docs/guide/cli.md), `packages/core/src/cli/README.md`, [templates/README.md](templates/README.md) |
+| Curl smoke tests for adapters, media, locales, invites | [docs/dev/smoke-tests.md](docs/dev/smoke-tests.md)                                                                    |
+| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)                                                            |
+| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                                                                                |
 
 ## Commands
 
@@ -49,7 +48,7 @@ Read the doc for an area before you change it. Update it in the same change.
   - `pnpm test:full`: also runs the integration suite on PGlite and `node:sqlite`, and the workerd tests. Run it before calling work done that touches SQL, migrations or the database adapters.
   - Watch: `pnpm --filter tenoncms test:watch`.
   - One test: `npx vitest run --project node <file> -t '<name>'` in `packages/core`. `pnpm ... test -- -t` does not filter.
-- `pnpm tarball`, then `pnpm smoke:templates <framework> <target> [database] [storage] [template]`: scaffolds a starter against the packed `tenoncms` and `@tenoncms/cli`, installs, builds and runs `tenon backup --dry-run`. CI runs the jobs of `scripts/template-matrix.mjs`.
+- `pnpm tarball`, then `pnpm smoke:templates <framework> <target> [database] [storage] [template]`: scaffolds a starter against the packed `tenoncms`, installs, builds and runs `tenon backup --dry-run`. CI runs the jobs of `scripts/template-matrix.mjs`.
 - `pnpm release`: bumps every version with bumpp, commits, tags and pushes; the tag publishes to npm. See [docs/dev/releasing.md](docs/dev/releasing.md).
 - `pnpm lint` (oxlint) / `pnpm fmt` (oxfmt): the husky pre-commit hook runs lint-staged (`oxlint --fix`, then `oxfmt`). `pnpm install` enables it via `prepare`.
   - oxfmt cannot format `.astro`, so those files use Prettier with `prettier-plugin-astro` (`.prettierrc.json`).

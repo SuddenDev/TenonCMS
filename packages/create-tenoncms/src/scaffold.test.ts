@@ -27,7 +27,6 @@ describe("scaffold", () => {
       tenoncms: "^1.2.3",
       "@astrojs/cloudflare": expect.any(String),
     });
-    expect(pkg.devDependencies).toMatchObject({ "@tenoncms/cli": "^1.2.3" });
     expect(pkg.scripts).toMatchObject({ dev: "astro dev", deploy: expect.any(String) });
     expect(read(dir, "tenon.config.ts")).toContain("database: durableObject(),");
     expect(read(dir, "tenon.config.ts")).toContain("secret: CMS_SECRET,");

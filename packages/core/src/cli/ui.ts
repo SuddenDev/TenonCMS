@@ -1,5 +1,5 @@
 import { isCancel, spinner } from "@clack/prompts";
-import type { ArchiveCounts } from "tenoncms/client";
+import type { ArchiveCounts } from "../client/index.ts";
 
 /** `1.2 MB`, in powers of 1000. */
 export function formatBytes(bytes: number) {

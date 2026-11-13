@@ -36,6 +36,8 @@ export default defineConfig({
     "src/media/default.ts",
     // Cloudflare Workers resolve `local`, `ipx` and `default` here, by the `workerd` export condition.
     "src/media/workerd.ts",
+    // The `tenon` bin.
+    "src/cli/index.ts",
   ],
   // Core imports its default media through the package exports, so Workers builds get `workerd.ts` instead.
   // The admin bar is built by the admin package; the host's bundler splits it into its own chunk.

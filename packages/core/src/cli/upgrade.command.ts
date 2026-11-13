@@ -16,22 +16,21 @@ const LOCKFILES: [string, PackageManager][] = [
   ["package-lock.json", "npm"],
 ];
 
-// Released together, with the same version.
-const PACKAGES = ["tenoncms", "@tenoncms/cli"];
-
 type Update = { name: string; installed: string; latest: string; dev: boolean };
 
 /**
- * `tenon upgrade`: compares the installed `tenoncms` and `@tenoncms/cli` with the latest on npm and installs the newer
- * ones after a confirm. Only packages in the project's `package.json` are upgraded.
+ * `tenon upgrade`: compares the installed `tenoncms` with the latest on npm and installs it after a confirm, as a
+ * dependency or dev dependency, where the project's `package.json` has it.
  */
 export async function upgradeCommand(flags: UpgradeFlags) {
   const cwd = process.cwd();
   const pkg = await readJson(join(cwd, "package.json"));
   if (!pkg) throw new Error("No package.json here. Run tenon upgrade in your project.");
+  if (pkg.dependencies?.["@tenoncms/cli"] || pkg.devDependencies?.["@tenoncms/cli"])
+    p.log.warn("Remove @tenoncms/cli from package.json. tenoncms has the tenon command now.");
 
   const updates: Update[] = [];
-  for (const name of PACKAGES) {
+  for (const name of ["tenoncms"]) {
     const dev = !pkg.dependencies?.[name] && !!pkg.devDependencies?.[name];
     if (!pkg.dependencies?.[name] && !dev) continue;
     const installed = (await readJson(join(cwd, "node_modules", name, "package.json")))?.version;
