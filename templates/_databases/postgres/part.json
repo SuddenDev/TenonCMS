@@ -8,7 +8,7 @@
   "env": [
     {
       "name": "DATABASE_URL",
-      "comment": "The connection string.",
+      "comment": "DB connection string",
       "example": "postgres://postgres:postgres@localhost:5432/cms"
     }
   ]

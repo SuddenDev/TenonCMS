@@ -1,7 +1,7 @@
 {
   "files": {
     "tenon.config.ts": {
-      "options": ["// Files in ./.uploads.", "media: true,"]
+      "options": ["// By default, media files are located in ./.uploads.", "media: true,"]
     }
   }
 }

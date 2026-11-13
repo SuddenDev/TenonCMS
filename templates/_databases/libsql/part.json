@@ -13,12 +13,12 @@
   "env": [
     {
       "name": "DATABASE_URL",
-      "comment": "A SQLite file, relative to the working directory. Use an absolute path or Turso (libsql://<db>-<org>.turso.io) in production.",
+      "comment": "A SQLite file, relative to the working directory. It's recommended to use an absolute path or Turso (libsql://<db>-<org>.turso.io) in production.",
       "default": "file:./cms.db"
     },
     {
       "name": "DATABASE_AUTH_TOKEN",
-      "comment": "Turso's token. A file needs none.",
+      "comment": "Optional Turso auth token. If you use a local file, you won't need it.",
       "optional": true
     }
   ]

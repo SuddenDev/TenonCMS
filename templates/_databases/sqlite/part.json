@@ -8,7 +8,7 @@
   "env": [
     {
       "name": "DATABASE_PATH",
-      "comment": "The SQLite file, relative to the working directory. Use an absolute path in production.",
+      "comment": "The SQLite file, relative to the working directory. It is recommneded to use an absolute path in production.",
       "default": "./cms.db"
     }
   ]

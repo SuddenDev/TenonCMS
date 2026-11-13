@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
-import { parseArgs, styleText } from "node:util";
+import { parseArgs } from "node:util";
 import * as p from "@clack/prompts";
 import { fetchTemplates, readIndex, scaffold, toPackageName } from "./scaffold.ts";
 
@@ -57,18 +57,19 @@ async function main() {
   if (flags.help) return void process.stdout.write(HELP);
   const ask = !flags.yes && !!process.stdin.isTTY;
 
-  p.intro(styleText("inverse", " create-tenoncms "));
+  // p.intro(styleText("#13dc13", " TENON"));
+  p.note("Let's get started setting up your project!", "Welcome to TENON");
   const dir = resolve(
     positionals[0] ??
       (ask
         ? await answer(
             p.text({
-              message: "Where should the project go?",
-              initialValue: "my-site",
-              validate: (v) => (v?.trim() ? undefined : "Enter a folder"),
+              message: "Where should we put your new project?",
+              placeholder: "./tenon-cms",
+              defaultValue: "./tenon-cms",
             }),
           )
-        : "my-site"),
+        : "./tenon-cms"),
   );
   await prepareFolder(dir, ask);
 
@@ -83,9 +84,14 @@ async function main() {
   spin.stop("Fetched the templates");
   const index = await readIndex(root);
 
-  const framework = await choose(index.frameworks, flags.framework, "Which framework?", ask);
+  const framework = await choose(
+    index.frameworks,
+    flags.framework,
+    "Which framework would you like to work with?",
+    ask,
+  );
   const templates = pick(index.templates, (t) => t.frameworks.includes(framework));
-  const template = await choose(templates, flags.template, "Which template?", ask);
+  const template = await choose(templates, flags.template, "Do you want a starter template?", ask);
   const targets = pick(index.targets, (_, key) =>
     index.frameworks[framework]!.targets.includes(key),
   );
@@ -95,7 +101,7 @@ async function main() {
   const database = await choose(
     Object.fromEntries(databases.map((id) => [id, index.databases[id]!])),
     flags.database,
-    "Which database?",
+    "Which database should we use?",
     ask,
   );
   const storage = await choose(
@@ -153,7 +159,7 @@ async function main() {
     p.log.info(
       `On Vercel, set the variables of ${envFile} in the project settings.${database === "libsql" ? " DATABASE_URL MUST be a Turso URL there." : ""}`,
     );
-  p.outro("Open /admin to create the first admin.");
+  p.outro("Open /admin to create the first admin user.");
 }
 
 /** Empties or keeps a folder that has files, after asking. Without a terminal it MUST be empty. */
