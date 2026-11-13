@@ -42,7 +42,7 @@ describe("scaffold", () => {
     const dir = project();
     await scaffold(templates, dir, {
       name: "a",
-      framework: "nuxt",
+      framework: "astro",
       template: "minimal",
       target: "node",
       database: "pglite",
@@ -53,12 +53,75 @@ describe("scaffold", () => {
     const secret = read(dir, ".env").match(/^CMS_SECRET=(.*)$/m)?.[1];
     expect(secret).toMatch(/^[0-9a-f]{64}$/);
     expect(read(dir, ".env.example")).toContain("change-me");
-    expect(read(dir, ".env.example")).toContain("S3_BUCKET=uploads");
-    expect(read(dir, "tenon.config.ts")).toContain("new PGlite(process.env.DATABASE_DIR");
+    expect(read(dir, ".env.example")).toMatch(/^S3_BUCKET=uploads$/m);
+    expect(read(dir, "tenon.config.ts")).toContain("new PGlite(DATABASE_DIR)");
+    expect(read(dir, "astro.config.ts")).toContain("DATABASE_DIR: envField.string(");
     expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty(
       "@electric-sql/pglite",
     );
     expect(read(dir, ".gitignore")).toMatch(/^\.pglite$/m);
+  });
+
+  it("reads Nuxt's runtimeConfig, set by NUXT_ variables", async () => {
+    const dir = project();
+    await scaffold(templates, dir, {
+      name: "a",
+      framework: "nuxt",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "s3",
+    });
+
+    const nuxt = read(dir, "nuxt.config.ts");
+    expect(nuxt).toContain('cmsSecret: "",');
+    expect(nuxt).toContain('databaseUrl: "file:./cms.db",');
+    expect(nuxt).toContain('databaseAuthToken: "",');
+    expect(nuxt).toContain('s3Bucket: "",');
+    expect(nuxt).toContain('awsEndpointUrlS3: "",');
+
+    const config = read(dir, "tenon.config.ts");
+    expect(config).toContain("const config = useRuntimeConfig();");
+    expect(config).toContain("secret: config.cmsSecret,");
+    expect(config).toContain("url: config.databaseUrl,");
+    expect(config).toContain("authToken: config.databaseAuthToken || undefined,");
+    expect(config).toContain("bucket: config.s3Bucket,");
+    expect(config).toContain("endpoint: config.awsEndpointUrlS3,");
+
+    const example = read(dir, ".env.example");
+    expect(example).toMatch(/^# NUXT_DATABASE_URL=file:\.\/cms\.db$/m);
+    expect(example).toMatch(/^# NUXT_DATABASE_AUTH_TOKEN=$/m);
+    expect(example).toMatch(/^NUXT_S3_BUCKET=uploads$/m);
+    expect(example).toMatch(/^NUXT_AWS_ENDPOINT_URL_S3=/m);
+    expect(read(dir, ".env")).toMatch(/^NUXT_CMS_SECRET=[0-9a-f]{64}$/m);
+  });
+
+  it("declares every runtimeConfig key that a Nuxt starter reads, with its NUXT_ variable", async () => {
+    const index = await readIndex(templates);
+    for (const target of index.frameworks.nuxt!.targets)
+      for (const database of index.targets[target]!.databases)
+        for (const storage of index.targets[target]!.storages) {
+          const dir = project();
+          const choices = { name: "a", framework: "nuxt", template: "minimal", target };
+          await scaffold(templates, dir, { ...choices, database, storage });
+          const combo = `${target}/${database}/${storage}`;
+
+          const config = read(dir, "tenon.config.ts");
+          const nuxt = read(dir, "nuxt.config.ts");
+          const example = read(dir, ".env.example");
+          const keys = [...nuxt.matchAll(/^ {4}(\w+): ".*",$/gm)].map((m) => m[1]!);
+          const used = [...config.matchAll(/\bconfig\.(\w+)/g)].map((m) => m[1]!);
+
+          expect(config, combo).not.toContain("process.env");
+          expect(config + nuxt, combo).not.toContain("@tenon-");
+          expect(keys, combo).toContain("cmsSecret");
+          for (const key of used) expect(keys, `${combo}: ${key}`).toContain(key);
+          for (const key of keys) {
+            const name = `NUXT_${key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}`;
+            expect(example, `${combo}: ${name}`).toMatch(new RegExp(`^(# )?${name}=`, "m"));
+          }
+          expect(example, combo).not.toMatch(/^(# )?(?!NUXT_)[A-Z_0-9]+=/m);
+        }
   });
 
   it("approves the dependency builds the layers need, for pnpm", async () => {
