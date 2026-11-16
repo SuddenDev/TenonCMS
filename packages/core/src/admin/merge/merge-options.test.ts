@@ -190,6 +190,12 @@ describe("admin bar registration merge", () => {
 describe("admin registration validation", () => {
   const host = (admin: object) => () => mergeAdmin([], admin as never);
 
+  it("accepts a plain string as page header", () => {
+    expect(
+      host({ pages: { p: { mount: clientRef("./p"), pageHeader: "Reports" } } }),
+    ).not.toThrow();
+  });
+
   it("only accepts functions in load", () => {
     expect(host({ fields: { color: { mount: () => {} } } })).toThrow("clientRef()");
     expect(host({ pages: { p: { mount: clientRef("./p"), pageHeader: () => "" } } })).toThrow(

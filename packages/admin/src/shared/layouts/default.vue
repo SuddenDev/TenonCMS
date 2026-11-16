@@ -55,6 +55,10 @@ const perspectives = [
 ] as const;
 const trail = useBreadcrumbs();
 const pageTitle = computed(() => trail.value.at(-1)?.label ?? t("nav.page"));
+const pageHeader = computed(() => {
+  const value = route.meta.pageHeader;
+  return (typeof value === "function" ? value() : value) ?? !route.meta.full;
+});
 const row = ref<HTMLElement>();
 providePanes(row);
 </script>
@@ -214,23 +218,27 @@ providePanes(row);
       <div ref="row" class="flex min-h-0 flex-1 overflow-x-auto">
         <div v-if="route.meta.full" class="flex min-w-0 flex-1 flex-col">
           <header
-            v-if="route.meta.pageHeader"
+            v-if="pageHeader"
             class="border-border flex h-12 shrink-0 items-center border-b px-4"
           >
-            <PageTitle :value="route.meta.pageHeader" />
+            <PageTitle :value="pageHeader" />
           </header>
           <main class="min-h-0 flex-1 overflow-auto"><slot /></main>
         </div>
         <template v-else>
           <MenuPane v-if="route.meta.menu !== false" />
           <slot v-if="route.meta.panes" />
-          <Pane v-else :title="pageTitle" :min="448" grow :collapsible="false">
-            <template #header>
-              <header
-                v-if="route.meta.pageHeader"
-                class="border-border flex h-12 shrink-0 items-center border-b px-4"
-              >
-                <PageTitle :value="route.meta.pageHeader" />
+          <Pane
+            v-else
+            :title="typeof pageHeader === 'string' ? pageHeader : pageTitle"
+            :hide-header="pageHeader === false"
+            :min="448"
+            grow
+            :collapsible="false"
+          >
+            <template v-if="typeof pageHeader === 'object'" #header>
+              <header class="border-border flex h-12 shrink-0 items-center border-b px-4">
+                <PageTitle :value="pageHeader" />
               </header>
             </template>
             <main class="h-full"><slot /></main>

@@ -14,9 +14,9 @@ import { useBreadcrumbs } from "@/shared/composables/useBreadcrumbs";
 import { i18n } from "@/shared/i18n";
 import { tenonKey, pageDataKey, registryKey } from "@/shared/options";
 
-// `true`: the title as text, `false`: nothing, an array: these breadcrumbs, a `clientRef`: a callback that returns
-// HTML or breadcrumbs.
-const props = defineProps<{ value: boolean | Crumb[] | ClientRef<PageHeader<any>> }>();
+// `true`: the title as text, `false`: nothing, a string: this text, an array: these breadcrumbs, a `clientRef`:
+// a callback that returns HTML or breadcrumbs.
+const props = defineProps<{ value: boolean | string | Crumb[] | ClientRef<PageHeader<any>> }>();
 const route = useRoute();
 const trail = useBreadcrumbs();
 const tenon = inject(tenonKey)!;
@@ -80,7 +80,9 @@ const shown = computed(() => {
     return undefined;
   }
 });
-const title = computed(() => trail.value.at(-1)?.label);
+const title = computed(() =>
+  typeof props.value === "string" ? props.value : trail.value.at(-1)?.label,
+);
 
 // `Mount` also opens links under the admin path without a reload.
 const renderHtml: MountFn<{ html: string }> = (el, { html }) => {

@@ -17,8 +17,11 @@ declare module "vue-router" {
     panes?: boolean;
     /** The view is a page of its own: full width, without the menu or panes. The top bar stays. */
     full?: boolean;
-    /** The header above a view without panes. Defaults to none. */
-    pageHeader?: PageDescriptor["pageHeader"];
+    /**
+     * The header above a view without panes. Defaults to the title, and to none with `full`. A function reads
+     * the value from the schema.
+     */
+    pageHeader?: PageDescriptor["pageHeader"] | (() => PageDescriptor["pageHeader"]);
     /** Key of the host page this route shows. */
     page?: string;
     /** The host page has a server loader. */

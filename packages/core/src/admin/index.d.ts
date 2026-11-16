@@ -360,8 +360,9 @@ export type PageRegistration<D = any> = {
   /**
    * The visible header area above the page: for pages with `nav.display` `content` or `settings` the header of
    * the page's pane, otherwise a bar above the page.
-   * - `false`: no header (default).
-   * - `true`: the `title` as text.
+   * - `true`: the `title` as text. The default for `content` and `settings` pages.
+   * - `false`: no header. The default for `main` and `none` pages.
+   * - a string: this text.
    * - `Crumb[]`: these breadcrumbs.
    * - `clientRef()` of a {@link PageHeader}: gets the breadcrumbs of the route and the page context, and returns
    *   an HTML string or breadcrumbs. Links in the HTML under `tenon.base` open without a reload. The admin
@@ -369,7 +370,7 @@ export type PageRegistration<D = any> = {
    * @example
    * pageHeader: clientRef('./src/admin/reports.ts#header')
    */
-  pageHeader?: boolean | Crumb[] | BrowserValue<PageHeader<D>>;
+  pageHeader?: boolean | string | Crumb[] | BrowserValue<PageHeader<D>>;
   /** Renders the page. Runs in the browser. */
   mount: BrowserValue<Mount<PageContext<D>>>;
   /**
@@ -601,7 +602,7 @@ export type FieldDescriptor = {
 /** A page registration as `/schema` sends it. `load` is only a flag: the function stays on the server. */
 export type PageDescriptor = Omit<PageRegistration, "mount" | "load" | "pageHeader"> & {
   mount: ClientRef<Mount<PageContext<any>>>;
-  pageHeader?: boolean | Crumb[] | ClientRef<PageHeader<any>>;
+  pageHeader?: boolean | string | Crumb[] | ClientRef<PageHeader<any>>;
   load?: true;
 };
 

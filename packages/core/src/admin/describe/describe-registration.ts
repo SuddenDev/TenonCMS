@@ -10,13 +10,17 @@ export function describeField(key: string, value: unknown, source: string) {
 }
 
 /**
- * Checks a page registration. `pageHeader` MUST be a boolean, an array of crumbs or a `clientRef()`.
+ * Checks a page registration. `pageHeader` MUST be a boolean, a string, an array of crumbs or a `clientRef()`.
  * @returns Its descriptor and its loader.
  */
 export function describePage(key: string, value: unknown, source: string) {
   return describeEntry<PageDescriptor>("pages", key, value, source, (entry, path) => {
     const { pageHeader } = entry;
-    if (pageHeader !== undefined && typeof pageHeader !== "boolean" && !Array.isArray(pageHeader))
+    if (
+      pageHeader !== undefined &&
+      !["boolean", "string"].includes(typeof pageHeader) &&
+      !Array.isArray(pageHeader)
+    )
       requireRef(pageHeader, `${path}.pageHeader`, source);
   });
 }

@@ -96,7 +96,9 @@ async function loaded(options: { load?: true } = { load: true }) {
   app = createApp({
     render: () =>
       h("div", [
-        h("header", [h(PageTitle, { value: router.currentRoute.value.meta.pageHeader ?? true })]),
+        h("header", [
+          h(PageTitle, { value: (router.currentRoute.value.meta.pageHeader ?? true) as never }),
+        ]),
         h(RouterView),
       ]),
   })

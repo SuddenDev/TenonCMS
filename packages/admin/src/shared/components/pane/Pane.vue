@@ -13,6 +13,8 @@ export interface PaneProps {
   width?: number;
   /** Edge of the resize handle */
   handle?: "left" | "right";
+  /** Renders no header, not even the default one */
+  hideHeader?: boolean;
 }
 </script>
 <script setup lang="ts">
@@ -87,7 +89,7 @@ function startResize(e: PointerEvent) {
       <span class="text-sm font-medium [writing-mode:vertical-rl]">{{ title }}</span>
     </Button>
     <template v-else>
-      <slot name="header" :toggle="toggle">
+      <slot v-if="!hideHeader" name="header" :toggle="toggle">
         <header class="border-border flex h-12 shrink-0 items-center gap-1 border-b pr-2 pl-3">
           <Button
             v-if="back"

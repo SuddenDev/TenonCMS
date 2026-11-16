@@ -168,8 +168,9 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 
 | Value                       | Result                                                                                                                              |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `false` (default)           | Nothing                                                                                                                             |
-| `true`                      | The title as text                                                                                                                   |
+| `true`                      | The title as text. The default for pages in the content menu or on the Settings page                                                |
+| `false`                     | No bar. The default for `main` and `none` pages                                                                                     |
+| a string                    | This text                                                                                                                           |
 | `[{ label, to }]`           | Breadcrumbs                                                                                                                         |
 | `clientRef()` of a function | `(crumbs, { params, query, data, tenon })` returns an HTML string or breadcrumbs. `crumbs` are the route's. It MUST be synchronous. |
 
