@@ -77,7 +77,7 @@ describe("s3", () => {
     expect(url.searchParams.get("X-Amz-Expires")).toBe("3600");
   });
 
-  it("completes with parts sorted by number, then reads the size", async () => {
+  it("completes with XML and parts sorted by number, then reads the size", async () => {
     const { calls, fetch } = fake((c) =>
       c.method === "HEAD" ? new Response(null, { headers: { "content-length": "42" } }) : undefined,
     );
@@ -89,6 +89,7 @@ describe("s3", () => {
     expect(result).toEqual({ size: 42 });
     expect(calls[0].method).toBe("POST");
     expect(calls[0].url.searchParams.get("uploadId")).toBe("u1");
+    expect(calls[0].headers.get("content-type")).toBe("application/xml");
     expect(calls[0].body).toBe(
       '<CompleteMultipartUpload><Part><PartNumber>1</PartNumber><ETag>"a"</ETag></Part><Part><PartNumber>2</PartNumber><ETag>"b"</ETag></Part></CompleteMultipartUpload>',
     );

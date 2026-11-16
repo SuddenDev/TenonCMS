@@ -36,6 +36,7 @@ export function s3Multipart(client: S3Client): Multipart {
       .join("");
     await client.send("POST", key, {
       query: { uploadId },
+      headers: { "content-type": "application/xml" },
       body: `<CompleteMultipartUpload>${xml}</CompleteMultipartUpload>`,
     });
     return { size: (await client.size(key)) ?? 0 };

@@ -84,3 +84,4 @@ Rules:
 - Media documents live in `cms_documents`. `cms_media_key_idx` keeps `key` unique; `/files` and `/img` look documents up with `mediaByKey()`, which uses it.
 - Variants live under `.variants/<key>/<modifiers>`, so `storage.list('.variants/<key>/')` finds one file's variants. Regeneration uses this layout for orphan cleanup.
 - `.variants` and `.tmp` are reserved folder names.
+- S3 multipart completion MUST set `Content-Type: application/xml` before signing its XML body, including completion of multipart copies.
