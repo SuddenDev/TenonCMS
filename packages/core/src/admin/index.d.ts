@@ -555,7 +555,7 @@ export type AdminOptions = {
   icon?: Themed;
   /**
    * Favicon of the admin page. Defaults to `icon`, then to the host's `favicon.svg`, `.ico` or `.png`
-   * in its public folder, if there is one.
+   * in its public folder, then to the tenoncms icon in the OS color scheme.
    */
   favicon?: Themed;
   /**

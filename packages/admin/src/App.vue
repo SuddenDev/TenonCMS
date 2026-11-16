@@ -8,6 +8,7 @@ import { useTheme } from "@/shared/composables/useTheme";
 import { useBrand } from "@/shared/composables/useBrand";
 import { CONTENT, optionsKey, sessionKey } from "@/shared/options";
 import { Toaster } from "@/shared/components/ui/sonner";
+import tenonIcon from "@/shared/components/logo/tenon-icon.svg?raw";
 
 const { user, loading, load, signOut, expire, error } = useSession();
 const route = useRoute();
@@ -49,11 +50,18 @@ const viewKey = computed(() =>
 const { name } = useBrand();
 const options = inject(optionsKey, {});
 const favicon = computed(() => options.favicon);
+// A favicon has no theme of its own, so the default icon follows the OS color scheme.
+const defaultFavicon = `data:image/svg+xml,${encodeURIComponent(
+  tenonIcon.replace(
+    "<path",
+    "<style>svg{color:#171717}@media (prefers-color-scheme:dark){svg{color:#fafafa}}</style><path",
+  ),
+)}`;
 
 useHead(() => ({
   titleTemplate: (title) => (title ? `${title} · ${name.value}` : name.value),
   link: !favicon.value
-    ? []
+    ? [{ rel: "icon", type: "image/svg+xml", href: defaultFavicon }]
     : typeof favicon.value === "string"
       ? [{ rel: "icon", href: favicon.value }]
       : [

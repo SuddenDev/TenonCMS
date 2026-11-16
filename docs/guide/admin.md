@@ -127,7 +127,7 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
   ```
 
 - The admin links these files and does not bundle them. Put them in your `public/` folder (`static/` where the framework calls it that) and use the URL, like `/logo.svg`.
-- The favicon is `favicon` if set, else `icon`, else your `favicon.svg`, `.ico` or `.png` in the public folder. `favicon` takes a URL or a `{ light, dark }` pair.
+- The favicon is `favicon` if set, else `icon`, else your `favicon.svg`, `.ico` or `.png` in the public folder, else the tenoncms icon in the OS color scheme. `favicon` takes a URL or a `{ light, dark }` pair.
 
 ## Menu and navigation
 
