@@ -199,9 +199,10 @@ providePanes(row);
           </DropdownMenuContent>
         </DropdownMenu>
         <Separator orientation="vertical" class="h-6 self-center!" />
-        <Button variant="ghost" size="icon-sm" :aria-label="t('nav.search')">
+        <!-- TODO: search button -->
+        <!-- <Button variant="ghost" size="icon-sm" :aria-label="t('nav.search')">
           <Icon name="search" />
-        </Button>
+        </Button> -->
         <NavUser />
       </div>
     </header>

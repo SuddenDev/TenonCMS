@@ -518,18 +518,14 @@ describe("/schema", () => {
       name: "secret",
       description: "Hidden",
     });
-    expect((await schema(b)).jobs.map((j) => j.name).sort()).toEqual([
-      "tenon:publish",
-      "tenon:unpublish",
-    ]);
+    expect((await schema(b)).jobs).toEqual([]);
     expect((await setup(cms).fetch(`${origin}/_tenon/schema`)).status).toBe(401);
   });
 
-  it("leaves the built-in tasks out when the user may update no scheduled entry", async () => {
+  it("lists a task for an editor when its rule allows them", async () => {
     const cms = defineCms({
-      collections: {
-        locked: { schedule: true, access: { update: ["admin"] }, fields: { t: { type: "text" } } },
-      },
+      collections: { posts: { schedule: true, fields: { t: { type: "text" } } } },
+      jobs: { tasks: { digest: defineTask({ access: ["editor"], run: () => {} }) } },
       media: false,
       settings: false,
       database: testDatabase(),
@@ -541,7 +537,6 @@ describe("/schema", () => {
     const b = setup(cms);
     await b.client.signIn(editor);
 
-    expect((await schema(a)).jobs).toHaveLength(2);
-    expect((await schema(b)).jobs).toEqual([]);
+    expect((await schema(b)).jobs.map((j) => j.name)).toEqual(["digest"]);
   });
 });

@@ -8,9 +8,9 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `collections/`  | Collection config, document operations and endpoints.             | [README](collections/README.md)             |
 | `globals/`      | Global config, singleton operations and endpoints.                | [README](globals/README.md)                 |
 | `content/`      | Shared lifecycle, reads/writes, population and integrity.         | [README](content/README.md)                 |
-| `auth/`         | better-auth provider, caller lookup and session middleware.       | [README](auth/README.md)                    |
+| `auth/`         | better-auth provider, sign-in methods, caller lookup, sessions.   | [README](auth/README.md)                    |
 | `email/`        | Server-side delivery, adapters and authentication templates.      | [README](email/README.md)                   |
-| `users/`        | Roles, invites, their operations and endpoints.                   | [README](users/README.md)                   |
+| `users/`        | Roles, invites, `cms.users`, their operations and endpoints.      | [README](users/README.md)                   |
 | `api-keys/`     | API key management: operations and endpoints.                     | [README](api-keys/README.md)                |
 | `locks/`        | Edit locks for the admin: claim, renew, take over, free.          | [README](locks/README.md)                   |
 | `versions/`     | Version history: list, read and restore past versions.            | [README](versions/README.md)                |
@@ -34,7 +34,7 @@ A feature-first modular monolith. Each module owns a capability; collections and
 | `seo/`          | `/sitemap.xml`, `/robots.txt` and `cms.sitemap()`.                | [README](seo/README.md)                     |
 | `admin/`        | Page/build glue and public UI extension contracts.                | [README](admin/README.md)                   |
 | `integrations/` | Framework adapters, Vue components and preview helpers.           | [README](integrations/README.md)            |
-| `cli/`          | The `tenon` bin: backup, restore, upgrade, login.                 | [README](cli/README.md)                     |
+| `cli/`          | The `tenon` bin: backup, restore, upgrade, login, users.          | [README](cli/README.md)                     |
 | `tests/`        | Behavior tests against a real in-memory CMS.                      | [README](tests/README.md)                   |
 
 `index.ts` lists the public root exports. `errors.ts` remains import-free for browser consumers. Internal implementations import their owning leaf modules. Feature definitions belong to `config/`; Hono routes to `endpoints/`; use cases to `operations/`; scoped collection/global methods to `operations/local/`.

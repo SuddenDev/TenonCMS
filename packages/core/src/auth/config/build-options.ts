@@ -14,8 +14,13 @@ import { signUpStatus } from "../sign-up.ts";
 import { BUILT_IN_ROLES, type Role } from "../../users/roles.ts";
 import { userAccess } from "./access.ts";
 import { apiKeyRoutesOff, apiKeys } from "./api-keys.ts";
+import { withEmailSender } from "./email-sign-in.ts";
 import { lastAdmin } from "./last-admin.ts";
+import { lastPasskey } from "./last-passkey.ts";
+import { lastSignInMethod } from "./last-sign-in-method.ts";
+import { manageUsers } from "./manage-users.ts";
 import { passwordLength } from "./password-length.ts";
+import { signInUser } from "./sign-in-user.ts";
 import { userFields } from "./user-fields.ts";
 
 /** What core adds to the host's better-auth options. */
@@ -59,7 +64,7 @@ export function authOptions<A extends AuthOptions>(
     // The admin manages users with `admin()`. API keys come from `apiKey()`. A host's plugin with the same id replaces
     // core's. Typed as the host's plugins: their endpoint types break the declaration build (TS7056).
     plugins: [
-      ...plugins,
+      ...(email ? plugins.map((p) => withEmailSender(p, email)) : plugins),
       ...(has("admin")
         ? []
         : [admin({ ...userAccess(roles), adminRoles: ["admin"], defaultRole: "editor" })]),
@@ -76,14 +81,17 @@ export function authOptions<A extends AuthOptions>(
             }),
           ]),
       ...(has("bearer") ? [] : [bearer()]),
+      ...(has("last-login-method") ? [] : [lastSignInMethod()]),
       apiKeyRoutesOff(),
       lastAdmin(db),
+      lastPasskey(),
       passwordLength(),
+      signInUser(),
+      manageUsers(db),
     ] as A["plugins"],
-    // The admin login needs email and password, so core MUST force it on.
     emailAndPassword: {
       ...emailAndPassword,
-      enabled: true,
+      enabled: emailAndPassword?.enabled ?? true,
       ...(send && {
         sendResetPassword: emailAndPassword?.sendResetPassword ?? send("resetPassword"),
       }),

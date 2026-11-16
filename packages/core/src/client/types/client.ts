@@ -13,6 +13,7 @@ import type {
   Schema,
 } from "../../schema/index.ts";
 import type { Invite, InviteResult } from "../../users/types.ts";
+import type { Role } from "../../users/roles.ts";
 import type { ApiKey, ApiKeyPermissions, NewApiKey } from "../../api-keys/types.ts";
 import type { Lock } from "../../locks/types.ts";
 import type { CronEntry, Job, JobFilter } from "../../jobs/types.ts";
@@ -511,6 +512,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     /** The `site` option: the base of preview URLs. */
     site?: string;
     admin?: AdminDescriptor;
+    /** The roles a user MAY get: the built-in ones, then the host's. */
+    roles?: Role[];
   }>;
 
   /**
@@ -548,10 +551,38 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   signUp(data: { name: string; email: string; password: string }): Promise<Session["user"]>;
 
   /**
+   * Creates the first admin without a password and signs them in. Only while password sign-in is off: it throws a
+   * `CmsError` with status `404` while it is on, and `409` once a user exists. `POST /_tenon/setup`
+   */
+  setup(data: { name: string; email: string }): Promise<Session["user"]>;
+
+  /**
    * Signs in and sets the session cookie. Throws a `CmsError` with status `401` for a wrong email or password.
    * `POST /_tenon/auth/sign-in/email`
    */
   signIn(data: { email: string; password: string }): Promise<Session["user"]>;
+
+  /**
+   * Emails a link that signs in once. Needs the `magicLink()` plugin. The link opens `callbackURL`, or
+   * `errorCallbackURL` with `?error=` when it is used or expired. Both MUST be trusted origins.
+   * `POST /_tenon/auth/sign-in/magic-link`
+   */
+  signInMagicLink(data: {
+    email: string;
+    callbackURL: string;
+    errorCallbackURL?: string;
+  }): Promise<void>;
+
+  /**
+   * Emails a sign-in code. Needs the `emailOTP()` plugin. `POST /_tenon/auth/email-otp/send-verification-otp`
+   */
+  sendSignInCode(data: { email: string }): Promise<void>;
+
+  /**
+   * Signs in with the code from `sendSignInCode()` and sets the session cookie. Throws a `CmsError` with the code `INVALID_OTP`
+   * or `OTP_EXPIRED` (400), or `TOO_MANY_ATTEMPTS` (403), which needs a new code. `POST /_tenon/auth/sign-in/email-otp`
+   */
+  signInWithCode(data: { email: string; otp: string }): Promise<Session["user"]>;
 
   /** Sends a password-reset link when the account exists. Needs configured email delivery. `redirectTo` is the trusted URL of the new-password form. */
   requestPasswordReset(data: { email: string; redirectTo?: string }): Promise<void>;
@@ -627,8 +658,11 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     revoke(id: string): Promise<void>;
     /** The email, role and role label of a valid token. Public. `POST /_tenon/invites/check` */
     check(token: string): Promise<{ email: string; role: string; label: Text }>;
-    /** Creates the invited user and signs them in. Public. `POST /_tenon/invites/accept` */
-    accept(data: { token: string; name: string; password: string }): Promise<{
+    /**
+     * Creates the invited user and signs them in. `password` is required while password sign-in is on and MUST be left
+     * out while it is off. Public. `POST /_tenon/invites/accept`
+     */
+    accept(data: { token: string; name: string; password?: string }): Promise<{
       user: Session["user"];
     }>;
   };

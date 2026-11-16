@@ -171,6 +171,14 @@ export default {
     removePasskeyText:
       "Der Passkey wird von diesem Konto entfernt. Du kannst dich dann nicht mehr mit diesem Gerät anmelden.",
     addedOn: "Hinzugefügt am {date}",
+    signInStep: {
+      title: "Wie möchtest du dich anmelden?",
+      description: "Dein Konto ist bereit. Wähle, wie du dich beim nächsten Mal anmeldest.",
+      passkey: "Passkey erstellen",
+      password: "Passwort festlegen",
+      setPassword: "Passwort speichern",
+      email: "Stattdessen per E-Mail anmelden",
+    },
     name: "Name",
     password: "Passwort",
     signIn: "Anmelden",
@@ -193,6 +201,27 @@ export default {
     requestNewLink: "Neuen Link anfordern",
     backToSignIn: "Zurück zur Anmeldung",
     pleaseWait: "Bitte warten…",
+    continue: "Weiter",
+    or: "oder",
+    otherMethod: "Andere Methode wählen",
+    emailLink: {
+      send: "Anmeldelink per E-Mail senden",
+      checkInbox: "Sieh in dein Postfach",
+      sent: "Wir haben einen Anmeldelink an {email} gesendet. Er funktioniert einmal.",
+      invalid: "Dieser Anmeldelink ist ungültig oder abgelaufen.",
+      failed: "Die Anmeldung mit diesem Link ist fehlgeschlagen. Versuch es noch einmal.",
+    },
+    emailCode: {
+      send: "Code per E-Mail senden",
+      title: "Code eingeben",
+      sent: "Wir haben einen Anmeldecode an {email} gesendet.",
+      digit: "Ziffer {n} von {total}",
+      resend: "Neuen Code senden",
+      resent: "Ein neuer Code ist unterwegs.",
+      invalid: "Dieser Code ist nicht korrekt.",
+      expired: "Dieser Code ist abgelaufen. Fordere einen neuen an.",
+      tooManyAttempts: "Zu viele Versuche. Fordere einen neuen Code an.",
+    },
     device: {
       title: "CLI anmelden",
       description: "Die tenon-CLI möchte als {email} handeln.",
@@ -206,6 +235,7 @@ export default {
     invite: {
       title: "Einladung annehmen",
       description: "Du wurdest als {role} eingeladen. Wähle deinen Namen und ein Passwort.",
+      descriptionNoPassword: "Du wurdest als {role} eingeladen. Wähle deinen Namen.",
       accept: "Konto erstellen",
       invalid: "Diese Einladung ist nicht mehr gültig. Bitte einen Admin um eine neue.",
     },
@@ -383,6 +413,14 @@ export default {
     setPassword: "Passwort festlegen",
     passwordChanged: "Passwort geändert",
     passwordSet: "Passwort festgelegt",
+    recovery: {
+      passkeyOrPassword:
+        "Du hast dich mit einem Wiederherstellungslink angemeldet. Füge einen Passkey hinzu oder lege ein neues Passwort fest, damit du dich beim nächsten Mal anmelden kannst.",
+      passkey:
+        "Du hast dich mit einem Wiederherstellungslink angemeldet. Füge einen Passkey hinzu, damit du dich beim nächsten Mal anmelden kannst.",
+      password:
+        "Du hast dich mit einem Wiederherstellungslink angemeldet. Lege ein neues Passwort fest, damit du dich beim nächsten Mal anmelden kannst.",
+    },
   },
   timezone: {
     device: "Dieses Gerät",

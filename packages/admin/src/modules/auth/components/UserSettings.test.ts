@@ -10,6 +10,7 @@ import UserSettings from "./UserSettings.vue";
 
 let app: App | undefined;
 let accounts = [{ providerId: "credential" }];
+let status = { password: true, passkeys: false };
 const user = ref<Session["user"] | null>(null);
 const request = vi.fn();
 
@@ -17,10 +18,13 @@ beforeEach(() => {
   useAdminLocale().locale.value = "en";
   useTimeZone().preferred.value = null;
   accounts = [{ providerId: "credential" }];
+  status = { password: true, passkeys: false };
   user.value = { id: "u", name: "Admin", email: "admin@example.com" } as Session["user"];
   request
     .mockReset()
-    .mockImplementation(async (path: string) => (path === "/auth/list-accounts" ? accounts : {}));
+    .mockImplementation(async (path: string) =>
+      path === "/auth/list-accounts" ? accounts : path === "/auth-status" ? status : {},
+    );
   vi.spyOn(client, "request").mockImplementation(request);
 });
 afterEach(() => {
@@ -30,14 +34,14 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-async function open() {
+async function open(props = {}) {
   const root = document.createElement("div");
   document.body.append(root);
-  app = createApp({ render: () => h(UserSettings, { open: true }) })
+  app = createApp({ render: () => h(UserSettings, { open: true, ...props }) })
     .use(i18n)
     .provide(sessionKey, { user, load: async () => {}, signOut: async () => {}, expire: () => {} });
   app.mount(root);
-  await vi.waitFor(() => expect(document.querySelector("#account-name")).not.toBeNull());
+  await vi.waitFor(() => expect(document.querySelector('[role="tabpanel"]')).not.toBeNull());
 }
 
 async function fill(selector: string, value: string, event = "input") {
@@ -63,6 +67,11 @@ it("saves the name and preferences and applies them", async () => {
   );
   await vi.waitFor(() => expect(i18n.global.locale.value).toBe("de"));
   expect(user.value).toMatchObject({ name: "New name", language: "de", timezone: null });
+});
+
+it("fills in the user's name when it opens", async () => {
+  await open();
+  expect(document.querySelector<HTMLInputElement>("#account-name")!.value).toBe("Admin");
 });
 
 it("changes an existing password", async () => {
@@ -114,4 +123,37 @@ it("applies the signed-in user's language and time zone", async () => {
   await vi.waitFor(() => expect(i18n.global.locale.value).toBe("de"));
   expect(useTimeZone().timeZone.value).toBe("Asia/Tokyo");
   expect(request).not.toHaveBeenCalledWith("/auth/update-user", expect.anything());
+});
+
+it("hides the password while password sign-in is off", async () => {
+  status = { password: false, passkeys: false };
+  await open();
+  expect(document.querySelector('[role="tab"]')).toBeNull();
+  expect(document.querySelector("#new-password")).toBeNull();
+});
+
+it("opens on Security with a hint after a recovery", async () => {
+  await open({ recovery: true });
+  await vi.waitFor(() => expect(document.querySelector("#new-password")).not.toBeNull());
+  expect(document.body.textContent).toContain("Set a new password, so you can sign in next time");
+});
+
+it("opens the settings from a recovery link", async () => {
+  vi.spyOn(client, "getSession").mockResolvedValue({ user: user.value } as never);
+  vi.spyOn(client, "getSchema").mockRejectedValue(new CmsError(401, {}));
+  vi.spyOn(client.preview, "enter").mockResolvedValue();
+  const { router } = await render("/content/settings?settings=security");
+  await vi.waitFor(() => expect(document.body.textContent).toContain("recovery link"));
+  expect(router.currentRoute.value.query.settings).toBeUndefined();
+});
+
+it("drops a recovery link's query without opening when there is nothing to add", async () => {
+  status = { password: false, passkeys: false };
+  vi.spyOn(client, "getSession").mockResolvedValue({ user: user.value } as never);
+  vi.spyOn(client, "getSchema").mockRejectedValue(new CmsError(401, {}));
+  vi.spyOn(client.preview, "enter").mockResolvedValue();
+  const { router } = await render("/content/settings?settings=security");
+  await vi.waitFor(() => expect(router.currentRoute.value.query.settings).toBeUndefined());
+  await nextTick();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
 });

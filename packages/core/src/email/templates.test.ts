@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { emailTemplates } from "./templates.ts";
 
-it.each(["resetPassword", "verifyEmail"] as const)(
+it.each(["resetPassword", "verifyEmail", "signInLink", "magicLink"] as const)(
   "renders %s with escaped HTML and a plain text link",
   async (key) => {
     const user = { name: "<img src=x onerror=\"alert(1)\"> & 'Name'", email: "a@example.com" };
@@ -35,4 +35,16 @@ it("renders the invite with the inviter, role, site and link, HTML escaped", asy
   expect(result.html).toContain("Tom &amp; Jerry");
   expect(result.html).toContain('href="https://example.com/admin/invite?token=a&amp;b"');
   expect(result.html).not.toContain("<b>");
+});
+
+it.each([
+  ["sign-in", "Your sign-in code"],
+  ["email-verification", "Verify your email address"],
+  ["forget-password", "Reset your password"],
+  ["change-email", "Confirm your new email address"],
+] as const)("words the %s code", async (type, subject) => {
+  const result = await emailTemplates.emailOtp({ email: "a@example.com", otp: "123456", type });
+  expect(result.subject).toBe(subject);
+  expect(result.text).toContain("123456");
+  expect(result.html).toContain("123456");
 });

@@ -10,7 +10,7 @@ beforeEach(() => {
   i18n.global.locale.value = "en";
   vi.spyOn(client, "getSession").mockResolvedValue(null);
   vi.spyOn(client, "getSchema").mockRejectedValue(new CmsError(401, {}));
-  vi.spyOn(client, "request").mockResolvedValue({ setup: false, signUp: false });
+  vi.spyOn(client, "request").mockResolvedValue({ setup: false, signUp: false, password: true });
 });
 afterEach(cleanup);
 

@@ -34,21 +34,38 @@ import PasskeyList from "./PasskeyList.vue";
 import PasswordForm from "./PasswordForm.vue";
 
 const open = defineModel<boolean>("open", { default: false });
+const props = defineProps<{
+  /** Opened by a recovery link: starts on Security, with a hint to add a way to sign in. */
+  recovery?: boolean;
+}>();
 const { user } = inject(sessionKey)!;
 const { t } = useI18n();
 const { locale, locales } = useAdminLocale();
 const { preferred } = useTimeZone();
 const status = useAuthStatus();
 const passkeys = computed(() => !!status.value?.passkeys && passkeysSupported());
+const password = computed(() => !!status.value?.password);
+const recoveryHint = computed(() => {
+  if (!props.recovery) return undefined;
+  if (passkeys.value && password.value) return t("account.recovery.passkeyOrPassword");
+  if (passkeys.value) return t("account.recovery.passkey");
+  if (password.value) return t("account.recovery.password");
+  return undefined;
+});
 const form = ref({ name: "", language: locale.value, timezone: null as string | null });
 const error = ref("");
 const busy = ref(false);
 
-watch(open, (o) => {
-  if (!o || !user.value) return;
-  form.value = { name: user.value.name, language: locale.value, timezone: preferred.value };
-  error.value = "";
-});
+// Immediate, because a recovery link mounts the dialog already open.
+watch(
+  open,
+  (o) => {
+    if (!o || !user.value) return;
+    form.value = { name: user.value.name, language: locale.value, timezone: preferred.value };
+    error.value = "";
+  },
+  { immediate: true },
+);
 
 async function save() {
   if (busy.value || !user.value) return;
@@ -76,8 +93,8 @@ async function save() {
         <DialogTitle>{{ t("account.settings") }}</DialogTitle>
         <DialogDescription>{{ user?.email }}</DialogDescription>
       </DialogHeader>
-      <Tabs default-value="profile" class="gap-4">
-        <TabsList class="w-full">
+      <Tabs v-if="status" :default-value="recoveryHint ? 'security' : 'profile'" class="gap-4">
+        <TabsList v-if="password || passkeys" class="w-full">
           <TabsTrigger value="profile" class="flex-1">{{ t("account.profile") }}</TabsTrigger>
           <TabsTrigger value="security" class="flex-1">{{ t("account.security") }}</TabsTrigger>
         </TabsList>
@@ -110,12 +127,15 @@ async function save() {
         </TabsContent>
         <TabsContent value="security">
           <FieldGroup class="gap-6">
-            <FieldSet>
+            <p v-if="recoveryHint" role="status" class="bg-muted rounded-lg px-3 py-2 text-sm">
+              {{ recoveryHint }}
+            </p>
+            <FieldSet v-if="password">
               <FieldLegend>{{ t("auth.password") }}</FieldLegend>
               <PasswordForm />
             </FieldSet>
             <template v-if="passkeys">
-              <FieldSeparator />
+              <FieldSeparator v-if="password" />
               <FieldSet>
                 <FieldLegend>{{ t("auth.passkeys") }}</FieldLegend>
                 <FieldDescription>{{ t("auth.passkeysDescription") }}</FieldDescription>

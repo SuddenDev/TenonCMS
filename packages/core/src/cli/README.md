@@ -1,6 +1,6 @@
 # cli
 
-The `tenon` bin of `tenoncms` (also `tenoncms`): `backup`, `restore`, `upgrade`, `login` and `logout`. The guide is [The CLI](../../../../docs/guide/cli.md). Scaffolding is the separate `create-tenoncms` package.
+The `tenon` bin of `tenoncms` (also `tenoncms`): `backup`, `restore`, `upgrade`, `login`, `logout` and `users`. The guide is [The CLI](../../../../docs/guide/cli.md). Scaffolding is the separate `create-tenoncms` package.
 
 It is its own build entry (`dist/cli/index.mjs`), so no host bundle includes it. It runs the host's `vite`, an optional peer dependency, and imports only what the package exports: the client, `readArchiveManifest()` and the archive types from `client/`, and `clientModules()` from `integrations/vite/`.
 
@@ -19,16 +19,25 @@ A backup is a `full` archive unless `--content-only`. It writes `<file>.part` an
 
 `restore.command.ts` reads the manifest locally (`readArchiveManifest()` on `openAsBlob()`), then checks: locally `cms.import(…, { dryRun: true })`, over HTTP `POST /import/check` with the manifest alone. Errors stop it before any question. Then it warns, offers a backup, asks with a default of No, and restores with `mode: "replace"`. Without a terminal it needs `--yes`.
 
+## Follow a recovery
+
+`users.command.ts` → `target.ts` `loadConfig()` → `cms.users.signInLink()`
+
+`users recover` refuses `--url`: it needs the database, not a session, so it works when nobody can sign in. `users create` invites with `cms.users.invite()`, or with `--url` through `client.invites.create()` and the session of `tenon login`; `--password` calls `cms.users.create()`. The site's origin is `configuredOrigin()` of better-auth's `baseURL` (a string when `TENON_BASE_URL` or `auth.baseURL` is set), else a question. `deliveryNote()` says whether the link was emailed; the link is printed either way.
+
+`users list`, `deactivate`, `reactivate` and `remove` call the same-named `cms.users` methods, and refuse `--url` like `recover` (`localOnly()`). Deactivate and remove confirm first unless `--yes`; remove defaults to No. `formatUsers()` prints the list as a table and colors the status when `stdout.hasColors()`. The role prompt of `users create` is a select of `roleOptions()`: `cms.users.roles()` locally, the `roles` of `GET /schema` with `--url`. These commands and `--password` need no `TENON_BASE_URL`; only a link does.
+
 ## Files
 
-| File                     | Role                                                                        |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `index.ts`               | Node check, flags, help, dispatch, exit codes                               |
-| `target.ts`              | `openTarget()`: local config or HTTP, and the archive download              |
-| `credentials.ts`         | Sessions per origin in `$XDG_CONFIG_HOME/tenon/credentials.json` (mode 600) |
-| `nuxt-runtime-config.ts` | `useRuntimeConfig()` for a Nuxt config: `@nuxt/kit`, then `applyEnv()`      |
-| `ui.ts`                  | Counts, bytes, file names, `answer()`, `spinning()`, `canAsk()`             |
-| `backup.command.ts`      | `tenon backup`                                                              |
-| `restore.command.ts`     | `tenon restore`                                                             |
-| `login.command.ts`       | `tenon login` (device flow, RFC 8628 polling) and `tenon logout`            |
-| `upgrade.command.ts`     | `tenon upgrade`: npm registry, lockfile, `<pm> add`                         |
+| File                     | Role                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `index.ts`               | Node check, flags, help, dispatch, exit codes                                 |
+| `target.ts`              | `openTarget()`, `loadConfig()`, `remoteClient()`, the archive download        |
+| `credentials.ts`         | Sessions per origin in `$XDG_CONFIG_HOME/tenon/credentials.json` (mode 600)   |
+| `nuxt-runtime-config.ts` | `useRuntimeConfig()` for a Nuxt config: `@nuxt/kit`, then `applyEnv()`        |
+| `ui.ts`                  | Counts, bytes, file names, `answer()`, `spinning()`, `canAsk()`               |
+| `backup.command.ts`      | `tenon backup`                                                                |
+| `restore.command.ts`     | `tenon restore`                                                               |
+| `login.command.ts`       | `tenon login` (device flow, RFC 8628 polling) and `tenon logout`              |
+| `upgrade.command.ts`     | `tenon upgrade`: npm registry, lockfile, `<pm> add`                           |
+| `users.command.ts`       | `tenon users create`, `list`, `recover`, `deactivate`, `reactivate`, `remove` |

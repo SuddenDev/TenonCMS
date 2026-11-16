@@ -140,7 +140,7 @@ export function createAdminRouter(base: string) {
       component: Backup,
       meta: { admin: true, breadcrumb: () => t("nav.backup") },
     },
-    // Not `admin`: editors see the jobs of the tasks they MAY access.
+    // Not `admin`: a task with an `access` rule MAY show the page to editors.
     {
       path: "/jobs",
       component: Jobs,

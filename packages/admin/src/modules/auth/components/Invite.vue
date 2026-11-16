@@ -9,13 +9,17 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { text } from "@/shared/i18n";
 import { sessionKey } from "@/shared/options";
+import { useAuthStatus } from "../composables/useAuthStatus";
+import { passkeysSupported } from "../passkey";
 import AuthCard from "./AuthCard.vue";
 import PasswordInput from "./PasswordInput.vue";
+import SignInStep from "./SignInStep.vue";
 
 const route = useRoute();
 const router = useRouter();
 const session = inject(sessionKey)!;
 const { t } = useI18n();
+const status = useAuthStatus();
 // Read once: the address loses the token after the account exists.
 const token = typeof route.query.token === "string" ? route.query.token : "";
 const invite = ref<{ email: string; label: Text }>();
@@ -24,6 +28,13 @@ const name = ref("");
 const password = ref("");
 const error = ref("");
 const busy = ref(false);
+// What the step after the account offers. `undefined` until the account exists.
+const choices = ref<{ passkey: boolean; password: boolean; email: boolean }>();
+// Another method signs the user in, so the password MAY wait until after the account exists.
+const askPassword = computed(() => {
+  const s = status.value;
+  return !!s?.password && !s.passkeys && !s.magicLink && !s.emailOtp;
+});
 
 useHead({
   title: () => t("auth.invite.title"),
@@ -40,7 +51,11 @@ onMounted(async () => {
 });
 
 const description = computed(() =>
-  invite.value ? t("auth.invite.description", { role: text(invite.value.label) }) : "",
+  invite.value
+    ? t(askPassword.value ? "auth.invite.description" : "auth.invite.descriptionNoPassword", {
+        role: text(invite.value.label),
+      })
+    : "",
 );
 
 // The first field error of a 400, else the error's own message.
@@ -54,10 +69,20 @@ async function submit() {
   error.value = "";
   busy.value = true;
   try {
-    await client.invites.accept({ token, name: name.value, password: password.value });
+    await client.invites.accept(
+      askPassword.value
+        ? { token, name: name.value, password: password.value }
+        : { token, name: name.value },
+    );
     await router.replace({ query: {} });
-    await session.load();
-    await router.replace("/");
+    const s = status.value!;
+    const offer = {
+      passkey: s.passkeys && passkeysSupported(),
+      password: s.password,
+      email: s.magicLink || s.emailOtp,
+    };
+    if (!askPassword.value && (offer.passkey || offer.password)) choices.value = offer;
+    else await finish();
   } catch (e) {
     if (e instanceof CmsError && e.status === 404) invalid.value = true;
     else error.value = message(e as Error);
@@ -65,17 +90,28 @@ async function submit() {
     busy.value = false;
   }
 }
+
+async function finish() {
+  await session.load();
+  await router.replace("/");
+}
 </script>
 
 <template>
-  <AuthCard :title="t('auth.invite.title')" :description="description" :heading="true">
+  <SignInStep v-if="choices" v-bind="choices" @done="finish" />
+  <AuthCard v-else :title="t('auth.invite.title')" :description="description" :heading="true">
     <template v-if="invalid">
       <p role="alert" class="text-destructive text-sm">{{ t("auth.invite.invalid") }}</p>
       <Button as-child variant="link" size="xs">
         <RouterLink to="/login">{{ t("auth.backToSignIn") }}</RouterLink>
       </Button>
     </template>
-    <form v-else-if="invite" class="flex flex-col gap-3" :aria-busy="busy" @submit.prevent="submit">
+    <form
+      v-else-if="invite && status"
+      class="flex flex-col gap-3"
+      :aria-busy="busy"
+      @submit.prevent="submit"
+    >
       <fieldset :disabled="busy" class="flex flex-col gap-3">
         <label class="flex flex-col gap-1 text-sm">
           {{ t("auth.email") }}
@@ -97,7 +133,7 @@ async function submit() {
             required
           />
         </label>
-        <label class="flex flex-col gap-1 text-sm">
+        <label v-if="askPassword" class="flex flex-col gap-1 text-sm">
           {{ t("auth.password") }}
           <PasswordInput
             v-model="password"

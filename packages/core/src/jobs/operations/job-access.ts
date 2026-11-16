@@ -1,6 +1,5 @@
-import { scheduleTasks } from "../../schedule/tasks.ts";
 import type { CmsUser } from "../../admin/index.d.ts";
-import { check, decide, guard } from "../../access/rule.ts";
+import { check, guard } from "../../access/rule.ts";
 import { inner, outerScope } from "../../cms/runtime/operation-context.ts";
 import type { Core, Inner } from "../../cms/runtime/types.ts";
 import { type ContentTarget, hasTarget, targetOfKey } from "../../content/targets.ts";
@@ -35,27 +34,15 @@ export async function canAccessJob(core: Core, user: CmsUser, job: JobOwner) {
 }
 
 /**
- * The tasks the caller of `s` MAY see, for the `/schema` of the admin. The built-in tasks (`tenon:`) belong to
- * documents and have no rule of their own: they show when the caller MAY update an entry with `schedule`.
+ * The tasks the caller of `s` MAY see, for the `/schema` of the admin. The built-in tasks (`tenon:`) have no rule of
+ * their own, so they show for admins only, like any task without `access`.
  * @returns `name` and `description` of each task.
  */
 export async function visibleTasks(core: Core, s: Inner) {
-  const entries = [
-    ...Object.entries(core.schema.collections).map(([name, e]) => [name, e, "collection"] as const),
-    ...Object.entries(core.schema.globals).map(([name, e]) => [name, e, "global"] as const),
-  ];
-  let scheduling = false;
-  for (const [name, entry, kind] of entries)
-    if (entry.schedule && (await decide(core, s, { kind, name }, "update"))) {
-      scheduling = true;
-      break;
-    }
-
   const tasks: Array<{ name: string; description: string }> = [];
-  for (const [name, task] of core.jobs.tasks) {
-    const allowed = name in scheduleTasks ? scheduling : await isTaskAllowed(core, s, name);
-    if (allowed) tasks.push({ name, description: task.meta?.description ?? "" });
-  }
+  for (const [name, task] of core.jobs.tasks)
+    if (await isTaskAllowed(core, s, name))
+      tasks.push({ name, description: task.meta?.description ?? "" });
   return tasks;
 }
 

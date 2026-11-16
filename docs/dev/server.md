@@ -7,7 +7,7 @@ Code: `packages/core/src/http/`, `auth/`, `users/`, `client/`, `db/` (each has a
 The Hono app mounts feature routes in a fixed order. The order is the security model, so keep it.
 
 1. CMS binding, then public plugin middleware
-2. Session hint cookie on `/auth/*`, then auth routes and the **open** routes: admin branding, auth status, invites check and accept, `/localization`, public plugin routes, `/jobs/run` (only with `jobs.secret`), media files and images
+2. Session hint cookie on `/auth/*`, `/invites/accept` and `/setup`, then auth routes and the **open** routes: admin branding, auth status, invites check and accept, `/setup`, `/localization`, public plugin routes, `/jobs/run` (only with `jobs.secret`), media files and images
 3. **CSRF** (skipped with an API key), then `optionalSession` (one caller lookup per request)
 4. Content **reads** (collections, globals, media folders)
 5. Protected plugin middleware, then content **writes**. Access rules decide here.
@@ -37,12 +37,19 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 ## Auth
 
 - Auth is better-auth. The host's `auth` options pass through. Core owns the database, base path and secret.
-- `auth/config/base-url.ts` resolves the origin when the provider is created: explicit `auth.baseURL`, `TENON_BASE_URL`, better-auth's URL environment variables, then the adapter's development origin. `TENON_BASE_URL` MUST be an HTTP(S) origin without credentials, path, query or fragment. Development uses a dynamic host allowlist and the actual listener as the requestless fallback. `site` is independent. See [auth options](../guide/auth-and-access.md#auth-options).
+- `auth/config/base-url.ts` resolves the origin when the provider is created: explicit `auth.baseURL`, `TENON_BASE_URL`, better-auth's URL environment variables, then the adapter's development origin. `TENON_BASE_URL` MUST be an HTTP(S) origin without credentials, path, query or fragment. Development uses a dynamic host allowlist and the actual listener as the requestless fallback. Without a listener (the CLI, a script), `cms.users` seeds the fallback itself. `site` is independent. See [auth options](../guide/auth-and-access.md#auth-options).
 - The first user becomes `admin`. After that, only an admin session can create users. Sign-up is open only during setup.
+- With password off, `POST /setup` (`users/endpoints/setup.endpoint.ts`) creates the first admin from `{ name, email }`: 404 while password is on, 409 once a user exists. `checkCreate()` reads "no user yet" before the insert, so concurrent creates can both become admin. `setUpFirstAdmin()` runs its calls one at a time in the process; separate instances can still race. Sign-up with a password has the same race.
+- Invite accept and `/setup` share `createAndSignIn()` (`users/operations/`): `createUser()` without a request, then the server-only `signInUser`, so they work whichever methods are on.
 - A readable `tenon-session` cookie mirrors the session cookie. It grants nothing; it only lets the site decide whether to ask for the admin bar.
+- Sign-in methods (`auth/config/sign-in-methods.ts`): password is on unless `emailAndPassword.enabled === false`; passkey, magic link and email OTP are on with a plugin of id `passkey`, `magic-link` or `email-otp`. A magic link or email OTP counts only when its plugin can send. `defineCms()` throws when no method is on, and warns when only email methods are on without email. `/auth-status` reports the four flags and `emailOtpLength`.
+- `tenoncms/auth` (`auth/plugins.ts`) exports `magicLink()` and `emailOTP()`: better-auth's plugins with `Partial` options and `disableSignUp: true`. Both copy their options when created, so `withEmailSender()` (`auth/config/email-sign-in.ts`) creates a host plugin without a sender again, with core's `magicLink` or `emailOtp` email. The magic-link sender skips unknown addresses.
+- `lastPasskey()` refuses `/passkey/delete-passkey` for a user's last passkey while password is off and no email method can send.
 - Passkeys are off unless the host adds `passkey()` from `@better-auth/passkey`. Rate limits live in the database unless the host sets `rateLimit.storage`. Users have `language` and `timezone` fields.
 - `admin` and `editor` are built-in roles. Hosts add roles with `roles`. A missing role counts as `editor`.
 - The last active admin cannot be demoted.
+- `signInUser()` (`auth/config/sign-in-user.ts`) is one of core's two plugins with endpoints. `signInUser` and `createSignInLink` are server-only (`SERVER_ONLY`, so better-call never routes them). `GET /auth/sign-in-link?token=` is public: it consumes the verification value (`tenon-sign-in:<hash>`, 1 hour), ends the user's sessions, signs them in and redirects to `callbackURL` (checked with `originCheck`) or `/admin/?settings=security`. A used, expired or unknown token redirects to `errorCallbackURL` (also checked) or `/admin/login`, with `?error=INVALID_TOKEN`, the code of better-auth's magic link. It lives under `/auth/*`, so the provider serves it and `sessionHint()` applies.
+- `cms.users` (`users/api.ts`) is for server code and the CLI: `hasUsers()`, `invite()`, `create()`, `signInLink()`, `list()`, `deactivate()`, `reactivate()`, `remove()`. It checks no access rules, so a `withSession()` copy throws `ForbiddenError`. The last four call the server-only endpoints of `manageUsers()` (`auth/config/manage-users.ts`), because better-auth's `admin()` endpoints require an admin's session. Only tests MAY read better-auth's `$context`; plugin endpoints use `ctx.context.internalAdapter`.
 
 ## API keys
 
@@ -60,7 +67,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 - Admins create, resend and revoke invites. Accepting is public.
 - Tokens are random. Only their hash is stored. Invites expire after 7 days.
 - Accepting claims the invite, creates the user, signs them in, and puts the invite back if user creation fails.
-- The invite page MUST be on the site's origin.
+- The invite page MUST be on the site's origin. `cms.users.invite()` is trusted and skips that rule. Its `invited_by` is `cli`.
 
 ## Client
 

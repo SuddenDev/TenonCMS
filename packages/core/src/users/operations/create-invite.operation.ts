@@ -12,15 +12,19 @@ import { inviteLink } from "../invite-url.ts";
 import { hashToken, newToken } from "../token.ts";
 import { sendInvite } from "./send-invite.operation.ts";
 
+/** `invited_by` of an invite from server code or the CLI, which has no user. */
+const SERVER_INVITER = "cli";
+
 /**
  * Invites `email` with `role` and sends the invite. An expired invite for the email is replaced.
+ * @param inviter The signed-in user, or `undefined` for server code.
  * @param origin The origin the invite page MUST be on.
  * @throws {ValidationError} For an unknown role or a page on another origin.
  * @throws {HTTPException} 409 when a user or a pending invite has the email.
  */
 export async function createInvite(
   core: Core,
-  inviter: CmsUser,
+  inviter: CmsUser | undefined,
   input: { email: string; role: string; url: string },
   origin: string,
 ) {
@@ -39,7 +43,7 @@ export async function createInvite(
     email,
     role: input.role,
     token_hash: await hashToken(token),
-    invited_by: inviter.id,
+    invited_by: inviter?.id ?? SERVER_INVITER,
     expires_at: now + INVITE_TTL,
     created_at: now,
   };

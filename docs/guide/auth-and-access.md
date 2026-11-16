@@ -7,8 +7,72 @@ Three things live here: how people sign in, how users and roles work, and how yo
 The admin signs in at `/login`.
 
 - While no user exists, every admin URL leads to `/signup`, which creates the first admin. After that, sign-up is closed: `/signup` redirects to `/login`, and the sign-in shows no sign-up link. New users join through [invites](#users-and-roles).
-- `GET /_tenon/auth-status` answers `{ setup, signUp, passkeys }` for custom forms.
-- The admin supports email and password, [passkeys](#passkeys), and password reset. Plugins that need other screens (2FA, magic link) work on the server but not in the admin yet.
+- `GET /_tenon/auth-status` answers `{ setup, signUp, password, passkeys, magicLink, emailOtp, emailOtpLength }` for custom forms.
+- With password off, `/signup` asks only for a name and an email. See [Getting started without a password](#getting-started-without-a-password).
+- The admin supports every method below, and password reset. Other plugins that need screens (2FA) work on the server only.
+
+### Sign-in methods
+
+Pick any mix of these. better-auth's options decide which are on:
+
+| Method     | On when                                      | Default |
+| ---------- | -------------------------------------------- | ------- |
+| Password   | `auth.emailAndPassword.enabled` is not false | on      |
+| Passkey    | the `passkey()` plugin is added              | off     |
+| Magic link | the `magicLink()` plugin is added            | off     |
+| Email OTP  | the `emailOTP()` plugin is added             | off     |
+
+```ts
+import { passkey } from "@better-auth/passkey";
+import { emailOTP, magicLink } from "tenoncms/auth";
+
+export default defineCms({
+  auth: {
+    emailAndPassword: { enabled: false },
+    plugins: [passkey(), magicLink(), emailOTP()],
+  },
+  email: { adapter, from: "Site <hello@example.com>" },
+  // ...
+});
+```
+
+- `npm create tenoncms` asks which methods to use and writes this block. See [Create a project](./cli.md#create-a-project).
+- `magicLink()` and `emailOTP()` from `tenoncms/auth` are better-auth's plugins with every option optional. Sign-up is off (`disableSignUp: true`), so they only sign in existing users. Pass `disableSignUp: false` to change that.
+- Without your own `sendMagicLink` or `sendVerificationOTP`, they send the [email templates](./email.md#templates-for-account-emails) `magicLink` and `emailOtp`. A magic link goes only to an existing user. A request for an unknown address answers the same, but sends nothing.
+- Without [email](./email.md) and without your own sender, magic link and email OTP are off: `/auth-status` reports them as `false`. Startup warns when they are the only methods. Sign in with [`tenon users recover`](#recovery) until email is set up.
+- Startup throws when no method is on.
+- With password off, a user cannot remove their last passkey unless a magic link or email OTP is on. The request answers 400.
+
+The admin's sign-in asks for the email first. **Continue** keeps the email field and adds the methods that are on:
+
+- Password: the password field with **Forgot password?** and **Sign in**. With password as the only email method, the first step shows email and password together.
+- Email OTP: **Email me a code**, then one box per digit (`otpLength`, 6 by default). The last digit signs in. **Send a new code** sends another one.
+- Magic link: **Email me a sign-in link**, then "Check your inbox". The link signs in and returns to the admin. A used or expired link (after 5 minutes by default) comes back to the sign-in with a message.
+- Once a code or link is sent, only **Choose a different method** leads to the other methods. With one email method alone, **Continue** sends it right away.
+- After a sign-in on this device, **Continue** goes straight to that method: the password field, or the code or link is sent. The cookie `better-auth.last_used_login_method` remembers it for 30 days, per device, not per email. A recovery link does not set it, and after a passkey **Continue** offers every method. Core adds this unless you add better-auth's own `lastLoginMethod()`.
+- **Sign in with a passkey** needs no email. It shows until a code or link is sent.
+- Host apps can call `client.signInMagicLink({ email, callbackURL, errorCallbackURL })`, `client.sendSignInCode({ email })` and `client.signInWithCode({ email, otp })`.
+
+### Getting started without a password
+
+With password off, the first admin and invited users get an account from a name and an email. The invite page does the same while password is on next to another method:
+
+- `/signup` and the invite page hide the password field. Creating the account signs the user in.
+- Then the admin asks **How do you want to sign in?**: **Create a passkey** (with passkeys on and supported by the browser) or **Set a password** (with password on, invites only). With magic link or email OTP on, **Sign in by email instead** goes on to the admin. Without them, the user has to pick a passkey or a password.
+- With only magic link or email OTP, the user goes straight to the admin and signs in by email next time.
+- A user who leaves before creating a passkey, and has no email method, signs in again with [`tenon users recover`](#recovery).
+
+Custom forms use these routes:
+
+| Route                         | Body                         | Answers                                                                         |
+| ----------------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| `POST /_tenon/setup`          | `{ name, email }`            | `{ user }` and the session cookie. 404 with password on, 409 once a user exists |
+| `POST /_tenon/invites/accept` | `{ token, name, password? }` | `{ user }` and the session cookie                                               |
+
+- Both are public and accept only `application/json`.
+- `/setup` creates the first admin. With password on, sign-up does that instead (`client.signUp()`). Two requests at once create one admin: the second answers 409.
+- `password` on `/invites/accept` is required while password is the only method, optional next to passkeys, magic link or email OTP, and refused with password off (400 with `errors.password`). A user without one MAY set it later with `POST /_tenon/account/password`.
+- The client has `client.setup({ name, email })` and `client.invites.accept({ token, name, password })`.
 
 ### Account settings
 
@@ -17,6 +81,8 @@ The admin signs in at `/login`.
 - edit their name, admin language and time zone. Dates in forms and the publication status follow the time zone. Empty follows the device.
 - change the password (other sessions are signed out), or set a first one if they have none (`POST /_tenon/account/password`).
 - add or remove passkeys, when they are on.
+
+The Security tab shows only the methods that are on: the password form with password on, the passkey list with passkeys on. With neither, the settings have no Security tab.
 
 Language and time zone are stored on the user as better-auth fields `language` and `timezone`, validated on write. A host's own field of the same name replaces core's.
 
@@ -41,6 +107,16 @@ The admin's **Forgot password?** link sends a reset email and opens a form for a
 - Host apps can use `client.requestPasswordReset({ email, redirectTo })` and `client.resetPassword({ token, newPassword })` for their own forms. `redirectTo` is the trusted URL of that form.
 - better-auth checks password rules and token expiry, and uses a reset token once. Whether other sessions are revoked follows `auth.emailAndPassword.revokeSessionsOnPasswordReset`.
 
+### Recovery
+
+When nobody can sign in, run [`npx tenon users recover <email>`](./cli.md#users) in the project. It prints a sign-in link, and emails it as well when [email](./email.md) is set up. It needs no email and no session, only the database.
+
+- The link works once and expires after an hour.
+- Opening it signs the user out everywhere else, signs them in and opens the admin's account settings on Security, with a hint to set a new password or add a passkey. With neither password nor passkeys on, the settings stay closed.
+- It is also the way back for a user who lost their passkey and has no other way to sign in.
+- A used, expired or unknown link opens the admin sign-in with "This sign-in link is invalid or has expired".
+- Server code gets the same link with `cms.users.signInLink(email, { origin })`, which answers `{ link, sent }`.
+
 ## Auth options
 
 `auth` is [better-auth](https://better-auth.com)'s options object. It is better-auth's API and follows better-auth's versioning.
@@ -58,7 +134,7 @@ defineCms({
 });
 ```
 
-- Core owns `database`, `basePath` and `secret`. It always turns `emailAndPassword` on, because the admin login needs it. Your other email options stay.
+- Core owns `database`, `basePath` and `secret`. `emailAndPassword` is on unless you set `enabled: false`. See [sign-in methods](#sign-in-methods).
 - Set `TENON_BASE_URL=https://cms.example.com` in production. It MUST be the public CMS origin, without an admin or API path. Tenon supplies better-auth's base URL internally. `site` stays separate, because the frontend MAY run on another origin.
 - Development needs no URL setting: the adapters detect the actual server URL and port. Auth accepts localhost, IPv4/IPv6 loopback addresses and the configured development hostname, and resolves URLs per request. The detected URL is the fallback for server calls without a request, such as API key creation and invite acceptance. Development hosts are never automatic in production.
 - An explicit `auth.baseURL` takes precedence over `TENON_BASE_URL`, followed by better-auth's existing URL environment variables (including `BETTER_AUTH_URL`), then the detected development URL. A host without an adapter MUST supply its own URL for server calls before its first development request. In production, without any URL, better-auth keeps its request-derived behavior and warning.
@@ -133,7 +209,7 @@ The "+" opens "New user" with two modes:
 - **Set password** creates the user at once, with a name, a password and a role. The dice button fills in a random password and shows it. Pass the password on yourself.
 - **Invite** asks for an email and a role. With email configured, the person gets a link. Without it, or when sending fails, the admin shows the link to copy and send yourself.
 
-The link opens the admin's `/invite` page, where the person picks a name and password and is signed in. A link works once and expires after 7 days. Resending makes a new link and stops the old one. Revoking deletes the invite.
+The link opens the admin's `/invite` page, where the person picks a name and password and is signed in. When another sign-in method is on, they pick only a name and then how they sign in next time; see [Getting started without a password](#getting-started-without-a-password). A link works once and expires after 7 days. Resending makes a new link and stops the old one. Revoking deletes the invite.
 
 ### Invite API
 
@@ -146,10 +222,11 @@ For custom screens:
 | `POST /_tenon/invites/:id/resend` | admins | `{ url }`: new link, sent again                                               |
 | `DELETE /_tenon/invites/:id`      | admins | Revokes                                                                       |
 | `POST /_tenon/invites/check`      | public | `{ token }`: `{ email, role, label }`, else 404                               |
-| `POST /_tenon/invites/accept`     | public | `{ token, name, password }`: creates the user and sets the session cookie     |
+| `POST /_tenon/invites/accept`     | public | `{ token, name, password? }`: creates the user and sets the session cookie    |
 
 - Create and resend answer `{ invite, link, sent }`. A 502 with the same body means sending failed and the invite stays.
 - The client has `client.invites.list()`, `create()`, `resend()`, `revoke()`, `check()` and `accept()`.
+- Server code has `cms.users.invite({ email, role, url })`, without the origin rule. The invite is stored as from `cli`. `cms.users.create({ email, name, role, password })` creates a user directly; the first user becomes an admin. `cms.users.roles()` lists the built-in roles, then yours. `cms.users.list()`, `deactivate(email)`, `reactivate(email)` and `remove(email)` do what the admin's user list does; the last active admin cannot be deactivated or removed. A `withSession()` copy refuses `cms.users`.
 - The public routes accept only `application/json`. Only the SHA-256 hash of a token is stored.
 
 ### Testing email locally

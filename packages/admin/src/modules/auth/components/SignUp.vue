@@ -9,8 +9,10 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/shared/components/ui/field";
 import { useAuthStatus } from "../composables/useAuthStatus";
+import { passkeysSupported } from "../passkey";
 import AuthCard from "./AuthCard.vue";
 import PasswordInput from "./PasswordInput.vue";
+import SignInStep from "./SignInStep.vue";
 
 const { load } = inject(sessionKey)!;
 const route = useRoute();
@@ -22,6 +24,7 @@ const title = computed(() => t(setup.value ? "auth.createFirstAdmin" : "auth.sig
 const form = ref({ name: "", email: "", password: "" });
 const error = ref("");
 const busy = ref(false);
+const passkeyStep = ref(false);
 
 useHead({ title });
 
@@ -29,14 +32,19 @@ watch(status, (s) => {
   if (s && !s.signUp) void router.replace({ path: "/login", query: route.query });
 });
 
-// The session reload sends the new user on (App.vue).
+// The session reload sends the new user on (App.vue), so the passkey step comes before it.
 async function submit() {
   if (busy.value) return;
   busy.value = true;
   error.value = "";
   try {
-    await client.signUp(form.value);
-    await load();
+    const withPassword = status.value!.password;
+    const { name, email } = form.value;
+    if (withPassword) await client.signUp(form.value);
+    else await client.setup({ name, email });
+    // Without a password, a passkey is how the user signs in next time.
+    if (!withPassword && status.value!.passkeys && passkeysSupported()) passkeyStep.value = true;
+    else await load();
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -46,8 +54,14 @@ async function submit() {
 </script>
 
 <template>
+  <SignInStep
+    v-if="passkeyStep"
+    passkey
+    :email="status?.magicLink || status?.emailOtp"
+    @done="load"
+  />
   <AuthCard
-    v-if="status?.signUp"
+    v-else-if="status?.signUp"
     :title="title"
     :description="setup ? t('auth.firstAdminDescription') : undefined"
     :heading="setup"
@@ -75,7 +89,7 @@ async function submit() {
             required
           />
         </Field>
-        <Field>
+        <Field v-if="status.password">
           <FieldLabel for="password">{{ t("auth.password") }}</FieldLabel>
           <PasswordInput
             id="password"

@@ -23,6 +23,8 @@ type Session = {
  * @param coreAuth Email delivery, the default app name and the roles.
  * @returns `db()` connects and migrates on its first call. `auth()` creates better-auth on its first call.
  * `getSession()` reads the session of a request's headers. `getApiKey()` verifies an API key.
+ * `bindOrigin()` seeds better-auth's development fallback, which its calls without a request need; the first origin
+ * stays. `bindRequest()` seeds it from a local request.
  */
 export function createRuntime<A extends AuthOptions>(
   database: DatabaseOptions,
@@ -55,16 +57,19 @@ export function createRuntime<A extends AuthOptions>(
   const db = async () => (await connect()).db;
 
   let authInstance: ReturnType<typeof createAuth<ReturnType<typeof authOptions<A>>>> | undefined;
-  let requestOrigin: string | undefined;
-  const bindRequest = (request: Request) => {
-    if (requestOrigin) return;
-    const origin = developmentRequestOrigin(request);
-    if (!origin) return;
-    requestOrigin = origin;
+  let origin: string | undefined;
+  const bindOrigin = (value: string) => {
+    if (origin) return;
+    origin = value;
     const baseURL = authInstance?.options.baseURL;
-    if (!host.baseURL && typeof baseURL === "object") baseURL.fallback ??= origin;
+    if (!host.baseURL && typeof baseURL === "object") baseURL.fallback ??= value;
   };
-  const auth = async () => (authInstance ??= createAuth((await connect()).options, requestOrigin));
+  const bindRequest = (request: Request) => {
+    if (origin) return;
+    const requestOrigin = developmentRequestOrigin(request);
+    if (requestOrigin) bindOrigin(requestOrigin);
+  };
+  const auth = async () => (authInstance ??= createAuth((await connect()).options, origin));
 
   // `A` hides `getSession` from the type checker, so it is typed here.
   const getSession = async (headers: Headers) =>
@@ -72,5 +77,5 @@ export function createRuntime<A extends AuthOptions>(
 
   const getApiKey = async (key: string) => apiKeyCaller(await auth(), key);
 
-  return { db, auth, getSession, getApiKey, bindRequest };
+  return { db, auth, getSession, getApiKey, bindOrigin, bindRequest };
 }

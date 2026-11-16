@@ -11,6 +11,7 @@ const reserved = [
   "invites",
   "jobs",
   "schema",
+  "setup",
   "media",
   "preview",
   "localization",

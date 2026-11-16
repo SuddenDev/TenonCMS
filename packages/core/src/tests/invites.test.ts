@@ -1,3 +1,4 @@
+import { passkey } from "@better-auth/passkey";
 import { describe, expect, it } from "vitest";
 import { defineCms, type EmailAdapter, type EmailMessage } from "../index.ts";
 import { admin, base, origin, setup, testDb } from "./setup.ts";
@@ -204,6 +205,12 @@ describe("invites", () => {
       body: JSON.stringify({ token, ...ed }),
     });
     expect(text.status).toBe(415);
+    expect(
+      await json(await call(g.fetch, "POST", "/invites/accept", { token, name: "Ed" })),
+    ).toMatchObject({
+      status: 400,
+      body: { errors: { password: expect.any(String) } },
+    });
     expect((await call(g.fetch, "POST", "/invites/accept", { token, ...ed })).status).toBe(200);
   });
 
@@ -229,6 +236,19 @@ describe("invites", () => {
     expect(sent[0].text).toContain("Admin invited you to tenoncms as Editor.");
   });
 
+  it("invites from server code, as the actor cli", async () => {
+    const sent: Omit<EmailMessage, "from">[] = [];
+    const { cms, guest } = await env({ adapter: { send: async (m) => void sent.push(m) } });
+    const created = await cms.users.invite({ email: "e@b.co", role: "editor", url });
+    expect(created).toMatchObject({ invite: { invitedBy: "cli" }, sent: true });
+    expect(sent[0].text).toContain("You are invited to tenoncms as Editor.");
+
+    const g = guest();
+    const token = tokenOf(created.link);
+    expect((await call(g.fetch, "POST", "/invites/accept", { token, ...ed })).status).toBe(200);
+    expect(await g.client.getSession()).toMatchObject({ user: { email: "e@b.co" } });
+  });
+
   it("answers 502 with the link when sending fails, and keeps the invite", async () => {
     const { invite, owner } = await env({
       adapter: { send: async () => Promise.reject(new Error("SMTP down")) },
@@ -241,5 +261,73 @@ describe("invites", () => {
       message: expect.any(String),
     });
     expect((await json(await call(owner.fetch, "GET", "/invites"))).body).toHaveLength(1);
+  });
+});
+
+describe("invites with password and another method", () => {
+  it("accepts without a password, which the user MAY set right after", async () => {
+    const cms = defineCms({ ...base, auth: { ...base.auth, plugins: [passkey()] } });
+    await cms.users.create(admin);
+    const invite = async () =>
+      tokenOf((await cms.users.invite({ email: "e@b.co", role: "editor", url })).link);
+
+    const g = setup(cms);
+    await g.client.invites.accept({ token: await invite(), name: "Ed" });
+    expect(await g.client.getSession()).toMatchObject({ user: { email: "e@b.co" } });
+    const set = await call(g.fetch, "POST", "/account/password", { newPassword: "password123" });
+    expect(set.status).toBe(200);
+    await setup(cms).client.signIn({ email: "e@b.co", password: "password123" });
+
+    await cms.users.remove("e@b.co");
+    const short = { token: await invite(), name: "Ed", password: "short" };
+    expect((await call(setup(cms).fetch, "POST", "/invites/accept", short)).status).toBe(400);
+  });
+});
+
+describe("invites without a password", () => {
+  async function env() {
+    const { database, exec } = testDb();
+    const cms = defineCms({
+      ...base,
+      database,
+      auth: { emailAndPassword: { enabled: false }, plugins: [passkey()] },
+    });
+    await cms.users.create({ name: "Admin", email: admin.email });
+    const token = tokenOf((await cms.users.invite({ email: "e@b.co", role: "editor", url })).link);
+    return { cms, token, sql: exec };
+  }
+  const pending = async (sql: (s: string) => Promise<unknown[]>) =>
+    (await sql("SELECT email FROM cms_invites")).length;
+
+  it("accepts with a name only, and signs in", async () => {
+    const { cms, token, sql } = await env();
+    const g = setup(cms);
+    expect(await g.client.invites.accept({ token, name: "Ed" })).toMatchObject({
+      user: { email: "e@b.co" },
+    });
+    expect(await g.client.getSession()).toMatchObject({
+      user: { email: "e@b.co", name: "Ed", role: "editor" },
+    });
+    expect(await sql("SELECT * FROM account")).toEqual([]);
+    expect(
+      (await call(setup(cms).fetch, "POST", "/invites/accept", { token, name: "Ed" })).status,
+    ).toBe(404);
+  });
+
+  it("rejects a password, and keeps the invite", async () => {
+    const { cms, token, sql } = await env();
+    expect(
+      await json(await call(setup(cms).fetch, "POST", "/invites/accept", { token, ...ed })),
+    ).toMatchObject({ status: 400, body: { errors: { password: expect.any(String) } } });
+    expect(await pending(sql)).toBe(1);
+  });
+
+  it("puts the invite back when better-auth rejects the user", async () => {
+    const { cms, token, sql } = await env();
+    await cms.users.create({ name: "Ed", email: "e@b.co" });
+    const res = await call(setup(cms).fetch, "POST", "/invites/accept", { token, name: "Ed" });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+    expect(await pending(sql)).toBe(1);
   });
 });

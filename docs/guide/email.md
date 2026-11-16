@@ -1,6 +1,6 @@
 # Email
 
-Email is optional and runs on the server. The CMS uses it for password resets, email verification and invites. Your own code can send mail too.
+Email is optional and runs on the server. The CMS uses it for password resets, email verification, invites and sign-in links. Your own code can send mail too.
 
 ## Configure
 
@@ -73,7 +73,7 @@ Hosts MUST validate input, choose recipients and templates on the server, and en
 
 ## Templates for account emails
 
-With email configured, password-reset, email-verification and invite emails use default text and HTML templates. Replace any of them with a function returning `{ subject, text?, html? }`. Async functions work too:
+With email configured, password-reset, email-verification, invite, sign-in-link, magic-link and email OTP emails use default text and HTML templates. Replace any of them with a function returning `{ subject, text?, html? }`. Async functions work too:
 
 ```ts
 email: {
@@ -89,18 +89,34 @@ email: {
       text: `Hello ${user.name}, verify your email: ${url}`,
     }),
     // No account exists yet, so an invite gets the email, role, inviter and site name instead of a user.
+    // `inviter` is missing for an invite from server code or `tenon users create`.
     invite: ({ role, url, inviter, site }) => ({
       subject: `Join ${site}`,
-      text: `${inviter.name} invited you as ${role.label}: ${url}`,
+      text: `${inviter?.name ?? "We"} invited you as ${role.label}: ${url}`,
+    }),
+    // The link of `tenon users recover`. It works once, for an hour.
+    signInLink: ({ user, url }) => ({
+      subject: "Your sign-in link",
+      text: `Hello ${user.name}, sign in: ${url}`,
+    }),
+    // The link of `magicLink()`. It goes only to an existing user.
+    magicLink: ({ user, url }) => ({
+      subject: "Sign in",
+      text: `Hello ${user.name}, sign in: ${url}`,
+    }),
+    // The code of `emailOTP()`. `type` is "sign-in", "email-verification", "forget-password" or "change-email".
+    emailOtp: ({ otp, type }) => ({
+      subject: type === "sign-in" ? "Your sign-in code" : "Your code",
+      text: `Your code: ${otp}`,
     }),
   },
 }
 ```
 
 - The defaults escape names and URLs in HTML. Replacement templates MUST escape any values they put into HTML.
-- Explicit `auth.emailAndPassword.sendResetPassword` and `auth.emailVerification.sendVerificationEmail` callbacks take precedence.
+- Explicit `auth.emailAndPassword.sendResetPassword`, `auth.emailVerification.sendVerificationEmail`, `sendMagicLink` and `sendVerificationOTP` callbacks take precedence.
 - Requiring verification, or sending it on sign-up, stays an explicit better-auth option.
-- Magic-link sign-in is a separate feature.
+- Magic link and email OTP are [sign-in methods](./auth-and-access.md#sign-in-methods) you add as plugins.
 
 ## Use another provider
 

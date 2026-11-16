@@ -57,6 +57,7 @@ export type {
 
 export type { AuthOptions } from "./auth/config/options.ts";
 export type { Role, RoleOptions } from "./users/roles.ts";
+export type { SignInLinkResult, UserSummary, UsersApi } from "./users/types.ts";
 export type {
   ApiKey,
   ApiKeyCaller,

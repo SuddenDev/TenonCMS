@@ -12,7 +12,7 @@ import type { InviteResult } from "../types.ts";
  */
 export async function sendInvite(
   core: Core,
-  inviter: CmsUser,
+  inviter: CmsUser | undefined,
   row: InviteRow,
   link: string,
 ): Promise<InviteResult & { message?: string }> {
@@ -24,7 +24,7 @@ export async function sendInvite(
       email: row.email,
       role: { name: row.role, label: translate(label, "en") ?? row.role },
       url: link,
-      inviter: { name: inviter.name, email: inviter.email },
+      inviter: inviter && { name: inviter.name, email: inviter.email },
       site: core.admin.descriptor.name ?? "tenoncms",
     });
     await core.email.send({ ...content, to: row.email });

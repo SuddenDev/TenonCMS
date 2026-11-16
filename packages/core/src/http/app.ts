@@ -13,6 +13,7 @@ import { statusEndpoint } from "../auth/endpoints/status.endpoint.ts";
 import { passwordEndpoint } from "../auth/endpoints/password.endpoint.ts";
 import { acceptEndpoint } from "../users/endpoints/accept.endpoint.ts";
 import { invitesEndpoint } from "../users/endpoints/invites.endpoint.ts";
+import { setupEndpoint } from "../users/endpoints/setup.endpoint.ts";
 import { sessionHint } from "../auth/middleware/session-hint.middleware.ts";
 import { apiKeyReach, csrfUnlessApiKey } from "../auth/middleware/api-key.middleware.ts";
 import { apiKeysEndpoint } from "../api-keys/endpoints/api-keys.endpoint.ts";
@@ -67,6 +68,7 @@ export function createApp(core: Core, site?: string) {
   );
   open.route("/", statusEndpoint(core));
   open.route("/", acceptEndpoint(core));
+  open.route("/", setupEndpoint(core));
   open.route("/", localizationEndpoint(core.localization));
   mountRoutes(open, plugins, "publicRoutes");
   if (core.jobs.secret) open.route("/", runEndpoint(core, core.jobs.secret));
@@ -110,6 +112,7 @@ export function createApp(core: Core, site?: string) {
   api.use(withCms(core), ...pluginMiddleware(plugins, "publicMiddleware"));
   api.use("/auth/*", sessionHint(core));
   api.use("/invites/accept", sessionHint(core));
+  api.use("/setup", sessionHint(core), noStore);
   // Invite responses hold tokens, a created or rolled API key its secret.
   api.use("/invites", noStore);
   api.use("/invites/*", noStore);

@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
 import Icon from "@/shared/components/Icon.vue";
 import { useTheme } from "@/shared/composables/useTheme";
 import { useAdminLocale } from "@/shared/i18n";
 import { localeLabel } from "@/shared/locale";
 import { sessionKey } from "@/shared/options";
 import UserSettings from "@/modules/auth/components/UserSettings.vue";
+import { loadAuthStatus } from "@/modules/auth/composables/useAuthStatus";
+import { passkeysSupported } from "@/modules/auth/passkey";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import {
   DropdownMenu,
@@ -26,11 +29,31 @@ const { t } = useI18n();
 const { user, signOut } = inject(sessionKey)!;
 const theme = useTheme();
 const settings = ref(false);
+const recovery = ref(false);
+const route = useRoute();
+const router = useRouter();
 const { locale, locales } = useAdminLocale();
 const themes = [
   { value: "light", label: "nav.light", icon: "sun" },
   { value: "dark", label: "nav.dark", icon: "moon" },
 ] as const;
+
+// A recovery link lands on `?settings=security`. The query goes, so a reload does not open it again. The settings
+// open only when they offer a way to sign in.
+watch(
+  () => route.query.settings,
+  async (tab) => {
+    if (tab !== "security") return;
+    const status = await loadAuthStatus();
+    if (status.password || (status.passkeys && passkeysSupported()))
+      recovery.value = settings.value = true;
+    void router.replace({ query: { ...route.query, settings: undefined } });
+  },
+  { immediate: true },
+);
+watch(settings, (open) => {
+  if (!open) recovery.value = false;
+});
 
 const initials = computed(() =>
   (user.value?.name || user.value?.email || "?")
@@ -93,5 +116,5 @@ const initials = computed(() =>
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
-  <UserSettings v-if="user" v-model:open="settings" />
+  <UserSettings v-if="user" v-model:open="settings" :recovery="recovery" />
 </template>

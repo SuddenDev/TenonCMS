@@ -3,7 +3,7 @@ import { readFile, rename, rm } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { LocalApi } from "../index.ts";
+import type { LocalApi, UsersApi } from "../index.ts";
 import {
   API_KEY_HEADER,
   type ArchiveCheck,
@@ -34,6 +34,12 @@ export type Target = {
 
 export type TargetFlags = { url?: string; "api-key"?: string; config?: string };
 
+/** The `defineCms()` instance of a config loaded here. */
+export type LocalCms = LocalApi & {
+  users: UsersApi;
+  auth(): Promise<{ options: { baseURL?: unknown } }>;
+};
+
 /**
  * `--url` (or `TENON_URL`) talks HTTP with `--api-key` (or `TENON_API_KEY`), else the session of `tenon login`.
  * Without a URL, it loads `--config` (default `tenon.config.ts`) here.
@@ -46,7 +52,11 @@ export async function openTarget(flags: TargetFlags): Promise<Target> {
     : openLocal(flags.config);
 }
 
-async function openRemote(url: string, apiKey: string | undefined): Promise<Target> {
+/**
+ * A client for the instance at `url`, with `apiKey`, else the session of `tenon login`.
+ * @throws When there is neither.
+ */
+export async function remoteClient(url: string, apiKey: string | undefined) {
   const origin = new URL(url).origin;
   const token = apiKey ? undefined : (await readCredential(origin))?.token;
   if (!apiKey && !token)
@@ -60,7 +70,11 @@ async function openRemote(url: string, apiKey: string | undefined): Promise<Targ
     }
     return fetch(input, { ...init, headers });
   };
-  const client = createClient({ baseUrl: origin, fetch: fetchFn });
+  return { origin, fetchFn, client: createClient({ baseUrl: origin, fetch: fetchFn }) };
+}
+
+async function openRemote(url: string, apiKey: string | undefined): Promise<Target> {
+  const { origin, fetchFn, client } = await remoteClient(url, apiKey);
   return {
     label: origin,
     name: new URL(origin).hostname,
@@ -78,7 +92,7 @@ async function openRemote(url: string, apiKey: string | undefined): Promise<Targ
 }
 
 async function openLocal(config = "tenon.config.ts"): Promise<Target> {
-  const cms = await loadConfig(resolve(config));
+  const cms = await loadConfig(config);
   return {
     label: `the database of ${config}`,
     name: await packageName(),
@@ -102,7 +116,8 @@ async function packageName() {
  * `useRuntimeConfig()` returns Nuxt's runtime config. A config that imports other platform modules
  * (`cloudflare:workers`) only runs on its platform.
  */
-async function loadConfig(path: string): Promise<LocalApi> {
+export async function loadConfig(config = "tenon.config.ts"): Promise<LocalCms> {
+  const path = resolve(config);
   const { loadEnv, runnerImport } = await import("vite");
   const { clientModules } = await import("../integrations/vite/index.ts");
   for (const [key, value] of Object.entries(loadEnv("production", process.cwd(), "")))
@@ -112,7 +127,7 @@ async function loadConfig(path: string): Promise<LocalApi> {
   const inline = { configFile: false as const, logLevel: "error" as const };
   try {
     const defaults = await astroEnvDefaults((id) => runnerImport(id, inline));
-    const { module } = await runnerImport<{ default?: LocalApi }>(path, {
+    const { module } = await runnerImport<{ default?: LocalCms }>(path, {
       ...inline,
       plugins: [clientModules({ server: true }), astroEnv(defaults)],
     });

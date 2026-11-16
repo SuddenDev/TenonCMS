@@ -31,6 +31,29 @@ it("requests and completes a password reset through the auth endpoints", async (
   ]);
 });
 
+it("signs in by email link and by email code through the auth endpoints", async () => {
+  const { client, calls } = recorder({ status: true, user: { id: "u" } });
+  const link = {
+    email: "admin@example.com",
+    callbackURL: "https://example.com/cms/",
+    errorCallbackURL: "https://example.com/cms/login",
+  };
+  await expect(client.signInMagicLink(link)).resolves.toBeUndefined();
+  await expect(client.sendSignInCode({ email: link.email })).resolves.toBeUndefined();
+  await expect(client.signInWithCode({ email: link.email, otp: "123456" })).resolves.toEqual({
+    id: "u",
+  });
+  expect(calls()).toEqual([
+    ["POST", "http://x/_tenon/auth/sign-in/magic-link", link],
+    [
+      "POST",
+      "http://x/_tenon/auth/email-otp/send-verification-otp",
+      { email: link.email, type: "sign-in" },
+    ],
+    ["POST", "http://x/_tenon/auth/sign-in/email-otp", { email: link.email, otp: "123456" }],
+  ]);
+});
+
 describe("locale on reads", () => {
   it("sends locale, fallback and alternates as query parameters", async () => {
     const { client, calls } = recorder([]);

@@ -164,7 +164,7 @@ defineTask({ access: ["editor"], run: async () => {} });
 
 ## The Jobs page
 
-The admin has a **Jobs** page under Manage. It shows when you MAY see at least one task, so an editor who MAY update an entry with [`schedule`](./drafts.md#scheduling) sees it, too. Without such a task the entry is hidden.
+The admin has a **Jobs** page under Manage. It shows when you MAY see at least one task. The `tenon:` tasks count for admins only, so by default editors do not see the page. They still see and cancel the scheduled jobs of a document in its [Schedule dialog](./drafts.md#scheduling). Give a task `access: ["editor"]` to show the page to editors.
 
 - Tabs: **Upcoming** (queued), **Running**, **Failed**, **Done** and **Cron**. A task filter narrows the list to one task. The page refreshes every ten seconds.
 - A row shows the task, its target (a link to the document or global, for a scheduled publish or unpublish), the time it is due, its status, attempts, who created it and the last error. Attempts show the limit (`1 / 3`) until the job is done, then only the count. **Details** in a row opens a sheet with everything the job holds: schedule, target, payload, result and error. It works for jobs that have not run yet.

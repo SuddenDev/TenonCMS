@@ -31,6 +31,11 @@ export type Core = {
   db: () => Promise<Kysely<Database>>;
   /** Creates better-auth on the first call. */
   auth: () => Promise<{ handler(request: Request): Promise<Response>; options: BetterAuthOptions }>;
+  /**
+   * Seeds the origin of better-auth's calls without a request. In development without a base URL, better-auth MUST
+   * have one before such a call. The first origin stays.
+   */
+  bindOrigin: (origin: string) => void;
   /** The session of a request's headers, or `null`. */
   getSession: (headers: Headers) => Promise<{ user: CmsUser } | null>;
   /** The key of an API key's secret, or `null` for a key that is not valid. */

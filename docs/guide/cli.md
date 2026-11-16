@@ -1,6 +1,6 @@
 # The CLI
 
-Two commands: `npm create tenoncms` starts a project, and `tenon` backs it up, restores it and upgrades it. Both need Node 24 or newer.
+Two commands: `npm create tenoncms` starts a project, and `tenon` backs it up, restores it, upgrades it and manages its users. Both need Node 24 or newer.
 
 `tenon` comes with the `tenoncms` package, so every project that has `tenoncms` has it: `npx tenon backup`. `npx tenoncms backup` is the same command. Remove `@tenoncms/cli` if a project still has it; it was the old home of the command.
 
@@ -10,7 +10,7 @@ Two commands: `npm create tenoncms` starts a project, and `tenon` backs it up, r
 npm create tenoncms
 ```
 
-It asks one question at a time: the folder, the site name (default `Tenon`, written to `admin.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
+It asks one question at a time: the folder, the site name (default `Tenon`, written to `admin.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, how people sign in to the admin, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
 
 | Runs on                 | Database                                                                                | Media                                |
 | ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -18,10 +18,16 @@ It asks one question at a time: the folder, the site name (default `Tenon`, writ
 | Vercel                  | SQLite / Turso (a file in development, Turso on Vercel), Postgres                       | S3-compatible bucket                 |
 | Cloudflare (Astro only) | Durable Object                                                                          | R2, images through Cloudflare Images |
 
+Sign-in offers any mix of password (the default), passkey, magic link and email code. At least one is required. See [Sign-in methods](./auth-and-access.md#sign-in-methods).
+
+- Password alone writes nothing: it is core's default. Without password, `tenon.config.ts` gets `emailAndPassword: { enabled: false }`.
+- Passkey adds `@better-auth/passkey` to `package.json` and its plugin to `tenon.config.ts`.
+- Magic link and email code add `magicLink()` and `emailOTP()` from `tenoncms/auth`. They need [email](./email.md), which the scaffolder does not set up. Until then, `npx tenon users recover <email>` prints a sign-in link.
+
 Every question has a flag, so it also runs without a terminal:
 
 ```sh
-npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --pm pnpm --yes
+npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --auth passkey,magic-link --pm pnpm --yes
 ```
 
 It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `CMS_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.
@@ -51,6 +57,28 @@ It checks the backup first and shows what it deletes and what it writes. Then it
 - `--dry-run` stops after the check.
 - `--yes` skips the questions; it is required without a terminal. `--backup` backs up first anyway.
 - A full backup restores only into the same kind of database and the same `tenoncms` version. The check says what differs.
+
+## Users
+
+```sh
+npx tenon users create editor@example.com
+npx tenon users recover admin@example.com
+npx tenon users list
+npx tenon users deactivate editor@example.com
+npx tenon users remove editor@example.com
+```
+
+`users create` invites a user. It asks for the email and picks the role from a list of the configured roles: `admin` for the first user, else `editor` by default. It prints the invite link, and emails it as well when [email](./email.md) is set up. Without email it warns first: pass the link on yourself.
+
+- `--role <role>` sets the role without asking. `--admin <path>` sets the admin's path for the link, if it is not `/admin`.
+- `--password` creates the user at once instead, with a name and a password it asks for. It needs a terminal and works on the local project only.
+- With `--url`, the invite goes through a deployed instance. It needs `tenon login` as an admin.
+
+`users recover` prints a link that signs the user in once, within an hour. Use it when nobody can sign in, e.g. after a lost password with no email set up. Opening the link signs the user out everywhere else and opens the account settings. It asks first; without a terminal it needs `--yes`. It works on the local project only, because it needs the database, not a session.
+
+`users list` prints every user with ID, name, email, role and status. In a terminal with colors, the status is green when active and red when deactivated. `users deactivate` ends the user's sessions and blocks sign-in, like **Deactivate** in the admin; `users reactivate` lifts that. `users remove` deletes the user, like **Remove** in the admin. It cannot be undone; their content stays. Deactivate and remove ask first, remove with No as the default; without a terminal they need `--yes`. The last active admin cannot be deactivated or removed. These four work on the local project only, like `users recover`.
+
+`users create` and `users recover` build the link on the site's URL: `TENON_BASE_URL` (or `auth.baseURL`), else they ask, with `http://localhost:4321` as the default. Without a terminal, set `TENON_BASE_URL`.
 
 ## Local or remote
 

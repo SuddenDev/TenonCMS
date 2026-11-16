@@ -206,7 +206,19 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
 
     signUp: (data: object) => user("/auth/sign-up/email", data),
 
+    setup: (data: object) => user("/setup", data),
+
     signIn: (data: object) => user("/auth/sign-in/email", data),
+
+    signInMagicLink: async (data: object) => {
+      await request("POST", "/auth/sign-in/magic-link", data);
+    },
+
+    sendSignInCode: async ({ email }: { email: string }) => {
+      await request("POST", "/auth/email-otp/send-verification-otp", { email, type: "sign-in" });
+    },
+
+    signInWithCode: (data: object) => user("/auth/sign-in/email-otp", data),
 
     requestPasswordReset: async (data: { email: string; redirectTo?: string }) => {
       await request("POST", "/auth/request-password-reset", data);

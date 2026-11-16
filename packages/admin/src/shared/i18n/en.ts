@@ -166,6 +166,14 @@ export default {
     removePasskeyText:
       "The passkey will be removed from this account. You will no longer be able to sign in with this device.",
     addedOn: "Added {date}",
+    signInStep: {
+      title: "How do you want to sign in?",
+      description: "Your account is ready. Choose how you sign in next time.",
+      passkey: "Create a passkey",
+      password: "Set a password",
+      setPassword: "Save password",
+      email: "Sign in by email instead",
+    },
     name: "Name",
     password: "Password",
     signIn: "Sign in",
@@ -185,6 +193,27 @@ export default {
     requestNewLink: "Request a new link",
     backToSignIn: "Back to sign in",
     pleaseWait: "Please wait…",
+    continue: "Continue",
+    or: "or",
+    otherMethod: "Choose a different method",
+    emailLink: {
+      send: "Email me a sign-in link",
+      checkInbox: "Check your inbox",
+      sent: "We sent a sign-in link to {email}. It works once.",
+      invalid: "This sign-in link is invalid or has expired.",
+      failed: "Signing in with this link failed. Try again.",
+    },
+    emailCode: {
+      send: "Email me a code",
+      title: "Enter your code",
+      sent: "We sent a sign-in code to {email}.",
+      digit: "Digit {n} of {total}",
+      resend: "Send a new code",
+      resent: "A new code is on its way.",
+      invalid: "This code is not correct.",
+      expired: "This code has expired. Send a new one.",
+      tooManyAttempts: "Too many attempts. Send a new code.",
+    },
     device: {
       title: "Sign in the CLI",
       description: "The tenon CLI asks to act as {email}.",
@@ -198,6 +227,7 @@ export default {
     invite: {
       title: "Accept invitation",
       description: "You were invited as {role}. Choose your name and a password.",
+      descriptionNoPassword: "You were invited as {role}. Choose your name.",
       accept: "Create account",
       invalid: "This invitation is no longer valid. Ask an admin for a new one.",
     },
@@ -366,6 +396,13 @@ export default {
     setPassword: "Set password",
     passwordChanged: "Password changed",
     passwordSet: "Password set",
+    recovery: {
+      passkeyOrPassword:
+        "You signed in with a recovery link. Add a passkey or set a new password, so you can sign in next time.",
+      passkey: "You signed in with a recovery link. Add a passkey, so you can sign in next time.",
+      password:
+        "You signed in with a recovery link. Set a new password, so you can sign in next time.",
+    },
   },
   timezone: {
     device: "This device",

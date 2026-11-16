@@ -50,6 +50,8 @@ import { sitemapEntries } from "../seo/sitemap-entries.ts";
 import { resolveWebhooks } from "../webhooks/config/resolve-webhooks.ts";
 import { webhookTasks } from "../webhooks/tasks.ts";
 import { reportError, runInit, runSeeds } from "../lifecycle/run-lifecycle.ts";
+import { usersApi } from "../users/api.ts";
+import { requireSignInMethod } from "../auth/config/sign-in-methods.ts";
 
 /**
  * Creates a CMS instance.
@@ -135,6 +137,7 @@ export function defineCms<
         ? defaultMedia(!!mediaOption)
         : undefined;
   requireConfig({ secret, database, storage: mediaOptions?.storage });
+  requireSignInMethod(host, !!emailOptions);
 
   /* ── Schema creation + validation ────────────────────────────────────────────────────── */
 
@@ -214,6 +217,7 @@ export function defineCms<
       auth,
       getSession,
       getApiKey,
+      bindOrigin,
       bindRequest,
     } = createRuntime<A>(database, secret, host, localized, coreAuth);
 
@@ -252,6 +256,7 @@ export function defineCms<
       auth,
       getSession,
       getApiKey,
+      bindOrigin,
       email,
       emailTemplates: emailOptions && { ...emailTemplates, ...emailOptions.templates },
       roles,
@@ -308,6 +313,9 @@ export function defineCms<
        * database.
        */
       jobs: { ...api.jobs, run: (): Promise<RunResult> => runJobs(core) },
+
+      /** Invites, creates and recovers users. Server code only: a `withSession()` copy refuses it. */
+      users: usersApi(core, overrideAccess),
 
       /** Returns a copy whose reads include drafts. */
       withDrafts<S>(this: S): S {
