@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cms
+      POSTGRES_USER: tenon
+      POSTGRES_PASSWORD: tenon
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "tenon", "-d", "cms"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  s3:
+    image: adobe/s3mock:5.2.3
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: uploads
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3mockroot
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - s3:/s3mockroot
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/favicon.ico"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres:
+  s3:

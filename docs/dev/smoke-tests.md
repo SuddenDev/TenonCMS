@@ -140,6 +140,8 @@ Expect no output from the loop. Then start the build on another port and its own
 
 ## Postgres
 
+For Postgres and S3 together, use [the Vercel example's Docker Compose setup](../../examples/vercel/README.md). It includes commands for the live adapter tests and an admin upload check.
+
 PGlite runs the integration suite already. This checks `postgres()` and the `pg` pool against a real server, in a throwaway container.
 
 ```sh

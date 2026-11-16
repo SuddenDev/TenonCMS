@@ -15,6 +15,7 @@ Every example has its instance in `tenon.config.ts` at the project root and its 
 
 ## Astro in more detail
 
+- `DATABASE_URL` selects Postgres for `postgres:` / `postgresql:` URLs and libsql otherwise. Setting `S3_BUCKET` selects private S3 media with the `AWS_*` variables; without it, media stays local. Standalone does the same. Both work with the [local Postgres and S3Mock services](../../examples/vercel/README.md).
 - The **kitchen-sink** global holds every field type except `join` (globals cannot hold joins), plus every option and layout feature. Extend it whenever you add a field type or option.
 - **Comments** is the access-rule example: visitors can create, readers see only approved ones, only `admin` and `editor` can moderate. The post page lists them and handles its own form post.
 - A `strings` global (the `strings()` preset) holds translated site text.
@@ -30,13 +31,14 @@ Every example has its instance in `tenon.config.ts` at the project root and its 
 
 ## Vercel in more detail
 
+- Local Postgres and S3Mock: follow [the example README](../../examples/vercel/README.md). `compose.yaml` starts both services with persistent volumes; `.env.example` matches their ports and credentials. Use this to test admin uploads and the live S3 and Postgres tests without cloud services.
 - Vercel project: root directory `examples/vercel`, build command `cd ../.. && pnpm build:packages && pnpm --filter example-vercel build`, because the example consumes core's `dist/`.
   - Set `ENABLE_EXPERIMENTAL_COREPACK=1`, or Vercel ignores `packageManager` and installs with its own pnpm.
 - Set up Neon as in the [guide](../guide/frameworks.md#with-neon): the pooled `DATABASE_URL`, a private bucket and its S3 variables (`AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET`), and `CMS_SECRET`. The same variables in `.env` work locally.
 - Vercel allows the `AWS_*` key names and injects unusable ones when they are unset, so all of them MUST be set.
 - `site` stays unset. Set `TENON_BASE_URL` to the public CMS origin in production. For production and preview hosts together, use `auth.baseURL` with explicit `allowedHosts` and a trusted `fallback` (see [auth options](../guide/auth-and-access.md#auth-options)). Development detects its origin automatically. Passkeys bind to the host they were made on.
 - `astro build` writes `.vercel/output`. The function (2026-10-29): 39 MB, with `tenoncms`, `kysely`, `pg` and `sharp` traced by nft. No libsql.
-- Smoke test without Vercel: a temp Postgres as `DATABASE_URL` and dummy S3 variables; everything except uploads works. With a real bucket, run `s3.live.test.ts` against it too (`S3_TEST_*` variables).
+- Smoke test without Vercel: use the local Compose services or a temp Postgres and a test bucket. Run `s3.live.test.ts` against the bucket too (`S3_TEST_*` variables).
 - Neon checked on 2026-10-29: `s3.live.test.ts` passes, and an upload through presigned parts, the file and a variant served by core work.
 - `/` and `/posts/[slug]` are prerendered; `getStaticPaths()` imports the config, because `Astro.locals` does not exist there. `/preview/posts/[slug]` renders per request and is the `preview` URL of posts, so the admin's preview shows drafts. Both render `src/components/Post.astro` with `findPost()`.
 - `src/deploy/plugin.ts` is a plugin in the project with two admin actions that share one `run`: Deploy in the top bar (the default) and in the Manage section (`display: "content"` and `group` with the built-in section's labels), plus an Analytics link in the top bar. `run` calls `DEPLOY_HOOK_URL` directly, because Vercel has no job clock. Both ask `confirm` first. Admins only, the default of actions. Without `DEPLOY_HOOK_URL` the plugin is not registered.
@@ -44,6 +46,7 @@ Every example has its instance in `tenon.config.ts` at the project root and its 
 
 ## Conventions
 
+- Standalone redirects `/` to `/admin` with a relative `Location`, so TLS termination at a reverse proxy does not turn the redirect into HTTP.
 - Secrets come from the environment (Astro env, `process.env`, or Nuxt runtime config).
 - Admin pages that are reachable only by URL use `nav: { display: "none" }`.
 - Smoke-test an example with the [smoke tests](smoke-tests.md). Examples and adapters have no automated tests yet.
