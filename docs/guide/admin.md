@@ -142,7 +142,7 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 
 - Collections and globals take `description` and `nav` in their own config, next to `label`.
 - Default orders: collections 10, media 15, globals 20, pages 30. Equal orders keep their definition order. Sections appear in the order of their first item.
-- `media` takes `{ label, nav }` to move the media library.
+- `media` takes `{ label, nav }` to move the media library. Its `pageHeader` sets the bar above the library: `false` hides the bar (default, the library has its own toolbar), `true` shows the label, a string shows that text.
 - **Settings**: the content menu has a "Settings" entry under "Manage" when any item has `display: "settings"`. It opens `/content/settings`, with one section of cards per `group`. Each card opens its global, collection or page. The default `general` and `seo` globals sit there, and so can your own: `defineGlobal({ label: "Footer", nav: { display: "settings", order: 3 }, fields })`.
 
 ## Custom fields

@@ -560,11 +560,12 @@ export type AdminOptions = {
   favicon?: Themed;
   /**
    * Navigation entry of the media library. `label` and the `nav` keys replace its defaults
-   * (`Media`, `Content`, `image`, 15).
+   * (`Media`, `Content`, `image`, 15). `pageHeader` is the bar above the library: `false` hides it (default),
+   * `true` shows the label, a string shows that text.
    * @example
-   * media: { nav: { group: 'Assets', icon: 'images' } }
+   * media: { nav: { group: 'Assets', icon: 'images' }, pageHeader: true }
    */
-  media?: { label?: Text; nav?: Nav };
+  media?: { label?: Text; nav?: Nav; pageHeader?: boolean | string };
   /**
    * Inputs by custom field type. The key `color` handles fields with `type: 'custom:color'`.
    * A key a plugin or the host uses twice throws at startup.

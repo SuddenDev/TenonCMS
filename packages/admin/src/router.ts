@@ -12,6 +12,7 @@ import NotFound from "@/shared/components/NotFound.vue";
 import SelectContentPlaceholder from "@/shared/components/SelectContentPlaceholder.vue";
 import Mount from "@/shared/components/Mount.vue";
 import { useExtensionData } from "@/shared/composables/useExtensionData";
+import { schema } from "@/shared/api";
 import { i18n, text } from "@/shared/i18n";
 import { CONTENT, pageDataKey, pagePath } from "@/shared/options";
 import CollectionList from "@/modules/documents/views/CollectionList.vue";
@@ -162,9 +163,11 @@ export function createAdminRouter(base: string) {
       component: Media,
       meta: {
         breadcrumb: (r) =>
-          String(r.params.folder || t("nav.media"))
+          String(r.params.folder || (text(schema.value.admin?.media?.label) ?? t("nav.media")))
             .split("/")
             .at(-1)!,
+        // The library has a toolbar of its own.
+        pageHeader: () => schema.value.admin?.media?.pageHeader ?? false,
       },
       children: [{ path: ":folder(.*)", component: empty }],
     },
