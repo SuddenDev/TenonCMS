@@ -10,3 +10,4 @@ uploads
 !packages/core/src/media/operations/uploads/
 .uploads
 /packages/core/README.md
+.DS_Store
