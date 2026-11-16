@@ -103,13 +103,13 @@ describe("fillMarkers", () => {
 describe("envExample", () => {
   it("lists required variables, and defaults and optional ones commented out", () => {
     expect(envExample(parts)).toBe(
-      "# A file.\n# DATABASE_URL=file:./cms.db\n# DATABASE_AUTH_TOKEN=\nS3_BUCKET=uploads\n",
+      "# A file.\n# DATABASE_URL=file:./cms.db\n# DATABASE_AUTH_TOKEN=\n\nS3_BUCKET=uploads\n",
     );
   });
 
   it("prefixes the names for Nuxt", () => {
     expect(envExample(parts, "NUXT_")).toBe(
-      "# A file.\n# NUXT_DATABASE_URL=file:./cms.db\n# NUXT_DATABASE_AUTH_TOKEN=\nNUXT_S3_BUCKET=uploads\n",
+      "# A file.\n# NUXT_DATABASE_URL=file:./cms.db\n# NUXT_DATABASE_AUTH_TOKEN=\n\nNUXT_S3_BUCKET=uploads\n",
     );
   });
 });

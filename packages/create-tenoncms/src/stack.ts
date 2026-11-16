@@ -86,15 +86,23 @@ export function fillMarkers(
     .join("\n");
 }
 
-/** `.env.example`: each variable with its comment, its name after `prefix`. */
+/** `.env.example`: the variables of each part with their comments, one block per part, names after `prefix`. */
 export function envExample(parts: Part[], prefix = "") {
-  const lines = [...envVars(parts).values()].flatMap((variable) => [
-    ...(variable.comment ? [`# ${variable.comment}`] : []),
-    variable.example === undefined
-      ? `# ${prefix}${variable.name}=${variable.default ?? ""}`
-      : `${prefix}${variable.name}=${variable.example}`,
-  ]);
-  return `${lines.join("\n")}\n`;
+  const seen = new Set<string>();
+  const blocks = parts
+    .map((part) => (part.env ?? []).filter((v) => !seen.has(v.name) && seen.add(v.name)))
+    .filter((vars) => vars.length)
+    .map((vars) =>
+      vars
+        .flatMap((variable) => [
+          ...(variable.comment ? [`# ${variable.comment}`] : []),
+          variable.example === undefined
+            ? `# ${prefix}${variable.name}=${variable.default ?? ""}`
+            : `${prefix}${variable.name}=${variable.example}`,
+        ])
+        .join("\n"),
+    );
+  return `${blocks.join("\n\n")}\n`;
 }
 
 function importLine(names: string[], from: string) {

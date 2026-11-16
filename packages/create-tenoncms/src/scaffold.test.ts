@@ -56,6 +56,7 @@ describe("scaffold", () => {
     expect(read(dir, ".env.example")).toContain("change-me");
     expect(read(dir, ".env.example")).toContain("# TENON_BASE_URL=https://cms.example.com");
     expect(read(dir, ".env.example")).toMatch(/^S3_BUCKET=uploads$/m);
+    expect(read(dir, ".env.example")).toMatch(/^CMS_SECRET=.*\n\n(# .*\n)*# ?DATABASE_DIR=/m);
     expect(read(dir, "tenon.config.ts")).toContain("new PGlite(DATABASE_DIR)");
     expect(read(dir, "astro.config.ts")).toContain("DATABASE_DIR: envField.string(");
     expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty(
