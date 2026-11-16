@@ -19,6 +19,8 @@ export type TemplateIndex = {
 
 export type Choices = {
   name: string;
+  /** The admin's name for the site. Default: `Tenon`. */
+  siteName?: string;
   framework: string;
   template: string;
   target: string;
@@ -80,7 +82,13 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
   ].filter((layer): layer is string => !!layer && existsSync(layer));
 
   let pkg: PackageJson = {};
-  const parts: Part[] = [SECRET_PART];
+  const siteName = choices.siteName?.trim() || "Tenon";
+  const parts: Part[] = [
+    SECRET_PART,
+    {
+      files: { "tenon.config.ts": { options: [`admin: { name: ${JSON.stringify(siteName)} },`] } },
+    },
+  ];
   for (const layer of layers) {
     const read = async (file: string) => JSON.parse(await readFile(join(layer, file), "utf8"));
     if (existsSync(join(layer, "package.json")))

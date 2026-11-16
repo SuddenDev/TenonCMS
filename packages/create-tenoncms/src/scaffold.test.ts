@@ -9,6 +9,20 @@ const project = () => join(mkdtempSync(join(tmpdir(), "create-tenoncms-")), "sit
 const read = (dir: string, file: string) => readFileSync(join(dir, file), "utf8");
 
 describe("scaffold", () => {
+  it("names the site", async () => {
+    const dir = project();
+    await scaffold(templates, dir, {
+      name: "a",
+      siteName: 'My "Site"',
+      framework: "astro",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    });
+    expect(read(dir, "tenon.config.ts")).toContain('admin: { name: "My \\"Site\\"" },');
+  });
+
   it("layers the template, the shared target and the framework's target", async () => {
     const dir = project();
     await scaffold(templates, dir, {
@@ -57,6 +71,7 @@ describe("scaffold", () => {
     expect(read(dir, ".env.example")).toContain("# TENON_BASE_URL=https://cms.example.com");
     expect(read(dir, ".env.example")).toMatch(/^S3_BUCKET=uploads$/m);
     expect(read(dir, ".env.example")).toMatch(/^CMS_SECRET=.*\n\n(# .*\n)*# ?DATABASE_DIR=/m);
+    expect(read(dir, "tenon.config.ts")).toContain('admin: { name: "Tenon" },');
     expect(read(dir, "tenon.config.ts")).toContain("new PGlite(DATABASE_DIR)");
     expect(read(dir, "astro.config.ts")).toContain("DATABASE_DIR: envField.string(");
     expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty(

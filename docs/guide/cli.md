@@ -10,7 +10,7 @@ Two commands: `npm create tenoncms` starts a project, and `tenon` backs it up, r
 npm create tenoncms
 ```
 
-It asks one question at a time: the folder, the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
+It asks one question at a time: the folder, the site name (default `Tenon`, written to `admin.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
 
 | Runs on                 | Database                                                                                | Media                                |
 | ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -21,7 +21,7 @@ It asks one question at a time: the folder, the framework (Astro, Nuxt, TanStack
 Every question has a flag, so it also runs without a terminal:
 
 ```sh
-npm create tenoncms my-site -- --framework nuxt --target node --database postgres --storage s3 --pm pnpm --yes
+npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --pm pnpm --yes
 ```
 
 It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `CMS_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.

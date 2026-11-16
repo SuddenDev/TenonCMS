@@ -13,6 +13,7 @@ type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 
 const HELP = `Usage: npm create tenoncms [dir] [options]
 
+  --site-name <name>    The site's name in the admin. Default: Tenon
   --framework <name>    astro, nuxt, tanstack or standalone
   --template <name>     The starter. Default: minimal
   --target <name>       node, vercel or cloudflare (Astro only)
@@ -41,6 +42,7 @@ async function main() {
     allowPositionals: true,
     allowNegative: true,
     options: {
+      "site-name": { type: "string" },
       framework: { type: "string" },
       template: { type: "string" },
       target: { type: "string" },
@@ -72,6 +74,17 @@ async function main() {
         : "./tenon-cms"),
   );
   await prepareFolder(dir, ask);
+  const siteName =
+    flags["site-name"] ??
+    (ask
+      ? await answer(
+          p.text({
+            message: "What should the site be called?",
+            placeholder: "Tenon",
+            defaultValue: "Tenon",
+          }),
+        )
+      : "Tenon");
 
   const spin = p.spinner();
   spin.start("Fetching the templates");
@@ -132,6 +145,7 @@ async function main() {
   spin.start("Creating the project");
   await scaffold(root, dir, {
     name: toPackageName(basename(dir)),
+    siteName,
     framework,
     template,
     target,
