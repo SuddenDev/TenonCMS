@@ -36,6 +36,7 @@ describe("development auth origins", () => {
   let client: ReturnType<typeof development>["client"];
   beforeEach(() => {
     vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("TENON_BASE_URL", undefined);
     vi.stubEnv("__TENON_DEV_ORIGIN", "http://localhost:4329");
     ({ cms, client } = development());
   });
