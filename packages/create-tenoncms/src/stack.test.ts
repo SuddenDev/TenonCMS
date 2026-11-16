@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { envExample, fillMarkers, type Part } from "./stack.ts";
+import { authPart, envExample, fillMarkers, requireAuthMethods, type Part } from "./stack.ts";
 
 const config = `import { defineCms } from "tenoncms";
 // @tenon-imports
@@ -111,5 +111,40 @@ describe("envExample", () => {
     expect(envExample(parts, "NUXT_")).toBe(
       "# A file.\n# NUXT_DATABASE_URL=file:./cms.db\n# NUXT_DATABASE_AUTH_TOKEN=\n\nNUXT_S3_BUCKET=uploads\n",
     );
+  });
+});
+
+describe("authPart", () => {
+  const filled = (part: Part) => fillMarkers(config, "tenon.config.ts", [part]);
+
+  it("writes nothing for password alone", () => {
+    expect(filled(authPart(["password"]))).not.toContain("auth");
+  });
+
+  it("turns password off and adds a plugin per method", () => {
+    const text = filled(authPart(["passkey", "magic-link", "email-otp"]));
+    expect(text).toContain('import { passkey } from "@better-auth/passkey";');
+    expect(text).toContain('import { emailOTP, magicLink } from "tenoncms/auth";');
+    expect(text).toContain(
+      "  auth: {\n    emailAndPassword: { enabled: false },\n    plugins: [passkey(), magicLink(), emailOTP()],\n  },\n",
+    );
+  });
+
+  it("keeps password on when it is picked", () => {
+    const text = filled(authPart(["password", "email-otp"]));
+    expect(text).not.toContain("emailAndPassword");
+    expect(text).toContain('import { emailOTP } from "tenoncms/auth";');
+    expect(text).toContain("plugins: [emailOTP()],");
+  });
+});
+
+describe("requireAuthMethods", () => {
+  it("reads a comma list", () => {
+    expect(requireAuthMethods("passkey, magic-link")).toEqual(["passkey", "magic-link"]);
+  });
+
+  it("rejects an unknown method and an empty list", () => {
+    expect(() => requireAuthMethods("password,sms")).toThrow(/sms/);
+    expect(() => requireAuthMethods(" , ")).toThrow();
   });
 });

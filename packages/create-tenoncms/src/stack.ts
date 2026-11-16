@@ -35,6 +35,54 @@ export const SECRET_PART: Part = {
   env: [{ name: "CMS_SECRET", example: "change-me-to-at-least-32-random-chars-please", min: 32 }],
 };
 
+export const AUTH_METHODS = ["password", "passkey", "magic-link", "email-otp"] as const;
+export type AuthMethod = (typeof AUTH_METHODS)[number];
+
+const AUTH_PLUGINS: Record<Exclude<AuthMethod, "password">, { plugin: string; from: string }> = {
+  passkey: { plugin: "passkey", from: "@better-auth/passkey" },
+  "magic-link": { plugin: "magicLink", from: "tenoncms/auth" },
+  "email-otp": { plugin: "emailOTP", from: "tenoncms/auth" },
+};
+
+/**
+ * The one `auth` block for the sign-in methods. Password alone writes nothing, because it is core's default. The
+ * passkey package comes from the `_auth/passkey` layer.
+ */
+export function authPart(methods: AuthMethod[]): Part {
+  const plugins = methods.flatMap((method) => (method === "password" ? [] : AUTH_PLUGINS[method]));
+  const password = methods.includes("password");
+  if (password && !plugins.length) return {};
+
+  const from = [...new Set(plugins.map((p) => p.from))];
+  const imports = from.map((module) => {
+    const names = plugins.filter((p) => p.from === module).map((p) => p.plugin);
+    return importLine(names.sort(), module);
+  });
+  const options = [
+    "auth: {",
+    ...(password ? [] : ["  emailAndPassword: { enabled: false },"]),
+    ...(plugins.length ? [`  plugins: [${plugins.map((p) => `${p.plugin}()`).join(", ")}],`] : []),
+    "},",
+  ];
+  return { files: { "tenon.config.ts": { imports, options } } };
+}
+
+/**
+ * Reads `--auth password,passkey`.
+ * @throws For an unknown method or an empty list.
+ */
+export function requireAuthMethods(list: string): AuthMethod[] {
+  const methods = list
+    .split(",")
+    .map((method) => method.trim())
+    .filter(Boolean);
+  const unknown = methods.filter((method) => !AUTH_METHODS.includes(method as AuthMethod));
+  if (unknown.length)
+    throw new Error(`${unknown.join(", ")} is not one of ${AUTH_METHODS.join(", ")}`);
+  if (!methods.length) throw new Error(`--auth needs one of ${AUTH_METHODS.join(", ")}`);
+  return methods as AuthMethod[];
+}
+
 const MARKER = /^(\s*)\/\/ @tenon-(imports|options|env|runtime-config)$/;
 
 /**

@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@better-auth/passkey": "^1.7.14"
+  }
+}

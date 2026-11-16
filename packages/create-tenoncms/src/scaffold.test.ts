@@ -164,6 +164,31 @@ describe("scaffold", () => {
     expect(existsSync(join(npm, "pnpm-workspace.yaml"))).toBe(false);
   });
 
+  it("writes the sign-in methods and adds the passkey package", async () => {
+    const choices = {
+      name: "a",
+      framework: "standalone",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    };
+    const dir = project();
+    await scaffold(templates, dir, { ...choices, auth: ["passkey", "magic-link"] });
+    expect(read(dir, "tenon.config.ts")).toContain("emailAndPassword: { enabled: false },");
+    expect(read(dir, "tenon.config.ts")).toContain("plugins: [passkey(), magicLink()],");
+    expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty(
+      "@better-auth/passkey",
+    );
+
+    const plain = project();
+    await scaffold(templates, plain, choices);
+    expect(read(plain, "tenon.config.ts")).not.toContain("auth:");
+    expect(JSON.parse(read(plain, "package.json")).dependencies).not.toHaveProperty(
+      "@better-auth/passkey",
+    );
+  });
+
   it("takes the target's own version of a database", async () => {
     const dir = project();
     await scaffold(templates, dir, {

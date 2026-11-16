@@ -30,7 +30,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:full
 
-  # Every template on every target, with each database and storage once. See scripts/template-matrix.mjs.
+  # Every template on every target, with each database and storage once, and each framework once without a password.
+  # See scripts/template-matrix.mjs.
   template-matrix:
     name: List templates
     runs-on: ubuntu-latest
@@ -42,7 +43,7 @@ jobs:
         run: echo "include=$(node scripts/template-matrix.mjs)" >> "$GITHUB_OUTPUT"
 
   templates:
-    name: ${{ matrix.framework }}/${{ matrix.template }} on ${{ matrix.target }} (${{ matrix.database }}, ${{ matrix.storage }})
+    name: ${{ matrix.framework }}/${{ matrix.template }} on ${{ matrix.target }} (${{ matrix.database }}, ${{ matrix.storage }}${{ matrix.auth && format(', {0}', matrix.auth) || '' }})
     needs: template-matrix
     runs-on: ubuntu-latest
     strategy:
@@ -58,4 +59,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm tarball
-      - run: node scripts/smoke-template.mjs ${{ matrix.framework }} ${{ matrix.target }} ${{ matrix.database }} ${{ matrix.storage }} ${{ matrix.template }}
+      - run: node scripts/smoke-template.mjs ${{ matrix.framework }} ${{ matrix.target }} ${{ matrix.database }} ${{ matrix.storage }} ${{ matrix.template }} ${{ matrix.auth }}

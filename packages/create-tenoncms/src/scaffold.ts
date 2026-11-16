@@ -3,7 +3,15 @@ import { existsSync } from "node:fs";
 import { appendFile, cp, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { envExample, type EnvSource, fillMarkers, SECRET_PART, type Part } from "./stack.ts";
+import {
+  type AuthMethod,
+  authPart,
+  envExample,
+  type EnvSource,
+  fillMarkers,
+  SECRET_PART,
+  type Part,
+} from "./stack.ts";
 
 type Option = { label: string; hint?: string };
 /** `templates/index.json`: what the prompts offer. */
@@ -26,6 +34,8 @@ export type Choices = {
   target: string;
   database: string;
   storage: string;
+  /** The sign-in methods. Default: password only. */
+  auth?: AuthMethod[];
   /** With `pnpm`, the layers' `builds` are approved in `pnpm-workspace.yaml`. */
   pm?: string;
   /** The version `latest` of `tenoncms` becomes, without a range. `undefined` keeps `latest`. */
@@ -60,7 +70,7 @@ export async function readIndex(root: string): Promise<TemplateIndex> {
 
 /**
  * Copies the layers into `dir`: the template, the shared target, the framework's target, then the database and the
- * storage. A target MAY have its own version of a database or storage in `_databases/` or `_storages/`. Later files
+ * storage, then `_auth/<method>/` for each sign-in method that has one. A target MAY have its own version of a database or storage in `_databases/` or `_storages/`. Later files
  * overwrite earlier ones; `package.json` files are merged instead. Then fills the markers of the copied files with each
  * layer's `part.json`, names the package, pins `tenoncms`, and writes the env file with a new
  * `CMS_SECRET`.
@@ -73,12 +83,14 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
   const template = join(root, choices.framework, choices.template);
   if (!existsSync(template))
     throw new Error(`No template ${choices.framework}/${choices.template}`);
+  const auth = choices.auth ?? ["password"];
   const layers = [
     template,
     target,
     join(root, choices.framework, "_targets", choices.target),
     part("_databases", choices.database),
     part("_storages", choices.storage),
+    ...auth.map((method) => join(root, "_auth", method)),
   ].filter((layer): layer is string => !!layer && existsSync(layer));
 
   let pkg: PackageJson = {};
@@ -99,6 +111,7 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
     );
     await cp(layer, dir, { recursive: true, force: true, filter: (src) => !skip.includes(src) });
   }
+  parts.push(authPart(auth));
 
   const source = index.frameworks[choices.framework] ?? {};
   for (const file of new Set(parts.flatMap((p) => Object.keys(p.files ?? {})))) {

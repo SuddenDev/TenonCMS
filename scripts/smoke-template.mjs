@@ -1,15 +1,16 @@
 // Scaffolds one framework and target from ./templates against the packed tarballs, then installs and builds it.
-// Run `pnpm tarball` first. Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template]
-// An omitted database or storage is the target's default.
+// Run `pnpm tarball` first.
+// Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template] [auth]
+// An omitted database or storage is the target's default. `auth` is a comma list for `--auth`; the default is password.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const [framework, target, database, storage, template = "minimal"] = process.argv.slice(2);
+const [framework, target, database, storage, template = "minimal", auth] = process.argv.slice(2);
 if (!framework || !target)
   throw new Error(
-    "Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template]",
+    "Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template] [auth]",
   );
 
 const root = resolve(import.meta.dirname, "..");
@@ -18,7 +19,9 @@ const tarballs = {
   tenoncms: join(root, `dist/tenoncms-${version}.tgz`),
 };
 // Outside the repository, so pnpm does not treat it as a workspace package.
-const name = [framework, template, target, database, storage].filter(Boolean).join("-");
+const name = [framework, template, target, database, storage, auth?.replaceAll(",", "-")]
+  .filter(Boolean)
+  .join("-");
 const dir = join(mkdtempSync(join(tmpdir(), "tenon-smoke-")), name);
 const run = (command, args, cwd = dir) => {
   console.log(`$ ${command} ${args.join(" ")}`);
@@ -38,6 +41,7 @@ run(
     target,
     ...(database ? ["--database", database] : []),
     ...(storage ? ["--storage", storage] : []),
+    ...(auth ? ["--auth", auth] : []),
     "--pm",
     "pnpm",
     "--no-install",

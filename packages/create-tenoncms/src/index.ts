@@ -6,9 +6,16 @@ import { basename, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import * as p from "@clack/prompts";
 import { fetchTemplates, readIndex, scaffold, toPackageName } from "./scaffold.ts";
+import { type AuthMethod, requireAuthMethods } from "./stack.ts";
 
 const SOURCE = "gh:SuddenDev/TenonCMS/templates";
 const PACKAGE_MANAGERS = ["npm", "pnpm", "yarn", "bun"] as const;
+const AUTH_OPTIONS: { value: AuthMethod; label: string; hint?: string }[] = [
+  { value: "password", label: "Password" },
+  { value: "passkey", label: "Passkey", hint: "adds @better-auth/passkey" },
+  { value: "magic-link", label: "Magic link", hint: "a link by email" },
+  { value: "email-otp", label: "Email code", hint: "a one-time code by email" },
+];
 type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 
 const HELP = `Usage: npm create tenoncms [dir] [options]
@@ -19,6 +26,7 @@ const HELP = `Usage: npm create tenoncms [dir] [options]
   --target <name>       node, vercel or cloudflare (Astro only)
   --database <name>     node: libsql, postgres, pglite or sqlite. vercel: libsql or postgres
   --storage <name>      node: local or s3. vercel: s3
+  --auth <list>         Sign-in methods: password, passkey, magic-link, email-otp. Default: password
   --pm <name>           npm, pnpm, yarn or bun
   --install, --no-install
   --git, --no-git
@@ -48,6 +56,7 @@ async function main() {
       target: { type: "string" },
       database: { type: "string" },
       storage: { type: "string" },
+      auth: { type: "string" },
       pm: { type: "string" },
       install: { type: "boolean" },
       git: { type: "boolean" },
@@ -58,6 +67,7 @@ async function main() {
   });
   if (flags.help) return void process.stdout.write(HELP);
   const ask = !flags.yes && !!process.stdin.isTTY;
+  const authFlag = flags.auth === undefined ? undefined : requireAuthMethods(flags.auth);
 
   // p.intro(styleText("#13dc13", " TENON"));
   p.note("Let's get started setting up your project!", "Welcome to TENON");
@@ -124,6 +134,18 @@ async function main() {
     "Where should media files go?",
     ask,
   );
+  const auth =
+    authFlag ??
+    (ask
+      ? await answer(
+          p.multiselect({
+            message: "How should people sign in to the admin?",
+            options: AUTH_OPTIONS,
+            initialValues: ["password"],
+            required: true,
+          }),
+        )
+      : (["password"] as AuthMethod[]));
   const detected = detectPackageManager();
   const pm = (flags.pm ??
     (ask
@@ -151,6 +173,7 @@ async function main() {
     target,
     database,
     storage,
+    auth,
     pm,
     tenonVersion: await latestTenon(),
   });
@@ -175,7 +198,15 @@ async function main() {
     p.log.info(
       `On Vercel, set the variables of ${envFile} in the project settings.${database === "libsql" ? ` ${env}DATABASE_URL MUST be a Turso URL there.` : ""}`,
     );
-  p.outro("Open /admin to create the first admin user.");
+  if (auth.includes("magic-link") || auth.includes("email-otp"))
+    p.log.info(
+      "Magic links and email codes need `email` in tenon.config.ts: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/email.md. Until then, `npx tenon users recover <email>` prints a sign-in link.",
+    );
+  p.outro(
+    auth.includes("password")
+      ? "Open /admin to create the first admin user."
+      : "Open /admin to create the first admin user. It needs no password. `npx tenon users create` works too.",
+  );
 }
 
 /** Empties or keeps a folder that has files, after asking. Without a terminal it MUST be empty. */

@@ -11,6 +11,7 @@ It copies these folders into the project, in order. Later files overwrite earlie
 3. `<framework>/_targets/<target>/`: the framework's own files, if any.
 4. `_databases/<database>/`, or `_targets/<target>/_databases/<database>/` when the target has its own version (Vercel: a libSQL URL MUST be set, and Postgres attaches its pool).
 5. `_storages/<storage>/`, with the same override.
+6. `_auth/<method>/` for each sign-in method that has one. Only `passkey` does: its `package.json` adds `@better-auth/passkey`.
 
 `package.json` files are merged: a layer adds or replaces `scripts` and dependencies. `tenoncms: "latest"` becomes the current version.
 
@@ -23,10 +24,10 @@ A layer's `part.json` is not copied. It says what the layer adds:
 - `ignore`: lines for `.gitignore`.
 - `builds`: dependencies whose install scripts MUST run, such as `esbuild` and `workerd`. With pnpm, they go into `allowBuilds` of `pnpm-workspace.yaml`, because pnpm refuses an install with unapproved builds. A local smoke run MAY miss a new one: the store can hold a copy built for the repository. CI starts with an empty store.
 
-Every project gets `secret: $CMS_SECRET`. The variables go into `.env.example` (`envFile` of the target, `.dev.vars` on Cloudflare), and a copy with a random `CMS_SECRET` becomes the real file.
+Every project gets `secret: $CMS_SECRET`. The sign-in methods have no `part.json`: several methods share one `auth` block, so `authPart()` in `packages/create-tenoncms/src/stack.ts` writes it. Password alone writes nothing. The variables go into `.env.example` (`envFile` of the target, `.dev.vars` on Cloudflare), and a copy with a random `CMS_SECRET` becomes the real file.
 
 ## Checks
 
-A new template MUST work with each database and storage of its targets. Locally run `pnpm tarball`, then `pnpm smoke:templates <framework> <target> [database] [storage] [template]`. CI runs the jobs of `scripts/template-matrix.mjs`.
+A new template MUST work with each database and storage of its targets. Locally run `pnpm tarball`, then `pnpm smoke:templates <framework> <target> [database] [storage] [template] [auth]`, where `auth` is the `--auth` list. CI runs the jobs of `scripts/template-matrix.mjs`; each framework runs once with `passkey,magic-link` and no password.
 
 Renovate (`.github/renovate.json`) groups the dependency updates of `templates/` into one weekly PR, so the starters stay current and CI shows what breaks.
