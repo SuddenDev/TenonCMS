@@ -1,10 +1,10 @@
 import { openAsBlob } from "node:fs";
 import { styleText } from "node:util";
 import * as p from "@clack/prompts";
-import { readArchiveManifest } from "../client/index.ts";
+import { readArchiveManifest } from "../../client/index.ts";
 import { backupCommand } from "./backup.command.ts";
-import { openTarget, type TargetFlags } from "./target.ts";
-import { Cancelled, answer, canAsk, formatBytes, formatCounts, spinning } from "./ui.ts";
+import { openTarget, type TargetFlags } from "../target.ts";
+import { Cancelled, answer, canAsk, formatBytes, formatCounts, spinning } from "../ui.ts";
 
 export type RestoreFlags = TargetFlags & { "dry-run"?: boolean; yes?: boolean; backup?: boolean };
 

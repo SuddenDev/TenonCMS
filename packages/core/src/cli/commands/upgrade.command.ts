@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
-import { Cancelled, answer, canAsk } from "./ui.ts";
+import { Cancelled, answer, canAsk } from "../ui.ts";
 
 export type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 export type UpgradeFlags = { "dry-run"?: boolean; yes?: boolean };

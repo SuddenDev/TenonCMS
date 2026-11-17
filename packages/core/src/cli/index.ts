@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import { parseArgs, styleText } from "node:util";
 import * as p from "@clack/prompts";
-import { backupCommand } from "./backup.command.ts";
-import { loginCommand, logoutCommand } from "./login.command.ts";
-import { restoreCommand } from "./restore.command.ts";
+import { backupCommand } from "./commands/backup.command.ts";
+import { loginCommand, logoutCommand } from "./commands/login.command.ts";
+import { restoreCommand } from "./commands/restore.command.ts";
 import { Cancelled } from "./ui.ts";
-import { upgradeCommand } from "./upgrade.command.ts";
-import { usersCommand } from "./users.command.ts";
+import { upgradeCommand } from "./commands/upgrade.command.ts";
+import { usersCommand } from "./commands/users.command.ts";
 
 const HELP = `Usage: tenon <command> [options]
 

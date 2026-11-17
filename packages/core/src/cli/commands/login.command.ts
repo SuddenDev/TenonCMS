@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
 import * as p from "@clack/prompts";
-import { CmsError, createClient, type Session } from "../client/index.ts";
-import { readCredential, removeCredential, saveCredential } from "./credentials.ts";
-import { answer, canAsk, spinning } from "./ui.ts";
+import { CmsError, createClient, type Session } from "../../client/index.ts";
+import { readCredential, removeCredential, saveCredential } from "../credentials.ts";
+import { answer, canAsk, spinning } from "../ui.ts";
 
 export type LoginFlags = { url?: string; open?: boolean; yes?: boolean };
 

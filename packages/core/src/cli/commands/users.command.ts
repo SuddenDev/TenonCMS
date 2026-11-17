@@ -1,10 +1,10 @@
 import * as p from "@clack/prompts";
 import { styleText } from "node:util";
-import { translate } from "../admin/browser/text.ts";
-import { BUILT_IN_ROLES, type Role } from "../users/roles.ts";
-import type { UserSummary } from "../users/types.ts";
-import { loadConfig, type LocalCms, remoteClient, type TargetFlags } from "./target.ts";
-import { Cancelled, answer, canAsk } from "./ui.ts";
+import { translate } from "../../admin/browser/text.ts";
+import { BUILT_IN_ROLES, type Role } from "../../users/roles.ts";
+import type { UserSummary } from "../../users/types.ts";
+import { loadConfig, type LocalCms, remoteClient, type TargetFlags } from "../target.ts";
+import { Cancelled, answer, canAsk } from "../ui.ts";
 
 export type UsersFlags = TargetFlags & {
   role?: string;
