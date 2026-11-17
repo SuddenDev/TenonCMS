@@ -161,6 +161,7 @@ defineCms({
 Rules:
 
 - `mount` cannot be combined with `href`, `onClick` or `children`. `onClick` cannot be combined with `href` or `children`. Both throw at startup, as does a missing `label`.
+- `href` MUST be a path starting with `/` or an http(s) URL. Anything else throws at startup; from a loader, it fails the item.
 - The bar is one flat row sorted by `order`, then by registration order. Items without `order` follow.
 - Built-ins and their orders: `dashboard` 10, `edit` 20, `perspective` 30. Plugins add items the same way, see [Plugins](./plugins.md). They compose in this order: built-ins, plugins in plugin order, then the host.
 - Preview tabs show the fixed `edit` (10) and `live-edit` (20) controls. Custom items and their loaders do not run there.

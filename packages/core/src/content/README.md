@@ -1,6 +1,6 @@
 # Content
 
-The engine that collections, globals and media share. It runs the lifecycle, validation, hooks, population and integrity checks for every read and write. It gets a CMS core and a call scope and exposes no public API of its own. Feature modules such as [collections](../collections/README.md) and [globals](../globals/README.md) call into it.
+The engine that collections, globals and media share. It runs the lifecycle, validation, hooks, population and integrity checks for every read and write. It gets a CMS core and a call scope and exposes no public API of its own. Feature modules such as [collections](../collections/README.md) and [globals](../globals/README.md) call into it. It calls back up in a few places: `writes/remove-document.ts` runs the collection `update` and global `setGlobal` operations, writes check `requireUnscheduled()` from [schedule](../schedule/README.md), and `lifecycle/collect-hooks.ts` appends the hooks of [webhooks](../webhooks/README.md).
 
 ## Follow a create
 
@@ -35,7 +35,7 @@ Draft saves check types and run the before hooks, then save the pending version.
 | `targets.ts`                                          | Collection and global names, `targetKey()` and its inverse `targetOfKey()`, schema lookup, name checks and draft eligibility.              |
 | `locale.ts`                                           | `withLocale()`: applies `locale` and `fallback` to a scope and rejects unknown locales.                                                    |
 | `lifecycle/run-operation.ts`                          | Operation hooks, delegation to the transaction owner and `afterError` after rollback.                                                      |
-| `lifecycle/collect-hooks.ts`                          | Hook order: collection or global, then plugins, then root. None for media.                                                                 |
+| `lifecycle/collect-hooks.ts`                          | Hook order: collection or global, then plugins, then root, then the webhook hook. None for media.                                          |
 | `lifecycle/hook-args.ts`                              | The arguments every hook gets.                                                                                                             |
 | `lifecycle/run-read-hooks.ts`                         | `beforeRead` and `afterRead`, shared by reads, writes and population.                                                                      |
 | `reads/drop-unknown-keys.ts`                          | `dropUnknownKeys()`: removes stored keys that are no field before `beforeRead`, inside groups and items too.                               |
@@ -84,4 +84,4 @@ A localized entry with lists MAY share one item structure across locales (`syncS
 
 `writes/discard-locale.ts` drops one locale's draft and keeps the shared draft; with `all`, every draft goes. Locale rows that were never published are deleted, and so is a never-published document without rows. `copy-locale.ts` reads the source locale in the drafts perspective without fallback and writes it to the scope's locale (a draft, or straight to the data with `drafts: false`). `remove-locale.ts` refuses the default locale and the last row.
 
-Integrity covers locale rows. `checkUnique()` compares a localized key with the values a read of that locale returns, fallback included. `findReferences()` also scans the data and the draft of every locale row for localized relation, image and file keys. `applyOnDelete()` writes `set-null` back to the row that holds the ID, in its locale, and a pending locale draft is rewritten without hooks. Deleting a document deletes its locale rows in the same transaction.
+Integrity covers locale rows. `checkUnique()` compares a localized key with the values a read of that locale returns, fallback included. `references()` also scans the data and the draft of every locale row for localized relation, image and file keys. `onDelete()` writes `set-null` back to the row that holds the ID, in its locale, and a pending locale draft is rewritten without hooks. Deleting a document deletes its locale rows in the same transaction.

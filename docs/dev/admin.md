@@ -7,7 +7,7 @@ Two parts: the **contract** in core (`packages/core/src/admin/`) and the **app**
 
 The admin is a compiled library that the host's own bundler includes. Core never imports it, so a headless setup costs nothing. The admin always runs on a page of its own.
 
-Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an export in the host's own code, compiled by the host's Vite with HMR. A scan of the config finds these references at build time, so they MUST be literal. Adding one needs a dev server restart.
+Hosts extend it with `clientRef("./path.ts#export")`: a literal reference to an export in the host's own code, compiled by the host's Vite with HMR. A scan of the config finds these references at build time, so they MUST be literal. In dev, Astro and `tenonAdmin()` pick up a new reference without a restart. On Nuxt, restart the dev server if it does not appear.
 
 ## Extension contract
 

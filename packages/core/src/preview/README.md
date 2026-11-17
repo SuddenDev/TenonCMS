@@ -66,7 +66,8 @@ The framework-specific `useDraft()` helpers live in [`integrations/vue/preview.t
 | `runtime/site-api.ts`             | The site's calls and cookies: session hint, `loadAdminBar()`, `perspective()`, `setPerspective()`.                                                                                                                                                                          |
 
 `index.ts` and the Vue/React helpers in `integrations/` run in the browser and in server bundles. They MUST NOT import zod or core
-runtime code. `runtime/` imports only types from `admin/index.d.ts` and loads the bar with a dynamic
+runtime code. `runtime/` imports types from `admin/`, the browser-safe `admin/browser/lazy-mount.ts`, `locale.ts`
+and `logo.ts`, `schema/condition.ts` and `idiomorph`. It loads the bar with a dynamic
 `import("tenoncms/admin/bar")`, which the host's bundler splits into its own chunk. Files in `templates/` MUST import
 only from each other.
 

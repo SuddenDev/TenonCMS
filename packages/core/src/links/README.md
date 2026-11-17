@@ -48,6 +48,7 @@ Both need a session and read in the perspective of the preview cookie.
 | `runtime/fields.ts`        | Rich text and `link` values inside groups, arrays and blocks.                 |
 | `runtime/held-links.ts`    | Every reference of a value, and the deletion marker rules.                    |
 | `runtime/title-key.ts`     | The field that names a link target.                                           |
+| `runtime/link-attrs.ts`    | `linkAttrs()`: anchor attributes of a populated `link`. Type imports only.    |
 | `reads/resolve-targets.ts` | Batched target loads with `href` and `title`.                                 |
 | `reads/resolve-links.ts`   | `link` value decoration and `resolveReferences()`.                            |
 | `writes/prepare-links.ts`  | Collection check and deletion markers on every write.                         |

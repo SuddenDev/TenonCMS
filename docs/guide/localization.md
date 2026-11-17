@@ -86,6 +86,8 @@ await cms.removeGlobalLocale("general", "de");
 // HTTP: POST /collections/:name/:id/locales/:to/copy { "from": "en" }, DELETE /collections/:name/:id/locales/:locale
 ```
 
+A `from` locale or a locale to remove without a version throws a `ValidationError` (400). A global that was never saved has no version.
+
 References that point to a document are found in locale rows too, so `onDelete` (`restrict`, `set-null`, `cascade`) and media usage see every locale.
 
 ## Same content structure in all languages

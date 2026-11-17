@@ -35,7 +35,7 @@ One `UPDATE … WHERE id = (SELECT … LIMIT 1) RETURNING *` takes the oldest du
 
 ## Tasks and cron entries
 
-`config/resolve-jobs.ts` merges the tasks at startup: built-in tasks (`tenon:`), then plugins in their order, then the host. It throws for a duplicate name, the reserved `tenon:` prefix, a plugin task without its `<plugin>:` prefix, a cron entry for an unknown task, a plugin that schedules another source's task, an invalid cron pattern (checked with croner) and an unknown role in a task's `access`. The built-in tasks are `tenon:publish` and `tenon:unpublish`, see [schedule](../schedule/README.md), and `tenon:webhook` with at least one webhook, see [webhooks](../webhooks/README.md). `visibleTasks()` ties only the schedule tasks to scheduling rights; `tenon:webhook` follows the default rule (admins).
+`config/resolve-jobs.ts` merges the tasks at startup: built-in tasks (`tenon:`), then plugins in their order, then the host. It throws for a duplicate name, the reserved `tenon:` prefix, a plugin task without its `<plugin>:` prefix, a cron entry for an unknown task, a plugin that schedules another source's task, an invalid cron pattern (checked with croner) and an unknown role in a task's `access`. The built-in tasks are `tenon:publish` and `tenon:unpublish`, see [schedule](../schedule/README.md), and `tenon:webhook` with at least one webhook, see [webhooks](../webhooks/README.md). The built-in tasks have no `access` rule, so `visibleTasks()` shows them to admins only.
 
 `scheduledTasks` entries are validated and kept on `core.jobs.scheduled`. A pattern MUST have exactly five fields (minute precision): a six-field pattern or a nickname like `@daily` throws at startup.
 
@@ -56,7 +56,7 @@ One `UPDATE … WHERE id = (SELECT … LIMIT 1) RETURNING *` takes the oldest du
 - A job with a `target` (a scheduled publish or unpublish) follows the `update` rule of that target, with the job's document id. `targetOfKey()` turns the `target` column back into a collection or global. A job whose target left the schema counts as any other job.
 - Any other job follows the task's `access` rule (`true`, `false`, roles, a function). The default is admins.
 
-A user sees only the jobs they MAY access. `GET /jobs` takes `target` (`collection:<name>`, `global:<name>`) and `docId` filters (`docId=` for a global), so the admin lists the schedule of one document. `visibleTasks()` gives the `jobs` of `/schema`: custom tasks by their rule, and the `tenon:` tasks for users who MAY update an entry with `schedule`.
+A user sees only the jobs they MAY access. `GET /jobs` takes `target` (`collection:<name>`, `global:<name>`) and `docId` filters (`docId=` for a global), so the admin lists the schedule of one document. `visibleTasks()` gives the `jobs` of `/schema`: each task by its `access` rule, admins only without one. The `tenon:` tasks have none.
 
 ## Files
 

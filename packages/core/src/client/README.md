@@ -18,7 +18,7 @@
 | ------------------- | ---------------------------------------------------------------------------------------------- |
 | `index.ts`          | Public exports and the augmentable `Register` interface.                                       |
 | `types/index.ts`    | Barrel of the public types. Internal helpers stay out.                                         |
-| `types/client.ts`   | `Client`, `Session` and `Perspective`.                                                         |
+| `types/client.ts`   | `Client`, `Session`, `Perspective`, `DeviceCode`, `LocaleOption` and `DiscardOption`.          |
 | `types/schema.ts`   | The HTTP view of the schema (`Collections`, `Globals`), `RegisteredCms`, and read helpers.     |
 | `types/options.ts`  | `ClientOptions`, `FindOptions` and `UploadOptions`.                                            |
 | `types/media.ts`    | `MediaClient`.                                                                                 |
@@ -27,7 +27,7 @@
 | `read-query.ts`     | `readQuery()`: serializes `populate`, `depth`, `select`, `locale`, `fallback`, `alternates`.   |
 | `upload.ts`         | `createUpload()` and `sendFile()`: multipart upload with parallel parts, retries and progress. |
 | `errors.ts`         | `CmsError`, with status and parsed body.                                                       |
-| `constants.ts`      | `API_BASE`, the path of the HTTP API.                                                          |
+| `constants.ts`      | `API_BASE` (the path of the HTTP API), `API_KEY_HEADER`, `LOCK_TTL` and `DEVICE_CLIENT_ID`.    |
 | `register.d.ts`     | Fills `Register` with the host's `cms` type.                                                   |
 
 Each client keeps its own closures, so two clients with different origins or `fetch` functions do not share state.

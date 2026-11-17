@@ -141,7 +141,7 @@ defineCms({
 - For several production hosts, set `auth.baseURL: { allowedHosts: ["cms.example.com", "preview.example.com"], fallback: "https://cms.example.com" }`. The fallback is needed for Tenon's server calls without a request. List only hosts you control. Proxy headers are trusted only when `auth.advanced.trustedProxyHeaders` is `true`.
 - `modelName` is not accepted. Core reads the `user` table by name, so auth tables keep their default names.
 - Only the first user can sign up without a session (`/auth-status` reports `setup`). After that, a request MAY create a user only with the session of a user whose role is `admin`, on every endpoint (email sign-up, social sign-in, magic link, other plugins). Anything else returns 403. Server code that calls better-auth without a request is trusted.
-- Core's first-user rule runs before your `databaseHooks.user.create.before`.
+- Core's first-user rule runs before your `databaseHooks.user.create.before`. The first user keeps `role: "admin"` whatever data your hook returns.
 - Tables of plugins are created at runtime on the first database access. There is no CLI step.
 
 ### Coming from Payload

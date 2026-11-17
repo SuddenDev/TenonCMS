@@ -82,12 +82,12 @@ With `?locale=de`, `readOptions()` in [read-options.ts](http/query/read-options.
 
 For `POST /_tenon/media/uploads/:id/complete`, follow:
 
-1. [media/endpoints/uploads.endpoint.ts](media/endpoints/uploads.endpoint.ts) runs in the protected media group. `findUpload()` in [upload-row.ts](media/operations/uploads/upload-row.ts) rejects unknown, expired or foreign uploads.
+1. [media/endpoints/uploads.endpoint.ts](media/endpoints/uploads.endpoint.ts) runs in the media write group, behind CSRF and `optionalSession()`. `findUpload()` in [upload-row.ts](media/operations/uploads/upload-row.ts) rejects unknown, expired or foreign uploads.
 2. [complete.operation.ts](media/operations/uploads/complete.operation.ts) enters the transaction lifetime, registers rollback cleanup, assembles the stored parts and verifies the expected byte count and image header.
 3. [cms/runtime/transaction.ts](cms/runtime/transaction.ts) binds the transaction scope. Completion calls the shared content writer, runs media `afterUpload` hooks and deletes the unfinished upload row in that transaction.
 4. After the actual outer commit, [render-variants.ts](media/variants/render-variants.ts) prerenders configured variants and [read-media.ts](media/runtime/read-media.ts) decorates the result.
 
-Rollback runs storage abort and file/row cleanup through a live connection. Upload-table queries still live in media; moving them under a persistence contract is a separate architectural add-on. A local `cms.media.upload()` enters through [upload.operation.ts](media/operations/uploads/upload.operation.ts) and uses the same stages.
+Rollback runs storage abort and file/row cleanup through a live connection. The `cms_uploads` statements are queries in [db/queries/uploads/](db/queries/uploads/); media keeps the owner and expiry rule. A local `cms.media.upload()` enters through [upload.operation.ts](media/operations/uploads/upload.operation.ts) and uses the same stages.
 
 ## Resolve a preview URL
 

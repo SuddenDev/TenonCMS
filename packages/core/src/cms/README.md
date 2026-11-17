@@ -39,11 +39,11 @@ The first `auth()` call initializes the database if needed and creates the share
 
 These three internal types explain how calls keep the right user, draft perspective and transaction:
 
-| Type    | Lifetime and contents                                                                                                                                                                                                       |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Core`  | Shared by every instance created from one `defineCms()` call. Holds the assembled schema, plugins, hooks, defaults, `localization`, lazy runtime, optional media core, the `adminBar` option and `localApi(scope)` factory. |
-| `Scope` | Carries a caller's `user`, read `perspective`, `locale` and `fallback`, optional transaction, hook `context` and `nested` flag.                                                                                             |
-| `Inner` | A scope used inside an operation, with a `cms` API bound to that scope. Hooks receive this API.                                                                                                                             |
+| Type    | Lifetime and contents                                                                                                                                                                                                     |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Core`  | Shared by every instance created from one `defineCms()` call. Holds the assembled schema, plugins, hooks, defaults, `localization`, lazy runtime, optional media core, the `admin` runtime and `localApi(scope)` factory. |
+| `Scope` | Carries a caller's `user` or `apiKey`, read `perspective`, `locale` and `fallback`, optional transaction, hook `context`, `nested` flag and `overrideAccess`.                                                             |
+| `Inner` | A scope used inside an operation, with a `cms` API bound to that scope. Hooks receive this API.                                                                                                                           |
 
 An ordinary server call starts with `user: null`, the published perspective and no locale; a `locale` option or the default locale applies per call (`withLocale()` in [content](../content/README.md)). Each outer operation gets a fresh `context` object. A call through a hook's `cms` inherits the current user, perspective, locale, context and transaction, and runs its own hooks.
 

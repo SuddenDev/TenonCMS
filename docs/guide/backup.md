@@ -35,9 +35,11 @@ await cms.import(await openAsBlob("backup.zip"), { mode: "replace" });
 | `missing`         | Adds only entries whose id does not exist yet. Existing ones stay untouched.  |
 | `replace`         | Deletes all documents, globals and versions first, then writes the archive.   |
 
-- The import runs in one transaction. A failure changes nothing, except media files that were already copied to storage.
+- The import runs in one transaction. A failure changes nothing, except media files that were already copied to storage: a new file stays as an unused file, and the file of an entry the archive overwrites keeps the archive's version.
 - It restores stored rows: no hooks, no validation and no webhooks run. Plugins rebuild derived data in [`afterImport`](./lifecycle.md#afterimport).
 - Every collection and global in the archive MUST exist in your schema.
+- A manifest or row of the wrong shape, or a line that is not JSON, is refused with 400 on `archive`, which names the file and line. Nothing is written.
+- In `merge` and `missing`, a media file of the archive MUST NOT use the path of another media file here. `missing` never writes the files of existing entries.
 - `merge` and `missing` need the archive to store the same localized fields as your config. `replace` also moves values between shared and translated fields, like a deploy that changes `localized` does.
 - In the admin, **Manage → Backup** imports a file. It uploads the file into media storage in parts first, like a media file, then imports it from there and deletes it. So the host's request limit (Vercel: 4.5 MB) does not apply. `client.import()` does the same.
 - Without media (`media: false`), the file goes in one request: `POST /_tenon/import?mode=replace` with the ZIP as the body and `content-type: application/zip`. Hosts limit its size; import big archives with `cms.import()` from a script.

@@ -30,7 +30,6 @@ type OperationContext = CallScope & { cms: LocalApi };
 | `slot()`                                                  | `collectHooks()`                  | Gathers collection, plugin and root hooks for a stage    |
 | `read()`                                                  | `readDocuments()`                 | Checks access, queries, runs the read pipeline           |
 | `readDocs()`                                              | `processReadResults()`            | Works on already loaded documents; runs no initial query |
-| `writable()`                                              | `requireWritableCollection()`     | Throws for unknown collections and direct media writes   |
 | `placeFile()`                                             | `chooseUploadLocation()`          | Picks folder and name; does not store bytes              |
 | `hasVariants()`                                           | `canGenerateVariants()`           | Checks the image allows variants, not that any exist     |
 | `readMedia()`                                             | `addMediaUrls()`                  | Adds URLs to a record; loads nothing                     |
@@ -76,7 +75,6 @@ type OperationContext = CallScope & { cms: LocalApi };
 | Current                                                      | Suggested                                                                                    | Why                                                          |
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `target()`, params named `name` of `ContentTarget`           | `getContentDefinition()`, `target`                                                           | The object holds kind and name; `name.name` reads badly      |
-| `known()`, `draftable()`                                     | `requireKnownTarget()`, `requireDraftsEnabled()`                                             | They throw; they are not predicates                          |
 | `locOf()`                                                    | `localeReadOptions()`                                                                        | Builds locale settings, fallback and localized keys          |
 | `readPlan()`                                                 | `prepareReadOptions()`                                                                       | Builds the populate plan and validates `select`              |
 | `step()`                                                     | `planForField()`                                                                             | Decides if a field resolves and which plan it continues with |
@@ -173,7 +171,7 @@ type OperationContext = CallScope & { cms: LocalApi };
 | `session()`, `withSession()` middleware                        | `requireSession()`, `runIfSignedIn()`                                              | Differs from `cms.withSession()`                     |
 | `userAccess()`, `ac`, `none`                                   | `buildUserManagementAccess()`, `accessControl`, `noPermissions`                    | better-auth user permissions, not content rules      |
 | `lengthProblem()`, `passwordLength()`                          | `passwordLengthProblem()`, `enforcePasswordLengthPlugin()`                         | Return a message; build the plugin                   |
-| `input()`, `assertFree()`, `asHttp()` (users)                  | `parseRequestBody()`, `requireAvailableInviteEmail()`, `toHttpError()`             | Validate; reject used emails; convert errors         |
+| `assertFree()`, `asHttp()` (users)                             | `requireAvailableInviteEmail()`, `toHttpError()`                                   | Reject used emails; convert errors                   |
 | `HttpGroup`, `Http`, `Depth` (client types)                    | `HttpContainerField`, `HttpSchemaEntries`, `DefaultPopulateDepth`                  | `HttpGroup` also handles arrays and blocks           |
 | `paths()`, `readQuery()`                                       | `selectionPaths()`, `serializeReadOptions()`                                       | Object to dotted paths; options to query string      |
 | `flag()`, `treeOf()`, `readOptions()`, `coerce()` (http/query) | `parseBooleanQuery()`, `pathsToTree()`, `parseReadOptions()`, `parseFilterValue()` | `flag()` separates absent, valid and invalid         |

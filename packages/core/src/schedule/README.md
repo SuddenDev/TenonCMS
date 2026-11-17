@@ -18,7 +18,7 @@ Scheduled publish and unpublish. A collection or global with `schedule: true` ac
 6. `action` MUST be known and `at` a valid time. A time in the past is due at once, so the next `cms.jobs.run()` fires it.
 7. A publish MUST find a draft: `hasDraft`, `publishedAt === null` or, in a localized entry, a `sharedDraft`. A localized entry also needs a row in the locale. Else a `ValidationError` with `""`: `"Nothing to publish"`. An unpublish has no such check.
 8. `deleteQueuedTargetJobs()` deletes a queued job of the same task, document and locale. A new schedule replaces the old one, so each document has at most one queued publish and one queued unpublish per locale.
-9. `queueJob()` inserts the job with `runAt = at` and the `target`, `doc_id` and `locale` columns. Inside a transaction it joins both steps.
+9. `queueJob()` inserts the job with `runAt = at` and the `target`, `doc_id` and `locale` columns. Steps 8 and 9 run in one transaction, so a failed insert keeps the old job. Inside a hook they join the transaction of the write.
 
 The job payload is a `ScheduledPayload`: `kind`, `name`, `id` and the locale (`null` for an entry that is not `localized`). The `locale` column holds the same value, and `doc_id` is `''` for a global.
 

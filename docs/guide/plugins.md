@@ -72,7 +72,7 @@ A plugin is an object from `definePlugin()`:
 | `seed`, `onInit`, `afterImport`, `afterError` | [Lifecycle hooks](./lifecycle.md). They run before yours. A plugin's `seed` runs the first time the plugin starts on a database, also on one with content, so it installs the plugin's defaults                                                                                   |
 
 - Route and middleware errors map like core's: `ValidationError` is 400 with field errors, `ConflictError` is 409, anything else is 500.
-- These names are reserved: `account`, `admin`, `auth`, `auth-status`, `collections`, `globals`, `invites`, `jobs`, `localization`, `media`, `preview`, `schema`, `export` and `import`. Names use `[a-z0-9-]`.
+- These names are reserved: `account`, `admin`, `admin-bar`, `admin-brand`, `api-keys`, `auth`, `auth-status`, `collections`, `export`, `globals`, `import`, `invites`, `jobs`, `localization`, `media`, `preview`, `schema` and `setup`. Names use `[a-z0-9-]`.
 - Public routes run before CSRF and session checks, so a plugin MUST protect its own public writes.
 - Pages call plugin routes with `client.request()`.
 - A plugin that ships browser code MUST keep its `clientRef()` calls literal and keep `tenoncms/admin` external, so the adapters can find them.

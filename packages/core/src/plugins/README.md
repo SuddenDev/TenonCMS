@@ -1,14 +1,13 @@
 # plugins
 
-| Path                         | What it does                                                       |
-| ---------------------------- | ------------------------------------------------------------------ |
-| `index.ts`                   | Public export barrel.                                              |
-| `types.ts`                   | Plugin configuration and public/protected Hono environments.       |
-| `define-plugin.ts`           | Preserves literal collection and global types.                     |
-| `merge-plugins.ts`           | Merges schema definitions and rejects duplicate or reserved names. |
-| `http/mount-routes.ts`       | Mounts each plugin's routes under its name, in plugin order.       |
-| `http/collect-middleware.ts` | Collects public or protected middleware in plugin order.           |
+| Path                         | What it does                                                 |
+| ---------------------------- | ------------------------------------------------------------ |
+| `index.ts`                   | Public export barrel.                                        |
+| `types.ts`                   | Plugin configuration and public/protected Hono environments. |
+| `define-plugin.ts`           | Preserves literal collection and global types.               |
+| `http/mount-routes.ts`       | Mounts each plugin's routes under its name, in plugin order. |
+| `http/collect-middleware.ts` | Collects public or protected middleware in plugin order.     |
 
 Plugins can provide collections, globals, hooks, media hooks, jobs (`tasks` named `<plugin>:…` and `scheduledTasks`, merged by [jobs](../jobs/README.md)), routes, middleware and admin registrations (`admin`: fields, pages and bar `items`, merged in plugin order before the host's; see [admin](../admin/README.md) and [preview](../preview/README.md#admin-bar)). Public routes run before CSRF/session checks, so plugins MUST enforce any protection their public writes require. Protected routes and middleware receive the session user and scoped CMS API. The bundled plugins (`redirects`, `example`) live in `packages/plugins` and MUST use public exports.
 
-A plugin MAY have no collections or globals and only add `admin`. A plugin never sets the bar `position` or turns the bar off. The name `admin` is reserved, like `account`, `auth`, `auth-status`, `collections`, `globals`, `invites`, `jobs`, `localization`, `media`, `preview` and `schema`.
+[cms/config/merge-plugins.ts](../cms/config/merge-plugins.ts) merges plugin schema definitions and rejects duplicate or reserved names. A plugin MAY have no collections or globals and only add `admin`. A plugin never sets the bar `position` or turns the bar off. Names that are top-level routes of core are reserved: `account`, `admin`, `admin-bar`, `admin-brand`, `api-keys`, `auth`, `auth-status`, `collections`, `export`, `globals`, `import`, `invites`, `jobs`, `localization`, `media`, `preview`, `schema` and `setup`. A test in `tests/plugins.test.ts` fails when core mounts a new one.

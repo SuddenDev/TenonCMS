@@ -12,7 +12,7 @@ The media library: uploads, the reserved `media` collection, storage adapters an
 
 ## Follow a move
 
-`cms.media.update(id, { folder })` enters `operations/update/update.operation.ts`. `placeOf()` (`place.ts`) works out the new folder, filename and key. In one transaction `moveFile()` (`move-file.ts`) checks that the name is free, runs `beforeMove` and moves the file and its variants; then `update()` writes the document and runs `afterMove`. The transaction lifetime registers the inverse move before variants move. Outer rollback reverses moves in order, even after a nested update succeeds. `renameFolder()` calls `update()` once per document and reports partial failures.
+`cms.media.update(id, { folder })` enters `operations/update/update.operation.ts`. `placeOf()` (`place.ts`) works out the new folder, filename and key. In one transaction `update()` first checks the `update` rule, then `moveFile()` (`move-file.ts`) checks that the name is free, runs `beforeMove` and moves the file and its variants; then `update()` writes the document and runs `afterMove`. The transaction lifetime registers the inverse move before variants move. Outer rollback reverses moves in order, even after a nested update succeeds. `update()` checks the types of `alt`, `filename` and `folder` before the transaction. `renameFolder()` calls `update()` once per document and reports partial failures.
 
 Deletion registers `deleteWithVariants()` and `afterDelete` with the same transaction owner. Pending deletions keep their filenames reserved across scopes of the instance in `library/names-in.ts`, so an upload or move cannot overwrite bytes still needed for rollback. Each key is released after its storage cleanup, before its hook runs. Commit hooks receive a fresh API. Upload creation registers resource abort; completion registers abort and file/row cleanup against a live connection after rollback, and schedules prerendering after outer commit using the current document key, or skips it if the document is deleted.
 
@@ -32,24 +32,25 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `runtime/create-media-core.ts`                    | Resolves the option with defaults, checks presets and providers, builds the allowlist; `mediaOf()`.                |
 | `runtime/read-media.ts`                           | `loadMedia()` and `readMedia()`, which adds URLs with the global image options.                                    |
 | `runtime/run-media-hooks.ts`                      | Runs host hooks, then plugin hooks in registration order.                                                          |
+| `runtime/image-attrs.ts`                          | `imageAttrs()` and `pictureAttrs()`: `<img>` and `<picture>` attributes of a populated image. Type imports only.   |
 | `operations/uploads/*.operation.ts`               | The upload steps `create`, `putPart`, `complete` and `abort` (with `discard()`), and `upload()` for the local API. |
 | `operations/uploads/check-file.ts`                | Checks the announced size and type.                                                                                |
 | `operations/uploads/place-file.ts`                | Runs `beforeUpload` and picks a free filename.                                                                     |
-| `operations/uploads/parts.ts`                     | Part size, part count, part length and part URLs.                                                                  |
+| `operations/uploads/parts.ts`                     | Part size, part count, part length, part URLs and `requireUploadParts()`, shared with staged imports.              |
 | `operations/uploads/file-data.ts`                 | Document data of an assembled file, with image dimensions.                                                         |
-| `operations/uploads/upload-row.ts`                | The `cms_uploads` row: lookup by owner and delete.                                                                 |
+| `operations/uploads/upload-row.ts`                | `findUpload()` and `ownUnexpiredUpload()`: the owner and expiry rule, shared with staged imports.                  |
 | `operations/uploads/remove-expired.ts`            | Aborts uploads older than a day.                                                                                   |
 | `operations/uploads/chunks.ts`                    | Splits bytes or a stream into parts for `upload()`.                                                                |
 | `operations/update/update.operation.ts`           | `alt` changes and moves in one transaction.                                                                        |
 | `operations/update/place.ts`                      | The target place of a file and the free-name check.                                                                |
 | `operations/update/move-file.ts`                  | Moves the original, registers its inverse, then moves variants.                                                    |
-| `operations/rename-folder.operation.ts`           | Moves every file of a folder.                                                                                      |
+| `operations/rename-folder.operation.ts`           | Moves every file of a folder. Only expected errors report their own message.                                       |
 | `operations/folders.operation.ts`                 | Lists the folders of the files the caller MAY read.                                                                |
 | `operations/download-archive.operation.ts`        | Streams selected originals into a ZIP and cancels the active storage read.                                         |
 | `operations/delete.operation.ts`                  | Deletes the document; schedules files and hooks after outer commit.                                                |
 | `operations/regenerate.operation.ts`              | Brings stored variants in line with the image options.                                                             |
 | `library/names.ts`                                | Filename and folder rules, storage keys, free names and MIME matching. Browser-safe.                               |
-| `library/names-in.ts`                             | Names used by documents and unfinished uploads.                                                                    |
+| `library/names-in.ts`                             | Names used by documents and unfinished uploads, and pending deletions. Server-only: database and module state.     |
 | `library/selection.ts`                            | Folder containment, recursive file selection and move destinations. Browser-safe.                                  |
 | `images/`                                         | Provider types, modifiers, variant selection, allowlist, `/img` path parsing and URL decoration.                   |
 | `images/ipx.ts`, `images/cloudflare.ts`           | Providers; `tenoncms/media/ipx` and `tenoncms/media/cloudflare` (Images binding or `/cdn-cgi/image` URLs).         |
@@ -79,6 +80,7 @@ The storage and provider files are their own package entries, so `node:fs` and `
 Rules:
 
 - Media documents change only through the media API. The local API's `create`, `update` and `delete` reject `media`, so the generic routes and `cms.create('media')` answer 400.
+- Create, update and delete check `media.access` first, inside the transaction, before any hook or storage effect. A denied caller gets the same answer for an unknown id.
 - Storage creation and moves precede database writes and compensate on failure. Deletion commits the document and reference effects before storage cleanup. A failure leaves at most a stray object in storage, never a document that points to a missing file.
 - `cms_uploads` holds uploads in progress: it reserves the key and binds the upload to its user. Another user's upload answers 404.
 - Media documents live in `cms_documents`. `cms_media_key_idx` keeps `key` unique; `/files` and `/img` look documents up with `mediaByKey()`, which uses it.

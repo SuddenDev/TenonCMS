@@ -35,7 +35,7 @@ Server call ---> scoped local API ---------^
 - File names are kebab-case with a role suffix: `create.endpoint.ts`, `create.operation.ts`, `create.local.ts`, `load-document.query.ts`.
 - A function used across files carries its meaning without the import path: `runOperation`, `writeDocument`. Not `run`, `write`, `col`, `q`.
 - Short local names are fine in a small scope (`i`, `T`, `c`).
-- Booleans read as conditions: `isDraft`, `hasVariants`, `canWrite`. A name starting with `is` or `can` answers yes or no. A helper that throws says so (`require…`).
+- Booleans read as conditions: `isDraft`, `hasVariants`, `canWrite`. A name starting with `is` or `can` answers yes or no. A helper that throws says so: `require…` for a precondition, `check…` or `validate…` for input it rejects. One that returns the problems says that instead (`collectFieldErrors`).
 - Use an options object when adjacent booleans or many arguments are hard to tell apart. Not for a plain two-argument call.
 - Do not rename a public export for style without a compatibility plan.
 

@@ -1,6 +1,6 @@
 # http
 
-The `/_tenon` API on Hono. It mounts the feature endpoints in a fixed middleware order and offers the helpers they share: body parsing, read options, query filters, caller lookup and error mapping. It does not validate content or run hooks; handlers call the scoped local API, and the operations do that.
+The `/_tenon` API on Hono. It mounts the feature endpoints in a fixed middleware order and offers the helpers they share: body parsing, read options, query filters and error mapping. Caller lookup lives in [auth/get-caller.ts](../auth/get-caller.ts). It does not validate content or run hooks; handlers call the scoped local API, and the operations do that.
 
 Endpoints live in their feature folders: `../collections/endpoints/`, `../jobs/endpoints/`, `../globals/endpoints/`, `../media/endpoints/`, `/schema` in `../schema/endpoints/read.endpoint.ts` and the preview cookie in `../preview/endpoints/`. Sessions live in `../auth/`; plugin mounting and middleware collection live in `../plugins/http/`.
 
@@ -15,7 +15,7 @@ withCms → plugins' publicMiddleware → auth/* or open routes
         → session → apiKeyReach → protected routes
 ```
 
-`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes, `/jobs/run` (a bearer secret, mounted only with `jobs.secret`) and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, `user` with a session and `apiKey` with an API key. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session or a key; `apiKeyReach()` lets a key reach only `/schema` there, with `read` on `schema`. `errorHandler(core)` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403, and hands a 500 to `afterError`.
+`withCms` binds the local API without a user, so public plugin middleware and routes get it. The open routes come next: auth status, invites, `/localization`, public plugin routes, `/jobs/run` (a bearer secret, mounted only with `jobs.secret`) and media files. They look up no caller; media files do it themselves, and only when a read rule exists. `optionalSession` looks up the caller once for every route below it: it sets `perspective`, a scoped `cms`, `user` with a session and `apiKey` with an API key. Content reads (collections, globals, media folders) and content writes come next, so their access rules decide (see `../access/`). Everything after `session` needs a session or a key; `apiKeyReach()` lets a key reach only `/schema` there, with `read` on `schema`, and the export and import routes, with any grant on `backup`. `errorHandler(core)` turns thrown errors into JSON responses, `ForbiddenError` into 401 or 403, and hands a 500 to `afterError`.
 
 ## Follow a public read
 
@@ -27,19 +27,22 @@ withCms → plugins' publicMiddleware → auth/* or open routes
 
 ## Files
 
-| Path                                | Responsibility                                                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `index.ts`                          | Exports `createApp()`.                                                                                             |
-| `app.ts`                            | `createApp()`: mounts `/sitemap.xml` and `/robots.txt` (`seo/`), then open, content and protected routes in order. |
-| `errors.ts`                         | `notFound()` and `errorHandler()`, which hides unexpected messages.                                                |
-| `parse-body.ts`                     | `parseBody()`: JSON bodies; malformed JSON reads as `undefined`.                                                   |
-| `attachment.ts`                     | `attachment()`: a `content-disposition` that downloads under a file name.                                          |
-| `middleware/types.ts`               | `Env`: the Hono context variables `cms`, `user` and `perspective`.                                                 |
-| `middleware/with-cms.middleware.ts` | `withCms()`: binds the userless local API.                                                                         |
-| `query/read-options.ts`             | `readOptions()`: `populate`, `depth`, `select`, `locale`, `fallback`, `alternates` and `permalink`, or a 400.      |
-| `query/parse-populate.ts`           | `parsePopulate()`: checks paths and hops against the schema. Groups, arrays, blocks and block names count no hop.  |
-| `query/parse-select.ts`             | `parseSelect()`: the selection tree; `badSelectPath()` checks its keys.                                            |
-| `query/path-tree.ts`                | `treeOf()`: dot paths to a null-prototype tree.                                                                    |
-| `query/where-from-query.ts`         | `whereFromQuery()`: query keys to typed equality filters.                                                          |
+| Path                                 | Responsibility                                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `index.ts`                           | Exports `createApp()`.                                                                                             |
+| `app.ts`                             | `createApp()`: mounts `/sitemap.xml` and `/robots.txt` (`seo/`), then open, content and protected routes in order. |
+| `errors.ts`                          | `notFound()` and `errorHandler()`, which hides unexpected messages.                                                |
+| `parse-body.ts`                      | `parseBody()`: JSON bodies; malformed JSON reads as `undefined`.                                                   |
+| `attachment.ts`                      | `attachment()`: a `content-disposition` that downloads under a file name.                                          |
+| `sync-choice.ts`                     | `syncChoice()`: the `sync` of a structure switch body, or a `ValidationError`.                                     |
+| `middleware/types.ts`                | `Env`: the Hono context variables `cms`, `user`, `apiKey` and `perspective`.                                       |
+| `middleware/with-cms.middleware.ts`  | `withCms()`: binds the userless local API.                                                                         |
+| `middleware/json-only.middleware.ts` | `jsonOnly`: 415 unless the body is JSON, for open routes that sign a visitor in.                                   |
+| `middleware/no-store.middleware.ts`  | `noStore`: `Cache-Control: no-store` on every response of the routes it covers.                                    |
+| `query/read-options.ts`              | `readOptions()`: `populate`, `depth`, `select`, `locale`, `fallback`, `alternates` and `permalink`, or a 400.      |
+| `query/parse-populate.ts`            | `parsePopulate()`: checks paths and hops against the schema. Groups, arrays, blocks and block names count no hop.  |
+| `query/parse-select.ts`              | `parseSelect()`: the selection tree; `badSelectPath()` checks its keys.                                            |
+| `query/path-tree.ts`                 | `treeOf()`: dot paths to a null-prototype tree.                                                                    |
+| `query/where-from-query.ts`          | `whereFromQuery()`: query keys to typed equality filters.                                                          |
 
 Reads are public unless a read rule says otherwise; the preview cookie reads drafts only with a valid session. Content writes MUST stay behind CSRF and run their access rules; every other write MUST stay behind the session check. HTTP scopes never set `overrideAccess`. Query trees MUST use null-prototype nodes, so a `__proto__` segment cannot pollute `Object.prototype`. Media parses its own bodies and keeps `{}` for malformed JSON.

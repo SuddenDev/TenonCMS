@@ -85,7 +85,7 @@ Read the doc for an area before you change it. Update it in the same change.
 The short version. Reasons and the rest: [code-rules.md](code-rules.md).
 
 - Search for the owner before you add a helper. Never write a second version of validation, traversal, locale resolution or hook order.
-- Name a function so it makes sense without its import path: `writeDocument`, not `write`. `is…` and `can…` return a boolean. A function that throws starts with `require…`.
+- Name a function so it makes sense without its import path: `writeDocument`, not `write`. `is…` and `can…` return a boolean. A function that throws starts with `require…`, `check…` or `validate…`.
 - Write a coordinating function as the real sequence: early returns first, then one phase per blank-line block (resolve context, check access, load, prepare, persist, effects).
 - Keep core files as lean as possible with code readabilty being of most importance.
 - Add JSDoc only for what the signature cannot say: ordering, mutation, what `undefined` means, which transaction. Do not repeat the name.

@@ -72,7 +72,7 @@ A `.client.ts` module is a browser entry. Its imports and closures behave like n
 
 Ordinary `.ts` modules can be shared. `.server.ts` modules MUST NOT enter the browser graph, including through shared helpers or dynamic imports resolved by the bundler. The integration rejects these imports, Node built-ins and known server-only Tenon entries. Type-only imports are erased and allowed. Keep secrets in `.server.ts` modules; this check cannot detect private strings in otherwise browser-compatible modules. Avoid runtime-computed import paths that the bundler cannot analyze.
 
-The conventions also cover `.client.js`, `.client.mjs`, `.client.mts` and JSX/TSX, and the matching `.server` suffixes. The filename does not auto-register or execute a module. Import it from the static configuration graph to register its exports. Restart the dev server after adding references or exports; edits to existing browser implementations use the host's HMR.
+The conventions also cover `.client.js`, `.client.mjs`, `.client.mts` and JSX/TSX, and the matching `.server` suffixes. The filename does not auto-register or execute a module. Import it from the static configuration graph to register its exports. In dev, Astro and `tenonAdmin()` pick up new references and exports without a restart, and edits to existing browser implementations use the host's HMR. On Nuxt, restart the dev server if a new one does not appear.
 
 Astro, Nuxt and `tenonAdmin()` install the build integration. Plain Node scripts and tests do not transform imports automatically. Untransformed functions in browser registrations or descriptions fail at CMS startup; use `clientRef()` there, or run the config through the build integration.
 
@@ -108,7 +108,7 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 - It names a module and an optional `#export` (default: `default`). Relative paths resolve from the project root, not from the file that calls it. Package paths resolve through package exports.
 - Astro, Nuxt and `tenonAdmin()` find the literal `clientRef()` calls in the static imports of `tenon.config.ts` without running it, and bundle those exports for the browser only.
 - Computed references are rejected. Inline functions for `mount`, `onClick` or `pageHeader` are rejected too.
-- Adding a `clientRef()` needs a dev server restart.
+- In dev, Astro and `tenonAdmin()` pick up a new reference without a restart. On Nuxt, restart the dev server if it does not appear.
 
 **What is public.** Only the login branding (`/admin-brand`). Fields, pages and bar items arrive after sign-in from `/schema` and `/admin-bar`, without loader functions. `POST /_tenon/admin/load` runs one loader for the signed-in user and answers with its data. It accepts registered keys only, and responses are `Cache-Control: no-store`.
 
