@@ -1,5 +1,6 @@
 import { sql } from "kysely";
-import { type Db, type DocData, type LocaleOwner } from "../document-sql.ts";
+import { type DocData, type LocaleOwner } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Publishes the data of one locale row. A pending draft stays, unless `clearDraft`. A missing row is created.

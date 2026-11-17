@@ -2,10 +2,15 @@ import type { Core } from "../../../cms/runtime/types.ts";
 import { ValidationError } from "../../../errors.ts";
 import { mediaOf } from "../../runtime/create-media-core.ts";
 import { partLength } from "./parts.ts";
-import type { Row } from "./upload-row.ts";
+import type { UploadRow } from "../../../db/types.ts";
 
 /** Step 2 for proxied uploads: streams part `n` into storage. Parts MAY come out of order or twice. */
-export async function putPart(core: Core, row: Row, n: number, body: ReadableStream<Uint8Array>) {
+export async function putPart(
+  core: Core,
+  row: UploadRow,
+  n: number,
+  body: ReadableStream<Uint8Array>,
+) {
   const { storage } = mediaOf(core);
   if (!storage.putPart) throw new ValidationError({ n: "This storage takes parts directly" });
 

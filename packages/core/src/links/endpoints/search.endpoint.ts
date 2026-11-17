@@ -41,7 +41,7 @@ export function linkSearchEndpoint(core: Core) {
       const docs = await findDocs(db, name, {
         access: typeof access === "object" ? access : undefined,
         limit: 20,
-        drafts: perspective === "drafts",
+        perspective,
         loc: await locOf(core, scope, collectionTarget(name)),
         search: { key, query },
       });

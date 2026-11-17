@@ -1417,6 +1417,16 @@ describe("copy and remove", () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
+  it("rejects copy and remove in a localized global that was never saved", async () => {
+    const { cms } = localized();
+    await expect(
+      (cms as any).copyGlobalLocale("site", { from: "en", to: "de" }),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect((cms as any).removeGlobalLocale("site", "de")).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
   it("copies and removes over HTTP, and needs a session", async () => {
     const s = localized();
     const anon = await s.fetchWithSession("/collections/posts/x/locales/de/copy", {

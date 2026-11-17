@@ -76,6 +76,18 @@ describe("reads", () => {
     ).toBe(400);
   });
 
+  it.each([0, -1, 1.5, "x", Infinity, Number.NaN])("reject a local limit of %s", async (limit) => {
+    await expect(cms.find("posts", { limit: limit as number })).rejects.toMatchObject({
+      errors: { limit: "Invalid limit" },
+    });
+  });
+
+  it("answer an invalid limit over HTTP with 400 and the same message", async () => {
+    const res = await cms.fetch(new Request(`${origin}/_tenon/collections/posts?limit=1.5`));
+    expect(res.status).toBe(400);
+    expect((await res.json()).message).toBe("Invalid limit");
+  });
+
   it("return 404 for unknown names", async () => {
     expect(await status(client.find("pages" as never))).toBe(404);
     expect(await status(client.getGlobal("nope" as never))).toBe(404);

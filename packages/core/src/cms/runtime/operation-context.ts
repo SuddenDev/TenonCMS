@@ -1,10 +1,19 @@
 import { type Caller, type Core, type Scope, type Inner } from "./types.ts";
 
 /** The scope of a call from outside the CMS: server code (`overrideAccess`) or an HTTP request. */
-export const outerScope = (
-  { user, apiKey, perspective }: Partial<Caller> & Pick<Caller, "user">,
+export const outerScope = ({
+  user,
+  apiKey,
+  perspective,
   overrideAccess = false,
-): Scope => ({ user, apiKey, context: {}, nested: false, perspective, overrideAccess });
+}: Partial<Caller> & Pick<Caller, "user"> & { overrideAccess?: boolean }): Scope => ({
+  user,
+  apiKey,
+  context: {},
+  nested: false,
+  perspective,
+  overrideAccess,
+});
 
 /** Who `createdBy` and `updatedBy` record: the user's id, `key:<id>` for an API key, or `null`. */
 export const actorId = (scope: Scope) =>

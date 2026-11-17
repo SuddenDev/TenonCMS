@@ -3,9 +3,18 @@ import { actorId } from "../../cms/runtime/operation-context.ts";
 import { databaseForScope, onRollback, transaction } from "../../cms/runtime/transaction.ts";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
 import { ValidationError } from "../../errors.ts";
-import { effectivePartSize, partUrls, partsOf } from "../../media/operations/uploads/parts.ts";
+import {
+  effectivePartSize,
+  partUrls,
+  partsOf,
+  requireUploadParts,
+} from "../../media/operations/uploads/parts.ts";
 import { removeExpired } from "../../media/operations/uploads/remove-expired.ts";
-import { DAY, deleteUpload, type Row } from "../../media/operations/uploads/upload-row.ts";
+import { ownUnexpiredUpload } from "../../media/operations/uploads/upload-row.ts";
+import type { UploadRow } from "../../db/types.ts";
+import { deleteUpload } from "../../db/queries/uploads/delete-upload.query.ts";
+import { insertUpload } from "../../db/queries/uploads/insert-upload.query.ts";
+import { uploadInFolder } from "../../db/queries/uploads/upload-in-folder.query.ts";
 import { mediaOf } from "../../media/runtime/create-media-core.ts";
 import type { Storage } from "../../media/storage/types.ts";
 import { requireBackup } from "../access.ts";
@@ -41,21 +50,18 @@ export async function createImportUpload(core: Core, scope: Scope, input: { size
     const { uploadId } = await storage.createUpload(key, { size, mimeType: ZIP, parts });
     onRollback(s, () => storage.abort(key, uploadId));
 
-    await db
-      .insertInto("cms_uploads")
-      .values({
-        id,
-        key,
-        folder: IMPORTS,
-        filename,
-        mime_type: ZIP,
-        size,
-        part_size: partSize,
-        adapter_upload_id: uploadId,
-        user_id: actorId(scope),
-        created_at: Date.now(),
-      })
-      .execute();
+    await insertUpload(db, {
+      id,
+      key,
+      folder: IMPORTS,
+      filename,
+      mime_type: ZIP,
+      size,
+      part_size: partSize,
+      adapter_upload_id: uploadId,
+      user_id: actorId(scope),
+      created_at: Date.now(),
+    });
 
     const route = `/import/uploads/${id}`;
     return { id, partSize, parts: await partUrls(storage, { key, uploadId, parts }, route) };
@@ -66,27 +72,22 @@ export async function createImportUpload(core: Core, scope: Scope, input: { size
 export async function findImportUpload(core: Core, scope: Scope, id: string) {
   requireBackup(scope, "update");
   const db = await databaseForScope(core, scope);
-  const row = await db
-    .selectFrom("cms_uploads")
-    .selectAll()
-    .where("id", "=", id)
-    .where("folder", "=", IMPORTS)
-    .executeTakeFirst();
-  const mine = row && row.user_id === actorId(scope);
-  return mine && row.created_at > Date.now() - DAY ? row : undefined;
+  return ownUnexpiredUpload(scope, await uploadInFolder(db, IMPORTS, id));
 }
 
 /**
  * Assembles the archive and imports it like `cms.import()`. The archive is read from storage piece by piece. It and
- * the upload row are deleted afterwards, also when the import fails.
+ * the upload row are deleted afterwards, also when the import fails. Invalid `parts` throw first, so the upload stays.
+ * @throws {ValidationError} For `parts` that {@link requireUploadParts} refuses, or an archive the import refuses.
  */
 export async function completeImportUpload(
   core: Core,
   scope: Scope,
-  row: Row,
-  parts: { n: number; etag: string }[],
+  row: UploadRow,
+  input: unknown,
   options: { mode?: ImportMode },
 ) {
+  const parts = requireUploadParts(row, input);
   const { storage } = mediaOf(core);
   try {
     await storage.complete(row.key, row.adapter_upload_id, parts);

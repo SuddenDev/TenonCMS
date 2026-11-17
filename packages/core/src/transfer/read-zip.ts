@@ -13,6 +13,9 @@ export type ZipSource = {
   read(start: number, end: number): Promise<ReadableStream<Uint8Array>>;
 };
 
+/** Thrown for data that is not a ZIP archive this reader supports. Its message names what is wrong. */
+export class ZipError extends Error {}
+
 const END = 0x06054b50;
 const CENTRAL = 0x02014b50;
 const LOCAL = 0x04034b50;
@@ -23,7 +26,8 @@ const MAX = 0xffffffff;
  * Reads the directory of a ZIP archive. Entries use STORE or DEFLATE. A `Blob` from `fs.openAsBlob()` or a
  * {@link ZipSource} is read piece by piece.
  * @returns The entries by name, in archive order. Folder entries are left out.
- * @throws For data that is not a ZIP, a ZIP64 archive or an unsupported compression method.
+ * @throws {ZipError} For data that is not a ZIP, a ZIP64 archive or an unsupported compression method. Errors of
+ * `input` pass through.
  */
 export async function readZip(input: Blob | ZipSource): Promise<Map<string, ZipEntry>> {
   const archive: ZipSource =
@@ -38,18 +42,20 @@ export async function readZip(input: Blob | ZipSource): Promise<Map<string, ZipE
   const tail = await view(tailStart, archive.size);
   let at = tail.byteLength - 22;
   while (at >= 0 && tail.getUint32(at, true) !== END) at--;
-  if (at < 0) throw new Error("tenoncms: the archive is not a ZIP file");
+  if (at < 0) throw new ZipError("tenoncms: the archive is not a ZIP file");
   const count = tail.getUint16(at + 10, true);
   const size = tail.getUint32(at + 12, true);
   const offset = tail.getUint32(at + 16, true);
-  if (offset === MAX || size === MAX) throw new Error("tenoncms: ZIP64 archives are not supported");
+  if (offset === MAX || size === MAX)
+    throw new ZipError("tenoncms: ZIP64 archives are not supported");
 
   const directory = await view(offset, offset + size);
   const decoder = new TextDecoder();
   const entries = new Map<string, ZipEntry>();
   let p = 0;
   for (let i = 0; i < count; i++) {
-    if (directory.getUint32(p, true) !== CENTRAL) throw new Error("tenoncms: broken ZIP directory");
+    if (directory.getUint32(p, true) !== CENTRAL)
+      throw new ZipError("tenoncms: broken ZIP directory");
     const method = directory.getUint16(p + 10, true);
     const compressed = directory.getUint32(p + 20, true);
     const uncompressed = directory.getUint32(p + 24, true);
@@ -64,13 +70,13 @@ export async function readZip(input: Blob | ZipSource): Promise<Map<string, ZipE
 
     if (name.endsWith("/")) continue;
     if (compressed === MAX || uncompressed === MAX || local === MAX)
-      throw new Error("tenoncms: ZIP64 archives are not supported");
+      throw new ZipError("tenoncms: ZIP64 archives are not supported");
     if (method !== 0 && method !== 8)
-      throw new Error(`tenoncms: unsupported ZIP compression method ${method} in "${name}"`);
+      throw new ZipError(`tenoncms: unsupported ZIP compression method ${method} in "${name}"`);
 
     const data = async () => {
       const header = await view(local, local + 30);
-      if (header.getUint32(0, true) !== LOCAL) throw new Error("tenoncms: broken ZIP entry");
+      if (header.getUint32(0, true) !== LOCAL) throw new ZipError("tenoncms: broken ZIP entry");
       const start = local + 30 + header.getUint16(26, true) + header.getUint16(28, true);
       return archive.read(start, start + compressed);
     };

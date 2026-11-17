@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ConflictError, defineCms, type EmailMessage } from "../index.ts";
+import type { Core } from "../cms/runtime/types.ts";
+import { ConflictError, defineCms, ValidationError, type EmailMessage } from "../index.ts";
+import { setUpFirstAdmin } from "../users/operations/set-up.operation.ts";
 import { admin, base, origin, post, setup, withAdmin } from "./setup.ts";
 
 const ed = { email: "ed@b.co", name: "Ed", role: "editor", password: "password123" };
@@ -62,6 +64,15 @@ describe("cms.users", () => {
     await expect(scoped.users.reactivate(admin.email)).rejects.toThrow("Forbidden");
     await expect(scoped.users.remove(admin.email)).rejects.toThrow("Forbidden");
     expect(() => scoped.users.roles()).toThrow("Forbidden");
+  });
+});
+
+describe("setup", () => {
+  // `cms` has no setup method. An empty core proves the email is checked before anything else runs.
+  it("rejects an invalid email in the operation", async () => {
+    const result = setUpFirstAdmin({} as Core, { name: "A", email: "not an email" });
+    await expect(result).rejects.toBeInstanceOf(ValidationError);
+    await expect(result).rejects.toMatchObject({ errors: { email: expect.any(String) } });
   });
 });
 

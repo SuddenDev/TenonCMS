@@ -1,6 +1,7 @@
 import type { Core, Scope, Inner } from "../../cms/runtime/types.ts";
 import { databaseForScope, onRollback } from "../../cms/runtime/transaction.ts";
 import { findDocs } from "../../db/queries/documents/find-documents.query.ts";
+import { uploadFilenames } from "../../db/queries/uploads/upload-filenames.query.ts";
 
 type Place = { folder: string; filename: string };
 const pendingDeletes = new WeakMap<Core, Set<Place>>();
@@ -24,16 +25,12 @@ export async function namesIn(core: Core, scope: Scope, folder: string) {
   const db = await databaseForScope(core, scope);
   // shortcut: loads every document of the folder, add a SQL filename filter if folders grow large.
   const docs = await findDocs(db, "media", { where: { folder } });
-  const uploads = await db
-    .selectFrom("cms_uploads")
-    .select("filename")
-    .where("folder", "=", folder)
-    .execute();
+  const uploads = await uploadFilenames(db, folder);
   const reserved = [...(pendingDeletes.get(core) ?? [])];
 
   return [
     ...docs.map((doc) => String(doc.filename)),
-    ...uploads.map((upload) => upload.filename),
+    ...uploads,
     ...reserved.filter((place) => place.folder === folder).map((place) => place.filename),
   ];
 }

@@ -1,8 +1,9 @@
 import { consola } from "consola";
-import type { Kysely } from "kysely";
-import type { Database } from "../../../db/types.ts";
+import type { Db } from "../../../db/types.ts";
 import type { Storage } from "../../storage/types.ts";
-import { DAY, deleteUpload } from "./upload-row.ts";
+import { deleteUpload } from "../../../db/queries/uploads/delete-upload.query.ts";
+import { uploadsCreatedBefore } from "../../../db/queries/uploads/uploads-created-before.query.ts";
+import { DAY } from "./upload-row.ts";
 
 const log = consola.withTag("tenon");
 
@@ -11,12 +12,8 @@ const log = consola.withTag("tenon");
  * file has no document: completing a media upload deletes its row in the same transaction. A failure is logged; the
  * row goes anyway.
  */
-export async function removeExpired(storage: Storage, db: Kysely<Database>) {
-  const expired = await db
-    .selectFrom("cms_uploads")
-    .selectAll()
-    .where("created_at", "<", Date.now() - DAY)
-    .execute();
+export async function removeExpired(storage: Storage, db: Db) {
+  const expired = await uploadsCreatedBefore(db, Date.now() - DAY);
 
   for (const row of expired) {
     await storage.abort(row.key, row.adapter_upload_id).catch((e) => log.error(e));

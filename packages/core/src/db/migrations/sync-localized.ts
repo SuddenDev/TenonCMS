@@ -1,6 +1,6 @@
 import { consola } from "consola";
-import { type Kysely, sql } from "kysely";
-import { type Database } from "../types.ts";
+import { sql } from "kysely";
+import type { Db } from "../types.ts";
 import type { Field, Fields } from "../../schema/index.ts";
 import { withLists } from "../../content/reads/merge-locale.ts";
 
@@ -55,7 +55,7 @@ function shift(from: Version, to: Version, keys: string[]) {
 }
 
 async function move(
-  trx: Kysely<Database>,
+  trx: Db,
   kind: Kind,
   name: string,
   keys: string[],
@@ -101,11 +101,7 @@ async function move(
   return counts;
 }
 
-async function missingDefault(
-  db: Kysely<Database>,
-  current: Record<string, string[] | null>,
-  locale: string,
-) {
+async function missingDefault(db: Db, current: Record<string, string[] | null>, locale: string) {
   let total = 0;
   for (const [id, keys] of Object.entries(current)) {
     if (!keys) continue;
@@ -135,7 +131,7 @@ function split(id: string): [Kind, string] {
  * merged with its shared structure first.
  */
 export async function syncLocalized(
-  db: Kysely<Database>,
+  db: Db,
   current: Record<string, string[] | null>,
   defaultLocale: string,
   fields: Record<string, Fields> = {},
@@ -161,7 +157,7 @@ export async function syncLocalized(
  * @returns What moved, as log lines, and the stored default locale before the sync.
  */
 export async function syncLocalizedIn(
-  trx: Kysely<Database>,
+  trx: Db,
   current: Record<string, string[] | null>,
   defaultLocale: string,
   fields: Record<string, Fields> = {},

@@ -1,6 +1,6 @@
 import { type ExpressionBuilder, sql } from "kysely";
-import type { Database, JobRow } from "../../types.ts";
-import { type Db, isPostgres } from "../document-sql.ts";
+import type { Database, JobRow, Db } from "../../types.ts";
+import { isPostgres } from "../../create-db.ts";
 
 // ponytail: a task longer than the lease can run twice. Delivery is at least once. Renew the lease while a task runs
 // if that ever matters.

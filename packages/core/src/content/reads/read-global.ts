@@ -21,12 +21,7 @@ export async function readGlobal(core: Core, s: Inner, name: string, options: Re
   const { plan, select } = readPlan(core, entry.fields, options, globalMetaKeys(entry.localized));
   const loc = await locOf(core, s, globalTarget(name));
 
-  const stored = await loadGlobal(
-    await databaseForScope(core, s),
-    name,
-    s.perspective === "drafts",
-    loc,
-  );
+  const stored = await loadGlobal(await databaseForScope(core, s), name, s.perspective, loc);
   const data = stored ?? {
     publishedAt: null,
     hasDraft: false,

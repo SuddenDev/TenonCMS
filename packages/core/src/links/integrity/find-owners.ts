@@ -1,5 +1,5 @@
 import type { Core } from "../../cms/runtime/types.ts";
-import type { Db } from "../../db/queries/document-sql.ts";
+import type { Db } from "../../db/types.ts";
 import type { Fields } from "../../schema/fields/index.ts";
 import type { LinkedReference } from "../../errors.ts";
 import { hasLinkingFields } from "../runtime/fields.ts";

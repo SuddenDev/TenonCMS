@@ -21,12 +21,11 @@ export type RichtextField = Base<RichtextDocument> & {
 
 /** Structural checks also apply to drafts and inactive fields. */
 export function richtextFieldSchema() {
-  return z.custom<RichtextDocument>((value) => {
+  return z.custom<RichtextDocument>().superRefine((value, ctx) => {
     try {
       checkRichtextShape(value);
-      return true;
-    } catch {
-      return false;
+    } catch (error) {
+      ctx.addIssue({ code: "custom", message: (error as Error).message });
     }
-  }, "Invalid rich text document");
+  });
 }

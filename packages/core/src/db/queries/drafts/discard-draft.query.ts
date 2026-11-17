@@ -1,5 +1,6 @@
-import { type Db, rowColumns } from "../document-sql.ts";
+import { rowColumns } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
+import type { Db } from "../../types.ts";
 
 /** Drops the draft of a document. Returns the published row. */
 export const discardDraft = async (db: Db, collection: string, id: string) =>
@@ -9,6 +10,6 @@ export const discardDraft = async (db: Db, collection: string, id: string) =>
       .set({ draft: null })
       .where("collection", "=", collection)
       .where("id", "=", id)
-      .returning(rowColumns(false))
+      .returning(rowColumns("published"))
       .executeTakeFirstOrThrow(),
   );

@@ -40,6 +40,12 @@ describe("resolveBarItem", () => {
     });
   });
 
+  it("accepts a path or an http(s) URL as href, the children's too", () => {
+    expect(resolveBarItem(link, { href: "/admin/x?y=1" })).toMatchObject({ href: "/admin/x?y=1" });
+    const out = resolveBarItem(link, { children: { k: { label: "K", href: "https://a.test/" } } });
+    expect(out?.children?.[0]).toMatchObject({ href: "https://a.test/" });
+  });
+
   it("hides a native item for null", () => {
     expect(resolveBarItem(link, null)).toBeNull();
   });
@@ -60,6 +66,9 @@ describe("resolveBarItem", () => {
     ["a child with an unknown key", { children: { k: { label: "K", onClick: 1 } } }],
     ["a child with a bad order", { children: { k: { label: "K", order: "1" } } }],
     ["a child with an empty key", { children: { "": { label: "K" } } }],
+    ["a javascript: href", { href: "javascript:alert(1)" }],
+    ["a protocol-relative href", { href: "//evil.test/x" }],
+    ["a child with a javascript: href", { children: { k: { label: "K", href: "javascript:x" } } }],
   ])("rejects %s of a native item", (_name, loaded) => {
     expect(() => resolveBarItem(link, loaded as never)).toThrow();
   });

@@ -1,5 +1,6 @@
-import type { Db, Holds, LocaleOwner } from "../document-sql.ts";
+import type { Holds, LocaleOwner } from "../document-sql.ts";
 import { sql } from "kysely";
+import type { Db } from "../../types.ts";
 
 export type LocaleReference = {
   /** The document id, or the global name. */

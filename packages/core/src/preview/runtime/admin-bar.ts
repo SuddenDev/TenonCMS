@@ -152,7 +152,7 @@ export function startAdminBar(
     cleanup();
   };
 
-  // Asks for the items of the page, then shows them. Resolves to whether this load was applied.
+  // Asks for the items of the page, then shows them. A newer load or a stop discards the answer.
   async function load() {
     const current = ++generation;
     const asked = mode;

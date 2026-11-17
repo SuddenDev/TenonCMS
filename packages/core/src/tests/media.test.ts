@@ -283,6 +283,31 @@ describe("upload routes", () => {
     ).toBe(404);
   });
 
+  it("rejects malformed parts and keeps the upload", async () => {
+    const m = withMedia();
+    await m.client.signUp(admin);
+    const { id } = await (await start(m.fetchWithSession, { size: 1000 })).json();
+    await put(m.fetchWithSession, id, 1, bytes(1000));
+    const complete = (parts: unknown) =>
+      m.fetchWithSession(`/media/uploads/${id}/complete`, json({ parts }));
+
+    for (const parts of [
+      "1",
+      [null],
+      ["1"],
+      [{ n: 0, etag: "1" }],
+      [{ n: 1.5, etag: "1" }],
+      [{ n: 2, etag: "1" }],
+      [{ n: 1, etag: 1 }],
+      [{ n: 1 }],
+    ]) {
+      const res = await complete(parts);
+      expect(res.status).toBe(400);
+      expect(Object.keys((await res.json()).errors)[0]).toMatch(/^parts/);
+    }
+    expect((await complete([{ n: 1, etag: "1" }])).status).toBe(201);
+  });
+
   it("reserves the name of an unfinished upload", async () => {
     const m = withMedia();
     await m.client.signUp(admin);
@@ -702,6 +727,30 @@ describe("moves and deletes", () => {
     expect(await m.client.media.folders()).toEqual(["b", "b/c"]);
   });
 
+  it("rejects a folder rename to a non-string", async () => {
+    const m = withMedia();
+    await upload(m.cms, "x.txt", "a");
+    await m.client.signUp(admin);
+
+    expect(await status(m.client.media.renameFolder("a", 5 as never))).toBe(400);
+    expect(files(m.dir)).toEqual(["a/x.txt"]);
+  });
+
+  it("reports an unexpected storage error of a folder rename without its message", async () => {
+    const { fail, storage } = flaky();
+    const m = withMedia({ storage });
+    await upload(m.cms, "x.txt", "a");
+    await m.client.signUp(admin);
+    fail.move = true;
+    const log = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    const result = await m.client.media.renameFolder("a", "b");
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("disk full"));
+    log.mockRestore();
+    expect(result).toMatchObject({ moved: 0, failed: [{ message: "Could not move the file" }] });
+  });
+
   it("deletes the document, then the file and its variants, then runs afterDelete", async () => {
     const { provider } = spy();
     let block = true;
@@ -764,6 +813,16 @@ describe("moves and deletes", () => {
     await m.client.signUp(admin);
     expect(await m.client.media.update(doc.id, { alt: "x" })).toMatchObject({ alt: "x" });
     expect(await status(m.client.media.update("nope", { alt: "x" }))).toBe(404);
+  });
+
+  it("rejects alt, filename and folder that are not strings", async () => {
+    const m = withMedia();
+    const doc = await upload(m.cms, "a.txt");
+    await m.client.signUp(admin);
+
+    for (const data of [{ folder: null }, { folder: 5 }, { filename: 5 }, { alt: 5 }])
+      expect(await status(m.client.media.update(doc.id, data as never))).toBe(400);
+    expect(await m.client.media.update(doc.id, { alt: null })).toMatchObject({ key: "a.txt" });
   });
 });
 

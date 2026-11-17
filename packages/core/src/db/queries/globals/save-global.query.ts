@@ -1,4 +1,5 @@
-import { type Db, type DocData } from "../document-sql.ts";
+import { type DocData } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Publishes the data of a global. A pending draft stays, unless `clearDraft`. */
 export async function saveGlobal(db: Db, name: string, data: DocData, clearDraft = false) {

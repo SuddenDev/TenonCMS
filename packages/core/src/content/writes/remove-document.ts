@@ -34,7 +34,7 @@ export async function remove(
 
   // A delete removes the row whether it was published or not.
   const loc = await locOf(core, s, collectionTarget(collection));
-  const doc = await loadDoc(db, collection, id, true, loc);
+  const doc = await loadDoc(db, collection, id, "drafts", loc);
   if (!doc) return;
   enforce(s, decision, doc);
 

@@ -8,7 +8,7 @@ import { parseData } from "../../schema/validation/parse-data.ts";
 import { applyDefaults } from "../../schema/runtime/apply-defaults.ts";
 import { runFieldHooks } from "../../schema/runtime/run-field-hooks.ts";
 import { fillSlugs } from "../../schema/runtime/fill-slugs.ts";
-import { validateFields } from "../../schema/runtime/validate-fields.ts";
+import { collectFieldErrors } from "../../schema/runtime/validate-fields.ts";
 import { ValidationError } from "../../errors.ts";
 
 /** Runs defaults, slugs, validation and before-change hooks in write order. Mutates only a cloned input. */
@@ -37,7 +37,7 @@ export async function prepareData(state: WriteState, input: unknown) {
 
   // Delete effects only clear references, so the document's own rules do not apply.
   if (mode !== "deletion-effect" && mode !== "draft") {
-    const errors = await validateFields(fields, valid, fieldArgs(valid));
+    const errors = await collectFieldErrors(fields, valid, fieldArgs(valid));
     if (Object.keys(errors).length) throw new ValidationError(errors);
   }
 

@@ -5,9 +5,10 @@ import { jsonOnly } from "../../http/middleware/json-only.middleware.ts";
 import type { Env } from "../../http/middleware/types.ts";
 import { parseBody } from "../../http/parse-body.ts";
 import { setUpFirstAdmin } from "../operations/set-up.operation.ts";
-import { input } from "./input.ts";
+import { emailInput } from "../email.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 
-const setupBody = z.object({ name: z.string().min(1), email: z.email() });
+const setupBody = emailInput.extend({ name: z.string().min(1) });
 
 /**
  * Public, JSON only. `POST /setup` with `{ name, email }` creates the first admin without a password, signs them in
@@ -15,7 +16,10 @@ const setupBody = z.object({ name: z.string().min(1), email: z.email() });
  */
 export const setupEndpoint = (core: Core) =>
   new Hono<Env>().post("/setup", jsonOnly, async (c) => {
-    const { user, headers } = await setUpFirstAdmin(core, input(setupBody, await parseBody(c.req)));
+    const { user, headers } = await setUpFirstAdmin(
+      core,
+      validateInput(setupBody, await parseBody(c.req)),
+    );
     for (const cookie of headers.getSetCookie()) c.header("set-cookie", cookie, { append: true });
     return c.json({ user });
   });

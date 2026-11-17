@@ -369,4 +369,25 @@ describe("client.links", () => {
       status: 400,
     });
   });
+
+  it("names the rich text shape error of an unsaved document", async () => {
+    const { client } = setup(make());
+    await client.signUp(admin);
+    const unsafe = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "x", marks: [{ type: "link", attrs: { href: "javascript:x" } }] },
+          ],
+        },
+      ],
+    };
+
+    await expect(client.links.resolve(unsafe as never)).rejects.toMatchObject({
+      status: 400,
+      body: { errors: { document: "Unsafe rich text URL" } },
+    });
+  });
 });

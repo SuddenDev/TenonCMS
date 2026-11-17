@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** How many users other than `userId` have the role `admin` and are not banned. */
 export async function otherAdmins(db: Db, userId: string) {

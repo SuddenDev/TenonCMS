@@ -1,5 +1,5 @@
 import { type Database } from "./types.ts";
-import { type Dialect, Kysely } from "kysely";
+import { type Dialect, Kysely, PostgresAdapter } from "kysely";
 
 /**
  * Where the CMS stores its data: a Kysely dialect. `libsql()`, `postgres()`, `pglite()` and `durableObject()` build
@@ -15,3 +15,6 @@ export type DatabaseOptions = {
 /** Opens Kysely on the configured database. Nothing connects until the first query. */
 export const createDb = (database: DatabaseOptions) =>
   new Kysely<Database>({ dialect: database.dialect });
+
+/** Whether `db` (or a transaction of it) runs on Postgres or PGlite. Otherwise it runs on SQLite. */
+export const isPostgres = (db: Kysely<any>) => db.getExecutor().adapter instanceof PostgresAdapter;

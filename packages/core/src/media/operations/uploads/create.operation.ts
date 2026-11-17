@@ -10,6 +10,7 @@ import { cleanPlace, placeFile } from "./place-file.ts";
 import { removeExpired } from "./remove-expired.ts";
 import { collectionTarget } from "../../../content/targets.ts";
 import { guard } from "../../../access/rule.ts";
+import { insertUpload } from "../../../db/queries/uploads/insert-upload.query.ts";
 
 /**
  * Step 1: checks the file, runs `beforeUpload`, reserves a free key and starts the upload in storage.
@@ -35,21 +36,18 @@ export async function create(core: Core, scope: Scope, input: Partial<UploadInfo
 
     // The row reserves the key: `namesIn()` counts unfinished uploads.
     const id = crypto.randomUUID();
-    await db
-      .insertInto("cms_uploads")
-      .values({
-        id,
-        key,
-        folder,
-        filename,
-        mime_type: mimeType,
-        size,
-        part_size: partSize,
-        adapter_upload_id: uploadId,
-        user_id: actorId(scope),
-        created_at: Date.now(),
-      })
-      .execute();
+    await insertUpload(db, {
+      id,
+      key,
+      folder,
+      filename,
+      mime_type: mimeType,
+      size,
+      part_size: partSize,
+      adapter_upload_id: uploadId,
+      user_id: actorId(scope),
+      created_at: Date.now(),
+    });
 
     return {
       id,

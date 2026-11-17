@@ -1,5 +1,6 @@
 import { sql } from "kysely";
-import { type Db, type DocData, type LocaleOwner } from "../document-sql.ts";
+import { type DocData, type LocaleOwner } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** The published data and the pending draft of every locale row of a document or global, parsed. */
 export async function loadLocaleRows(db: Db, locales: LocaleOwner, owner: string) {

@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Gives the lock to `userId` when it is free, expired, already theirs, or `takeover` is set; else leaves it.

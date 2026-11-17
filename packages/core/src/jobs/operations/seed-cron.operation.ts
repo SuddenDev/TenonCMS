@@ -2,7 +2,7 @@ import { Cron } from "croner";
 import type { Core } from "../../cms/runtime/types.ts";
 import { deleteStaleCronJobs } from "../../db/queries/jobs/delete-jobs.query.ts";
 import { type CronSlot, insertCronSlots } from "../../db/queries/jobs/insert-cron-slots.query.ts";
-import type { Db } from "../../db/queries/document-sql.ts";
+import type { Db } from "../../db/types.ts";
 
 /**
  * Queues the next slot of every cron entry and deletes the rows of entries that are gone from the config.

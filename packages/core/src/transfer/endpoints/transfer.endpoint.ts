@@ -8,10 +8,11 @@ import { noStore } from "../../http/middleware/no-store.middleware.ts";
 import { abort } from "../../media/operations/uploads/abort.operation.ts";
 import { putPart } from "../../media/operations/uploads/put-part.operation.ts";
 import { body, scope } from "../../media/endpoints/request-context.ts";
-import { input } from "../../users/endpoints/input.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { requireBackup } from "../access.ts";
-import { ARCHIVE_SCOPES, IMPORT_MODES, type Manifest, ZIP, archiveName } from "../format.ts";
+import { ARCHIVE_SCOPES, IMPORT_MODES, ZIP, archiveName } from "../format.ts";
+import { manifestSchema } from "../read-archive.ts";
 import { checkArchive } from "../operations/check-archive.ts";
 import {
   completeImportUpload,
@@ -33,21 +34,7 @@ const exportQuery = z.object({
   scope: z.enum(ARCHIVE_SCOPES).optional(),
 });
 const importQuery = z.object({ mode: z.enum(IMPORT_MODES).optional() });
-const checkBody = z.object({
-  mode: z.enum(IMPORT_MODES).optional(),
-  manifest: z.looseObject({
-    format: z.string(),
-    version: z.number(),
-    defaultLocale: z.string(),
-    localized: z.record(z.string(), z.array(z.string()).nullable()),
-    media: z.boolean(),
-    scope: z.enum(ARCHIVE_SCOPES).optional(),
-    dialect: z.string().optional(),
-    migrations: z.array(z.string()).optional(),
-    tables: z.record(z.string(), z.array(z.string())).optional(),
-    targets: z.array(z.string()).optional(),
-  }),
-});
+const checkBody = z.object({ mode: z.enum(IMPORT_MODES).optional(), manifest: manifestSchema });
 
 /**
  * Admin routes over `cms.export()` and `cms.import()`.
@@ -67,18 +54,18 @@ export function transferEndpoint(core: Core) {
     .use("/import", allow("update"), noStore)
     .use("/import/*", allow("update"), noStore)
     .get("/export", async (c) => {
-      const { media, scope } = input(exportQuery, c.req.query());
+      const { media, scope } = validateInput(exportQuery, c.req.query());
       const body = await c.var.cms.export({ media: media !== "false", scope });
       return new Response(body, {
         headers: { "content-type": ZIP, "content-disposition": attachment(archiveName()) },
       });
     })
     .get("/export/summary", async (c) => {
-      const { media, scope } = input(exportQuery, c.req.query());
+      const { media, scope } = validateInput(exportQuery, c.req.query());
       return c.json(await c.var.cms.exportSummary({ media: media !== "false", scope }));
     })
     .post("/export", async (c) => {
-      const { media, scope: archive } = input(exportQuery, c.req.query());
+      const { media, scope: archive } = validateInput(exportQuery, c.req.query());
       return c.json({
         url: await stageExport(core, scope(c), { media: media !== "false", scope: archive }),
       });
@@ -86,16 +73,14 @@ export function transferEndpoint(core: Core) {
     .post("/import", async (c) => {
       if (c.req.header("content-type")?.split(";")[0]?.trim() !== ZIP)
         return c.json({ message: "The body MUST be a ZIP archive (application/zip)" }, 415);
-      const { mode } = input(importQuery, c.req.query());
+      const { mode } = validateInput(importQuery, c.req.query());
       // The body is held in memory and limited by the host. Big archives go through `/import/uploads`.
       return c.json(await c.var.cms.import(await c.req.blob(), { mode }));
     })
     .post("/import/check", async (c) => {
-      const { manifest, mode = "merge" } = input(checkBody, await body(c.req));
+      const { manifest, mode = "merge" } = validateInput(checkBody, await body(c.req));
       const db = await databaseForScope(core, scope(c));
-      return c.json(
-        await checkArchive(core, db, manifest as Manifest, { mode, targets: manifest.targets }),
-      );
+      return c.json(await checkArchive(core, db, manifest, { mode, targets: manifest.targets }));
     });
   if (!core.media) return api;
 
@@ -116,10 +101,9 @@ export function transferEndpoint(core: Core) {
     })
     .post("/import/uploads/:id/complete", async (c) => {
       const row = await ownUpload(c);
-      const { mode } = input(importQuery, c.req.query());
+      const { mode } = validateInput(importQuery, c.req.query());
       const { parts } = await body(c.req);
-      const list = Array.isArray(parts) ? parts : [];
-      return c.json(await completeImportUpload(core, scope(c), row, list, { mode }));
+      return c.json(await completeImportUpload(core, scope(c), row, parts, { mode }));
     })
     .delete("/import/uploads/:id", async (c) => {
       await abort(core, scope(c), await ownUpload(c));

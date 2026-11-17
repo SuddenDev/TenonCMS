@@ -218,6 +218,61 @@ describe("duplicate", () => {
     expect(await read(second.id, "en")).toMatchObject({ slug: "hello-copy-2" });
   });
 
+  it("shares one hook context across the copy's locales", async () => {
+    const counts: unknown[] = [];
+    const { cms } = localized({
+      collections: {
+        posts: {
+          hooks: {
+            beforeChange: [
+              ({ context }: { context: { saves?: number } }) => {
+                context.saves = (context.saves ?? 0) + 1;
+                counts.push(context.saves);
+              },
+            ],
+          },
+        },
+      },
+    });
+    const post = await cms.create("posts", { title: "Hello" });
+    await cms.update("posts", post.id, { title: "Hallo" }, { locale: "de" } as never);
+    counts.length = 0;
+
+    await cms.duplicate("posts", post.id);
+    expect(counts).toEqual([1, 2]);
+  });
+
+  it("runs afterError once, after the rollback, when the copy fails", async () => {
+    const seen: unknown[] = [];
+    let failing = false;
+    const { cms } = localized({
+      hooks: {
+        afterError: [
+          async ({ cms }: { cms: typeof outer }) =>
+            void seen.push((await cms.withDrafts().find("posts")).length),
+        ],
+      },
+      collections: {
+        posts: {
+          hooks: {
+            beforeChange: [
+              ({ locale }: { locale?: string }) => {
+                if (failing && locale === "de") throw new Error("boom");
+              },
+            ],
+          },
+        },
+      },
+    });
+    const outer = cms;
+    const post = await cms.create("posts", { title: "Hello" });
+    await cms.update("posts", post.id, { title: "Hallo" }, { locale: "de" } as never);
+    failing = true;
+
+    await expect(cms.duplicate("posts", post.id)).rejects.toThrow("boom");
+    expect(seen).toEqual([1]);
+  });
+
   it("saves the copy without drafts", async () => {
     const { cms, client } = localized();
     const note = await cms.create("notes", { text: "Hello" });

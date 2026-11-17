@@ -37,14 +37,13 @@ export async function resolveLinkTargets(core: Core, scope: Inner, references: L
     const entry = core.schema.collections[collection];
     if (!entry) continue;
 
-    const drafts = scope.perspective === "drafts";
     const access = await readDecision(core, scope, collectionTarget(collection));
     if (access === false) continue;
     const loaded = await loadByIds(
       db,
       collection,
       [...ids],
-      drafts,
+      scope.perspective,
       await locOf(core, scope, collectionTarget(collection)),
     );
     const docs = admittedRows(access, loaded);

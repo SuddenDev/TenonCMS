@@ -1,6 +1,6 @@
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Fields } from "../../schema/fields/index.ts";
-import type { Db } from "../../db/queries/document-sql.ts";
+import type { Db } from "../../db/types.ts";
 import { existingIds } from "../../db/queries/references/existing-ids.query.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { ValidationError } from "../../errors.ts";
@@ -33,7 +33,7 @@ export async function checkLinkTargets(
     const found = new Set(await existingIds(db, collection, [...ids]));
     const images =
       collection === "media"
-        ? new Map((await loadByIds(db, collection, [...ids], true)).map((d) => [d.id, d]))
+        ? new Map((await loadByIds(db, collection, [...ids], "drafts")).map((d) => [d.id, d]))
         : undefined;
 
     for (const { path, reference: ref, image } of held) {

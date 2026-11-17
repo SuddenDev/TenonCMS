@@ -5,7 +5,7 @@ import { hookArgs } from "../lifecycle/hook-args.ts";
 import { loadGlobal } from "../../db/queries/globals/load-global.query.ts";
 import { loadDoc } from "../../db/queries/documents/load-document.query.ts";
 import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts";
-import type { Db, Loc } from "../../db/queries/document-sql.ts";
+import type { Loc, Perspective } from "../../db/queries/document-sql.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { prepareData } from "./prepare-data.ts";
 import { persistDocument } from "./persist-document.ts";
@@ -13,6 +13,7 @@ import { guard } from "../../access/rule.ts";
 import { dropDenied } from "../../access/field-access.ts";
 import { ConflictError } from "../../errors.ts";
 import { requireUnscheduled } from "../../schedule/operations/require-unscheduled.ts";
+import type { Db } from "../../db/types.ts";
 
 export type WriteMode = "save" | "draft" | "publish" | "deletion-effect";
 export type WriteOperation = "create" | "update" | "setGlobal";
@@ -67,19 +68,15 @@ export async function writeDocument(core: Core, scope: Inner, request: WriteRequ
   if (mode === "draft" && operation !== "create")
     await requireUnscheduled(database, name, id, locale?.locale);
 
-  const source = await loadSource(
-    database,
-    name,
-    id,
-    mode === "draft" || mode === "publish",
-    locale,
-  );
+  const sourcePerspective: Perspective =
+    mode === "draft" || mode === "publish" ? "drafts" : "published";
+  const source = await loadSource(database, name, id, sourcePerspective, locale);
   if (id && !source) return undefined;
   // ponytail: millisecond token. Two writes in the same millisecond pass; add a version column if that matters.
   if (request.updatedAt && source?.updatedAt !== request.updatedAt)
     throw new ConflictError([], "Changed since it was loaded", "CHANGED");
   const originalDoc =
-    mode === "publish" ? await loadSource(database, name, id, false, locale) : source;
+    mode === "publish" ? await loadSource(database, name, id, "published", locale) : source;
   const sourceData = locale && source ? withoutLocaleMeta(source) : source;
   const args = hookArgs(scope, name, { operation, id, originalDoc, draft: mode === "draft" });
   const state: WriteState = {
@@ -115,12 +112,13 @@ export async function loadSource(
   db: Db,
   name: ContentTarget,
   id: string | undefined,
-  drafts: boolean,
+  perspective: Perspective,
   loc?: Loc,
 ) {
-  if (loc && (name.kind === "global" || id)) return loadLocaleDoc(db, name, id ?? "", drafts, loc);
-  if (name.kind === "global") return loadGlobal(db, name.name, drafts);
-  return id ? loadDoc(db, name.name, id, drafts) : undefined;
+  if (loc && (name.kind === "global" || id))
+    return loadLocaleDoc(db, name, id ?? "", perspective, loc);
+  if (name.kind === "global") return loadGlobal(db, name.name, perspective);
+  return id ? loadDoc(db, name.name, id, perspective) : undefined;
 }
 
 // Read metadata is reserved only on localized targets.

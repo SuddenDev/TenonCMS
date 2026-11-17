@@ -1,5 +1,6 @@
-import { type Db, type DocData, rowColumns } from "../document-sql.ts";
+import { type DocData, rowColumns } from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Stores the draft of a document. The published data stays. `by`: the user id, `null` for server code.
@@ -18,6 +19,6 @@ export const saveDraft = async (
       .set({ draft: JSON.stringify(draft), updated_at: Date.now(), updated_by: by })
       .where("collection", "=", collection)
       .where("id", "=", id)
-      .returning(rowColumns(true))
+      .returning(rowColumns("drafts"))
       .executeTakeFirstOrThrow(),
   );

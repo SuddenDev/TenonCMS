@@ -1,5 +1,5 @@
 import { type RawBuilder, sql } from "kysely";
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 import { iso } from "../../map-document.ts";
 import type { Version, VersionWithData } from "../../../versions/types.ts";
 

@@ -173,6 +173,17 @@ describe("invites", () => {
     });
   });
 
+  it("validates the email and url of an invite from server code, and stores nothing", async () => {
+    const { cms, sql } = await env();
+    await expect(
+      cms.users.invite({ email: "not an email", role: "editor", url }),
+    ).rejects.toMatchObject({ errors: { email: expect.any(String) } });
+    await expect(
+      cms.users.invite({ email: "e@b.co", role: "editor", url: "not a url" }),
+    ).rejects.toMatchObject({ errors: { url: expect.stringContaining("absolute") } });
+    expect(await sql("SELECT id FROM cms_invites")).toEqual([]);
+  });
+
   it("links into the admin on `auth.baseURL`, while the sitemap uses `site.url`", async () => {
     const cms = defineCms({
       ...base,

@@ -1,8 +1,8 @@
 import type { RichtextDocument } from "../../richtext/config/types.ts";
-import { type Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import { toDoc } from "../../db/map-document.ts";
 import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
-import { type Loc } from "../../db/queries/document-sql.ts";
+import { type Loc, type Perspective } from "../../db/queries/document-sql.ts";
 import { joinedDocs } from "../../db/queries/references/joined-documents.query.ts";
 import { blockGroups } from "../../schema/traversal/inner-fields.ts";
 import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
@@ -17,7 +17,6 @@ import {
 } from "../../schema/index.ts";
 import { isObject } from "../../schema/condition.ts";
 import { type PopulatePlan, step } from "./populate-plan.ts";
-import type { Kysely } from "kysely";
 import { admittedRows } from "../../access/read.ts";
 import type { Where } from "../../access/types.ts";
 
@@ -29,8 +28,8 @@ export type ReadHooks = {
   richtext?(values: RichtextDocument[]): Promise<void>;
   /** Adds `href`, `title` and `broken` to stored `link` values in place. */
   links?(values: Record<string, any>[]): Promise<void>;
-  /** Loads targets in the drafts perspective. */
-  drafts: boolean;
+  /** The perspective targets load in. */
+  perspective: Perspective;
   /** How a localized target collection reads, in the locale of the outer read. */
   loc?(collection: string): Promise<Loc | undefined>;
   /** The read rule of the target collection: `false` drops every target, a `Where` the targets outside it. */
@@ -42,7 +41,7 @@ export type ReadHooks = {
 };
 
 type Hop = {
-  db: Kysely<Database>;
+  db: Db;
   collections: Collections;
   read: ReadHooks;
   /** The plan the loaded documents continue with. */
@@ -54,7 +53,7 @@ type Hop = {
  * @returns Nothing. `docs` holds the resolved values.
  */
 export async function populate(
-  db: Kysely<Database>,
+  db: Db,
   collections: Collections,
   fields: Fields,
   docs: Docs,
@@ -99,7 +98,7 @@ async function resolveRef(ctx: Hop, docs: Docs, key: string, field: RefField) {
   const found = await hop(
     ctx,
     to,
-    await loadByIds(ctx.db, to, ids, ctx.read.drafts, await ctx.read.loc?.(to)),
+    await loadByIds(ctx.db, to, ids, ctx.read.perspective, await ctx.read.loc?.(to)),
   );
 
   const { media } = ctx.read;
@@ -128,7 +127,7 @@ async function resolveJoin(ctx: Hop, docs: Docs, key: string, field: JoinField) 
     field.on,
     source.many,
     ids,
-    ctx.read.drafts,
+    ctx.read.perspective,
     loc,
   );
   const unique = [...new Map(rows.map((r) => [r.id, toDoc(r, loc)])).values()];

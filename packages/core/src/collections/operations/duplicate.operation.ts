@@ -2,6 +2,8 @@ import type { Core, Scope } from "../../cms/runtime/types.ts";
 import type { LocalApi } from "../../cms/api/local-api.ts";
 import type { Collection } from "../config/types.ts";
 import { transaction } from "../../cms/runtime/transaction.ts";
+import { runAfterError } from "../../content/lifecycle/run-operation.ts";
+import { collectionTarget } from "../../content/targets.ts";
 import { linkTitleKey } from "../../links/runtime/title-key.ts";
 import { localizedKeys } from "../../schema/traversal/localized-fields.ts";
 
@@ -10,46 +12,55 @@ type Row = Record<string, unknown>;
 /**
  * Copies a document into a new one, every locale, as a draft (a save with `drafts: false`). The title gets ` (copy)`.
  * A slug or unique text value gets `-copy`, then `-copy-2` and so on until no document holds it. Other unique values
- * are cleared. Reads and writes run as the caller, in one transaction.
+ * are cleared. Reads and writes run as the caller, in one transaction. A failed copy runs `afterError` once, as a
+ * `create`, after the rollback.
  * @returns The copy in its first locale, or `undefined` when the source does not exist.
  */
-export const duplicate = (core: Core, scope: Scope, collection: string, id: string) =>
-  transaction(core, scope, async (s) => {
-    const cms = core.localApi({ ...scope, transaction: s.transaction, perspective: "drafts" });
-    const read = (locale?: string) =>
-      cms.findById(collection, id, { locale, fallback: false, populate: false });
-    const source = await read();
-    if (!source) return undefined;
+export async function duplicate(core: Core, scope: Scope, collection: string, id: string) {
+  let context: Scope["context"] = {};
+  try {
+    return await transaction(core, scope, async (s) => {
+      context = s.context;
+      const cms = core.localApi({ ...s, perspective: "drafts" });
+      const read = (locale?: string) =>
+        cms.findById(collection, id, { locale, fallback: false, populate: false });
+      const source = await read();
+      if (!source) return undefined;
 
-    const entry = core.schema.collections[collection];
-    const options = { draft: entry.drafts !== false };
-    const keys = Object.keys(entry.fields).filter((k) => entry.fields[k].type !== "join");
-    // The read locale (the default) comes first: the create writes the shared values.
-    const at = source.locale as string | undefined;
-    const others = ((source.locales as string[] | undefined) ?? []).filter((l) => l !== at);
-    const [first, rest] = [at, others];
-    const copy = await cms.create(
-      collection,
-      await copyValues(s.cms, collection, entry, source, keys, first),
-      { ...options, locale: first },
-    );
-    // Shared values come from the first locale only, so later locales add no shared draft.
-    for (const locale of rest)
-      await cms.update(
+      const entry = core.schema.collections[collection];
+      const options = { draft: entry.drafts !== false };
+      const keys = Object.keys(entry.fields).filter((k) => entry.fields[k].type !== "join");
+      // The read locale (the default) comes first: the create writes the shared values.
+      const at = source.locale as string | undefined;
+      const others = ((source.locales as string[] | undefined) ?? []).filter((l) => l !== at);
+      const [first, rest] = [at, others];
+      const copy = await cms.create(
         collection,
-        copy.id as string,
-        await copyValues(
-          s.cms,
-          collection,
-          entry,
-          (await read(locale))!,
-          localizedKeys(entry),
-          locale,
-        ),
-        { ...options, locale },
+        await copyValues(s.cms, collection, entry, source, keys, first),
+        { ...options, locale: first },
       );
-    return copy;
-  });
+      // Shared values come from the first locale only, so later locales add no shared draft.
+      for (const locale of rest)
+        await cms.update(
+          collection,
+          copy.id as string,
+          await copyValues(
+            s.cms,
+            collection,
+            entry,
+            (await read(locale))!,
+            localizedKeys(entry),
+            locale,
+          ),
+          { ...options, locale },
+        );
+      return copy;
+    });
+  } catch (error) {
+    await runAfterError(core, scope, context, collectionTarget(collection), "create", error);
+    throw error;
+  }
+}
 
 async function copyValues(
   all: LocalApi,

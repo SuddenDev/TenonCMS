@@ -1,4 +1,5 @@
-import type { Db, Holds } from "../document-sql.ts";
+import type { Holds } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** The raw JSON of global `name` if its published data `holds`. */
 export async function referencingGlobal(db: Db, name: string, holds: Holds) {

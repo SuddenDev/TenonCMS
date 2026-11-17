@@ -23,6 +23,6 @@ export async function getVersion(
 
   const operation = name.kind === "global" ? "getGlobal" : "read";
   const draft = version.status === "draft";
-  const [data] = await afterRead(core, scope, name, [version.data], operation, draft);
+  const [data] = await afterRead(core, scope, name, [version.data], operation, { draft });
   return { ...version, data };
 }

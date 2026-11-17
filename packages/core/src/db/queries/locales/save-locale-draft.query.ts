@@ -1,5 +1,6 @@
 import { sql } from "kysely";
-import { type Db, type DocData, type LocaleOwner } from "../document-sql.ts";
+import { type DocData, type LocaleOwner } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Stores the draft of one locale row. The published data stays. A missing row is created unpublished.

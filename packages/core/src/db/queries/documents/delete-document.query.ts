@@ -1,4 +1,4 @@
-import { type Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Deletes a document row. */
 export async function deleteDoc(db: Db, collection: string, id: string) {

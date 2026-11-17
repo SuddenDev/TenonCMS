@@ -1,4 +1,4 @@
-import type { Db } from "../../db/queries/document-sql.ts";
+import type { Db } from "../../db/types.ts";
 import { findJobs } from "../../db/queries/jobs/find-jobs.query.ts";
 import { type ContentTarget, targetKey } from "../../content/targets.ts";
 import { ValidationError } from "../../errors.ts";

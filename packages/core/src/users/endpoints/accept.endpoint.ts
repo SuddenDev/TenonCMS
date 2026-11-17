@@ -6,7 +6,7 @@ import type { Env } from "../../http/middleware/types.ts";
 import { parseBody } from "../../http/parse-body.ts";
 import { acceptInvite } from "../operations/accept-invite.operation.ts";
 import { checkInvite } from "../operations/check-invite.operation.ts";
-import { input } from "./input.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 
 const checkBody = z.object({ token: z.string() });
 const acceptBody = z.object({
@@ -23,11 +23,14 @@ const acceptBody = z.object({
 export const acceptEndpoint = (core: Core) =>
   new Hono<Env>()
     .post("/invites/check", jsonOnly, async (c) => {
-      const { token } = input(checkBody, await parseBody(c.req));
+      const { token } = validateInput(checkBody, await parseBody(c.req));
       return c.json(await checkInvite(core, token));
     })
     .post("/invites/accept", jsonOnly, async (c) => {
-      const { user, headers } = await acceptInvite(core, input(acceptBody, await parseBody(c.req)));
+      const { user, headers } = await acceptInvite(
+        core,
+        validateInput(acceptBody, await parseBody(c.req)),
+      );
       for (const cookie of headers.getSetCookie()) c.header("set-cookie", cookie, { append: true });
       return c.json({ user });
     });

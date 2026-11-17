@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Deletes the lock if `userId` holds it. A lock someone else took over stays. */
 export async function releaseLock(db: Db, target: string, id: string, userId: string) {

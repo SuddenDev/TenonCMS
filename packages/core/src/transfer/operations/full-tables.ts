@@ -1,8 +1,7 @@
 import type { BetterAuthOptions } from "better-auth";
 import { getAuthTables } from "better-auth/db";
-import type { Kysely } from "kysely";
+import type { Db } from "../../db/types.ts";
 import type { Core } from "../../cms/runtime/types.ts";
-import type { Database } from "../../db/types.ts";
 import { TABLE_NAMES } from "../format.ts";
 
 // Tenon's tables that a `full` archive leaves out: uploads in progress, edit locks, the schema state and migrations.
@@ -22,7 +21,7 @@ const SKIPPED_AUTH = ["session", "verification", "rateLimit", "deviceCode"];
  * @returns The tables with their columns, the user table first, so rows that point to a user insert after it.
  * Postgres' generated `rowid` is left out.
  */
-export async function fullTables(core: Core, db: Kysely<Database>) {
+export async function fullTables(core: Core, db: Db) {
   const options = (await core.auth()).options;
   const auth = authTableNames(options);
   const skipped = new Set([...SKIPPED, ...auth.skipped, ...TABLE_NAMES]);
@@ -43,7 +42,7 @@ export async function fullTables(core: Core, db: Kysely<Database>) {
  * better-auth's tables that point to a user and stay out of a `full` archive: sessions, and device codes when the
  * plugin is on. A full restore empties them, so nobody keeps a session of a user it replaced.
  */
-export async function sessionTables(core: Core, db: Kysely<Database>) {
+export async function sessionTables(core: Core, db: Db) {
   const tables = getAuthTables((await core.auth()).options);
   const names = [tables.session?.modelName, tables.deviceCode?.modelName].filter(Boolean);
   const existing = new Set((await db.introspection.getTables()).map((t) => t.name));

@@ -1,9 +1,9 @@
-import { type Database } from "../types.ts";
+import { isPostgres } from "../create-db.ts";
+import type { Db } from "../types.ts";
 import { migrator } from "./cms.ts";
-import { sql, type Kysely } from "kysely";
+import { sql } from "kysely";
 import type { BetterAuthOptions } from "better-auth";
 import { getMigrations } from "better-auth/db/migration";
-import { isPostgres } from "../queries/document-sql.ts";
 
 // Any fixed key. It differs from Kysely's own migration lock, which only covers the CMS migrations.
 const LOCK = 74_656_239_013;
@@ -16,7 +16,7 @@ const LOCK = 74_656_239_013;
  * other, and a failed run changes nothing.
  * @throws The first migration error.
  */
-export async function migrate(db: Kysely<Database>, authOptions: BetterAuthOptions) {
+export async function migrate(db: Db, authOptions: BetterAuthOptions) {
   if (!isPostgres(db)) return runMigrations(db, authOptions);
 
   // A transaction lock, because a session lock can outlive its transaction behind a pooler such as PgBouncer.
@@ -28,7 +28,7 @@ export async function migrate(db: Kysely<Database>, authOptions: BetterAuthOptio
   });
 }
 
-async function runMigrations(db: Kysely<Database>, authOptions: BetterAuthOptions) {
+async function runMigrations(db: Db, authOptions: BetterAuthOptions) {
   const { error } = await migrator(db).migrateToLatest();
   if (error) throw error;
 

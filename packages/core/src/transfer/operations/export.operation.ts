@@ -2,7 +2,7 @@ import { makeZip } from "client-zip";
 import type { Kysely } from "kysely";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
 import { databaseForScope, transaction } from "../../cms/runtime/transaction.ts";
-import type { Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import type { Storage } from "../../media/storage/types.ts";
 import {
   type ArchiveScope,
@@ -54,7 +54,7 @@ export async function exportContent(
 }
 
 // ponytail: one table at a time in memory. Page by key when sites get large.
-async function readContent(db: Kysely<Database>, core: Core, media: boolean, scope: ArchiveScope) {
+async function readContent(db: Db, core: Core, media: boolean, scope: ArchiveScope) {
   const state = await db.selectFrom("cms_schema_state").selectAll().execute();
   const extra = scope === "full" ? await fullTables(core, db) : [];
   const manifest: Manifest = {

@@ -1,6 +1,14 @@
-import { type Db, type Loc, selectDocs, jsonAt, equals, containsText } from "../document-sql.ts";
+import {
+  type Loc,
+  type Perspective,
+  selectDocs,
+  jsonAt,
+  equals,
+  containsText,
+} from "../document-sql.ts";
 import { toDoc } from "../../map-document.ts";
 import { sql } from "kysely";
+import type { Db } from "../../types.ts";
 
 /**
  * Documents of a collection, newest first. `where` and `access` hold equality filters on top-level keys, `createdBy`
@@ -16,7 +24,7 @@ export async function findDocs(
     access = {},
     limit,
     search,
-    drafts = false,
+    perspective = "published",
     loc,
   }: {
     id?: string;
@@ -25,19 +33,19 @@ export async function findDocs(
     access?: Record<string, unknown>;
     limit?: number;
     search?: { key: string; query: string };
-    drafts?: boolean;
+    perspective?: Perspective;
     /** Reads a localized collection in a locale. A filter on a localized key matches the value a read returns. */
     loc?: Loc;
   },
 ) {
-  let query = selectDocs(db, collection, drafts, loc);
+  let query = selectDocs(db, collection, perspective, loc);
   if (id !== undefined) query = query.where("cms_documents.id", "=", id);
 
   for (const [key, value] of [...Object.entries(where), ...Object.entries(access)])
-    if (value !== undefined) query = query.where(equals(db, key, value, drafts, loc));
+    if (value !== undefined) query = query.where(equals(db, key, value, perspective, loc));
 
   if (search)
-    query = query.where(containsText(db, jsonAt(db, search.key, drafts, loc), search.query));
+    query = query.where(containsText(db, jsonAt(db, search.key, perspective, loc), search.query));
 
   // `rowid` orders documents created in the same millisecond.
   query = query

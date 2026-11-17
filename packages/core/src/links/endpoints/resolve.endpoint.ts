@@ -21,8 +21,8 @@ export function linkResolveEndpoint(core: Core) {
     if (references === undefined) {
       try {
         checkRichtextShape(body?.document);
-      } catch {
-        throw new ValidationError({ document: "Invalid rich text document" });
+      } catch (error) {
+        throw new ValidationError({ document: (error as Error).message });
       }
     } else if (
       !Array.isArray(references) ||

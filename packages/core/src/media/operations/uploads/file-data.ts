@@ -1,7 +1,7 @@
 import { ValidationError } from "../../../errors.ts";
 import { dimensions } from "../../images/dimensions.ts";
 import type { Storage } from "../../storage/types.ts";
-import type { Row } from "./upload-row.ts";
+import type { UploadRow } from "../../../db/types.ts";
 
 // Bytes read for the image header. Some JPEGs carry large metadata before their size.
 const HEADER = 1024 ** 2;
@@ -10,7 +10,7 @@ const HEADER = 1024 ** 2;
  * The document data of an assembled upload, with `width` and `height` for images.
  * @throws {ValidationError} When the stored size differs from the announced one, or an image has no readable header.
  */
-export async function fileData(storage: Storage, row: Row, size: number) {
+export async function fileData(storage: Storage, row: UploadRow, size: number) {
   if (size !== row.size)
     throw new ValidationError({ size: `Received ${size} bytes, expected ${row.size}` });
 

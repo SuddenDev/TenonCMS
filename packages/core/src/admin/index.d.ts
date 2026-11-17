@@ -434,6 +434,7 @@ export type ActionRegistration = {
 export type AdminBarItemOverrides = {
   label?: Text;
   icon?: IconName;
+  /** A path starting with `/` or an http(s) URL. Anything else fails the item, which is logged and left out. */
   href?: string;
   /** Replaces the registered children, by id. */
   children?: Record<string, { label: Text; icon?: IconName; href?: string; order?: number }>;
@@ -450,7 +451,7 @@ type BarItemBase = {
 type NativeItem<Children> = BarItemBase & {
   /** Text of the item. */
   label: Text;
-  /** Link target. */
+  /** Link target: a path starting with `/` or an http(s) URL. Anything else throws at startup. */
   href?: string;
   /**
    * Entries of a dropdown by id. The item opens them instead of linking. One level only. An id is unique

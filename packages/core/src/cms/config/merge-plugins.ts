@@ -4,6 +4,9 @@ import type { Plugin } from "../../plugins/types.ts";
 // Route prefixes core uses under `/_tenon`.
 const reserved = [
   "account",
+  "admin-bar",
+  "admin-brand",
+  "api-keys",
   "auth",
   "auth-status",
   "collections",

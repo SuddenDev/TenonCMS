@@ -58,7 +58,7 @@ export const discard = async (
       await requireUnscheduled(db, name, args.id, all ? undefined : loc?.locale);
       if (loc) return discardLocalized(core, s, name, args.id, loc, all, options);
 
-      const doc = await loadDoc(db, name.name, args.id, true);
+      const doc = await loadDoc(db, name.name, args.id, "drafts");
       if (!doc) return undefined;
 
       if (doc.publishedAt === null) {

@@ -10,7 +10,8 @@ import { slot } from "./collect-hooks.ts";
 import { consola } from "consola";
 
 /**
- * Every local API call goes through here. Collection calls run `beforeOperation` and `afterOperation`.
+ * Runs one content operation: find, create, update, delete, get, set, publish, unpublish, discard, copy-locale,
+ * remove-locale or sync-structure. Collection calls run `beforeOperation` and `afterOperation`.
  * Writes run in one transaction with their hooks and nested calls. Reads open none.
  *
  * @returns The result of `fn` after `afterOperation` hooks.
@@ -41,25 +42,32 @@ export async function runOperation<R>(
     if (isWrite) return await transaction(core, scope, body);
     return await body(inner(core, scope, scope.transaction, context));
   } catch (error) {
-    // Only the outermost call runs `afterError`, after the rollback. 400, 401, 403 and 409 are expected and run none.
-    const expected =
-      error instanceof ValidationError ||
-      error instanceof ConflictError ||
-      error instanceof ForbiddenError;
-    if (!scope.nested && !expected)
-      await afterError(core, inner(core, scope, undefined, context), name, operation, error);
+    await runAfterError(core, scope, context, name, operation, error);
     throw error;
   }
 }
 
-// An error in an `afterError` hook MUST NOT replace the original.
-async function afterError(
+/**
+ * Runs the `afterError` hooks for a failed call. It MUST run after the rollback: the hooks get an API bound to no
+ * transaction. Only the outermost call runs them, so a nested `scope` runs none. 400, 401, 403 and 409 are expected
+ * and run none. An error in a hook is logged and never replaces `error`.
+ * @param context The hook context of the failed call.
+ */
+export async function runAfterError(
   core: Core,
-  s: Inner,
+  scope: Scope,
+  context: Scope["context"],
   name: ContentTarget,
   operation: Operation,
   error: unknown,
 ) {
+  const expected =
+    error instanceof ValidationError ||
+    error instanceof ConflictError ||
+    error instanceof ForbiddenError;
+  if (scope.nested || expected) return;
+
+  const s = inner(core, scope, undefined, context);
   const args = hookArgs(s, name, { operation, error });
   for (const fn of slot(core, name, "afterError")) {
     try {

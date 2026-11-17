@@ -1,4 +1,5 @@
 import type { AdminBarItemDescriptor } from "../index.d.ts";
+import { isPageUrl } from "../load/load-request.ts";
 import {
   isText,
   copyConfig,
@@ -34,6 +35,10 @@ export function describeBarItem(
 
   const { label, icon, order, href, onClick, mount, children } = value;
   checkCombination(value, id, where, source);
+  if (href !== undefined && !(typeof href === "string" && isPageUrl(href)))
+    throw new Error(
+      `tenoncms: ${where} MUST use a path starting with "/" or an http(s) URL for href`,
+    );
 
   const fn = optionalLoad(value.load, `admin bar item "${id}"`, source);
   const descriptor: AdminBarItemDescriptor = copyConfig(

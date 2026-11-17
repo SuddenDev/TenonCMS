@@ -17,9 +17,10 @@ import { requireUnscheduled } from "../../schedule/operations/require-unschedule
 /**
  * Deletes the locale row of the scope's locale, then runs `afterChange` with the document as it is afterwards.
  *
- * @returns The document in the removed locale, without its localized values, or `undefined` when the document does not exist.
+ * @returns The document in the removed locale, without its localized values, or `undefined` when the collection document
+ * does not exist.
  * @throws {ValidationError} For an unlocalized entry, the default locale, a locale without a version, the last locale row,
- * or a locale whose publish is scheduled.
+ * or a locale whose publish is scheduled. A global that was never saved has no version.
  * @throws {ForbiddenError} When the `update` rule denies.
  */
 export async function removeLocalized(
@@ -37,9 +38,9 @@ export async function removeLocalized(
   await guard(core, s, name, "update", { id });
   const db = await databaseForScope(core, s);
   const global = name.kind === "global";
-  const before = await loadLocaleDoc(db, name, id ?? "", true, loc);
-  if (!before) return undefined;
-  if (!before.locales.includes(loc.locale))
+  const before = await loadLocaleDoc(db, name, id ?? "", "drafts", loc);
+  if (!before && !global) return undefined;
+  if (!before?.locales.includes(loc.locale))
     throw new ValidationError({ locale: "No version in this locale" });
   if (before.locales.length === 1)
     throw new ValidationError({ locale: "The last locale cannot be removed" });
@@ -51,7 +52,7 @@ export async function removeLocalized(
     global ? name.name : id!,
     loc.locale,
   );
-  const stored = (await loadLocaleDoc(db, name, id ?? "", true, loc))!;
+  const stored = (await loadLocaleDoc(db, name, id ?? "", "drafts", loc))!;
 
   const operation = global ? "setGlobal" : "update";
   const args = hookArgs(s, name, { operation, id, originalDoc: before });

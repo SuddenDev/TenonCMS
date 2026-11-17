@@ -12,8 +12,9 @@ import { guard } from "../../access/rule.ts";
  * perspective without fallback. The result replaces the pending draft of `to` (with `drafts: false`, its data) through
  * the normal write pipeline.
  *
- * @returns The written document in `to`, or `undefined` when the document does not exist.
- * @throws {ValidationError} For an unlocalized entry, an unknown or equal locale, or a `from` without a version.
+ * @returns The written document in `to`, or `undefined` when the collection document does not exist.
+ * @throws {ValidationError} For an unlocalized entry, an unknown or equal locale, or a `from` without a version. A
+ * global that was never saved has no version.
  * @throws {ForbiddenError} When the `update` rule denies.
  */
 export async function copyLocalized(
@@ -31,12 +32,12 @@ export async function copyLocalized(
   if (!loc.locales.includes(from)) throw new ValidationError({ from: "Unknown locale" });
   if (from === to) throw new ValidationError({ from: "Source and target locale are equal" });
 
-  const source = await loadLocaleDoc(await databaseForScope(core, s), name, id ?? "", true, {
+  const source = await loadLocaleDoc(await databaseForScope(core, s), name, id ?? "", "drafts", {
     ...loc,
     locale: from,
   });
-  if (!source) return undefined;
-  if (!source.locales.includes(from)) throw new ValidationError({ from: "No version to copy" });
+  if (!source && name.kind !== "global") return undefined;
+  if (!source?.locales.includes(from)) throw new ValidationError({ from: "No version to copy" });
 
   const input = Object.fromEntries(loc.keys.map((key) => [key, source[key] ?? null]));
   return writeDocument(core, s, {

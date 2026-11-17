@@ -9,8 +9,8 @@ import type { Role } from "../../users/roles.ts";
 import { type Plugin } from "../../plugins/index.ts";
 import { type Fields, type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
 import type { BetterAuthOptions } from "better-auth";
-import type { Database } from "../../db/types.ts";
-import type { Kysely } from "kysely";
+import type { Db } from "../../db/types.ts";
+import type { Perspective } from "../../db/queries/document-sql.ts";
 import type { TransactionLifetime } from "./transaction.ts";
 import type { RobotsOptions, SitemapOptions } from "../../seo/config/types.ts";
 import type { ResolvedJobs } from "../../jobs/config/resolve-jobs.ts";
@@ -29,7 +29,7 @@ export type Core = {
   /** The `populate` config with defaults. */
   populate: { depth: number; maxDepth: number };
   /** Connects and migrates on the first call. */
-  db: () => Promise<Kysely<Database>>;
+  db: () => Promise<Db>;
   /** Creates better-auth on the first call. */
   auth: () => Promise<{ handler(request: Request): Promise<Response>; options: BetterAuthOptions }>;
   /**
@@ -94,12 +94,7 @@ export type Core = {
 };
 export type Stage = keyof RootHooks;
 
-/**
- * Which version of a document reads return.
- * - `published`: only published documents, with their published data.
- * - `drafts`: every document, with its pending draft where one exists.
- */
-export type Perspective = "published" | "drafts";
+export type { Perspective } from "../../db/queries/document-sql.ts";
 
 /** Who calls over HTTP or `withSession()`: a session's user, an API key, or neither. */
 export type Caller = { user: CmsUser | null; apiKey?: ApiKeyCaller; perspective: Perspective };

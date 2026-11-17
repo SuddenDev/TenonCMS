@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** How a run ended. `queued` is a retry. */
 export type Outcome =

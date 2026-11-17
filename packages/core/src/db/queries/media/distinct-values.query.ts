@@ -1,5 +1,6 @@
-import { type Db, equals, jsonAt } from "../document-sql.ts";
+import { equals, jsonAt } from "../document-sql.ts";
 import { sql } from "kysely";
+import type { Db } from "../../types.ts";
 
 /**
  * The distinct values of a top-level key in `collection`, e.g. the folders of `media`, among the documents that match

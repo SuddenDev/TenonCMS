@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Every invite, oldest first, expired ones included. */
 export const findInvites = (db: Db) =>

@@ -1,4 +1,5 @@
-import { type Db, inIds } from "../document-sql.ts";
+import { inIds } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** The ids of `ids` that exist in `collection`. Any row counts, published or not. */
 export async function existingIds(db: Db, collection: string, ids: string[]) {

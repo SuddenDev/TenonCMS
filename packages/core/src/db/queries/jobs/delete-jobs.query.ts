@@ -1,5 +1,4 @@
-import type { Db } from "../document-sql.ts";
-import type { JobRow } from "../../types.ts";
+import type { JobRow, Db } from "../../types.ts";
 
 /**
  * Deletes a job that is not running.

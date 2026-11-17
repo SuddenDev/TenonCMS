@@ -6,7 +6,7 @@ import { matchCondition } from "../condition.ts";
  * Runs the `validate` function or Standard Schema of every field. Fields whose condition is false are skipped, with their children.
  * @returns The error messages by field path. Empty when every field passes.
  */
-export async function validateFields(
+export async function collectFieldErrors(
   fields: Fields,
   data: Record<string, any>,
   args: Omit<FieldArgs, "siblingData" | "path">,

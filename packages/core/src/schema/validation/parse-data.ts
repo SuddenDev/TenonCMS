@@ -1,6 +1,6 @@
-import { ValidationError } from "../../errors.ts";
 import { type Fields } from "../index.ts";
 import { dataSchema } from "./build-data-schema.ts";
+import { validationErrorOf } from "./validate-input.ts";
 
 /**
  * Validates `data` against `fields`. The validator is built per write, because conditions depend on the data.
@@ -10,9 +10,6 @@ import { dataSchema } from "./build-data-schema.ts";
  */
 export function parseData(fields: Fields, data: unknown, loose = false) {
   const result = dataSchema(fields, data, data, !loose).safeParse(data);
-  if (!result.success)
-    throw new ValidationError(
-      Object.fromEntries(result.error.issues.map((i) => [i.path.join("."), i.message])),
-    );
+  if (!result.success) throw validationErrorOf(result.error);
   return result.data as Record<string, unknown>;
 }

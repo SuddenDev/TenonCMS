@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Whether a user has this email. better-auth stores emails lowercase. */
 export async function userExists(db: Db, email: string) {

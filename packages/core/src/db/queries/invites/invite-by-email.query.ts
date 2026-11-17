@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** The invite for a lowercase email, expired or not. */
 export const inviteByEmail = (db: Db, email: string) =>

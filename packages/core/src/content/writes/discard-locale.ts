@@ -35,7 +35,7 @@ export async function discardLocalized(
   if (name.kind === "global") {
     await discardLocaleDrafts(db, GLOBAL_LOCALES, name.name, all ? undefined : loc.locale);
     if (all) await discardGlobalDraft(db, name.name);
-    const doc = (await loadLocaleDoc(db, name, name.name, false, loc)) ?? {
+    const doc = (await loadLocaleDoc(db, name, name.name, "published", loc)) ?? {
       publishedAt: null,
       hasDraft: false,
     };
@@ -43,12 +43,12 @@ export async function discardLocalized(
     return (await afterRead(core, s, name, [doc], "setGlobal"))[0];
   }
 
-  const shared = await loadDoc(db, name.name, id, true);
+  const shared = await loadDoc(db, name.name, id, "drafts");
   if (!shared) return undefined;
 
   await discardLocaleDrafts(db, DOCUMENT_LOCALES, id, all ? undefined : loc.locale);
 
-  const rows = (await loadLocaleDoc(db, name, id, true, loc))!.locales;
+  const rows = (await loadLocaleDoc(db, name, id, "drafts", loc))!.locales;
   if (shared.publishedAt === null && (all || !rows.length)) {
     // Part of the discard, which the `update` rule allowed.
     await remove(core, { ...s, overrideAccess: true }, name.name, id, options);
@@ -57,7 +57,7 @@ export async function discardLocalized(
 
   if (all) await discardDraft(db, name.name, id);
 
-  const doc = await loadLocaleDoc(db, name, id, false, loc);
+  const doc = await loadLocaleDoc(db, name, id, "published", loc);
   if (!doc?.publishedAt) return undefined;
   return (await afterRead(core, s, name, [doc], "update"))[0];
 }

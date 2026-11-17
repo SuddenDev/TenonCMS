@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Puts a failed job back in the queue, due now, with all its attempts.

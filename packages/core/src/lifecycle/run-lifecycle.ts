@@ -1,10 +1,9 @@
 import { consola } from "consola";
-import type { Kysely } from "kysely";
+import type { Db } from "../db/types.ts";
 import type { LocalApi } from "../cms/api/local-api.ts";
 import { outerScope } from "../cms/runtime/operation-context.ts";
 import { databaseForScope, transaction } from "../cms/runtime/transaction.ts";
 import type { Core } from "../cms/runtime/types.ts";
-import type { Database } from "../db/types.ts";
 import type { ErrorContext, LifecycleHooks } from "./types.ts";
 
 /** The marker name of the host's seed. A plugin's is its name. */
@@ -15,7 +14,7 @@ const owners = (core: Core): { name: string; hooks: LifecycleHooks }[] => [
   { name: HOST, hooks: core.lifecycle },
 ];
 
-const serverApi = (core: Core) => core.localApi(outerScope({ user: null }, true));
+const serverApi = (core: Core) => core.localApi(outerScope({ user: null, overrideAccess: true }));
 
 /**
  * Runs the seeds that have no marker on this database, in one transaction. Whether the database is empty is read
@@ -26,7 +25,7 @@ export async function runSeeds(core: Core) {
   const seeds = owners(core).filter((o) => o.hooks.seed);
   if (!seeds.length) return;
 
-  await transaction(core, outerScope({ user: null }, true), async (inner) => {
+  await transaction(core, outerScope({ user: null, overrideAccess: true }), async (inner) => {
     const db = await databaseForScope(core, inner);
     const done = new Set(
       (await db.selectFrom("cms_seeds").select("name").execute()).map((r) => r.name),
@@ -85,7 +84,7 @@ export async function reportError(
   }
 }
 
-async function hasContent(db: Kysely<Database>) {
+async function hasContent(db: Db) {
   const doc = await db.selectFrom("cms_documents").select("id").limit(1).executeTakeFirst();
   if (doc) return true;
   return !!(await db.selectFrom("cms_globals").select("name").limit(1).executeTakeFirst());

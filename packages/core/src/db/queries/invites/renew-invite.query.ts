@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Gives an invite a new token hash and expiry, so the old token stops working. The renewed invite, if it exists. */
 export const renewInvite = (db: Db, id: string, tokenHash: string, expiresAt: number) =>

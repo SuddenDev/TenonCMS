@@ -1,6 +1,20 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { API_BASE } from "../client/constants.ts";
 import { defineCms, definePlugin, ValidationError } from "../index.ts";
-import { admin, base, origin, setup, status } from "./setup.ts";
+import { admin, base, origin, setup, status, withMedia } from "./setup.ts";
+
+// Keeps every app `defineCms()` builds, so a test can read the routes core mounts.
+const apps = vi.hoisted(() => [] as { routes: { path: string }[] }[]);
+vi.mock("../http/index.ts", async (importOriginal) => {
+  const http = await importOriginal<typeof import("../http/index.ts")>();
+  return {
+    createApp: (...args: Parameters<typeof http.createApp>) => {
+      const app = http.createApp(...args);
+      apps.push(app);
+      return app;
+    },
+  };
+});
 
 describe("plugins", () => {
   const calls: string[] = [];
@@ -147,5 +161,23 @@ describe("plugins", () => {
     ).toThrow('collection "a"');
     expect(withPlugins({ name: "Bad Name" })).toThrow('plugin name "Bad Name"');
     expect(withPlugins({ name: "auth" })).toThrow('plugin name "auth"');
+  });
+
+  it("reject every name that is a top-level route of core", () => {
+    // Media and the jobs secret mount optional routes.
+    withMedia({}, { jobs: { secret: "s" } });
+    const names = new Set(
+      apps
+        .at(-1)!
+        .routes.map(({ path }) => path.split("/"))
+        .filter(([, base]) => `/${base}` === API_BASE)
+        .map(([, , name]) => name)
+        .filter((name) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)),
+    );
+    expect(names).toContain("collections");
+    for (const name of names)
+      expect(() => defineCms({ ...base, plugins: [{ name }] }), name).toThrow(
+        `plugin name "${name}"`,
+      );
   });
 });

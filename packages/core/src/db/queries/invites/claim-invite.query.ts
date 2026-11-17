@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Deletes and returns the invite with this token hash, unless it expired at `now`. One token claims once. */
 export const claimInvite = (db: Db, tokenHash: string, now: number) =>

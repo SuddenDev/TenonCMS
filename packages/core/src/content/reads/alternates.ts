@@ -40,7 +40,7 @@ export async function addAlternates(
       core,
       scope,
       collectionTarget(collection),
-      await loadByIds(db, collection, ids, false, loc),
+      await loadByIds(db, collection, ids, "published", loc),
       "read",
     );
 

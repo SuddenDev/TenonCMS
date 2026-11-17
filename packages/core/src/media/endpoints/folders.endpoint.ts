@@ -15,7 +15,7 @@ export function foldersWriteEndpoints(core: Core) {
   const api = new Hono<Env>();
   api.post("/folders/rename", async (c) => {
     const { from, to } = await body(c.req);
-    return c.json(await renameFolder(core, scope(c), String(from ?? ""), String(to ?? "")));
+    return c.json(await renameFolder(core, scope(c), from, to));
   });
   return api;
 }

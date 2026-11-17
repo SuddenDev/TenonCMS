@@ -1,4 +1,4 @@
-import { type Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import { type Field, type Fields, type RefField, type Schema } from "../../schema/index.ts";
 import { type Step, relationPaths } from "../../schema/traversal/relation-paths.ts";
 import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
@@ -16,7 +16,7 @@ import {
 } from "../../db/queries/document-sql.ts";
 import { structureFields, localizedKeys } from "../../schema/traversal/localized-fields.ts";
 import { withLists } from "../reads/merge-locale.ts";
-import { type Kysely, sql } from "kysely";
+import { sql } from "kysely";
 
 export type Ref = {
   collection?: string;
@@ -53,12 +53,7 @@ export function row(r: Ref) {
  * A localized key is searched in the data and the draft of the locale rows, one entry per row, with its `locale`.
  * @returns One entry per matching field. Entries of the same row share one `data` object, so all edits land in one write.
  */
-export async function references(
-  db: Kysely<Database>,
-  schema: Schema,
-  collection: string,
-  id: string,
-) {
+export async function references(db: Db, schema: Schema, collection: string, id: string) {
   const refs: Ref[] = [];
   const parsed = new Map<string, Record<string, any>>();
   // A locale row that holds values by id is read with full lists, so paths are positional.
@@ -126,7 +121,7 @@ type Scan = {
  * positional paths.
  */
 function scansOf(
-  db: Kysely<Database>,
+  db: Db,
   entry: { localized?: boolean; fields: Fields },
   collection: string,
   id: string,

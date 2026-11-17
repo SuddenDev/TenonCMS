@@ -6,7 +6,7 @@ import { globalOf } from "../../globals/endpoints/get-target.ts";
 import { notFound } from "../../http/errors.ts";
 import type { Env } from "../../http/middleware/types.ts";
 import { parseBody } from "../../http/parse-body.ts";
-import { input } from "../../users/endpoints/input.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 import { SCHEDULE_ACTIONS } from "../types.ts";
 
 const body = z.object({
@@ -26,7 +26,7 @@ export function scheduleEndpoint(core: Core) {
   return new Hono<Env>()
     .post("/collections/:name/:id/schedule", async (c) => {
       const { name } = collectionOf(core.schema.collections, c.req.param("name"));
-      const options = input(body, await parseBody(c.req));
+      const options = validateInput(body, await parseBody(c.req));
       const job = await c.var.cms.schedule(name, c.req.param("id"), options);
       if (!job) throw notFound();
 
@@ -34,7 +34,7 @@ export function scheduleEndpoint(core: Core) {
     })
     .post("/globals/:name/schedule", async (c) => {
       const { name } = globalOf(core.schema.globals, c.req.param("name"));
-      const options = input(body, await parseBody(c.req));
+      const options = validateInput(body, await parseBody(c.req));
       return c.json(await c.var.cms.scheduleGlobal(name, options));
     });
 }

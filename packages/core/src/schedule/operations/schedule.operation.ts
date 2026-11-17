@@ -1,7 +1,7 @@
 import { guard } from "../../access/rule.ts";
 import { contextOf, inner } from "../../cms/runtime/operation-context.ts";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
-import { databaseForScope } from "../../cms/runtime/transaction.ts";
+import { databaseForScope, transaction } from "../../cms/runtime/transaction.ts";
 import { withLocale } from "../../content/locale.ts";
 import { locOf } from "../../content/reads/loc-of.ts";
 import type { DocData } from "../../db/queries/document-sql.ts";
@@ -13,8 +13,8 @@ import { queueJob } from "../../jobs/operations/queue.operation.ts";
 import { SCHEDULE_ACTIONS, type ScheduledPayload, type ScheduleOptions } from "../types.ts";
 
 /**
- * Queues a publish or an unpublish of a document or global for a later time. The job joins the scope's transaction and
- * replaces a queued job of the same action, document and locale.
+ * Queues a publish or an unpublish of a document or global for a later time. It replaces a queued job of the same
+ * action, document and locale in one transaction, or in the scope's transaction when there is one.
  * It needs the `update` rule now; the job itself runs as the server, so the rule is not checked again when it fires.
  * @param id The document id. Missing for a global.
  * @returns The id of the job, or `undefined` when the collection document does not exist. A draft-only document exists.
@@ -38,7 +38,7 @@ export async function scheduleJob(
 
   const db = await databaseForScope(core, s);
   const loc = await locOf(core, { ...s, fallback: false }, name);
-  const doc = await loadSource(db, name, id, true, loc);
+  const doc = await loadSource(db, name, id, "drafts", loc);
   if (!doc && name.kind === "collection") return undefined;
 
   if (!SCHEDULE_ACTIONS.includes(action)) throw new ValidationError({ action: "Unknown action" });
@@ -56,8 +56,11 @@ export async function scheduleJob(
   };
   const task = `tenon:${action}`;
   const jobTarget = { key, docId: id ?? "", locale: payload.locale };
-  await deleteQueuedTargetJobs(db, task, jobTarget);
-  return queueJob(core, s, task, payload, { runAt: due, target: jobTarget });
+  // The old job MUST stay when the new one fails to insert.
+  return transaction(core, s, async (t) => {
+    await deleteQueuedTargetJobs(await databaseForScope(core, t), task, jobTarget);
+    return queueJob(core, t, task, payload, { runAt: due, target: jobTarget });
+  });
 }
 
 // A localized document needs a row in the locale, with its own draft, no publication yet, or a shared draft.

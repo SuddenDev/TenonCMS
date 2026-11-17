@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createApiKey } from "../api-keys/operations/create-api-key.operation.ts";
 import { createClient } from "../client/index.ts";
+import type { Core } from "../cms/runtime/types.ts";
 import {
   defineCms,
   definePlugin,
@@ -7,6 +9,7 @@ import {
   type ApiKeyPermissions,
   type NewApiKey,
   type Schema,
+  ValidationError,
 } from "../index.ts";
 import { admin, base, origin, post, setup, status, withAdmin, withMedia } from "./setup.ts";
 import { png } from "./fixtures.ts";
@@ -298,6 +301,23 @@ describe("API key management", () => {
       { users: ["read"] },
     ])
       expect((await post(u.fetch, "/api-keys", { name: "x", permissions })).status).toBe(400);
+  });
+
+  // `cms` has no method to create keys. A core with only the schema proves the operation checks before better-auth.
+  it("rejects a target the schema lacks, a bad name or expiry in the operation", async () => {
+    const core = { schema: { collections: schema.collections, globals: {} } } as unknown as Core;
+    const create = (data: object) =>
+      createApiKey(core, { id: "u" } as never, { name: "x", permissions: {}, ...data });
+    for (const [data, field] of [
+      [{ permissions: { "collection:nope": ["read"] } }, "permissions"],
+      [{ permissions: { schema: ["update"] } }, "permissions.schema.0"],
+      [{ name: " " }, "name"],
+      [{ expiresIn: 60 }, "expiresIn"],
+    ] as const) {
+      const result = create(data);
+      await expect(result).rejects.toBeInstanceOf(ValidationError);
+      await expect(result).rejects.toMatchObject({ errors: { [field]: expect.any(String) } });
+    }
   });
 
   it("rolls a key: a new secret for the same key, the old one stops at once; never a revoked or unknown one", async () => {

@@ -1,4 +1,4 @@
-import type { Selectable } from "kysely";
+import type { Kysely, Selectable } from "kysely";
 
 export interface Database {
   cms_documents: {
@@ -135,8 +135,14 @@ export interface Database {
   };
 }
 
+/** The CMS database, or a transaction of it. */
+export type Db = Kysely<Database>;
+
 /** A row of `cms_invites`. */
 export type InviteRow = Database["cms_invites"];
+
+/** A row of `cms_uploads`: an upload in progress. */
+export type UploadRow = Selectable<Database["cms_uploads"]>;
 
 /** A row of `cms_jobs`. */
 export type JobRow = Database["cms_jobs"];

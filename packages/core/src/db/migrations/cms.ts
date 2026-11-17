@@ -1,5 +1,5 @@
 import { type Database } from "../types.ts";
-import { isPostgres } from "../queries/document-sql.ts";
+import { isPostgres } from "../create-db.ts";
 import { postgresMigrations } from "./postgres.ts";
 import { type Kysely, sql } from "kysely";
 import { type Migration, Migrator } from "kysely/migration";

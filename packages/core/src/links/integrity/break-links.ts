@@ -1,5 +1,5 @@
 import type { Core } from "../../cms/runtime/types.ts";
-import type { Db } from "../../db/queries/document-sql.ts";
+import type { Db } from "../../db/types.ts";
 import { LinkedContentError } from "../../errors.ts";
 import { linkOwners } from "./find-owners.ts";
 import { heldLinks, type HeldLink } from "../runtime/held-links.ts";

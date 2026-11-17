@@ -3,6 +3,7 @@ import { ValidationError } from "../errors.ts";
 import { defineCms, defineTask } from "../index.ts";
 import {
   localized,
+  onPglite,
   origin,
   setup,
   status,
@@ -260,6 +261,63 @@ describe("schedule", () => {
       ["tenon:publish", other.id, "en", at],
       ["tenon:publish", post.id, "en", at + HOUR],
     ]);
+  });
+
+  it("keeps the queued job when its replacement fails to insert", async () => {
+    const { database, exec } = testDb();
+    const cms = make(database);
+    const post = await cms.create("posts", { title: "Hello" }, { draft: true });
+    const at = Date.now() + HOUR;
+    await cms.schedule("posts", post.id, { action: "publish", at });
+
+    // A trigger makes every later insert into the job table fail.
+    if (onPglite) {
+      await exec(
+        `CREATE FUNCTION no_jobs() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'no jobs'; END $$`,
+      );
+      await exec(
+        `CREATE TRIGGER no_jobs BEFORE INSERT ON cms_jobs FOR EACH ROW EXECUTE FUNCTION no_jobs()`,
+      );
+    } else
+      await exec(
+        `CREATE TRIGGER no_jobs BEFORE INSERT ON cms_jobs BEGIN SELECT RAISE(ABORT, 'no jobs'); END`,
+      );
+    await expect(
+      cms.schedule("posts", post.id, { action: "publish", at: at + HOUR }),
+    ).rejects.toThrow("no jobs");
+
+    const rows = await exec(`SELECT doc_id, run_at FROM cms_jobs`);
+    expect(rows.map((r) => [r.doc_id, Number(r.run_at)])).toEqual([[post.id, at]]);
+  });
+
+  it("joins the transaction of a hook, which rolls the job back with the write", async () => {
+    const { database, exec } = testDb();
+    const at = Date.now() + HOUR;
+    const cms = defineCms({
+      collections: {
+        posts: {
+          schedule: true,
+          fields: { title: { type: "text", required: true } },
+          hooks: {
+            afterChange: [
+              async ({ doc, cms }) => {
+                await cms.schedule("posts", doc.id, { action: "unpublish", at });
+                if (doc.title === "fail") throw new Error("hook failed");
+              },
+            ],
+          },
+        },
+      },
+      media: false,
+      settings: false,
+      database,
+      secret: "x".repeat(32),
+      auth: fastAuth,
+    });
+
+    await cms.create("posts", { title: "ok" });
+    await expect(cms.create("posts", { title: "fail" })).rejects.toThrow("hook failed");
+    expect(await exec(`SELECT doc_id FROM cms_jobs`)).toHaveLength(1);
   });
 
   it("stores no locale for an entry that is not localized", async () => {

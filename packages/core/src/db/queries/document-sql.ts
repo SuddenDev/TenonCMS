@@ -1,19 +1,17 @@
-import { type Database, type Row } from "../types.ts";
+import { type Database, type Db, type Row } from "../types.ts";
+import { isPostgres } from "../create-db.ts";
 import type { Each, Step } from "../../schema/traversal/relation-paths.ts";
 import type { Field } from "../../schema/index.ts";
-import {
-  type Kysely,
-  PostgresAdapter,
-  type RawBuilder,
-  type SelectQueryBuilder,
-  sql,
-} from "kysely";
+import { type RawBuilder, type SelectQueryBuilder, sql } from "kysely";
 
-export type Db = Kysely<Database>;
-
-/** Whether `db` (or a transaction of it) runs on Postgres or PGlite. Otherwise it runs on SQLite. */
-export const isPostgres = (db: Kysely<any>) => db.getExecutor().adapter instanceof PostgresAdapter;
 export type DocData = Record<string, any>;
+
+/**
+ * Which version of a document reads return.
+ * - `published`: only published documents, with their published data.
+ * - `drafts`: every document, with its pending draft where one exists.
+ */
+export type Perspective = "published" | "drafts";
 
 /**
  * How a read treats the locale rows of a localized collection or global. Unlocalized reads pass none.
@@ -42,19 +40,19 @@ export type LocaleOwner = {
 export const DOCUMENT_LOCALES: LocaleOwner = { table: "cms_document_locales", key: "document_id" };
 export const GLOBAL_LOCALES: LocaleOwner = { table: "cms_global_locales", key: "name" };
 
-// Reads run in a perspective. Published (`drafts` false): published rows only, data from `data`.
+// Reads run in a perspective. Published: published rows only, data from `data`.
 // Drafts: every row, data from `COALESCE(draft, data)`. `t` is a table alias with its dot.
 
 /** The data column of a perspective, as raw SQL. */
-export const dataOf = (drafts: boolean, t = "") =>
-  drafts ? `COALESCE(${t}draft, ${t}data)` : `${t}data`;
+export const dataOf = (perspective: Perspective, t = "") =>
+  perspective === "drafts" ? `COALESCE(${t}draft, ${t}data)` : `${t}data`;
 
 /**
  * The condition for the rows a perspective sees. A localized entry is seen in the published perspective when the
  * requested locale is published, or with `fallback` the default locale.
  */
-export const visible = (drafts: boolean, t = "", loc?: Loc) => {
-  if (drafts) return sql.raw<boolean>("TRUE");
+export const visible = (perspective: Perspective, t = "", loc?: Loc) => {
+  if (perspective === "drafts") return sql.raw<boolean>("TRUE");
   if (!loc) return sql.raw<boolean>(`${t}published_at IS NOT NULL`);
   return sql.raw<boolean>(
     loc.fallback
@@ -68,25 +66,30 @@ export const visible = (drafts: boolean, t = "", loc?: Loc) => {
  * the row belongs to. The published perspective joins published rows only.
  */
 export const localeOn = (
-  drafts: boolean,
+  perspective: Perspective,
   alias: "lr" | "ld",
   locale: string,
   { key }: LocaleOwner,
   owner: string,
 ) =>
   sql<boolean>`${sql.raw(`${alias}.${key} = ${owner}`)} AND ${sql.raw(`${alias}.locale`)} = ${locale}${sql.raw(
-    drafts ? "" : ` AND ${alias}.published_at IS NOT NULL`,
+    perspective === "drafts" ? "" : ` AND ${alias}.published_at IS NOT NULL`,
   )}`;
 
 /** Both locale row joins, for raw SQL. */
-export const localeJoins = (drafts: boolean, loc: Loc, locales: LocaleOwner, owner: string) =>
-  sql`LEFT JOIN ${sql.raw(locales.table)} lr ON ${localeOn(drafts, "lr", loc.locale, locales, owner)}
-    LEFT JOIN ${sql.raw(locales.table)} ld ON ${localeOn(drafts, "ld", loc.defaultLocale, locales, owner)}`;
+export const localeJoins = (
+  perspective: Perspective,
+  loc: Loc,
+  locales: LocaleOwner,
+  owner: string,
+) =>
+  sql`LEFT JOIN ${sql.raw(locales.table)} lr ON ${localeOn(perspective, "lr", loc.locale, locales, owner)}
+    LEFT JOIN ${sql.raw(locales.table)} ld ON ${localeOn(perspective, "ld", loc.defaultLocale, locales, owner)}`;
 
 // The columns of the requested and the default locale row. `r_data` is `NULL` for a missing row.
-const localeColumns = (drafts: boolean): Array<[string, string]> => [
-  ["r_data", dataOf(drafts, "lr.")],
-  ["d_data", dataOf(drafts, "ld.")],
+const localeColumns = (perspective: Perspective): Array<[string, string]> => [
+  ["r_data", dataOf(perspective, "lr.")],
+  ["d_data", dataOf(perspective, "ld.")],
   ["r_updated_at", "lr.updated_at"],
   ["r_published_at", "lr.published_at"],
   ["r_has_draft", "lr.draft IS NOT NULL"],
@@ -99,9 +102,9 @@ export const jsonArrayOf = (pg: boolean, column: string) =>
   pg ? `COALESCE(json_agg(${column})::text, '[]')` : `json_group_array(${column})`;
 
 // The locales of a document that have a row, as a JSON array. The published perspective counts published rows.
-const localesColumn = (pg: boolean, drafts: boolean, t: string): [string, string] => [
+const localesColumn = (pg: boolean, perspective: Perspective, t: string): [string, string] => [
   "locales",
-  `(SELECT ${jsonArrayOf(pg, "locale")} FROM cms_document_locales WHERE document_id = ${t}id${drafts ? "" : " AND published_at IS NOT NULL"})`,
+  `(SELECT ${jsonArrayOf(pg, "locale")} FROM cms_document_locales WHERE document_id = ${t}id${perspective === "drafts" ? "" : " AND published_at IS NOT NULL"})`,
 ];
 
 // Whether the shared row has a pending draft that differs from its published data.
@@ -110,7 +113,7 @@ export const SHARED_DRAFT = (t: string) => `(${t}draft IS NOT NULL AND ${t}draft
 // The columns of a `Row` of table alias `t`, as `[alias, SQL]` pairs.
 const documentColumns = (
   pg: boolean,
-  drafts: boolean,
+  perspective: Perspective,
   t: string,
   loc?: Loc,
 ): Array<[string, string]> => [
@@ -121,18 +124,18 @@ const documentColumns = (
   ["created_by", `${t}created_by`],
   ["updated_by", `${t}updated_by`],
   ["has_draft", `${t}draft IS NOT NULL`],
-  ["data", dataOf(drafts, t)],
+  ["data", dataOf(perspective, t)],
   ...(loc
     ? [
-        ...localeColumns(drafts),
-        localesColumn(pg, drafts, t),
+        ...localeColumns(perspective),
+        localesColumn(pg, perspective, t),
         ["shared_draft", SHARED_DRAFT(t)] as [string, string],
       ]
     : []),
 ];
 
 /** The columns of a `Row`. */
-export const rowColumns = (drafts: boolean) =>
+export const rowColumns = (perspective: Perspective) =>
   [
     "id",
     "created_at",
@@ -141,13 +144,13 @@ export const rowColumns = (drafts: boolean) =>
     "created_by",
     "updated_by",
     sql<number>`draft IS NOT NULL`.as("has_draft"),
-    sql<string>`${sql.raw(dataOf(drafts))}`.as("data"),
+    sql<string>`${sql.raw(dataOf(perspective))}`.as("data"),
   ] as const;
 
 /** The columns of a `Row` as raw SQL, for the table alias `t`. A localized `loc` adds the locale columns. */
-export const rawRowColumns = (db: Db, drafts: boolean, t: string, loc?: Loc) =>
+export const rawRowColumns = (db: Db, perspective: Perspective, t: string, loc?: Loc) =>
   sql.raw(
-    documentColumns(isPostgres(db), drafts, t, loc)
+    documentColumns(isPostgres(db), perspective, t, loc)
       .map(([alias, expr]) => `${expr} AS ${alias}`)
       .join(", "),
   );
@@ -186,15 +189,16 @@ const arrayOrNull = (json: RawBuilder<unknown>) =>
 export const jsonAt = (
   db: Db,
   path: string,
-  drafts = false,
+  perspective: Perspective = "published",
   loc?: Loc,
   t = loc ? "cms_documents." : "",
 ) => {
   const pg = isPostgres(db);
-  if (!loc?.keys.includes(path.split(".")[0])) return extract(pg, sql.raw(dataOf(drafts, t)), path);
-  const requested = extract(pg, sql.raw(dataOf(drafts, "lr.")), path);
+  if (!loc?.keys.includes(path.split(".")[0]))
+    return extract(pg, sql.raw(dataOf(perspective, t)), path);
+  const requested = extract(pg, sql.raw(dataOf(perspective, "lr.")), path);
   if (!loc.fallback) return requested;
-  return sql`COALESCE(${requested}, ${extract(pg, sql.raw(dataOf(drafts, "ld.")), path)})`;
+  return sql`COALESCE(${requested}, ${extract(pg, sql.raw(dataOf(perspective, "ld.")), path)})`;
 };
 
 /** Whether the text `value` contains `query`, ignoring case. */
@@ -211,14 +215,20 @@ const AUTHOR_COLUMNS: Record<string, string> = {
 
 /**
  * The equality filter `<key> = value` on a top-level key of the data, or on `createdBy` / `updatedBy`. `null` means
- * `IS NULL`. The key MUST be checked against the schema first; `drafts` and `loc` work as in {@link jsonAt}.
+ * `IS NULL`. The key MUST be checked against the schema first; `perspective` and `loc` work as in {@link jsonAt}.
  * Postgres compares text, so `value` arrives as text: `5` matches `5`, `true` matches `true`.
  * @returns The condition.
  */
-export function equals(db: Db, key: string, value: unknown, drafts = false, loc?: Loc) {
+export function equals(
+  db: Db,
+  key: string,
+  value: unknown,
+  perspective: Perspective = "published",
+  loc?: Loc,
+) {
   const field = Object.hasOwn(AUTHOR_COLUMNS, key)
     ? sql.ref(AUTHOR_COLUMNS[key])
-    : jsonAt(db, key, drafts, loc);
+    : jsonAt(db, key, perspective, loc);
   return value === null ? sql<boolean>`${field} IS NULL` : sql<boolean>`${field} = ${value}`;
 }
 
@@ -269,31 +279,31 @@ export function holdsAt(
 export function selectDocs(
   db: Db,
   collection: string,
-  drafts: boolean,
+  perspective: Perspective,
   loc?: Loc,
 ): SelectQueryBuilder<Database, "cms_documents", Row> {
   if (!loc)
     return db
       .selectFrom("cms_documents")
-      .select(rowColumns(drafts))
+      .select(rowColumns(perspective))
       .where("collection", "=", collection)
-      .where(visible(drafts));
+      .where(visible(perspective));
 
   return db
     .selectFrom("cms_documents")
     .leftJoin("cms_document_locales as lr", (j) =>
-      j.on(localeOn(drafts, "lr", loc.locale, DOCUMENT_LOCALES, "cms_documents.id")),
+      j.on(localeOn(perspective, "lr", loc.locale, DOCUMENT_LOCALES, "cms_documents.id")),
     )
     .leftJoin("cms_document_locales as ld", (j) =>
-      j.on(localeOn(drafts, "ld", loc.defaultLocale, DOCUMENT_LOCALES, "cms_documents.id")),
+      j.on(localeOn(perspective, "ld", loc.defaultLocale, DOCUMENT_LOCALES, "cms_documents.id")),
     )
     .select(
-      documentColumns(isPostgres(db), drafts, "cms_documents.", loc).map(([alias, expr]) =>
+      documentColumns(isPostgres(db), perspective, "cms_documents.", loc).map(([alias, expr]) =>
         sql.raw(expr).as(alias),
       ),
     )
     .where("collection", "=", collection)
-    .where(visible(drafts, "", loc)) as unknown as SelectQueryBuilder<
+    .where(visible(perspective, "", loc)) as unknown as SelectQueryBuilder<
     Database,
     "cms_documents",
     Row

@@ -7,9 +7,10 @@ import { createInvite } from "../operations/create-invite.operation.ts";
 import { listInvites } from "../operations/list-invites.operation.ts";
 import { resendInvite } from "../operations/resend-invite.operation.ts";
 import { revokeInvite } from "../operations/revoke-invite.operation.ts";
-import { input } from "./input.ts";
+import { emailInput } from "../email.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 
-const createBody = z.object({ email: z.email(), role: z.string(), url: z.string().optional() });
+const createBody = emailInput.extend({ role: z.string(), url: z.string().optional() });
 const resendBody = z.object({ url: z.string() });
 
 const requireAdmin: MiddlewareHandler<Env> = async (c, next) => {
@@ -34,12 +35,12 @@ export function invitesEndpoint(core: Core) {
     .use("/invites/*", requireAdmin)
     .get("/invites", async (c) => c.json(await listInvites(core)))
     .post("/invites", async (c) => {
-      const body = input(createBody, await parseBody(c.req));
+      const body = validateInput(createBody, await parseBody(c.req));
       const result = await createInvite(core, c.var.user, body, await origin(c.req.url));
       return c.json(result, result.message ? 502 : 201);
     })
     .post("/invites/:id/resend", async (c) => {
-      const { url } = input(resendBody, await parseBody(c.req));
+      const { url } = validateInput(resendBody, await parseBody(c.req));
       const result = await resendInvite(
         core,
         c.var.user,

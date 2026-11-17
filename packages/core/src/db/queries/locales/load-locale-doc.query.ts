@@ -1,9 +1,9 @@
 import { sql } from "kysely";
 import { mergeLocale } from "../../../content/reads/merge-locale.ts";
 import {
-  type Db,
   type DocData,
   type Loc,
+  type Perspective,
   GLOBAL_LOCALES,
   DOCUMENT_LOCALES,
   dataOf,
@@ -11,6 +11,7 @@ import {
 import { loadDoc } from "../documents/load-document.query.ts";
 import { loadSharedState } from "./load-shared-state.query.ts";
 import { loadGlobal } from "../globals/load-global.query.ts";
+import type { Db } from "../../types.ts";
 
 type LocaleRow = {
   locale: string;
@@ -32,18 +33,18 @@ export async function loadLocaleDoc(
   db: Db,
   target: { kind: "collection" | "global"; name: string },
   id: string,
-  drafts: boolean,
+  perspective: Perspective,
   loc: Loc,
 ): Promise<DocData | undefined> {
   const global = target.kind === "global";
   const shared = global
-    ? await loadGlobal(db, target.name, drafts)
-    : await loadDoc(db, target.name, id, drafts);
+    ? await loadGlobal(db, target.name, perspective)
+    : await loadDoc(db, target.name, id, perspective);
   if (!shared) return undefined;
 
   const owner = global ? GLOBAL_LOCALES : DOCUMENT_LOCALES;
   const { rows } = await sql<LocaleRow>`
-    SELECT locale, ${sql.raw(dataOf(drafts))} AS data, updated_at, published_at, draft IS NOT NULL AS has_draft
+    SELECT locale, ${sql.raw(dataOf(perspective))} AS data, updated_at, published_at, draft IS NOT NULL AS has_draft
     FROM ${sql.table(owner.table)} WHERE ${sql.id(owner.key)} = ${global ? target.name : id}`.execute(
     db,
   );
@@ -63,7 +64,7 @@ export async function loadLocaleDoc(
     locale: loc.locale,
     sharedDraft: state?.differs ?? false,
     locales: loc.locales.filter((l) =>
-      rows.some((r) => r.locale === l && (drafts || r.published_at !== null)),
+      rows.some((r) => r.locale === l && (perspective === "drafts" || r.published_at !== null)),
     ),
   };
 }

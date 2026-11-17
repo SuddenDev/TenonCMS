@@ -1,11 +1,11 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeZip } from "client-zip";
 import { describe, expect, it, vi } from "vitest";
 import { defineCms } from "../index.ts";
 import { local } from "../media/storage/local/index.ts";
 import { readZip } from "../transfer/read-zip.ts";
-import { png } from "./fixtures.ts";
+import { png, png4 } from "./fixtures.ts";
 import {
   base,
   localized,
@@ -21,6 +21,17 @@ import {
 
 const archiveOf = async (cms: { export(o?: { media?: boolean }): Promise<ReadableStream> }) =>
   new Response(await cms.export()).blob();
+
+// The archive with the text of `name` changed by `edit`.
+async function edited(archive: Blob, name: string, edit: (text: string) => string) {
+  const files = [];
+  for (const [entry, file] of await readZip(archive)) {
+    const input = new Response(file.stream());
+    const changed = entry === name ? edit(await input.text()) : await input.blob();
+    files.push({ name: entry, input: changed });
+  }
+  return new Response(makeZip(files)).blob();
+}
 
 describe("export and import", () => {
   it("keeps ids, times, drafts and relations", async () => {
@@ -150,6 +161,58 @@ describe("export and import", () => {
     });
   });
 
+  it("rejects a malformed manifest or row and writes nothing", async () => {
+    const a = withMedia();
+    await a.cms.media!.upload(png, { filename: "hero.png", mimeType: "image/png" });
+    await a.cms.create("posts", { title: "Hi" });
+    const archive = await archiveOf(a.cms);
+    const rows = (t: string, edit: (row: Record<string, unknown>) => void) =>
+      t
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => {
+          const row = JSON.parse(line);
+          edit(row);
+          return JSON.stringify(row);
+        })
+        .join("\n");
+    const edits: [string, (text: string) => string][] = [
+      ["manifest.json", (t) => JSON.stringify({ ...JSON.parse(t), localized: "x" })],
+      ["documents.ndjson", (t) => `${t}\n{broken`],
+      ["documents.ndjson", (t) => rows(t, (row) => delete row.id)],
+      [
+        "documents.ndjson",
+        (t) => rows(t, (row) => void (row.collection === "media" && (row.data = "{nope"))),
+      ],
+    ];
+
+    for (const [entry, edit] of edits) {
+      const b = withMedia();
+      await expect(b.cms.import(await edited(archive, entry, edit))).rejects.toMatchObject({
+        errors: { archive: expect.stringContaining(entry) },
+      });
+      expect(await b.cms.find("posts")).toEqual([]);
+      expect(await b.cms.find("media")).toEqual([]);
+    }
+  });
+
+  it("hides the message of an unexpected error while reading the archive", async () => {
+    class Unreadable extends Blob {
+      override slice(): Blob {
+        throw new Error("/srv/secret/archive.zip");
+      }
+    }
+    const log = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    const error = await relational()
+      .import(new Unreadable(["x"]))
+      .catch((e) => e);
+
+    log.mockRestore();
+    expect(error.errors.archive).toBeTruthy();
+    expect(error.errors.archive).not.toContain("secret");
+  });
+
   it("moves values to the config's localized fields on replace only", async () => {
     const a = localized().cms;
     const post = await a.create("posts", { title: "Hello", body: "Text" });
@@ -199,6 +262,53 @@ describe("export and import", () => {
     expect(await b.cms.import(archive)).toMatchObject({ media: 1 });
     expect(put).not.toHaveBeenCalled();
     expect(multipart).not.toHaveBeenCalled();
+  });
+
+  it("rejects a media key that another document owns and keeps its file", async () => {
+    const a = withMedia();
+    await a.cms.media!.upload(png, { filename: "hero.png", mimeType: "image/png" });
+    const b = withMedia();
+    const mine = await b.cms.media!.upload(png4, { filename: "hero.png", mimeType: "image/png" });
+
+    for (const mode of ["merge", "missing"] as const)
+      await expect(b.cms.import(await archiveOf(a.cms), { mode })).rejects.toMatchObject({
+        errors: { archive: expect.stringContaining("hero.png") },
+      });
+    expect(new Uint8Array(readFileSync(join(b.dir, mine.key)))).toEqual(png4);
+  });
+
+  it("keeps the files of existing documents in mode missing", async () => {
+    const a = withMedia();
+    const file = await a.cms.media!.upload(png, { filename: "hero.png", mimeType: "image/png" });
+    const archive = await archiveOf(a.cms);
+    const b = withMedia();
+    await b.cms.import(archive);
+    writeFileSync(join(b.dir, file.key), png4);
+
+    await b.cms.import(archive, { mode: "missing" });
+
+    expect(new Uint8Array(readFileSync(join(b.dir, file.key)))).toEqual(png4);
+  });
+
+  it("rejects a media key in a reserved folder", async () => {
+    const a = withMedia();
+    await a.cms.media!.upload(png, { filename: "hero.png", mimeType: "image/png" });
+    const entries = await readZip(await archiveOf(a.cms));
+    const files = [];
+    for (const [name, entry] of entries) {
+      const input = new Response(entry.stream());
+      files.push(
+        name === "documents.ndjson"
+          ? { name, input: (await input.text()).replace('key\\":\\"', 'key\\":\\".variants/') }
+          : { name: name.replace("media/", "media/.variants/"), input: await input.blob() },
+      );
+    }
+    const b = withMedia();
+
+    await expect(
+      b.cms.import(await new Response(makeZip(files)).blob(), { mode: "replace" }),
+    ).rejects.toMatchObject({ errors: { archive: expect.stringContaining(".variants/hero.png") } });
+    expect(existsSync(join(b.dir, ".variants/hero.png"))).toBe(false);
   });
 
   it("leaves media files out with media: false", async () => {
@@ -411,6 +521,17 @@ describe("staged export and import", () => {
     expect(
       readdirSync(target.dir, { recursive: true }).filter((f) => !String(f).startsWith(".tmp")),
     ).toEqual([]);
+  });
+
+  it("rejects malformed parts and keeps the upload", async () => {
+    const b = await withAdmin(withMedia().cms);
+    const plan = await (await post(b.fetch, "/import/uploads", { size: 10 })).json();
+    const path = `/import/uploads/${plan.id}`;
+
+    const res = await post(b.fetch, `${path}/complete`, { parts: [{ n: "1", etag: 1 }] });
+
+    expect(res.status).toBe(400);
+    expect((await b.fetch(`${origin}/_tenon${path}`, { method: "DELETE" })).status).toBe(204);
   });
 
   it("keeps import uploads out of the media routes", async () => {

@@ -1,4 +1,4 @@
-import { type Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Drops the draft of a global. */
 export async function discardGlobalDraft(db: Db, name: string) {

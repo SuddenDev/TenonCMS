@@ -1,10 +1,9 @@
 import { APIError, createAuthEndpoint } from "better-auth/api";
 import type { BetterAuthPlugin, GenericEndpointContext } from "better-auth";
 import type { UserWithRole } from "better-auth/plugins/admin";
-import type { Kysely } from "kysely";
+import type { Db } from "../../db/types.ts";
 import { z } from "zod";
 import { otherAdmins } from "../../db/queries/users/other-admins.query.ts";
-import type { Database } from "../../db/types.ts";
 
 const byEmail = {
   method: "POST",
@@ -17,7 +16,7 @@ const byEmail = {
  * server code does not have. Each endpoint writes what its `admin()` counterpart writes. An unknown email throws 404;
  * deactivating or removing the last active admin throws 409.
  */
-export const manageUsers = (db: Kysely<Database>) =>
+export const manageUsers = (db: Db) =>
   ({
     id: "tenon-manage-users",
     endpoints: {
@@ -80,7 +79,7 @@ async function requireUser(ctx: GenericEndpointContext, email: string) {
 }
 
 // Over HTTP, better-auth refuses self-ban and self-removal, so the caller stays an admin. Server calls have no caller.
-async function requireOtherAdmin(db: Kysely<Database>, user: UserWithRole) {
+async function requireOtherAdmin(db: Db, user: UserWithRole) {
   if (user.role !== "admin" || user.banned) return;
   if (!(await otherAdmins(db, user.id)))
     throw new APIError("CONFLICT", { message: "At least one admin is required" });

@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import { type Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Takes a document off the published perspective. The published `data` stays, so its unique values stay reserved,

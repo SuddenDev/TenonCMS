@@ -35,14 +35,13 @@ export async function readDocs(
   const { fields } = target(core, name);
   const { media } = core;
   const operation = name.kind === "collection" ? "read" : "getGlobal";
-  const drafts = s.perspective === "drafts";
 
   const before = await beforeRead(core, s, name, docs, operation);
 
   await populate(await databaseForScope(core, s), collections, fields, before, plan, {
     richtext: (values) => resolveRichtext(core, s, values),
     links: (values) => resolveLinks(core, s, values),
-    drafts,
+    perspective: s.perspective ?? "published",
     loc: (collection) => locOf(core, s, collectionTarget(collection)),
     access: (collection) => readDecision(core, s, collectionTarget(collection)),
     // Populated documents run their own collection's read hooks, in the scope of the outer read.
@@ -67,7 +66,7 @@ export async function readDocs(
 
 /**
  * Builds the populate plan of read options and checks `select` against the fields and what `populate` resolves.
- * `doc` is false for globals, which have no meta keys.
+ * `meta` is false for globals, which have no meta keys.
  *
  * @returns The populate plan and the checked `select`.
  * @throws {Error} For a `select` path that does not fit.

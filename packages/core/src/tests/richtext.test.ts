@@ -127,6 +127,25 @@ describe("rich text relations", () => {
   });
 });
 
+it("names the structural rich text failure for the field, drafts included", async () => {
+  const cms = make();
+  const href = (href: string) => ({
+    type: "doc" as const,
+    content: [{ type: "text", text: "x", marks: [{ type: "link", attrs: { href } }] }],
+  });
+  const heading = {
+    type: "doc" as const,
+    content: [{ type: "heading", attrs: { level: 9 } }],
+  };
+
+  await expect(cms.create("articles", { body: href("javascript:alert(1)") })).rejects.toMatchObject(
+    { errors: { body: "Unsafe rich text URL" } },
+  );
+  await expect(cms.create("articles", { body: heading }, { draft: true })).rejects.toMatchObject({
+    errors: { body: "Invalid heading level" },
+  });
+});
+
 it("resolves rich text and answers 409 for a linked delete over HTTP", async () => {
   const { setup, admin } = await import("./setup.ts");
   const cms = make();

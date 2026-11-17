@@ -290,6 +290,33 @@ describe("media", () => {
     const doc = await env.client.media.upload(new File([png], "a.png", { type: "image/png" }));
     expect(doc.createdBy).toEqual(expect.any(String));
   });
+
+  it("check `media.access` before an update or delete runs a hook or moves a file", async () => {
+    const calls: string[] = [];
+    const env = withMedia({
+      access: { update: ["admin"], delete: ["admin"] },
+      hooks: {
+        beforeChange: [() => void calls.push("beforeChange")],
+        beforeMove: [() => void calls.push("beforeMove")],
+        beforeDelete: [() => void calls.push("beforeDelete")],
+      },
+    });
+    const doc = await env.cms.media.upload(png, { filename: "a.png", mimeType: "image/png" });
+
+    expect(await status(env.client.media.update(doc.id, { alt: "x", filename: "b.png" }))).toBe(
+      401,
+    );
+    expect(await status(env.client.media.delete(doc.id))).toBe(401);
+    expect(calls).toEqual([]);
+    expect((await env.fetchWithSession("/media/files/a.png")).status).toBe(200);
+    expect((await env.cms.findById("media", doc.id))?.key).toBe("a.png");
+  });
+
+  it("deny an unknown media id like a known one", async () => {
+    const env = withMedia({ access: { update: ["admin"], delete: ["admin"] } });
+    expect(await status(env.client.media.update("nope", { alt: "x" }))).toBe(401);
+    expect(await status(env.client.media.delete("nope"))).toBe(401);
+  });
 });
 
 describe("startup", () => {

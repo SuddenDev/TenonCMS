@@ -3,26 +3,26 @@ import type { Kysely } from "kysely";
 import type { Core, Scope } from "../../cms/runtime/types.ts";
 import { afterCommit, databaseForScope, transaction } from "../../cms/runtime/transaction.ts";
 import { syncLocalizedIn } from "../../db/migrations/sync-localized.ts";
-import type { Database } from "../../db/types.ts";
+import { existingIds } from "../../db/queries/references/existing-ids.query.ts";
+import type { Db } from "../../db/types.ts";
 import { ValidationError } from "../../errors.ts";
 import { runAfterImport } from "../../lifecycle/run-lifecycle.ts";
 import { regenerate } from "../../media/operations/regenerate.operation.ts";
 import type { Storage } from "../../media/storage/types.ts";
 import { writeFile } from "../../media/storage/write-file.ts";
-import { readZip, type ZipEntry, type ZipSource } from "../read-zip.ts";
+import { ZipError, readZip, type ZipEntry, type ZipSource } from "../read-zip.ts";
 import {
   type ArchiveCheck,
   EXTRA,
   type ImportCounts,
   type ImportMode,
   MEDIA,
-  type Manifest,
   TABLES,
   TABLE_NAMES,
   type TableName,
-  manifestOf,
 } from "../format.ts";
-import { archiveTargets, checkArchive } from "./check-archive.ts";
+import { ANY_ROW, type ArchiveManifest, ROWS, readManifest, readNdjson } from "../read-archive.ts";
+import { type ArchiveMedia, archiveMedia, archiveTargets, checkArchive } from "./check-archive.ts";
 import { sessionTables } from "./full-tables.ts";
 
 type Row = Record<string, unknown>;
@@ -36,13 +36,14 @@ const PARAMETERS = 900;
 /**
  * Writes an archive from `exportContent()` into the database, with its ids, times, drafts, locales and versions. Runs
  * no hooks, validation or webhooks, because it restores stored rows. Media files are put into storage before the
- * transaction, so a rollback leaves them as unused files. A file already stored with the same size is skipped, so a
- * failed import can simply run again.
+ * transaction. A rollback leaves new keys as unused files, and the files of overwritten documents with the archive's
+ * bytes. A file already stored with the same size is skipped, so a failed import can simply run again.
  * A `full` archive also restores users, accounts, API keys and jobs, and signs everyone out. It needs `replace`.
  * @param mode See {@link ImportMode}. `merge` also replaces the locale rows of each document it overwrites.
  * @param dryRun Checks the archive and returns {@link ArchiveCheck} instead. Writes nothing, media files included.
  * @returns Rows written per table, and the media files of the archive that are in storage now.
- * @throws {ValidationError} For a file that is not an archive, or one that {@link checkArchive} refuses.
+ * @throws {ValidationError} For a file that is not an archive, a manifest or row of the wrong shape, or an archive that
+ * {@link checkArchive} refuses.
  */
 export async function importContent(
   core: Core,
@@ -63,7 +64,7 @@ export async function importContent(
   { mode = "merge", dryRun = false }: { mode?: ImportMode; dryRun?: boolean } = {},
 ): Promise<ImportCounts | ArchiveCheck> {
   const entries = await readArchive(archive);
-  const manifest = await manifestOf(entries);
+  const manifest = await readManifest(entries);
   const rows = await readRows(entries);
   const extra = await readExtraRows(entries, manifest);
   const targets = archiveTargets({
@@ -71,14 +72,16 @@ export async function importContent(
     globals: rows.cms_globals,
     versions: rows.cms_versions,
   });
+  const media = archiveMedia(rows.cms_documents);
   const check = await checkArchive(core, await databaseForScope(core, scope), manifest, {
     mode,
     targets,
+    media,
   });
   if (dryRun) return check;
   if (check.errors.length) throw new ValidationError({ archive: check.errors.join(" ") });
 
-  const files = await putMedia(core, entries, rows.cms_documents);
+  const files = await putMedia(core, scope, entries, media, mode);
 
   const { counts, messages } = await transaction(core, scope, async (inner) => {
     const db = await databaseForScope(core, inner);
@@ -111,57 +114,59 @@ export async function importContent(
   return counts;
 }
 
+// Only the errors of a broken ZIP send their message. Others, e.g. of storage, MAY hold internals.
 async function readArchive(archive: Blob | ZipSource) {
   try {
     return await readZip(archive);
   } catch (error) {
-    throw new ValidationError({ archive: (error as Error).message });
+    if (error instanceof ZipError) throw new ValidationError({ archive: error.message });
+    consola.withTag("tenon").error(error);
+    throw new ValidationError({ archive: "The archive could not be read" });
   }
-}
-
-async function readEntry(entries: Map<string, ZipEntry>, name: string) {
-  const entry = entries.get(name);
-  const text = entry ? await new Response(entry.stream()).text() : "";
-  return text
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as Row);
 }
 
 async function readRows(entries: Map<string, ZipEntry>) {
   const rows = {} as Rows;
-  for (const table of TABLE_NAMES) rows[table] = await readEntry(entries, TABLES[table].entry);
+  for (const table of TABLE_NAMES)
+    rows[table] = await readNdjson(entries, TABLES[table].entry, ROWS[table]);
   return rows;
 }
 
 // The extra tables of a `full` archive, in the manifest's order: the user table first.
-async function readExtraRows(entries: Map<string, ZipEntry>, manifest: Manifest | undefined) {
+async function readExtraRows(entries: Map<string, ZipEntry>, manifest?: ArchiveManifest) {
   if (manifest?.scope !== "full") return [];
   const extra = [];
-  for (const [table, columns] of Object.entries(manifest.tables ?? {}))
-    extra.push({ table, columns, rows: await readEntry(entries, `${EXTRA}${table}.ndjson`) });
+  for (const [table, columns] of Object.entries(manifest.tables ?? {})) {
+    const rows = await readNdjson(entries, `${EXTRA}${table}.ndjson`, ANY_ROW);
+    extra.push({ table, columns, rows });
+  }
   return extra;
 }
 
-async function putMedia(core: Core, entries: Map<string, ZipEntry>, documents: Row[]) {
+// `missing` keeps the files of documents that exist.
+async function putMedia(
+  core: Core,
+  scope: Scope,
+  entries: Map<string, ZipEntry>,
+  media: ArchiveMedia[],
+  mode: ImportMode,
+) {
   if (!core.media) return 0;
-  const mimeTypes = new Map(
-    documents
-      .filter((r) => r.collection === "media")
-      .map((r) => JSON.parse(r.data as string) as { key: string; mimeType: string })
-      .map((m) => [m.key, m.mimeType]),
-  );
+  const kept = mode === "missing" ? await existingMedia(core, scope, media) : new Set<string>();
   let n = 0;
-  for (const [name, entry] of entries) {
-    if (!name.startsWith(MEDIA)) continue;
-    const key = name.slice(MEDIA.length);
-    const mimeType = mimeTypes.get(key);
-    if (!mimeType || key.split("/").includes("..")) continue;
+  for (const { id, key, mimeType } of media) {
+    const entry = entries.get(MEDIA + key);
+    if (!entry || !mimeType || kept.has(id)) continue;
     if ((await storedSize(core.media.storage, key)) !== entry.size)
       await writeFile(core.media.storage, key, entry.stream(), mimeType);
     n++;
   }
   return n;
+}
+
+async function existingMedia(core: Core, scope: Scope, media: ArchiveMedia[]) {
+  const ids = media.map((m) => m.id);
+  return new Set(await existingIds(await databaseForScope(core, scope), "media", ids));
 }
 
 // The size of a stored file, from a one-byte read. `undefined` for a missing file.
@@ -171,7 +176,7 @@ async function storedSize(storage: Storage, key: string) {
   return file?.size;
 }
 
-async function deleteContent(db: Kysely<Database>) {
+async function deleteContent(db: Db) {
   for (const table of TABLE_NAMES) await db.deleteFrom(table).execute();
   await db.deleteFrom("cms_locks").execute();
   // Scheduled publishes and webhook deliveries of the old content.
@@ -183,7 +188,7 @@ async function deleteContent(db: Kysely<Database>) {
 }
 
 // `missing` skips a document or global that exists, together with its locale rows and versions.
-async function newRows(db: Kysely<Database>, rows: Rows): Promise<Rows> {
+async function newRows(db: Db, rows: Rows): Promise<Rows> {
   const ids = rows.cms_documents.map((r) => r.id as string);
   const names = rows.cms_globals.map((r) => r.name as string);
   const docs = new Set(
@@ -215,7 +220,7 @@ async function newRows(db: Kysely<Database>, rows: Rows): Promise<Rows> {
   };
 }
 
-async function deleteLocaleRows(db: Kysely<Database>, rows: Rows) {
+async function deleteLocaleRows(db: Db, rows: Rows) {
   const ids = rows.cms_documents.map((r) => r.id as string);
   const names = rows.cms_globals.map((r) => r.name as string);
   if (ids.length)
@@ -224,7 +229,7 @@ async function deleteLocaleRows(db: Kysely<Database>, rows: Rows) {
 }
 
 // Users and API keys are not part of an archive. `createdBy` keeps an id only when it exists here.
-async function knownActors(db: Kysely<Database>) {
+async function knownActors(db: Db) {
   const users = await (db as Kysely<any>).selectFrom("user").select("id").execute();
   const keys = await (db as Kysely<any>).selectFrom("apikey").select("id").execute();
   return new Set([
@@ -241,12 +246,7 @@ const withActors = (actors: Set<string>) => (row: Row) => {
   return out;
 };
 
-async function insertExtraRows(
-  db: Kysely<Database>,
-  table: string,
-  columns: string[],
-  rows: Row[],
-) {
+async function insertExtraRows(db: Db, table: string, columns: string[], rows: Row[]) {
   const batch = Math.max(1, Math.floor(PARAMETERS / columns.length));
   for (let i = 0; i < rows.length; i += batch) {
     const values = rows
@@ -257,7 +257,7 @@ async function insertExtraRows(
   return rows.length;
 }
 
-async function insertRows(db: Kysely<Database>, table: TableName, rows: Row[], mode: ImportMode) {
+async function insertRows(db: Db, table: TableName, rows: Row[], mode: ImportMode) {
   const { key, columns } = TABLES[table];
   const update = columns.filter((c) => !(key as readonly string[]).includes(c));
   for (let i = 0; i < rows.length; i += BATCH) {
@@ -281,7 +281,7 @@ async function insertRows(db: Kysely<Database>, table: TableName, rows: Row[], m
 }
 
 // The rows are stored for the archive's localized fields. Recording those lets the sync move them to the config's.
-async function syncTo(db: Kysely<Database>, core: Core, manifest: Manifest) {
+async function syncTo(db: Db, core: Core, manifest: ArchiveManifest) {
   for (const [id, keys] of Object.entries(manifest.localized)) {
     const i = id.indexOf(":");
     const row = {

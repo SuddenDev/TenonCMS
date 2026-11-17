@@ -1,5 +1,6 @@
 import { sql } from "kysely";
-import { type Db, type LocaleOwner } from "../document-sql.ts";
+import { type LocaleOwner } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Drops the drafts of the locale rows of a document or global: rows that were never published are deleted, the

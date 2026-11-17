@@ -1,5 +1,6 @@
 import { sql } from "kysely";
-import type { Db, DocData } from "../document-sql.ts";
+import type { DocData } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** After this long without a draft save, the next one starts a new version. */
 const DRAFT_BREAK = 30 * 60_000;

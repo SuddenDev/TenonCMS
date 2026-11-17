@@ -50,11 +50,12 @@ export async function persistDocument(state: WriteState, data: Record<string, an
   let stored: Record<string, any>;
   if (locale) {
     const owner = await persistLocalized(state, data);
-    stored = (await loadLocaleDoc(db, name, owner, isDraft, locale))!;
+    const perspective = isDraft ? "drafts" : "published";
+    stored = (await loadLocaleDoc(db, name, owner, perspective, locale))!;
   } else if (name.kind === "global") {
     if (isDraft) {
       await saveGlobalDraft(db, name.name, data);
-      stored = (await loadGlobal(db, name.name, true))!;
+      stored = (await loadGlobal(db, name.name, "drafts"))!;
     } else {
       await saveGlobal(db, name.name, data, isPublish);
       stored = (await loadGlobal(db, name.name))!;
@@ -80,7 +81,7 @@ export async function persistDocument(state: WriteState, data: Record<string, an
       max: target(core, name).maxVersions,
     });
 
-  if (isDraft) return (await afterRead(core, scope, name, [stored], operation, true))[0];
+  if (isDraft) return (await afterRead(core, scope, name, [stored], operation, { draft: true }))[0];
 
   await runFieldHooks("afterChange", fields, stored, { ...args, data: stored });
   const doc = await runHooks(

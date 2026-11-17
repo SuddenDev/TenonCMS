@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** One run of a cron entry, due at `runAt` (epoch milliseconds). */
 export type CronSlot = { cron: string; task: string; runAt: number };

@@ -1,9 +1,8 @@
-import { type Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import { type Loc } from "../../db/queries/document-sql.ts";
 import { type Fields } from "../../schema/index.ts";
 import { valueTaken } from "../../db/queries/references/value-taken.query.ts";
 import { ValidationError } from "../../errors.ts";
-import type { Kysely } from "kysely";
 
 // ponytail: one scan per unique field per write. Add SQLite expression indexes if collections grow large.
 /**
@@ -12,7 +11,7 @@ import type { Kysely } from "kysely";
  * @throws {ValidationError} With every field whose value is already used.
  */
 export async function checkUnique(
-  db: Kysely<Database>,
+  db: Db,
   collection: string,
   fields: Fields,
   data: Record<string, unknown>,

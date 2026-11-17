@@ -233,7 +233,7 @@ export function defineCms<
     let ready: Promise<void> | undefined;
     const start = async () => {
       await connect();
-      const cms = starting.localApi(outerScope({ user: null }, true));
+      const cms = starting.localApi(outerScope({ user: null, overrideAccess: true }));
       for (const [source, run] of [
         ["seed", runSeeds],
         ["init", runInit],
@@ -302,7 +302,7 @@ export function defineCms<
     overrideAccess: boolean,
   ) {
     const { core, auth, app } = bound;
-    const api = createLocalApi(core, outerScope(visitor, overrideAccess)) as unknown as Api<
+    const api = createLocalApi(core, outerScope({ ...visitor, overrideAccess })) as unknown as Api<
       T,
       D,
       L

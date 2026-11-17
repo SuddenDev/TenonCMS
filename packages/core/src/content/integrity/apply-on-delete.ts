@@ -1,11 +1,10 @@
-import { type Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import { type Schema } from "../../schema/index.ts";
 import { ConflictError } from "../../errors.ts";
 import { type Ref, owner, references, row } from "./find-references.ts";
 import { DOCUMENT_LOCALES, GLOBAL_LOCALES } from "../../db/queries/document-sql.ts";
 import { holdersAt } from "../../schema/traversal/holders-at.ts";
 import { saveLocaleDraft } from "../../db/queries/locales/save-locale-draft.query.ts";
-import type { Kysely } from "kysely";
 
 /** Local API calls of the current operation, with all their hooks. A `locale` writes that locale's row. */
 export type Effects = {
@@ -26,7 +25,7 @@ export type Effects = {
  * @throws {ConflictError} When a `restrict` reference points to the document. Nothing is changed then.
  */
 export async function onDelete(
-  db: Kysely<Database>,
+  db: Db,
   schema: Schema,
   collection: string,
   id: string,
@@ -66,7 +65,7 @@ function conflict(blocking: Ref[]) {
 // References of one stored row share one `data` object, so each row is written once with all its edits.
 // Every item that holds the id is cleared; the items stay.
 // A pending draft of a locale row is rewritten without hooks, as a draft save runs none of the write checks.
-async function clear(db: Kysely<Database>, refs: Ref[], id: string, effects: Effects) {
+async function clear(db: Db, refs: Ref[], id: string, effects: Effects) {
   for (const r of refs)
     for (const { parent, key } of holdersAt(r.data, r.path)) {
       const value = parent[key];

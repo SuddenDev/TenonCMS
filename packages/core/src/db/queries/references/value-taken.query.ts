@@ -1,12 +1,6 @@
-import {
-  type Db,
-  type Loc,
-  DOCUMENT_LOCALES,
-  jsonAt,
-  localeJoins,
-  visible,
-} from "../document-sql.ts";
+import { type Loc, DOCUMENT_LOCALES, jsonAt, localeJoins, visible } from "../document-sql.ts";
 import { sql } from "kysely";
+import type { Db } from "../../types.ts";
 
 /**
  * Whether another document of `collection` stores `value` under `key`. Scans published data only.
@@ -24,9 +18,9 @@ export async function valueTaken(
   if (loc?.keys.includes(key)) {
     const l = { ...loc, fallback: true };
     const { rows } = await sql`SELECT 1 FROM cms_documents
-      ${localeJoins(false, l, DOCUMENT_LOCALES, "cms_documents.id")}
-      WHERE cms_documents.collection = ${collection} AND ${visible(false, "", l)}
-      AND ${jsonAt(db, key, false, l)} = ${value}
+      ${localeJoins("published", l, DOCUMENT_LOCALES, "cms_documents.id")}
+      WHERE cms_documents.collection = ${collection} AND ${visible("published", "", l)}
+      AND ${jsonAt(db, key, "published", l)} = ${value}
       ${exceptId ? sql`AND cms_documents.id != ${exceptId}` : sql``} LIMIT 1`.execute(db);
     return rows.length > 0;
   }

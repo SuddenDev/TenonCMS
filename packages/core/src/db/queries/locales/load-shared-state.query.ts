@@ -1,5 +1,6 @@
 import { sql } from "kysely";
-import { type Db, type DocData, SHARED_DRAFT } from "../document-sql.ts";
+import { type DocData, SHARED_DRAFT } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * The shared row of a document or global, whatever its publication state: its pending data (`draft`, else `data`) and

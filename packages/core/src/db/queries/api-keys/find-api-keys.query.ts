@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * A row of better-auth's `apikey` table with its creator, as {@link findApiKeys} reads it. SQLite stores booleans as

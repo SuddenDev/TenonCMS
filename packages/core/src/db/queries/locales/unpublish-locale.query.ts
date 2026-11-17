@@ -1,5 +1,6 @@
 import { sql } from "kysely";
-import { type Db, type LocaleOwner } from "../document-sql.ts";
+import { type LocaleOwner } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Takes one locale row off the published perspective. Its `data` stays and a missing draft becomes a copy of it.

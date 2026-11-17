@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /**
  * Sets `enabled` to false, so better-auth refuses the key.

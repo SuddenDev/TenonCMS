@@ -307,6 +307,20 @@ describe("auth", () => {
     expect(calls).toEqual(["before", "after:a@b.co"]);
   });
 
+  it.each([{ name: "Host" }, { name: "Host", role: "editor" }])(
+    "keeps the first user an admin when a host hook returns %j",
+    async (data) => {
+      const { client } = setup(
+        defineCms({
+          ...base,
+          auth: { databaseHooks: { user: { create: { before: async () => ({ data }) } } } },
+        }),
+      );
+      await client.signUp(admin);
+      expect(await client.getSession()).toMatchObject({ user: { name: "Host", role: "admin" } });
+    },
+  );
+
   it("lets a signed-in admin create users", async () => {
     // `defaultRole: 'admin'` makes the first user an admin.
     const cms = defineCms({ ...base, auth: { plugins: [adminPlugin({ defaultRole: "admin" })] } });

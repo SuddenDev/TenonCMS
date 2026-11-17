@@ -1,4 +1,4 @@
-import { type Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import { type Fields, type RefField } from "../../schema/index.ts";
 import { eachField } from "../../schema/traversal/each-field.ts";
 import { isRef, targetOf } from "../../schema/traversal/reference-fields.ts";
@@ -6,7 +6,6 @@ import { loadByIds } from "../../db/queries/documents/load-by-ids.query.ts";
 import { existingIds } from "../../db/queries/references/existing-ids.query.ts";
 import { accepts } from "../../media/library/names.ts";
 import { ValidationError } from "../../errors.ts";
-import type { Kysely } from "kysely";
 
 /**
  * Every id MUST exist in its target collection. One query per relation field, for every item at any depth that holds it.
@@ -15,7 +14,7 @@ import type { Kysely } from "kysely";
  * @throws {ValidationError} At the positional path of the first value that fails, e.g. `links.1.page`.
  */
 export async function checkRefs(
-  db: Kysely<Database>,
+  db: Db,
   fields: Fields,
   data: Record<string, unknown>,
   self?: { collection: string; id: string },

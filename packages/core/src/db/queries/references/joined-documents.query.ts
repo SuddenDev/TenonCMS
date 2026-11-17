@@ -1,6 +1,6 @@
 import {
-  type Db,
   type Loc,
+  type Perspective,
   DOCUMENT_LOCALES,
   eachItem,
   inIds,
@@ -9,7 +9,7 @@ import {
   rawRowColumns,
   visible,
 } from "../document-sql.ts";
-import { type Row } from "../../types.ts";
+import { type Row, type Db } from "../../types.ts";
 import { sql } from "kysely";
 
 /**
@@ -23,23 +23,23 @@ export async function joinedDocs(
   on: string,
   many: boolean | undefined,
   ids: string[],
-  drafts = false,
+  perspective: Perspective = "published",
   loc?: Loc,
 ) {
-  const value = jsonAt(db, on, drafts, loc, "d.");
+  const value = jsonAt(db, on, perspective, loc, "d.");
   const from = loc
-    ? sql`cms_documents d ${localeJoins(drafts, loc, DOCUMENT_LOCALES, "d.id")}`
+    ? sql`cms_documents d ${localeJoins(perspective, loc, DOCUMENT_LOCALES, "d.id")}`
     : sql`cms_documents d`;
-  const where = sql`d.collection = ${collection} AND ${visible(drafts, "d.", loc)}`;
+  const where = sql`d.collection = ${collection} AND ${visible(perspective, "d.", loc)}`;
   const query = many
     ? sql<
         Row & { ref: string }
-      >`SELECT ${rawRowColumns(db, drafts, "d.", loc)}, j.value AS ref FROM ${from}, ${eachItem(db, value, "j")}
+      >`SELECT ${rawRowColumns(db, perspective, "d.", loc)}, j.value AS ref FROM ${from}, ${eachItem(db, value, "j")}
         WHERE ${where} AND ${inIds(db, ids, sql`j.value`)}
         ORDER BY d.created_at DESC, d.rowid DESC`
     : sql<
         Row & { ref: string }
-      >`SELECT ${rawRowColumns(db, drafts, "d.", loc)}, ${value} AS ref FROM ${from}
+      >`SELECT ${rawRowColumns(db, perspective, "d.", loc)}, ${value} AS ref FROM ${from}
         WHERE ${where} AND ${inIds(db, ids, value)}
         ORDER BY d.created_at DESC, d.rowid DESC`;
   return (await query.execute(db)).rows;

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
-import { input } from "../../users/endpoints/input.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 import { cancelJob } from "../operations/cancel-job.operation.ts";
 import { listCron } from "../operations/list-cron.operation.ts";
 import { listJobs } from "../operations/list-jobs.operation.ts";
@@ -29,7 +29,7 @@ const filter = z.object({
 export function jobsEndpoint(core: Core) {
   return new Hono<Env>()
     .get("/jobs", async (c) =>
-      c.json(await listJobs(core, c.var.user, input(filter, c.req.query()))),
+      c.json(await listJobs(core, c.var.user, validateInput(filter, c.req.query()))),
     )
     .get("/jobs/cron", async (c) => c.json(await listCron(core, c.var.user)))
     .post("/jobs/:id/retry", async (c) =>

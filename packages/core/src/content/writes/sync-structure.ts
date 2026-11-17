@@ -4,7 +4,7 @@ import { databaseForScope } from "../../cms/runtime/transaction.ts";
 import { ValidationError } from "../../errors.ts";
 import { guard } from "../../access/rule.ts";
 import { isObject } from "../../schema/condition.ts";
-import type { Db, Loc } from "../../db/queries/document-sql.ts";
+import type { Loc } from "../../db/queries/document-sql.ts";
 import { loadLocaleDoc } from "../../db/queries/locales/load-locale-doc.query.ts";
 import { loadSharedState } from "../../db/queries/locales/load-shared-state.query.ts";
 import { saveDraft } from "../../db/queries/drafts/save-draft.query.ts";
@@ -16,6 +16,7 @@ import { afterRead } from "../lifecycle/run-read-hooks.ts";
 import { locOf } from "../reads/loc-of.ts";
 import { type ContentTarget, target, targetKey } from "../targets.ts";
 import { structureOf } from "./split-locale.ts";
+import type { Db } from "../../db/types.ts";
 
 /** `true` or `false` sets the document's own state; `"default"` makes it follow its collection or global. */
 export type SyncChoice = boolean | "default";
@@ -50,7 +51,7 @@ export async function setSyncStructure(
   const loc = await structureLoc(core, s, name);
   const db = await databaseForScope(core, s);
   const owner = name.kind === "global" ? name.name : id!;
-  const source = await loadLocaleDoc(db, name, owner, true, loc);
+  const source = await loadLocaleDoc(db, name, owner, "drafts", loc);
   const state = await loadSharedState(db, name, owner);
   if (!source || !state) return undefined;
 
@@ -60,7 +61,7 @@ export async function setSyncStructure(
   const base =
     loc.locale === loc.defaultLocale
       ? source
-      : await loadLocaleDoc(db, name, owner, true, { ...loc, locale: loc.defaultLocale });
+      : await loadLocaleDoc(db, name, owner, "drafts", { ...loc, locale: loc.defaultLocale });
   const structure = Object.fromEntries(
     Object.entries(loc.structure).map(([key, f]) => [
       key,
@@ -80,7 +81,7 @@ export async function setSyncStructure(
   };
   const drafts = target(core, name).drafts !== false;
   if (JSON.stringify(written) === JSON.stringify(state.pending))
-    return (await afterRead(core, s, name, [source], operationOf(name), drafts))[0];
+    return (await afterRead(core, s, name, [source], operationOf(name), { draft: drafts }))[0];
 
   const by = actorId(s);
   if (name.kind === "global") {
@@ -89,7 +90,7 @@ export async function setSyncStructure(
   } else if (drafts) await saveDraft(db, name.name, owner, written, by);
   else await updateDoc(db, name.name, owner, written, false, by);
 
-  const doc = (await loadLocaleDoc(db, name, owner, true, loc))!;
+  const doc = (await loadLocaleDoc(db, name, owner, "drafts", loc))!;
   const { locale, locales, sharedDraft, syncStructure: _, syncStructureDefault, ...data } = doc;
   await recordVersion(db, {
     target: targetKey(name),
@@ -100,7 +101,7 @@ export async function setSyncStructure(
     by,
     max: target(core, name).maxVersions,
   });
-  return (await afterRead(core, s, name, [doc], operationOf(name), drafts))[0];
+  return (await afterRead(core, s, name, [doc], operationOf(name), { draft: drafts }))[0];
 }
 
 /**
@@ -164,7 +165,7 @@ async function countChanges(
   const next = idsIn(structure);
   const counts: StructureCounts = {};
   for (const locale of locales) {
-    const doc = await loadLocaleDoc(db, name, owner, true, { ...loc, locale });
+    const doc = await loadLocaleDoc(db, name, owner, "drafts", { ...loc, locale });
     const shown = idsIn(Object.keys(loc.structure).map((key) => doc?.[key]));
     counts[locale] = {
       removed: [...shown].filter((id) => !next.has(id)).length,

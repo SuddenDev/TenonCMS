@@ -44,17 +44,17 @@ export const unpublish = (
 
     const db = await databaseForScope(core, s);
     const loc = await locOf(core, { ...s, fallback: false }, name);
-    const pending = await loadSource(db, name, args.id, true, loc);
+    const pending = await loadSource(db, name, args.id, "drafts", loc);
     if (!pending && !global) return undefined;
     if (updatedAt && pending?.updatedAt !== updatedAt)
       throw new ConflictError([], "Changed since it was loaded", "CHANGED");
 
     const before = pending?.publishedAt
-      ? await loadSource(db, name, args.id, false, loc)
+      ? await loadSource(db, name, args.id, "published", loc)
       : undefined;
     if (!before) {
       const doc = pending ?? { publishedAt: null, hasDraft: false };
-      return (await afterRead(core, s, name, [doc], operation, true))[0];
+      return (await afterRead(core, s, name, [doc], operation, { draft: true }))[0];
     }
 
     const by = actorId(s);
@@ -78,7 +78,7 @@ export const unpublish = (
       max: maxVersions,
     });
 
-    const stored = (await loadSource(db, name, args.id, true, loc))!;
+    const stored = (await loadSource(db, name, args.id, "drafts", loc))!;
     await runFieldHooks("afterChange", fields, stored, {
       ...hookArgs(s, name, { operation, id: args.id, originalDoc: before }),
       data: stored,
@@ -89,6 +89,6 @@ export const unpublish = (
       stored,
       hookArgs(s, name, { operation, previousDoc: before }),
     );
-    return (await afterRead(core, s, name, [doc], operation, true))[0];
+    return (await afterRead(core, s, name, [doc], operation, { draft: true }))[0];
   });
 };

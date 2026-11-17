@@ -1,5 +1,7 @@
 // Presets run in browser bundles too, so this file MUST NOT import zod or server code.
 import type { BlocksField, Collection, CollectionHooks, Fields } from "../schema/index.ts";
+import type { Slot } from "../schema/hooks/index.ts";
+import { hookList } from "../schema/runtime/run-hooks.ts";
 import { nestedPaths } from "./nested-paths.ts";
 import { seo } from "./seo.ts";
 
@@ -39,7 +41,10 @@ type PagesPresetOptions<N, F, S, B> = Omit<Collection, "fields" | "hooks"> & {
   blocks?: B;
   /** More fields, after the page fields. A key of the preset replaces its field. */
   fields?: F;
-  /** More hooks. Each stage merges with the preset's, and a hook named like one of the preset's replaces it. */
+  /**
+   * More hooks. A record merges with the preset's stage: a new name runs after the preset's hooks, and a hook named like
+   * one of the preset's replaces it. An array runs after the preset's hooks.
+   */
   hooks?: CollectionHooks<Fields>;
 };
 
@@ -57,8 +62,12 @@ export function pagesPreset<
 >(options: T & PagesPresetOptions<N, F, S, B> = {} as T) {
   const { name = "pages", seo: withSeo, blocks, fields, hooks = {}, tabs, ...collection } = options;
   const base = page({ collection: name });
-  const merged: Record<string, object> = { ...base.hooks };
-  for (const [stage, slot] of Object.entries(hooks)) merged[stage] = { ...merged[stage], ...slot };
+  const merged: Record<string, Slot<unknown>> = { ...base.hooks };
+  // An array has no names to replace by, so its hooks run after the preset's.
+  for (const [stage, slot] of Object.entries(hooks))
+    merged[stage] = Array.isArray(slot)
+      ? [...hookList(merged[stage]), ...slot]
+      : { ...merged[stage], ...slot };
 
   type Pages = Omit<T, "name" | "seo" | "blocks" | "fields" | "hooks"> & {
     fields: ReturnType<typeof page<N>>["fields"] &

@@ -1,4 +1,5 @@
-import type { Db, Holds } from "../document-sql.ts";
+import type { Holds } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Documents of `collection` whose published data `holds`, as `{ id, data }` with the raw JSON. */
 export const referencingDocs = (db: Db, collection: string, holds: Holds) =>

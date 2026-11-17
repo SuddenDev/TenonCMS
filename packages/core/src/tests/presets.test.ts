@@ -572,6 +572,23 @@ describe("presets option", () => {
     await cms.getGlobal("nope").catch(() => {});
   });
 
+  it("runs host hooks after the preset's, given as an array or a record", async () => {
+    const seen: string[] = [];
+    const see = ({ data }: { data: { path: string } }) => {
+      seen.push(data.path);
+      return data;
+    };
+    for (const beforeChange of [[see], { see }]) {
+      const cms = defineCms({
+        presets: [pagesPreset({ hooks: { beforeChange } })],
+        database: testDatabase(),
+        secret,
+      });
+      await cms.create("pages", { title: "About", slug: "about" });
+    }
+    expect(seen).toEqual(["/about", "/about"]);
+  });
+
   describe("pagesPreset layout", () => {
     const build = (options: Parameters<typeof pagesPreset>[0] = {}) =>
       defineCms({ presets: [pagesPreset(options)], database: testDatabase(), secret }).schema

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
 import { parseBody } from "../../http/parse-body.ts";
-import { input } from "../../users/endpoints/input.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 import { collectionTarget, globalTarget } from "../../content/targets.ts";
 import { collectionOf } from "../../collections/endpoints/get-target.ts";
 import { globalOf } from "../../globals/endpoints/get-target.ts";
@@ -12,7 +12,7 @@ import { unlockTarget } from "../operations/unlock-target.operation.ts";
 
 const claimBody = z.object({ takeover: z.boolean().optional() });
 const takeover = async (c: Context<Env>) =>
-  input(claimBody, await parseBody(c.req)).takeover ?? false;
+  validateInput(claimBody, await parseBody(c.req)).takeover ?? false;
 
 /**
  * Protected edit lock routes: `POST` claims or renews, `DELETE` frees, on `/collections/:name/:id/lock` and

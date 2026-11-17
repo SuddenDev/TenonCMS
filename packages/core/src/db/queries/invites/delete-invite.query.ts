@@ -1,4 +1,4 @@
-import type { Db } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
 
 /** Deletes an invite. Whether it existed. */
 export async function deleteInvite(db: Db, id: string) {

@@ -1,12 +1,14 @@
 import { HTTPException } from "hono/http-exception";
 import type { CmsUser } from "../../admin/index.d.ts";
 import type { Core } from "../../cms/runtime/types.ts";
-import type { Db } from "../../db/queries/document-sql.ts";
+import type { Db } from "../../db/types.ts";
 import { deleteInvite } from "../../db/queries/invites/delete-invite.query.ts";
 import { insertInvite } from "../../db/queries/invites/insert-invite.query.ts";
 import { inviteByEmail } from "../../db/queries/invites/invite-by-email.query.ts";
 import { userExists } from "../../db/queries/users/user-exists.query.ts";
 import { ValidationError } from "../../errors.ts";
+import { emailInput } from "../email.ts";
+import { validateInput } from "../../schema/validation/validate-input.ts";
 import { INVITE_TTL } from "../invite.ts";
 import { inviteLink } from "../invite-url.ts";
 import { hashToken, newToken } from "../token.ts";
@@ -18,22 +20,23 @@ const SERVER_INVITER = "cli";
 /**
  * Invites `email` with `role` and sends the invite. An expired invite for the email is replaced.
  * @param inviter The signed-in user, or `undefined` for server code.
- * @param input `url` is the invite page. Without it, the page is `<origin><admin.path>/invite`.
+ * @param data `url` is the invite page. Without it, the page is `<origin><admin.path>/invite`.
  * @param origin The origin the invite page MUST be on.
- * @throws {ValidationError} For an unknown role, a page on another origin, or no `url` with `admin: false`.
+ * @throws {ValidationError} For an invalid email, an unknown role, a page on another origin, or no `url` with `admin: false`.
  * @throws {HTTPException} 409 when a user or a pending invite has the email.
  */
 export async function createInvite(
   core: Core,
   inviter: CmsUser | undefined,
-  input: { email: string; role: string; url?: string },
+  data: { email: string; role: string; url?: string },
   origin: string,
 ) {
-  if (!core.roles.some((r) => r.name === input.role))
+  validateInput(emailInput, data);
+  if (!core.roles.some((r) => r.name === data.role))
     throw new ValidationError({ role: "Unknown role" });
   const token = newToken();
-  const link = inviteLink(input.url ?? invitePage(core, origin), token, origin);
-  const email = input.email.toLowerCase();
+  const link = inviteLink(data.url ?? invitePage(core, origin), token, origin);
+  const email = data.email.toLowerCase();
   const db = await core.db();
   const now = Date.now();
 
@@ -42,7 +45,7 @@ export async function createInvite(
   const row = {
     id: crypto.randomUUID(),
     email,
-    role: input.role,
+    role: data.role,
     token_hash: await hashToken(token),
     invited_by: inviter?.id ?? SERVER_INVITER,
     expires_at: now + INVITE_TTL,

@@ -1,5 +1,5 @@
-import type { Db } from "../document-sql.ts";
-import { isPostgres } from "../document-sql.ts";
+import type { Db } from "../../types.ts";
+import { isPostgres } from "../../create-db.ts";
 
 /**
  * The oldest queued job of `task` with `key`. On Postgres the row stays locked until the transaction ends, so a

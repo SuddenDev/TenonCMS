@@ -1,7 +1,6 @@
 import { type RawBuilder, sql } from "kysely";
-import type { Db } from "../document-sql.ts";
 import { iso } from "../../map-document.ts";
-import type { JobRow } from "../../types.ts";
+import type { JobRow, Db } from "../../types.ts";
 import type { Job, JobFilter } from "../../../jobs/types.ts";
 
 type JobWithName = JobRow & { user_name: string | null };

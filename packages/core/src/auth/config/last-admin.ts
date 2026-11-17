@@ -1,14 +1,13 @@
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { BetterAuthPlugin } from "better-auth";
-import type { Kysely } from "kysely";
-import type { Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import { otherAdmins } from "../../db/queries/users/other-admins.query.ts";
 
 /**
  * Refuses a role change that leaves no active admin. Only `set-role` can do that over HTTP: the caller is an active
  * admin, and better-auth refuses self-ban and self-removal.
  */
-export const lastAdmin = (db: Kysely<Database>) =>
+export const lastAdmin = (db: Db) =>
   ({
     id: "tenon-last-admin",
     hooks: {

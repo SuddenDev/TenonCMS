@@ -2,11 +2,10 @@ import { APIError, type BetterAuthOptions } from "better-auth";
 import { admin } from "better-auth/plugins/admin";
 import { bearer } from "better-auth/plugins/bearer";
 import { deviceAuthorization } from "better-auth/plugins/device-authorization";
-import type { Kysely } from "kysely";
+import { isPostgres } from "../../db/create-db.ts";
+import type { Db } from "../../db/types.ts";
 import { API_BASE } from "../../client/index.ts";
 import { DEVICE_CLIENT_ID } from "../../client/constants.ts";
-import { isPostgres } from "../../db/queries/document-sql.ts";
-import type { Database } from "../../db/types.ts";
 import type { AuthOptions } from "./options.ts";
 import type { EmailApi, EmailTemplates, EmailTemplateData } from "../../email/types.ts";
 import { emailTemplates } from "../../email/templates.ts";
@@ -42,7 +41,7 @@ type UserCreate = NonNullable<
 type BeforeCreate = Parameters<NonNullable<UserCreate["before"]>>;
 
 export function authOptions<A extends AuthOptions>(
-  db: Kysely<Database>,
+  db: Db,
   secret: string,
   host: A,
   { email, appName = "tenoncms", siteUrl, adminPath, roles = BUILT_IN_ROLES }: CoreAuth = {},
@@ -112,12 +111,15 @@ export function authOptions<A extends AuthOptions>(
         ...host.databaseHooks?.user,
         create: {
           ...create,
-          // Core MUST run first, so a host hook cannot reopen sign-up.
+          // Core MUST run first, so a host hook cannot reopen sign-up. better-auth merges the returned data onto
+          // `user`, so the first user's result MUST carry the admin role.
           async before(user: BeforeCreate[0], ctx: BeforeCreate[1]) {
             const first = await checkCreate(db, ctx);
             const data = first ? { ...user, role: "admin" } : user;
             const result = await create?.before?.(data, ctx);
-            return result ?? (first ? { data } : undefined);
+            if (!first || result === false) return result;
+            const changes = typeof result === "object" ? result.data : undefined;
+            return { data: { ...data, ...changes, role: "admin" } };
           },
         },
       },
@@ -128,7 +130,7 @@ export function authOptions<A extends AuthOptions>(
 // The first user becomes an admin. After that, a request MAY create a user only with an admin's session, whatever
 // the endpoint. Server code without a request is trusted, as in better-auth's admin plugin.
 // Returns whether the new user is the first.
-async function checkCreate(db: Kysely<Database>, ctx: BeforeCreate[1]) {
+async function checkCreate(db: Db, ctx: BeforeCreate[1]) {
   const { setup } = await signUpStatus(db);
   if (setup) return true;
   if (!ctx?.request && !ctx?.headers) return false;

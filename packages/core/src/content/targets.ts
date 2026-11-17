@@ -47,7 +47,7 @@ export function target({ schema }: Core, { kind, name }: ContentTarget) {
  * Checks that the target allows drafts.
  * @throws {ValidationError} When the collection or global has `drafts: false`.
  */
-export function draftable(core: Core, name: ContentTarget) {
+export function requireDraftsEnabled(core: Core, name: ContentTarget) {
   if (target(core, name).drafts === false)
     throw new ValidationError({ "": `Drafts are off for "${name.name}"` });
 }
@@ -56,7 +56,7 @@ export function draftable(core: Core, name: ContentTarget) {
  * Checks that the schema has the collection or global.
  * @throws {Error} For an unknown collection or global.
  */
-export function known(core: Core, kind: ContentTarget["kind"], name: string) {
+export function requireKnownTarget(core: Core, kind: ContentTarget["kind"], name: string) {
   if (!hasTarget(core, { kind, name })) throw new Error(`Unknown ${kind} "${name}"`);
 }
 

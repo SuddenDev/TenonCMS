@@ -20,7 +20,7 @@ export async function afterRead(
   name: ContentTarget,
   docs: Record<string, any>[],
   operation: Operation,
-  draft = false,
+  { draft = false }: { draft?: boolean } = {},
 ) {
   const { fields } = target(core, name);
 

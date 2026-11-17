@@ -32,7 +32,7 @@ async function outcomeOf(core: Core, job: JobRow): Promise<Outcome> {
 
     result = await task.run({
       payload: JSON.parse(job.payload),
-      cms: core.localApi(outerScope({ user: null }, true)),
+      cms: core.localApi(outerScope({ user: null, overrideAccess: true })),
       job: { id: job.id, attempts: job.attempts },
     });
   } catch (error) {

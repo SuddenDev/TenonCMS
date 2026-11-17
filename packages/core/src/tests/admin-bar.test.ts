@@ -249,6 +249,30 @@ describe("admin bar items", () => {
     }
   });
 
+  it("rejects an href that is not a path or an http(s) URL at startup", () => {
+    for (const href of ["javascript:alert(1)", "//evil.test/x"]) {
+      expect(() => items({ x: { label: "X", href } })).toThrow(/admin bar item "x".*href/);
+      expect(() => items({ m: { label: "M", children: { c: { label: "C", href } } } })).toThrow(
+        /admin bar item "c".*href/,
+      );
+    }
+    expect(() =>
+      items({ a: { label: "A", href: "/a" }, b: { label: "B", href: "https://b.test/" } }),
+    ).not.toThrow();
+  });
+
+  it("leaves out an item whose loader returns an unsafe href", async () => {
+    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      const { ids: list } = await signedIn(
+        items({ x: { label: "X", href: "/x", load: () => ({ href: "javascript:alert(1)" }) } }),
+      );
+      expect(await list()).not.toContain("x");
+    } finally {
+      write.mockRestore();
+    }
+  });
+
   it("runs the loaders in parallel", async () => {
     let running = 0;
     let peak = 0;

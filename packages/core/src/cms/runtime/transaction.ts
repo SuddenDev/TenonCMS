@@ -1,6 +1,5 @@
 import { consola } from "consola";
-import type { Kysely } from "kysely";
-import type { Database } from "../../db/types.ts";
+import type { Db } from "../../db/types.ts";
 import { type Core, type Scope, type Inner } from "./types.ts";
 import { contextOf, inner } from "./operation-context.ts";
 
@@ -8,7 +7,7 @@ type Effect = (scope: Inner) => Promise<unknown>;
 
 /** Shared by nested writes. Only the transaction owner finalizes its effects. */
 export type TransactionLifetime = {
-  database: Kysely<Database>;
+  database: Db;
   commit: Effect[];
   rollback: Effect[];
   failure?: { error: unknown };

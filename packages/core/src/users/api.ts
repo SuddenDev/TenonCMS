@@ -1,6 +1,6 @@
 import { signUpStatus } from "../auth/sign-up.ts";
 import type { Core } from "../cms/runtime/types.ts";
-import { ForbiddenError } from "../errors.ts";
+import { ForbiddenError, ValidationError } from "../errors.ts";
 import { createInvite } from "./operations/create-invite.operation.ts";
 import { createUser } from "./operations/create-user.operation.ts";
 import { listUsers } from "./operations/list-users.operation.ts";
@@ -38,7 +38,7 @@ export function usersApi(core: Core, trusted: boolean): UsersApi {
     async invite(input) {
       requireTrusted();
       // Server code is trusted, so a given page MAY be on any origin.
-      const origin = input.url ? (URL.parse(input.url)?.origin ?? "") : await fixedOrigin();
+      const origin = input.url ? originOf(input.url) : await fixedOrigin();
       return createInvite(core, undefined, input, origin);
     },
     async create(input) {
@@ -70,4 +70,10 @@ export function usersApi(core: Core, trusted: boolean): UsersApi {
       return removeUser(core, email);
     },
   };
+}
+
+function originOf(url: string) {
+  const parsed = URL.parse(url);
+  if (!parsed) throw new ValidationError({ url: "MUST be an absolute URL of the invite page" });
+  return parsed.origin;
 }

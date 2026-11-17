@@ -28,7 +28,7 @@ export function uploadsEndpoints(core: Core) {
   api.post("/uploads/:id/complete", async (c) => {
     const row = await ownUpload(c);
     const { parts } = await body(c.req);
-    return c.json(await complete(core, scope(c), row, Array.isArray(parts) ? parts : []), 201);
+    return c.json(await complete(core, scope(c), row, parts), 201);
   });
   api.delete("/uploads/:id", async (c) => {
     await abort(core, scope(c), await ownUpload(c));

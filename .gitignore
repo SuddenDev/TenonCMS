@@ -8,6 +8,7 @@ dist
 .output
 uploads
 !packages/core/src/media/operations/uploads/
+!packages/core/src/db/queries/uploads/
 .uploads
 /packages/core/README.md
 .DS_Store
