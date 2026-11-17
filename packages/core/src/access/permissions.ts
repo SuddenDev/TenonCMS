@@ -41,7 +41,7 @@ export async function withPermissions(core: Core, json: Json, visitor: Caller) {
   }
 
   out.jobs = await visibleTasks(core, s);
-  out.admin.actions = await visibleActions(core, s);
+  if (core.admin) out.admin.actions = await visibleActions(core.admin, s);
 
   const shared = {
     cms: s.cms,

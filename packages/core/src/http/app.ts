@@ -43,17 +43,18 @@ import { scheduleEndpoint } from "../schedule/endpoints/schedule.endpoint.ts";
  * Builds the Hono app behind `cms.fetch`. Open routes mount first and look up no caller. Then `optionalSession` looks
  * up the caller once for everything below it: content reads, then content writes (collections, globals, media) after
  * the plugins' `middleware`, both behind their access rules, and last the routes that need a session. Media routes
- * mount at `/media` when the `media` option is set. `site.url` goes out in `/schema` for the admin's preview.
+ * mount at `/media` when the `media` option is set. `site.url` goes out in `/schema` for the admin's preview. Without
+ * an admin (`admin: false`), the admin routes are not mounted and `/schema` has no `admin`.
  * `/sitemap.xml` and `/robots.txt` sit at the root, outside `API_BASE`.
  * @returns The app.
  */
 export function createApp(core: Core) {
-  const { plugins } = core;
+  const { plugins, admin } = core;
   const media = core.media && mediaRoutes(core);
   const schemaEndpoint = readEndpoint(core.schema, {
     media,
     site: core.site.url,
-    admin: core.admin.descriptor,
+    admin: admin?.descriptor,
     localization: core.localization,
     roles: core.roles,
     email: !!core.emailTemplates,
@@ -63,9 +64,8 @@ export function createApp(core: Core) {
   const globals = globalsRoutes(core);
 
   // Media files look up the caller only when a read rule exists, because pages load many of them.
-  const open = new Hono<Env>().get("/admin-brand", (c) =>
-    c.json(adminBrand(core.admin.descriptor)),
-  );
+  const open = new Hono<Env>();
+  if (admin) open.get("/admin-brand", (c) => c.json(adminBrand(admin.descriptor)));
   open.route("/", statusEndpoint(core));
   open.route("/", acceptEndpoint(core));
   open.route("/", setupEndpoint(core));
@@ -89,7 +89,7 @@ export function createApp(core: Core) {
   signedIn.route("/", schemaEndpoint);
   signedIn.route("/", enterEndpoint());
   signedIn.route("/", exitEndpoint());
-  if (core.admin.bar) signedIn.route("/", adminBarEndpoint(core, core.admin.bar));
+  if (admin?.bar) signedIn.route("/", adminBarEndpoint(admin.bar, admin.descriptor));
   signedIn.route("/", passwordEndpoint(core));
   signedIn.route("/", invitesEndpoint(core));
   signedIn.route("/", apiKeysEndpoint(core));
@@ -97,8 +97,10 @@ export function createApp(core: Core) {
   signedIn.route("/", locksEndpoint(core));
   signedIn.route("/", versionsEndpoint(core));
   signedIn.route("/", jobsEndpoint(core));
-  signedIn.route("/", loadEndpoint(core));
-  signedIn.route("/", actionEndpoint(core));
+  if (admin) {
+    signedIn.route("/", loadEndpoint(core));
+    signedIn.route("/", actionEndpoint(core));
+  }
   signedIn.route("/", linkSearchEndpoint(core));
   signedIn.route("/", linkResolveEndpoint(core));
   mountRoutes(signedIn, plugins, "routes");

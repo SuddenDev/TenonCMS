@@ -38,7 +38,6 @@ Options
   --content-only       backup: content and media only, no users or API keys
   --no-media           backup: leave the media files out
   --backup             restore: back up the current data first (--no-backup skips the question)
-  --admin <path>       login, users create: the admin's path, if it is not /admin
   --role <role>        users create: the role. Default: admin for the first user, else editor
   --password           users create: create the user with a password instead of an invite, locally only
   --no-open            login: print the link instead of opening the browser
@@ -49,7 +48,6 @@ const OPTIONS = {
   "api-key": { type: "string" },
   config: { type: "string" },
   out: { type: "string" },
-  admin: { type: "string" },
   role: { type: "string" },
   password: { type: "boolean" },
   "dry-run": { type: "boolean" },

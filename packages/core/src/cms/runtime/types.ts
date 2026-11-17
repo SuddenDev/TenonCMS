@@ -86,10 +86,11 @@ export type Core = {
   };
 
   /**
-   * The merged admin registrations of the plugins and the host: the `/schema` descriptor, the loaders, and the
-   * bar. `admin.bar` is `false` with `admin: { adminBar: false }`, which mounts no `/admin-bar` route.
+   * The admin's path and the merged admin registrations of the plugins and the host: the `/schema` descriptor, the
+   * loaders, and the bar. Missing with `admin: false`, which mounts no admin route. `admin.bar` is `false` with
+   * `admin: { adminBar: false }`, which mounts no `/admin-bar` route.
    */
-  admin: AdminRuntime;
+  admin?: AdminRuntime;
 };
 export type Stage = keyof RootHooks;
 

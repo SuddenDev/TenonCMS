@@ -1,12 +1,12 @@
-import { API_BASE } from "../../client/constants.ts";
-import type { AdminOption } from "./types.ts";
+import { API_BASE } from "../client/constants.ts";
 
 /**
- * Normalizes {@link AdminOption} to a path without a trailing slash, or `undefined` when there is no admin.
+ * Normalizes an admin path to one without a trailing slash: `true` is `/admin`, a path like `/cms/` is `/cms`, `false`
+ * is `undefined` (no admin). Core and the adapters share it, so it MUST NOT import Node modules.
  * @throws {Error} For a path with other characters than letters, digits, `-` and `_`, for `/`, and for a path
  * under `API_BASE`.
  */
-export function adminPath(admin: AdminOption = true) {
+export function adminPath(admin: boolean | `/${string}` = true) {
   if (admin === false) return;
   const path = admin === true ? "/admin" : `/${admin.replace(/^\/+|\/+$/g, "")}`;
 

@@ -9,7 +9,6 @@ import { Cancelled, answer, canAsk } from "./ui.ts";
 export type UsersFlags = TargetFlags & {
   role?: string;
   password?: boolean;
-  admin?: string;
   yes?: boolean;
 };
 
@@ -137,12 +136,9 @@ async function createCommand(email: string | undefined, flags: UsersFlags) {
   email ??= await askEmail(flags);
 
   if (url) {
-    const { origin, client } = await remoteClient(
-      url,
-      flags["api-key"] ?? process.env.TENON_API_KEY,
-    );
+    const { client } = await remoteClient(url, flags["api-key"] ?? process.env.TENON_API_KEY);
     const role = await askRole(flags, "editor", async () => (await client.getSchema()).roles);
-    const result = await client.invites.create({ email, role, url: invitePage(origin, flags) });
+    const result = await client.invites.create({ email, role });
     return showLink(result, email, "Invite link");
   }
 
@@ -159,8 +155,7 @@ async function createCommand(email: string | undefined, flags: UsersFlags) {
     });
     return p.log.success(`Created ${user.email} as ${user.role}`);
   }
-  const origin = await siteOrigin(cms, flags);
-  const result = await cms.users.invite({ email, role, url: invitePage(origin, flags) });
+  const result = await cms.users.invite({ email, role, url: await askedInvitePage(cms, flags) });
   showLink(result, email, "Invite link");
 }
 
@@ -231,9 +226,10 @@ async function siteOrigin(cms: LocalCms, flags: UsersFlags) {
   return new URL(answered).origin;
 }
 
-function invitePage(origin: string, flags: UsersFlags) {
-  const admin = (flags.admin ?? "/admin").replace(/^\/+|\/+$/g, "");
-  return `${origin}/${admin}/invite`;
+// Core links to the admin on the configured origin. Without one, the CLI asks where the site runs.
+async function askedInvitePage(cms: LocalCms, flags: UsersFlags) {
+  if (!cms.adminPath || configuredOrigin((await cms.auth()).options.baseURL)) return;
+  return `${await siteOrigin(cms, flags)}${cms.adminPath}/invite`;
 }
 
 async function askEmail(flags: UsersFlags) {

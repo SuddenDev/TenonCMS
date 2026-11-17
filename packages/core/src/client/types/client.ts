@@ -647,11 +647,11 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     /** Every invite, expired ones flagged. `GET /_tenon/invites` */
     list(): Promise<Invite[]>;
     /**
-     * Invites `email` with `role`. `url` is the admin's invite page; it MUST be on the site's origin. A `CmsError` with
-     * status `502` means sending failed: its `body` is the {@link InviteResult}, so the link can be sent by hand.
-     * `POST /_tenon/invites`
+     * Invites `email` with `role`. `url` is the admin's invite page; it MUST be on the site's origin. Without it, the
+     * server links to `/invite` under `admin.path`. A `CmsError` with status `502` means sending failed: its `body` is
+     * the {@link InviteResult}, so the link can be sent by hand. `POST /_tenon/invites`
      */
-    create(data: { email: string; role: string; url: string }): Promise<InviteResult>;
+    create(data: { email: string; role: string; url?: string }): Promise<InviteResult>;
     /** A new link, so the old one stops working, sent again. `POST /_tenon/invites/:id/resend` */
     resend(id: string, data: { url: string }): Promise<InviteResult>;
     /** `DELETE /_tenon/invites/:id` */

@@ -22,6 +22,14 @@ export function usersApi(core: Core, trusted: boolean): UsersApi {
     requireTrusted();
     core.bindOrigin(origin);
   };
+  // better-auth's fixed `baseURL`: `auth.baseURL`, else `site.url`. A dynamic one needs a request.
+  const fixedOrigin = async () => {
+    const { baseURL } = (await core.auth()).options;
+    if (typeof baseURL === "string") return new URL(baseURL).origin;
+    throw new Error(
+      "tenoncms: cms.users.invite() needs `url`, or `site.url` or `auth.baseURL` in the config",
+    );
+  };
   return {
     async hasUsers() {
       requireTrusted();
@@ -29,8 +37,9 @@ export function usersApi(core: Core, trusted: boolean): UsersApi {
     },
     async invite(input) {
       requireTrusted();
-      // Server code is trusted, so the page MAY be on any origin.
-      return createInvite(core, undefined, input, URL.parse(input.url)?.origin ?? "");
+      // Server code is trusted, so a given page MAY be on any origin.
+      const origin = input.url ? (URL.parse(input.url)?.origin ?? "") : await fixedOrigin();
+      return createInvite(core, undefined, input, origin);
     },
     async create(input) {
       requireServerCall();

@@ -18,6 +18,7 @@ import { describeField, describePage } from "../describe/describe-registration.t
 import { describeAction } from "../describe/describe-action.ts";
 import { addBarItems, buildBar, type AdminBar } from "./merge-bar.ts";
 import { copyConfig, type Loader } from "../describe/registration-checks.ts";
+import { adminPath } from "../path.ts";
 
 /** The server parts of an action. A link has no `run`. */
 export type ActionEntry = {
@@ -31,6 +32,8 @@ export type ActionEntry = {
  * The loaders stay here and run per request. Maps keep keys from the request away from the prototype.
  */
 export type AdminRuntime = {
+  /** The host's `admin.path`, without a trailing slash. Defaults to `/admin`. */
+  path: string;
   descriptor: AdminDescriptor;
   fieldLoaders: Map<string, Loader<FieldLoadContext>>;
   pageLoaders: Map<string, Loader<PageLoadContext>>;
@@ -47,6 +50,7 @@ const HOST = "tenon.config.ts";
 /**
  * Combines the active registrations in plugin order, then host order.
  * Fields, pages and actions MUST NOT repeat a key. The host's branding wins. Bar items replace by id.
+ * @throws For an invalid `host.path`, see {@link adminPath}.
  * @param name The `site.name` the admin shows.
  * @param richtext The merged rich text extensions. The descriptor gets their `client` halves.
  */
@@ -92,6 +96,7 @@ export function mergeAdmin(
   }
 
   return {
+    path: adminPath(host.path)!,
     descriptor,
     fieldLoaders,
     pageLoaders,

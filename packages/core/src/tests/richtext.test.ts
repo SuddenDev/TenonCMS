@@ -326,6 +326,29 @@ it("validates plugin content and preserves it on unrelated writes after the plug
   ).toThrow(/duplicate Tiptap extension/);
 });
 
+it("validates extension content without an admin", async () => {
+  const { Node } = await import("@tiptap/core");
+  const { clientRef } = await import("../admin/config.ts");
+  const Notice = Node.create({ name: "notice", group: "block", content: "inline*" });
+  const cms = defineCms({
+    ...base,
+    media: false,
+    settings: false,
+    admin: false,
+    collections: { articles: { fields: { body: { type: "richtext" } } } },
+    richtext: { extensions: { notice: { schema: Notice, client: clientRef("./notice.ts") } } },
+  });
+  const doc = (type: string) => ({
+    type: "doc" as const,
+    content: [{ type, content: [{ type: "text", text: "Hi" }] }],
+  });
+
+  expect((await cms.create("articles", { body: doc("notice") })).body).toEqual(doc("notice"));
+  await expect(cms.create("articles", { body: doc("unknown") })).rejects.toBeInstanceOf(
+    ValidationError,
+  );
+});
+
 it("owns safe relationship attributes for external new-tab links", async () => {
   const cms = make();
   const article = await cms.create("articles", {

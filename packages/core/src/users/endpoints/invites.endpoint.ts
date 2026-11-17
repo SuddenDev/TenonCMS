@@ -9,7 +9,7 @@ import { resendInvite } from "../operations/resend-invite.operation.ts";
 import { revokeInvite } from "../operations/revoke-invite.operation.ts";
 import { input } from "./input.ts";
 
-const createBody = z.object({ email: z.email(), role: z.string(), url: z.string() });
+const createBody = z.object({ email: z.email(), role: z.string(), url: z.string().optional() });
 const resendBody = z.object({ url: z.string() });
 
 const requireAdmin: MiddlewareHandler<Env> = async (c, next) => {
@@ -22,6 +22,7 @@ const requireAdmin: MiddlewareHandler<Env> = async (c, next) => {
  * Protected invite routes, for admins only: `GET /invites`, `POST /invites`, `POST /invites/:id/resend` and
  * `DELETE /invites/:id`. Create and resend answer 502 with the result when sending failed. The invite page MUST be in
  * the admin: on the origin of a fixed better-auth `baseURL` (`auth.baseURL`, else `site.url`), else on the request's.
+ * Create without `url` links to `/invite` under `admin.path` on that origin.
  */
 export function invitesEndpoint(core: Core) {
   const origin = async (url: string) => {

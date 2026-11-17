@@ -540,6 +540,11 @@ export type AdminBarOptions = {
  */
 export type AdminOptions = {
   /**
+   * Path the admin is served at. Defaults to `/admin`. Device login (`tenon login`) and invite links point under it.
+   * Letters, digits, `-` and `_` only; MUST NOT be `/` or sit under `/_tenon`.
+   */
+  path?: `/${string}`;
+  /**
    * Wide logo for the top bar and the login. One logo for both, or one per place. A place without a logo shows
    * the icon and the name.
    * @example
@@ -581,9 +586,9 @@ export type AdminOptions = {
 
 /**
  * The admin registrations of a plugin: like {@link AdminOptions}, but a plugin only adds bar `items`. The
- * position and `false` belong to the host. The host's branding wins over the plugin's.
+ * position, `false` and `path` belong to the host. The host's branding wins over the plugin's.
  */
-export type PluginAdminOptions = Omit<AdminOptions, "adminBar"> & {
+export type PluginAdminOptions = Omit<AdminOptions, "adminBar" | "path"> & {
   adminBar?: { items?: Record<string, AdminBarItemRegistration | false> };
 };
 
@@ -628,7 +633,10 @@ export type ActionDescriptor = {
  * What `GET /schema` sends as `admin`: branding and the active registrations of the plugins and the host,
  * without functions, request data or secrets.
  */
-export type AdminDescriptor = Omit<AdminOptions, "fields" | "pages" | "actions" | "adminBar"> & {
+export type AdminDescriptor = Omit<
+  AdminOptions,
+  "path" | "fields" | "pages" | "actions" | "adminBar"
+> & {
   /** The `site.name` of `defineCms()`: the name in the sidebar, the login and the page title. */
   name?: string;
   /** The `client` halves of the merged `richtext.extensions` of `defineCms()` and the plugins. */

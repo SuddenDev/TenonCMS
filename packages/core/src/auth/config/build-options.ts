@@ -30,6 +30,8 @@ export type CoreAuth = {
   appName?: string;
   /** better-auth's `baseURL` when the host sets none: the `site.url` origin. */
   siteUrl?: string;
+  /** The admin's path. Links into the admin point under it. Without it, core adds no device login. */
+  adminPath?: string;
   /** Defaults to the built-in roles. */
   roles?: Role[];
 };
@@ -43,7 +45,7 @@ export function authOptions<A extends AuthOptions>(
   db: Kysely<Database>,
   secret: string,
   host: A,
-  { email, appName = "tenoncms", siteUrl, roles = BUILT_IN_ROLES }: CoreAuth = {},
+  { email, appName = "tenoncms", siteUrl, adminPath, roles = BUILT_IN_ROLES }: CoreAuth = {},
 ) {
   const { emailAndPassword, emailVerification, plugins = [], rateLimit, user, ...options } = host;
   const has = (id: string) => plugins.some((p) => p.id === id);
@@ -74,12 +76,11 @@ export function authOptions<A extends AuthOptions>(
       ...(has("api-key") ? [] : [apiKeys()]),
       // `tenon login`: the CLI shows a code, a signed-in user approves it in the admin, the CLI gets a session token
       // and sends it as `Authorization: Bearer`.
-      ...(has("device-authorization")
+      ...(has("device-authorization") || !adminPath
         ? []
         : [
             deviceAuthorization({
-              // ponytail: assumes the admin at `/admin`. Pass the adapter's admin path once core knows it.
-              verificationUri: "/admin/device",
+              verificationUri: `${adminPath}/device`,
               validateClient: (id) => id === DEVICE_CLIENT_ID,
             }),
           ]),
@@ -89,7 +90,7 @@ export function authOptions<A extends AuthOptions>(
       lastAdmin(db),
       lastPasskey(),
       passwordLength(),
-      signInUser(),
+      signInUser(adminPath),
       manageUsers(db),
     ] as A["plugins"],
     emailAndPassword: {

@@ -170,9 +170,10 @@ export function defineCms<
 
   const richtext = mergeRichtext(plugins, richtextOption);
   checkRichtextConfig(schema, richtext);
-  const adminRuntime = mergeAdmin(plugins, admin, siteConfig.name, richtext);
+  const adminRuntime =
+    admin === false ? undefined : mergeAdmin(plugins, admin, siteConfig.name, richtext);
   const knownRoles = new Set(roles.map((r) => r.name));
-  for (const [key, { access }] of adminRuntime.actions)
+  for (const [key, { access }] of adminRuntime?.actions ?? [])
     checkRoles(knownRoles, `admin action "${key}"`, { run: access });
 
   const count = (o: object) => Object.keys(o).length;
@@ -209,6 +210,7 @@ export function defineCms<
     email: emailOptions && { api: email, templates: emailOptions.templates },
     appName: siteConfig.name,
     siteUrl: siteConfig.url,
+    adminPath: adminRuntime?.path,
     roles,
   };
 
@@ -313,6 +315,8 @@ export function defineCms<
       localization,
       /** The `site` option: `url` as an origin, `undefined` without it; `name` defaults to `tenoncms`. */
       site: siteConfig as { readonly url?: string; readonly name: string },
+      /** The `admin.path` without a trailing slash, `/admin` by default, or `undefined` with `admin: false`. */
+      adminPath: adminRuntime?.path,
       // The local API is untyped. `Api` adds the schema's types.
       ...api,
 

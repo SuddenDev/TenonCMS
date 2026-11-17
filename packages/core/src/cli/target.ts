@@ -37,6 +37,8 @@ export type TargetFlags = { url?: string; "api-key"?: string; config?: string };
 /** The `defineCms()` instance of a config loaded here. */
 export type LocalCms = LocalApi & {
   users: UsersApi;
+  /** The `admin.path`, or `undefined` with `admin: false`. */
+  adminPath: string | undefined;
   auth(): Promise<{ options: { baseURL?: unknown } }>;
 };
 

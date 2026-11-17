@@ -70,7 +70,7 @@ npx tenon users remove editor@example.com
 
 `users create` invites a user. It asks for the email and picks the role from a list of the configured roles: `admin` for the first user, else `editor` by default. It prints the invite link, and emails it as well when [email](./email.md) is set up. Without email it warns first: pass the link on yourself.
 
-- `--role <role>` sets the role without asking. `--admin <path>` sets the admin's path for the link, if it is not `/admin`.
+- `--role <role>` sets the role without asking. The link points to `/invite` under the config's `admin.path`. With `admin: false` there is no invite page, so `users create` fails; use `--password`.
 - `--password` creates the user at once instead, with a name and a password it asks for. It needs a terminal and works on the local project only.
 - With `--url`, the invite goes through a deployed instance. It needs `tenon login` as an admin.
 
@@ -91,7 +91,7 @@ npx tenon login https://example.com
 npx tenon backup --url https://example.com
 ```
 
-`tenon login` asks for the URL if you give none. It shows a code and opens the admin, where a signed-in user approves it. Backups of the local project (no `--url`) need no login. The session is stored per site in `~/.config/tenon/credentials.json` and lasts as long as a normal session (7 days, renewed on use). `tenon logout <url>` ends it. If your admin is not at `/admin`, pass `--admin <path>`; `--no-open` prints the link instead of opening it.
+`tenon login` asks for the URL if you give none. It shows a code and opens the admin, where a signed-in user approves it. Backups of the local project (no `--url`) need no login. The session is stored per site in `~/.config/tenon/credentials.json` and lasts as long as a normal session (7 days, renewed on use). `tenon logout <url>` ends it. The server names the page to open, under its `admin.path`; `--no-open` prints the link instead of opening it. A site with `admin: false` has no device login: use an API key there.
 
 For CI, create an API key with the **Backup** permission instead (`read` to back up, `update` to restore) and pass it as `TENON_API_KEY` or `--api-key`. `TENON_URL` replaces `--url`.
 

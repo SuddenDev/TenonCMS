@@ -226,7 +226,7 @@ For custom screens:
 
 - Create and resend answer `{ invite, link, sent }`. A 502 with the same body means sending failed and the invite stays.
 - The client has `client.invites.list()`, `create()`, `resend()`, `revoke()`, `check()` and `accept()`.
-- Server code has `cms.users.invite({ email, role, url })`, without the origin rule. The invite is stored as from `cli`. `cms.users.create({ email, name, role, password })` creates a user directly; the first user becomes an admin. `cms.users.roles()` lists the built-in roles, then yours. `cms.users.list()`, `deactivate(email)`, `reactivate(email)` and `remove(email)` do what the admin's user list does; the last active admin cannot be deactivated or removed. A `withSession()` copy refuses `cms.users`.
+- Server code has `cms.users.invite({ email, role, url })`, without the origin rule. `url` is optional: it defaults to `/invite` under `admin.path` on the origin of `auth.baseURL`, else `site.url`. `client.invites.create()` makes the same default on the server. The invite is stored as from `cli`. `cms.users.create({ email, name, role, password })` creates a user directly; the first user becomes an admin. `cms.users.roles()` lists the built-in roles, then yours. `cms.users.list()`, `deactivate(email)`, `reactivate(email)` and `remove(email)` do what the admin's user list does; the last active admin cannot be deactivated or removed. A `withSession()` copy refuses `cms.users`.
 - The public routes accept only `application/json`. Only the SHA-256 hash of a token is stored.
 
 ### Testing email locally

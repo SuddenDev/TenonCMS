@@ -23,7 +23,9 @@ A backup is a `full` archive unless `--content-only`. It writes `<file>.part` an
 
 `users.command.ts` → `target.ts` `loadConfig()` → `cms.users.signInLink()`
 
-`users recover` refuses `--url`: it needs the database, not a session, so it works when nobody can sign in. `users create` invites with `cms.users.invite()`, or with `--url` through `client.invites.create()` and the session of `tenon login`; `--password` calls `cms.users.create()`. The site's origin is `configuredOrigin()` of better-auth's `baseURL` (a string when `auth.baseURL` or `site.url` is set), else a question. `deliveryNote()` says whether the link was emailed; the link is printed either way.
+`users recover` refuses `--url`: it needs the database, not a session, so it works when nobody can sign in. `users create` invites with `cms.users.invite()`, or with `--url` through `client.invites.create()` and the session of `tenon login`; `--password` calls `cms.users.create()`. The server builds the invite page from `admin.path`. The site's origin is `configuredOrigin()` of better-auth's `baseURL` (a string when `auth.baseURL` or `site.url` is set), else a question; only then does `users create` pass the page itself, from the answer and `cms.adminPath`.
+
+`tenon login` opens the `verification_uri_complete` the server sends, which is `<admin.path>/device`. A 404 for the device code means the site has no device login (`admin: false`). `deliveryNote()` says whether the link was emailed; the link is printed either way.
 
 `users list`, `deactivate`, `reactivate` and `remove` call the same-named `cms.users` methods, and refuse `--url` like `recover` (`localOnly()`). Deactivate and remove confirm first unless `--yes`; remove defaults to No. `formatUsers()` prints the list as a table and colors the status when `stdout.hasColors()`. The role prompt of `users create` is a select of `roleOptions()`: `cms.users.roles()` locally, the `roles` of `GET /schema` with `--url`. These commands and `--password` need no `site.url`; only a link does.
 

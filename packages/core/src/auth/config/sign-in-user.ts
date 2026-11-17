@@ -13,8 +13,9 @@ const identifier = async (token: string) => `tenon-sign-in:${await hashToken(tok
  * Signs a user in without a password, for server code and recovery links. `signInUser` and `createSignInLink` are
  * server-only. `GET /sign-in-link?token=` is public: it ends the user's other sessions, signs them in and redirects. A used,
  * expired or unknown token redirects to the login with `?error=INVALID_TOKEN`.
+ * @param adminPath The admin's path, where the redirects go. Without it, they go to `/`.
  */
-export const signInUser = () =>
+export const signInUser = (adminPath?: string) =>
   ({
     id: "tenon-sign-in-user",
     endpoints: {
@@ -73,17 +74,19 @@ export const signInUser = () =>
             await identifier(ctx.query.token),
           );
           const user = value && (await ctx.context.internalAdapter.findUserById(value.value));
-          // ponytail: assumes the admin at `/admin`, like `deviceAuthorization()`.
           if (!user) {
             // The same error as better-auth's magic link, so the admin login shows one message for both.
-            const url = new URL(ctx.query.errorCallbackURL ?? "/admin/login", ctx.context.baseURL);
+            const login = adminPath ? `${adminPath}/login` : "/";
+            const url = new URL(ctx.query.errorCallbackURL ?? login, ctx.context.baseURL);
             url.searchParams.set("error", "INVALID_TOKEN");
             throw ctx.redirect(url.href);
           }
 
           await ctx.context.internalAdapter.deleteUserSessions(user.id);
           await startSession(ctx, user);
-          throw ctx.redirect(ctx.query.callbackURL ?? "/admin/?settings=security");
+          throw ctx.redirect(
+            ctx.query.callbackURL ?? (adminPath ? `${adminPath}/?settings=security` : "/"),
+          );
         },
       ),
     },

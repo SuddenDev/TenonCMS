@@ -16,8 +16,8 @@ type Request<K extends LoadRequest["kind"]> = Extract<LoadRequest, { kind: K }>;
  * object's prototype. Nothing runs before the request is checked.
  * @param cms The local API with the caller's user and perspective.
  * @returns `{ data }` for a field or page, `{ item }` for a bar item, which is `null` when the item is hidden.
- * @throws 404 for an unknown registration or one without a `load`, 400 for a field mismatch, 500 for a bar item
- * that fails. Errors from the loader itself pass through.
+ * @throws 404 for an unknown registration, one without a `load` or without an admin, 400 for a field mismatch, 500
+ * for a bar item that fails. Errors from the loader itself pass through.
  */
 export async function load(core: Core, request: LoadRequest, user: User, cms: LocalApi) {
   switch (request.kind) {
@@ -31,7 +31,7 @@ export async function load(core: Core, request: LoadRequest, user: User, cms: Lo
 }
 
 async function loadField(core: Core, request: Request<"field">, user: User, cms: LocalApi) {
-  const loader = registered(core.admin.fieldLoaders, request.type);
+  const loader = registered(core.admin?.fieldLoaders, request.type);
   const field = await fieldTarget(core, cms, request);
   const { path, owner, locale } = request;
   const data = await runLoader(
@@ -43,7 +43,7 @@ async function loadField(core: Core, request: Request<"field">, user: User, cms:
 }
 
 async function loadPage(core: Core, request: Request<"page">, user: User, cms: LocalApi) {
-  const loader = registered(core.admin.pageLoaders, request.key);
+  const loader = registered(core.admin?.pageLoaders, request.key);
   const { params, query, locale } = request;
   const data = await runLoader(
     loader,
@@ -54,7 +54,7 @@ async function loadPage(core: Core, request: Request<"page">, user: User, cms: L
 }
 
 async function loadItem(core: Core, request: Request<"bar-item">, user: User, cms: LocalApi) {
-  const { bar } = core.admin;
+  const bar = core.admin?.bar;
   if (!bar) throw notFound();
   const item = findItem(bar.items, request.id);
   if (!item?.load || !bar.loaders.has(item.id)) throw notFound();
@@ -66,8 +66,8 @@ async function loadItem(core: Core, request: Request<"bar-item">, user: User, cm
 }
 
 // A request key selects a registration. An unknown key is a 404.
-function registered<T>(loaders: Map<string, T>, key: string) {
-  const loader = loaders.get(key);
+function registered<T>(loaders: Map<string, T> | undefined, key: string) {
+  const loader = loaders?.get(key);
   if (!loader) throw notFound();
   return loader;
 }

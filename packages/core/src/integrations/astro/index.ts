@@ -4,7 +4,7 @@ import { API_BASE } from "../../client/index.ts";
 import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
-import { adminPath } from "../admin/path.ts";
+import { adminPath } from "../../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
 import { siteRoutes } from "../admin/seo-routes.ts";
 import { developmentAuth, developmentOrigin } from "../dev-auth.ts";

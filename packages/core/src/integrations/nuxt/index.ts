@@ -16,7 +16,7 @@ import type { NuxtModule } from "@nuxt/schema";
 import { API_BASE } from "../../client/index.ts";
 import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
-import { adminPath } from "../admin/path.ts";
+import { adminPath } from "../../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
 import { setupAdmin } from "./lib/setup-admin.ts";
 import { libsqlBinaries } from "./lib/libsql.ts";

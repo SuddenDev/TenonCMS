@@ -306,6 +306,16 @@ With `localization`, the document "…" menu has a **Sync Content Structure** su
 
 ## Serve the admin elsewhere
 
-Pass a path: `admin: '/cms'` to the Astro integration or the Nuxt module, or `tenonAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). To ship no admin at all, pass `admin: false`. Core never imports the admin, so it only lands in your bundle when you mount it.
+Set the path in the config. The device page of `tenon login` and invite links point under it:
+
+```ts
+export default defineCms({ /* … */ admin: { path: "/cms" } });
+```
+
+The path uses letters, digits, `-` and `_`, and MUST NOT be `/` or sit under `/_tenon`. A trailing slash is dropped. The default is `/admin`. Plugins cannot set it.
+
+To ship no admin at all, set `admin: false`. The CMS then serves no admin data, admin bar, field or page loaders, actions or device login (`tenon login`), and `cms.users.invite()` needs a `url`. The API under `/_tenon` works as before, and rich text writes still validate against `richtext`.
+
+For now, the adapters take their own path as well, and it MUST match: `admin: '/cms'` to the Astro integration or the Nuxt module, or `tenonAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). Core never imports the admin, so it only lands in your bundle when you mount it.
 
 Plugins contribute the same `admin` object through [`definePlugin({ admin })`](./plugins.md).

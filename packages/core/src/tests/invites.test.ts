@@ -203,6 +203,28 @@ describe("invites", () => {
     expect((await cms.sitemap()).map((e) => e.url)).toEqual(["https://site.example/posts/a"]);
   });
 
+  it("links to the invite page under `admin.path` without a `url`", async () => {
+    const cms = defineCms({ ...base, admin: { path: "/cms" } });
+    const owner = setup(cms);
+    await owner.client.signUp(admin);
+
+    const { link } = await owner.client.invites.create({ email: "e@b.co", role: "editor" });
+    expect(link).toMatch(`${origin}/cms/invite?token=`);
+    const local = defineCms({
+      ...base,
+      site: { url: "https://site.example" },
+      admin: { path: "/cms" },
+    });
+    expect((await local.users.invite({ email: "f@b.co", role: "editor" })).link).toMatch(
+      "https://site.example/cms/invite?token=",
+    );
+  });
+
+  it("needs a `url` without an admin", async () => {
+    const cms = defineCms({ ...base, site: { url: "https://site.example" }, admin: false });
+    await expect(cms.users.invite({ email: "e@b.co", role: "editor" })).rejects.toThrow(/no admin/);
+  });
+
   it("gives a resent invite a new token", async () => {
     const { invite, guest, owner } = await env();
     const { body } = await invite();

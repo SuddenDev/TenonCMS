@@ -50,13 +50,16 @@ export type UsersApi = {
   /** Whether any user exists. Until one does, the first user created becomes an admin. */
   hasUsers(): Promise<boolean>;
   /**
-   * Invites `email` with `role`, like `POST /invites`, and emails the invite when email is configured. `url` is the
-   * admin's invite page, e.g. `https://example.com/admin/invite`. The invite is stored as from `cli`.
+   * Invites `email` with `role`, like `POST /invites`, and emails the invite when email is configured. The invite is
+   * stored as from `cli`.
+   * @param input.url The invite page, e.g. `https://example.com/admin/invite`. Defaults to `/invite` under
+   * `admin.path` on the origin of `auth.baseURL`, else `site.url`.
+   * @throws Without `url`, when there is no admin or neither origin is set.
    */
   invite(input: {
     email: string;
     role: string;
-    url: string;
+    url?: string;
   }): Promise<InviteResult & { message?: string }>;
   /**
    * Creates a user directly. The first user becomes an admin, whatever `role` says. Without `password` the user signs

@@ -6,7 +6,7 @@ import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
 import { adminHtml } from "../admin/html.ts";
-import { adminPath } from "../admin/path.ts";
+import { adminPath } from "../../admin/path.ts";
 import type { AdminOption } from "../admin/types.ts";
 import { JOBS_TASK, withJobsTask } from "../nitro-jobs.ts";
 import { developmentAuth } from "../dev-auth.ts";

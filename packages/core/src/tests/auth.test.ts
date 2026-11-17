@@ -613,6 +613,12 @@ describe("device login", () => {
     expect(schema.status).toBe(200);
   });
 
+  it("sends the CLI to the device page under `admin.path`", async () => {
+    const { fetch } = setup(defineCms({ ...base, admin: { path: "/cms" } }));
+    const res = await post(fetch, "/auth/device/code", { client_id: "tenon-cli" });
+    expect((await res.json()).verification_uri).toMatch(/\/cms\/device$/);
+  });
+
   it("refuses a code nobody approved", async () => {
     const env = await withAdmin();
     const code = await setup(env.cms).client.device.code();

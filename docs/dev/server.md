@@ -19,6 +19,7 @@ The Hono app mounts feature routes in a fixed order. The order is the security m
 - Hono's CSRF only checks form-like content types. JSON is safe because browsers preflight cross-origin JSON and we send no CORS headers. Public JSON endpoints that run before CSRF MUST reject other content types.
 - Without a session, a path that matches no public route answers 401, not 404.
 - Unexpected errors are logged and answered without their message.
+- With `admin: false` (`core.admin` is missing), the admin routes are not mounted: `/admin-brand`, `/admin-bar`, `POST /admin/load`, `POST /admin/actions/:key` and the device login under `/auth/device/*`. `/schema` has no `admin`, so no rich text `client` halves either; writes still validate against `core.richtext`.
 
 ## Jobs
 
@@ -48,7 +49,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 - Passkeys are off unless the host adds `passkey()` from `@better-auth/passkey`. Rate limits live in the database unless the host sets `rateLimit.storage`. Users have `language` and `timezone` fields.
 - `admin` and `editor` are built-in roles. Hosts add roles with `roles`. A missing role counts as `editor`.
 - The last active admin cannot be demoted.
-- `signInUser()` (`auth/config/sign-in-user.ts`) is one of core's two plugins with endpoints. `signInUser` and `createSignInLink` are server-only (`SERVER_ONLY`, so better-call never routes them). `GET /auth/sign-in-link?token=` is public: it consumes the verification value (`tenon-sign-in:<hash>`, 1 hour), ends the user's sessions, signs them in and redirects to `callbackURL` (checked with `originCheck`) or `/admin/?settings=security`. A used, expired or unknown token redirects to `errorCallbackURL` (also checked) or `/admin/login`, with `?error=INVALID_TOKEN`, the code of better-auth's magic link. It lives under `/auth/*`, so the provider serves it and `sessionHint()` applies.
+- `signInUser()` (`auth/config/sign-in-user.ts`) is one of core's two plugins with endpoints. `signInUser` and `createSignInLink` are server-only (`SERVER_ONLY`, so better-call never routes them). `GET /auth/sign-in-link?token=` is public: it consumes the verification value (`tenon-sign-in:<hash>`, 1 hour), ends the user's sessions, signs them in and redirects to `callbackURL` (checked with `originCheck`) or `<admin.path>/?settings=security`. A used, expired or unknown token redirects to `errorCallbackURL` (also checked) or `<admin.path>/login` (`/` for both without an admin), with `?error=INVALID_TOKEN`, the code of better-auth's magic link. It lives under `/auth/*`, so the provider serves it and `sessionHint()` applies.
 - `cms.users` (`users/api.ts`) is for server code and the CLI: `hasUsers()`, `invite()`, `create()`, `signInLink()`, `list()`, `deactivate()`, `reactivate()`, `remove()`. It checks no access rules, so a `withSession()` copy throws `ForbiddenError`. The last four call the server-only endpoints of `manageUsers()` (`auth/config/manage-users.ts`), because better-auth's `admin()` endpoints require an admin's session. Only tests MAY read better-auth's `$context`; plugin endpoints use `ctx.context.internalAdapter`.
 
 ## API keys
@@ -68,6 +69,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 - Tokens are random. Only their hash is stored. Invites expire after 7 days.
 - Accepting claims the invite, creates the user, signs them in, and puts the invite back if user creation fails.
 - The invite page MUST be on the site's origin. `cms.users.invite()` is trusted and skips that rule. Its `invited_by` is `cli`.
+- Without `url`, the invite links to `<origin><admin.path>/invite`. Over HTTP the origin is the fixed `baseURL`, else the request's; `cms.users.invite()` needs the fixed one. With `admin: false`, `url` is required.
 
 ## Client
 

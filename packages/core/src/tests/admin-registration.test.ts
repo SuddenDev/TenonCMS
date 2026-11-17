@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { defineCms, definePlugin } from "../index.ts";
 import { clientRef } from "../admin/config.ts";
-import { admin, base, origin, setup } from "./setup.ts";
+import { admin, base, origin, post, setup } from "./setup.ts";
 
 describe("admin registration", () => {
   it("exposes only branding publicly and active registrations after sign-in", async () => {
@@ -105,5 +105,34 @@ describe("admin registration", () => {
     expect(() => defineCms({ ...base, admin: { adminBar: { position: "top" as never } } })).toThrow(
       "adminBar.position",
     );
+  });
+});
+
+describe("admin path", () => {
+  it("defaults to /admin, drops a trailing slash and is undefined without an admin", () => {
+    expect(defineCms(base).adminPath).toBe("/admin");
+    expect(defineCms({ ...base, admin: {} }).adminPath).toBe("/admin");
+    expect(defineCms({ ...base, admin: { path: "/cms/" } }).adminPath).toBe("/cms");
+    expect(defineCms({ ...base, admin: false }).adminPath).toBeUndefined();
+  });
+
+  it("throws at startup for an invalid path", () => {
+    expect(() => defineCms({ ...base, admin: { path: "/" } })).toThrow(/invalid admin path/);
+    expect(() => defineCms({ ...base, admin: { path: "/_tenon" } })).toThrow(/invalid admin path/);
+  });
+});
+
+describe("admin: false", () => {
+  it("mounts no admin routes and sends no admin data, while the API works", async () => {
+    const { client, fetch } = setup(defineCms({ ...base, admin: false }));
+    await client.signUp(admin);
+
+    expect((await fetch(`${origin}/_tenon/admin-brand`)).status).toBe(404);
+    expect((await fetch(`${origin}/_tenon/admin-bar?url=/&mode=site`)).status).toBe(404);
+    expect((await post(fetch, "/admin/load", { kind: "page", key: "x" })).status).toBe(404);
+    expect((await post(fetch, "/admin/actions/x", {})).status).toBe(404);
+    expect((await post(fetch, "/auth/device/code", { client_id: "tenon-cli" })).status).toBe(404);
+    expect((await client.getSchema()).admin).toBeUndefined();
+    expect(await client.create("posts", { title: "Hello" })).toMatchObject({ title: "Hello" });
   });
 });

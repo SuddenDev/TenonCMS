@@ -1,12 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { AdminBarItemDescriptor } from "../../admin/index.d.ts";
+import type { AdminBarItemDescriptor, AdminDescriptor } from "../../admin/index.d.ts";
 import { adminBrand } from "../../admin/merge/merge-options.ts";
 import type { AdminBar } from "../../admin/merge/merge-bar.ts";
 import { FAILED, loadBarItem } from "../../admin/load/bar-item.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
 import { adminLocale, isPageUrl } from "../../admin/load/load-request.ts";
-import type { Core } from "../../cms/runtime/types.ts";
 import type { Env } from "../../http/middleware/types.ts";
 import { builtIns, composeItems } from "../runtime/admin-bar-items.ts";
 
@@ -27,13 +26,13 @@ const query = z.object({
  *
  * `url` comes from the browser. Core only passes it to the loaders.
  */
-export function adminBarEndpoint(core: Core, bar: AdminBar) {
+export function adminBarEndpoint(bar: AdminBar, descriptor: AdminDescriptor) {
   return new Hono<Env>().get("/admin-bar", async (c) => {
     const parsed = query.safeParse(c.req.query());
     if (!parsed.success) return c.json({ message: z.prettifyError(parsed.error) }, 400);
     const { url, mode, locale } = parsed.data;
     const { position } = bar;
-    const branding = adminBrand(core.admin.descriptor);
+    const branding = adminBrand(descriptor);
     if (mode === "preview-tab") return c.json({ position, items: builtIns(mode), branding });
 
     const ctx = { user: c.var.user, cms: c.var.cms, locale, url };

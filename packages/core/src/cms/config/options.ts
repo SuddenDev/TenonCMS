@@ -182,10 +182,11 @@ export type CmsOptions<
    */
   richtext?: RichtextOptions;
   /**
-   * Branding, custom fields, custom pages and the admin bar. Inline or imported from your own module; check an
-   * extracted object with `satisfies AdminOptions` from `tenoncms/admin`. Plugins add their own.
+   * The admin's path, branding, custom fields, custom pages and the admin bar. Inline or imported from your own
+   * module; check an extracted object with `satisfies AdminOptions` from `tenoncms/admin`. Plugins add their own.
+   * `false` serves no admin: no device login, admin bar, admin data in `/schema`, loaders or actions.
    */
-  admin?: AdminOptions;
+  admin?: AdminOptions | false;
   /** Plugins, from `definePlugin()`. Their collections, globals and hooks merge into the instance. */
   plugins?: PL;
   /** Defaults for reads that resolve relations. */

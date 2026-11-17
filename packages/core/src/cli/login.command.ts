@@ -5,12 +5,13 @@ import { CmsError, createClient, type Session } from "../client/index.ts";
 import { readCredential, removeCredential, saveCredential } from "./credentials.ts";
 import { answer, canAsk, spinning } from "./ui.ts";
 
-export type LoginFlags = { url?: string; admin?: string; open?: boolean; yes?: boolean };
+export type LoginFlags = { url?: string; open?: boolean; yes?: boolean };
 
 /**
- * `tenon login <url>`: better-auth's device flow. Shows a code, opens the admin to approve it, polls for the session
- * token and stores it per origin. The session lasts as long as better-auth's sessions (7 days by default, renewed
- * on use).
+ * `tenon login <url>`: better-auth's device flow. Shows a code, opens the admin's device page that the server names,
+ * polls for the session token and stores it per origin. The session lasts as long as better-auth's sessions (7 days by
+ * default, renewed on use).
+ * @throws When the server has no device login, e.g. with `admin: false`.
  */
 export async function loginCommand(url: string | undefined, flags: LoginFlags) {
   url ??= flags.url ?? process.env.TENON_URL;
@@ -25,12 +26,17 @@ export async function loginCommand(url: string | undefined, flags: LoginFlags) {
   const origin = requireOrigin(url);
   const client = createClient({ baseUrl: origin });
 
-  const code = await client.device.code();
+  const code = await client.device.code().catch((error: unknown) => {
+    if (error instanceof CmsError && error.status === 404)
+      throw new Error(
+        `${origin} has no device login, e.g. because its config sets \`admin: false\`. Pass --api-key instead.`,
+      );
+    throw error;
+  });
   const page = new URL(code.verification_uri_complete);
   // The server picks the link. Only its own origin over http(s) MAY open, so it cannot name a program or file.
   if (page.origin !== origin || !/^https?:$/.test(page.protocol))
     throw new Error(`The server sent an unexpected verification link: ${page}`);
-  if (flags.admin) page.pathname = `/${flags.admin.replace(/^\/+|\/+$/g, "")}/device`;
   p.note(`${page}\n\nCode: ${code.user_code}`, "Approve this code in the admin");
   if (flags.open !== false) openBrowser(String(page));
 

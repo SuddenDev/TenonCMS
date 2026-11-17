@@ -29,7 +29,7 @@ const migratedPglite = () =>
   (template ??= (async () => {
     const client = new PGlite();
     const db = createDb({ dialect: pgliteDialect(client) });
-    await migrate(db, authOptions(db, base.secret, {} as AuthOptions));
+    await migrate(db, authOptions(db, base.secret, {} as AuthOptions, { adminPath: "/admin" }));
     return client;
   })());
 
