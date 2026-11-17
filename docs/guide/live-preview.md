@@ -43,7 +43,7 @@ preview();
 - With edit mode on, a click on one focuses its field in the admin.
 - For a field inside a list item, use the positional path: `edit("pages", page.id, "content.2.title")`.
 
-`preview({ admin: "/cms" })` sets the admin path for the links (default `/admin`). `admin: false` turns the admin bar off on the site. The Astro and Nuxt adapters pass their own `admin` option.
+`preview({ admin: "/cms" })` sets the admin path for the links (default `/admin`). `admin: false` turns the admin bar off on the site. The Astro and Nuxt adapters pass `admin.path` of the config, or `false` with `admin: false`.
 
 ### Keep content out of edit mode
 

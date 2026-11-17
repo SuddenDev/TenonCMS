@@ -55,9 +55,10 @@ export async function parseModule(file: string): Promise<Program> {
   const source = vue
     ? [...raw.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((match) => match[1]).join("\n")
     : raw;
+  // Only the syntax matters. A tsconfig can reference files a framework generates later, e.g. Nuxt's `.nuxt/`.
   const code =
     isScript(file) || vue
-      ? (await transformWithOxc(source, vue ? file + ".ts" : file)).code
+      ? (await transformWithOxc(source, vue ? file + ".ts" : file, { tsconfig: false })).code
       : source;
 
   return parseAst(code);

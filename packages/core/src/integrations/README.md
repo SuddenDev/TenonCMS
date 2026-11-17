@@ -52,7 +52,7 @@ The Astro integration and the Nuxt module set up a host through:
 
 alias `#tenon/config` → API route → `admin/` (path, references, favicon, entry, page) → preview runtime → injected types
 
-The alias points the runtime files at the host's config. The API route passes every `/_tenon` request to `cms.fetch`. `adminPath()` validates the admin path; the admin page loads `src/admin/entry.ts`, a second client entry in the host's Vite build. The preview runtime gets the admin path (or `false`) for the admin bar's links: Astro writes it into the injected script, Nuxt into `runtimeConfig.public.tenon.admin`. Last, the types fill the client's `Register`, and on Astro `App.Locals`.
+The alias points the runtime files at the host's config. The API route passes every `/_tenon` request to `cms.fetch`. `readAdminPath()` reads `admin.path` from the config's source with the client-registry parser (below), resolves `process.env.NAME` through Vite's `loadEnv()` and returns a `define` for it. `adminPath()` validates the result; the admin page loads `src/admin/entry.ts`, a second client entry in the host's Vite build. The preview runtime gets the admin path (or `false`) for the admin bar's links: Astro writes it into the injected script, Nuxt into `runtimeConfig.public.tenon.admin`. Last, the types fill the client's `Register`, and on Astro `App.Locals`.
 
 ## The client registry
 
@@ -87,7 +87,8 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 
 | Path                                       | Responsibility                                                                                                                                                         |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `admin/types.ts`                           | `AdminOption` and `AdapterOptions`. `tenoncms/nuxt` exports the latter as `Options`.                                                                                   |
+| `admin/types.ts`                           | `AdapterOptions`. `tenoncms/nuxt` exports it as `Options`.                                                                                                             |
+| `admin/read-admin-path.ts`                 | `readAdminPath()`: reads `admin.path` from the config's source, and `configResolver`, the file resolver the adapters pass it.                                          |
 | `admin/client-refs/client-references.ts`   | `clientReferences()`: the Vite plugin that serves `#tenon/client-registry`.                                                                                            |
 | `admin/client-refs/collect-client-refs.ts` | `collectClientRefs()`: walks the static import graph of `tenon.config.ts` and resolves every `clientRef()` specifier to a file.                                        |
 | `admin/client-refs/scan-refs.ts`           | `scanModule()` and `scanExport()`: find the `clientRef()` calls of one module and mark the ones `adminBar` reaches.                                                    |
@@ -114,7 +115,7 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 | `cloudflare/object-client.ts`              | `createObjectClient()`: the client over the object's stub, with the request's origin and cookie.                                                                       |
 | `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                                                         |
 | `nuxt/runtime/composables.ts`              | `useTenon()`: the client's read methods in `useAsyncData`, in the route's locale, with preview drafts merged in. `useLocale()`, `useAlternates()` and `useTenonSeo()`. |
-| `nuxt/runtime/server/site.ts`              | Nitro plugin: `event.context.tenonSiteUrl = cms.site.url`, which `useTenonSeo()` puts into the payload during SSR.                                                     |
+| `nuxt/runtime/server/site.ts`              | Server middleware: `event.context.tenonSiteUrl = cms.site.url`, which `useTenonSeo()` puts into the payload during SSR.                                                |
 | `nuxt/runtime/components/link.ts`          | `TenonLink`: `Link` with `NuxtLink` as `as`.                                                                                                                           |
 | `components.ts`                            | `tenoncms/components`: `imageAttrs()`, `pictureAttrs()`, `linkAttrs()` and `editBlock()`, shared by the components.                                                    |
 | `vue/index.ts`                             | `tenoncms/vue`: `Image`, `Picture`, `Link`, `Blocks`, `useBlockEdit()` and `Richtext`.                                                                                 |

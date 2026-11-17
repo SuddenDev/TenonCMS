@@ -8,6 +8,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 
 - Nitro rewrites `typeof window` to `"undefined"` as plain text, even inside strings. Keep browser-only code out of server bundles.
 - Nitro's Rolldown build of a Nuxt app's SSR chunk can drop the body of a brace-less `for (…) if (…) x;` once it inlines a constant and folds the `if`. The chunk then fails to parse (`Unexpected token 'const'`). Braces do not help, because core's tsdown build strips them. Avoid a loop whose only statement is an `if` that can fold, in code that pages import (`filter()` first).
+- Nitro 2 (Nuxt) does not transpile files under `node_modules`. An installed tenoncms ships `nuxt/runtime/server/*.ts` as source, so those files MUST contain no TypeScript syntax (no type annotations, `type` or `as`); let h3's `defineEventHandler()` infer the types. `server-runtime.test.ts` checks it. Linked examples do not show the error, because their path has no `node_modules`.
 - libsql loads its native binary (`@libsql/<platform>`) with a dynamic require, on import of the Node entry. The dialect imports it only for file URLs; remote URLs use `@libsql/client/web`.
   - If Vite bundles core, the binding breaks. That is why the Astro adapter and `tenonAdmin()` set core external in builds. Dev does not bundle, so core stays internal there.
   - Nitro 2 (Nuxt) does not trace the binary, so the Nuxt module adds it by hand. Nitro 3 (TanStack Start) traces it on its own.
@@ -17,6 +18,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - `wrangler deploy` cannot create an R2 bucket on an account without R2. It skips the bucket, treats the binding as inherited, and the first deploy fails with `inherit binding 'MEDIA' is invalid: previous version does not have binding named 'MEDIA'`. Enable R2 in the Cloudflare dashboard first (`wrangler r2 bucket list` answers code 10042 until then).
 - Nitro 2 (Nuxt) and Nitro 3 differ for tasks: Nitro 2 reads `experimental.tasks` from its config in `nitro:config`; Nitro 3 modules set `nitro.options` in `setup()`. Both import a task handler as is, so a handler path MUST be absolute (or a virtual id), never relative to the project.
 - A Durable Object that has set an alarm has the table `_cf_KV`. Any introspection that reads every table (`pragma_table_info`, `pragma_index_list`) fails with `SQLITE_AUTH`. The dialect skips `_cf_` tables; a new tool that introspects MUST do the same.
+- The adapters read `admin.path` from the source of `tenon.config.ts` at startup and write an env var's value into the build. A changed `TENON_ADMIN_PATH` (or any env var the path reads) needs a rebuild, and a dev server restart. The TanStack route file does not follow it: rename it.
 - TanStack Router treats a route file that starts with `_` as a pathless layout, so `_tenon.$.ts` never matches `/_tenon`. Name it `[_]tenon.$.ts`.
 
 **Watchers and build output**

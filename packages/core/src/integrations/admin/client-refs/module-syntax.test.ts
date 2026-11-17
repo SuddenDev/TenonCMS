@@ -76,3 +76,11 @@ it("parses TypeScript and the script blocks of a Vue file", async () => {
     "./c.ts",
   ]);
 });
+
+it("parses TypeScript whose tsconfig references a file not generated yet", async () => {
+  const root = await tempProject({
+    "tsconfig.json": JSON.stringify({ references: [{ path: "./.nuxt/tsconfig.app.json" }] }),
+    "a.ts": "export const a: number = 1;",
+  });
+  expect(describeModule(await parseModule(join(root, "a.ts"))).exports.has("a")).toBe(true);
+});

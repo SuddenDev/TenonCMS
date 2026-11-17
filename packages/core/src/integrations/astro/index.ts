@@ -1,11 +1,12 @@
 import type { AstroIntegration } from "astro";
 import { fileURLToPath } from "node:url";
+import { loadEnv } from "vite";
 import { API_BASE } from "../../client/index.ts";
 import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
-import { adminPath } from "../../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
+import { configResolver, readAdminPath } from "../admin/read-admin-path.ts";
 import { siteRoutes } from "../admin/seo-routes.ts";
 import { developmentAuth, developmentOrigin } from "../dev-auth.ts";
 
@@ -14,7 +15,7 @@ export type Options = AdapterOptions & {
   /**
    * Injects the preview runtime into every page. In the admin's preview it shows unsaved changes; after a save it
    * re-renders the page from the server, and prerendered pages only get the unsaved changes. A signed-in user with
-   * the preview cookie gets the admin bar, unless `admin` is `false`.
+   * the preview cookie gets the admin bar, unless the config sets `admin: false`.
    * `false` leaves it out. Defaults to `true`.
    */
   preview?: boolean;
@@ -22,17 +23,17 @@ export type Options = AdapterOptions & {
 
 /**
  * Astro integration for tenoncms. Injects `/_tenon`, the admin page and the preview runtime, and sets
- * `Astro.locals.tenon` to the CMS instance of the request's user.
+ * `Astro.locals.tenon` to the CMS instance of the request's user. The admin page's path is `admin.path` of the
+ * config, read from its source at startup.
  * With the `@astrojs/cloudflare` adapter, the CMS runs in a Durable Object bound as `CMS`: `/_tenon` goes to it, and
  * `Astro.locals.tenon` is the HTTP client over it, and an alarm of the object runs the jobs.
  * On Node (and in `astro dev`), an interval runs the due jobs every minute unless `jobs` is `false`.
  * @example
  * // astro.config.mjs
- * integrations: [tenonCms({ admin: '/cms' })]
+ * integrations: [tenonCms()]
  */
 export default function tenonCms({
   entry = "./tenon.config.ts",
-  admin = true,
   preview = true,
   sitemap,
   robots,
@@ -45,7 +46,7 @@ export default function tenonCms({
   return {
     name: "tenoncms",
     hooks: {
-      "astro:config:setup"({
+      async "astro:config:setup"({
         command,
         config,
         injectRoute,
@@ -79,7 +80,13 @@ export default function tenonCms({
             prerender: false,
           });
 
-        const path = adminPath(admin);
+        const mode = command === "dev" ? "development" : "production";
+        const admin = await readAdminPath(
+          entryPath,
+          configResolver,
+          loadEnv(mode, fileURLToPath(config.root), ""),
+        );
+        const { path } = admin;
         if (path) {
           injectRoute({
             pattern: `${path}/[...path]`,
@@ -89,7 +96,7 @@ export default function tenonCms({
         }
 
         if (preview) {
-          const options = `{ morph: true, admin: ${JSON.stringify(path ?? false)} }`;
+          const options = `{ morph: true, admin: ${JSON.stringify(path)} }`;
           injectScript("page", `import { preview } from 'tenoncms/preview'; preview(${options});`);
         }
 
@@ -103,6 +110,7 @@ export default function tenonCms({
             plugins: [developmentAuth(devHost), clientModules(), clientReferences(entry)],
             resolve: { alias: { "#tenon/config": entryPath } },
             define: {
+              ...admin.define,
               ...faviconDefine(fileURLToPath(config.publicDir)),
               __TENON_JOBS__: JSON.stringify(jobs && (command === "dev" || nodeAdapter)),
             },

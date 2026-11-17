@@ -9,7 +9,7 @@ Every setup does the same three things: send `/_tenon/*` to the CMS, serve the a
 | [TanStack Start](#tanstack-start)     | `tenonAdmin()` plus two server routes  |
 | [Anything else](#any-other-framework) | `cms.fetch(request)` and an admin page |
 
-To serve the admin under another path, pass `admin: '/cms'` to the Astro integration or the Nuxt module. Pass `admin: false` to ship no admin at all.
+To serve the admin under another path, set `admin: { path: '/cms' }` in `tenon.config.ts`; set `admin: false` to ship no admin at all. The adapters read it from there (see [Serve the admin elsewhere](./admin.md#serve-the-admin-elsewhere)).
 
 The CMS also serves `/sitemap.xml` and `/robots.txt` (see [Pages and SEO](pages-and-seo.md#sitemap-and-robotstxt)). Astro and Nuxt mount them, unless your project serves the path itself. `sitemap: false` and `robots: false` skip them. Other hosts send both paths to `cms.fetch(request)`.
 
@@ -23,7 +23,7 @@ import tenonCms from "tenoncms/astro";
 
 export default defineConfig({
   adapter: node({ mode: "standalone" }),
-  integrations: [tenonCms()], // reads ./tenon.config.ts, options: { entry, admin }
+  integrations: [tenonCms()], // reads ./tenon.config.ts, options: { entry, preview, sitemap, robots, jobs }
 });
 ```
 
@@ -122,7 +122,7 @@ Neon stores lifecycle rules but does not run them, so unfinished multipart uploa
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ["tenoncms/nuxt"], // reads ./tenon.config.ts, options: tenonCms: { entry, admin }
+  modules: ["tenoncms/nuxt"], // reads ./tenon.config.ts, options: tenonCms: { entry, sitemap, robots, jobs }
   runtimeConfig: { tenonSecret: "", tenonSiteUrl: "", databaseUrl: `file:${resolve("cms.db")}` },
 });
 ```
@@ -208,13 +208,13 @@ const getPosts = createServerFn().handler(() => cms.find("posts"));
 export const Route = createFileRoute("/")({ loader: () => getPosts(), component: Home });
 ```
 
-`tenonAdmin()` also keeps `tenoncms` external in the SSR build, because bundling it breaks libsql's native binding. To use another admin path, pass `tenonAdmin({ path: '/cms' })` and name the route file to match (`src/routes/cms.$.ts`).
+`tenonAdmin()` also keeps `tenoncms` external in the SSR build, because bundling it breaks libsql's native binding. `tenonAdmin()` reads the admin path from `admin.path` in `tenon.config.ts`. For another path, set it there and name the route file to match (`src/routes/cms.$.ts`).
 
 ## Any other framework
 
 Send `/_tenon/*`, `/sitemap.xml` and `/robots.txt` to `cms.fetch(request)`.
 
-- **With Vite**: use `tenonAdmin()` as in TanStack Start, and return `#tenon/admin-html` for `/admin` and `/admin/*`.
+- **With Vite**: use `tenonAdmin()` as in TanStack Start, and return `#tenon/admin-html` for `admin.path` and everything below it (`cms.adminPath` holds it).
 - **Without Vite**: serve a page of its own with an empty element, and mount the admin into it:
 
 ```ts

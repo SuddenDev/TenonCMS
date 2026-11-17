@@ -316,6 +316,8 @@ The path uses letters, digits, `-` and `_`, and MUST NOT be `/` or sit under `/_
 
 To ship no admin at all, set `admin: false`. The CMS then serves no admin data, admin bar, field or page loaders, actions or device login (`tenon login`), and `cms.users.invite()` needs a `url`. The API under `/_tenon` works as before, and rich text writes still validate against `richtext`.
 
-For now, the adapters take their own path as well, and it MUST match: `admin: '/cms'` to the Astro integration or the Nuxt module, or `tenonAdmin({ path: '/cms' })` with a matching route file (`src/routes/cms.$.ts`). Core never imports the admin, so it only lands in your bundle when you mount it.
+The adapters read the path from the source of `tenon.config.ts` when the dev server or build starts, without running it. So `path` MUST be a string or `process.env.NAME`, optionally with `?? "/cms"`, and `admin` an object literal, inline or bound to a name (also an imported one). Anything else fails at startup. An env var is read from the environment and `.env` files, and its value is written into the build, so the server cannot point links elsewhere later. A changed path needs a rebuild, and dev a restart.
+
+TanStack Start serves the admin from a route file, so name it after the path (`src/routes/cms.$.ts`). With `admin: false`, `tenonAdmin()` fails: remove it and the route. Core never imports the admin, so it only lands in your bundle when you mount it.
 
 Plugins contribute the same `admin` object through [`definePlugin({ admin })`](./plugins.md).

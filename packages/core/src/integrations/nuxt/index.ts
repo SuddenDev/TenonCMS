@@ -4,7 +4,6 @@ import {
   addImports,
   addPlugin,
   addServerHandler,
-  addServerPlugin,
   addTypeTemplate,
   addVitePlugin,
   createResolver,
@@ -13,11 +12,12 @@ import {
 } from "@nuxt/kit";
 import type {} from "@nuxt/nitro-server/augments";
 import type { NuxtModule } from "@nuxt/schema";
+import { loadEnv } from "vite";
 import { API_BASE } from "../../client/index.ts";
 import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
-import { adminPath } from "../../admin/path.ts";
 import type { AdapterOptions } from "../admin/types.ts";
+import { configResolver, readAdminPath } from "../admin/read-admin-path.ts";
 import { setupAdmin } from "./lib/setup-admin.ts";
 import { libsqlBinaries } from "./lib/libsql.ts";
 import { siteRoutes } from "../admin/seo-routes.ts";
@@ -29,24 +29,33 @@ export type { AdapterOptions as Options };
  * Nuxt module for tenoncms. Mounts `/_tenon`, `/sitemap.xml` and `/robots.txt`, serves the admin page, adds
  * `useTenon()`, `useTenonSeo()`, the components `TenonLink`, `TenonBlocks`, `TenonImage`, `TenonPicture` and `TenonRichtext`, and the preview
  * runtime. It also schedules the Nitro task `tenon:jobs` every minute, unless `jobs` is `false`. Options go under
- * `tenonCms` in `nuxt.config.ts`.
+ * `tenonCms` in `nuxt.config.ts`. The admin page's path is `admin.path` of the config, read from its source at
+ * startup.
  * @example
  * // nuxt.config.ts
  * modules: ['tenoncms/nuxt'],
- * tenonCms: { admin: '/cms' }
+ * tenonCms: { jobs: false }
  */
 const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
   meta: { name: "tenoncms", configKey: "tenonCms" },
-  defaults: { entry: "./tenon.config.ts", admin: true },
-  setup(options, nuxt) {
+  defaults: { entry: "./tenon.config.ts" },
+  async setup(options, nuxt) {
     const runtime = createResolver(import.meta.url).resolve("./runtime");
     if (nuxt.options.dev)
       nuxt.hook("listen", (_server, listener: { url: string }) => {
         process.env.__TENON_DEV_ORIGIN = new URL(listener.url).origin;
       });
 
+    const configFile = resolve(nuxt.options.rootDir, options.entry!);
+    const admin = await readAdminPath(
+      configFile,
+      configResolver,
+      loadEnv(nuxt.options.dev ? "development" : "production", nuxt.options.rootDir, ""),
+    );
+    const { path } = admin;
+
     // Nuxt forwards aliases to Nitro and to the generated tsconfig paths.
-    nuxt.options.alias["#tenon/config"] = resolve(nuxt.options.rootDir, options.entry!);
+    nuxt.options.alias["#tenon/config"] = configFile;
     nuxt.options.build.transpile.push(runtime);
     // A linked install would resolve its own copy of Vue from the tenoncms checkout.
     const resolveOptions = (nuxt.options.vite.resolve ??= {});
@@ -66,8 +75,9 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
     for (const route of routes) addServerHandler({ route, handler: `${runtime}/server/handler` });
 
     // The admin page, a second client entry in the host's Vite build.
-    const path = adminPath(options.admin);
     if (path) setupAdmin(nuxt, path, runtime);
+    // Nitro's Rollup bundles the config, Vite the host's pages. Both MUST see the path the routes use.
+    nuxt.options.vite.define = { ...nuxt.options.vite.define, ...admin.define };
 
     // `#tenon/client-registry`: the browser modules that `clientRef()` calls name.
     addVitePlugin(
@@ -91,9 +101,9 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
       addComponent({ name: `Tenon${name}`, export: name, filePath: "tenoncms/vue" });
 
     // The preview runtime reads the admin path for the bars' links; `false` renders no admin bar.
-    nuxt.options.runtimeConfig.public.tenon = { admin: path ?? false };
+    nuxt.options.runtimeConfig.public.tenon = { admin: path };
     addPlugin(`${runtime}/plugin`);
-    addServerPlugin(`${runtime}/server/site`);
+    addServerHandler({ middleware: true, handler: `${runtime}/server/site` });
 
     // Types `createClient()` from `tenoncms/client` without a type argument.
     addTypeTemplate(
@@ -105,6 +115,7 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
     );
 
     nuxt.hook("nitro:config", (config) => {
+      config.replace = { ...config.replace, ...admin.define };
       config.rollupConfig ??= {};
       config.rollupConfig.plugins = [
         clientModules({ root: nuxt.options.rootDir, server: true }) as NonNullable<

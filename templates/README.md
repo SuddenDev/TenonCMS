@@ -26,6 +26,8 @@ A layer's `part.json` is not copied. It says what the layer adds:
 
 Every project gets `secret: $TENON_SECRET` (`SECRET_PART`) and `site: { url: $TENON_SITE_URL, name }` (`sitePart()`), with `TENON_SITE_URL` commented out in the env example. The sign-in methods have no `part.json`: several methods share one `auth` block, so `authPart()` in `packages/create-tenoncms/src/stack.ts` writes it. Password alone writes nothing. The variables go into `.env.example` (`envFile` of the target, `.dev.vars` on Cloudflare), and a copy with a random `TENON_SECRET` becomes the real file.
 
+Astro and Nuxt read `admin.path` from `tenon.config.ts`, and standalone's `server.ts` reads `cms.adminPath`. The TanStack route file (`src/routes/admin.$.ts`) MUST match `admin.path`.
+
 ## Checks
 
 A new template MUST work with each database and storage of its targets. Locally run `pnpm tarball`, then `pnpm smoke:templates <framework> <target> [database] [storage] [template] [auth]`, where `auth` is the `--auth` list. CI runs the jobs of `scripts/template-matrix.mjs`; each framework runs once with `passkey,magic-link` and no password.

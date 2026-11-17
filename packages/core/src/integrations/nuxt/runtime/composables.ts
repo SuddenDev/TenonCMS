@@ -67,8 +67,8 @@ function useClient(): Client {
 }
 
 /**
- * `site.url` of the config, in the payload. During SSR it comes from the request's `event.context`, which the Nitro
- * plugin `server/site.ts` sets; the browser reads the payload.
+ * `site.url` of the config, in the payload. During SSR it comes from the request's `event.context`, which the server
+ * middleware `server/site.ts` sets; the browser reads the payload.
  */
 const useSiteUrl = () =>
   useState<string | null>(

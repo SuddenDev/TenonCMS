@@ -37,7 +37,7 @@ The choices that shape the rest of the code, and why.
 - **Instance-owned server state.** Everything server-side lives in the `defineCms()` closure, so several instances can coexist. The browser preview deliberately shares one store across its framework entries.
 - **Lazy database and auth.** Nothing connects at import time, so public pages keep working with a bad config.
 - **One published package.** Framework adapters are subpath exports with optional peer dependencies.
-- **The admin path is an adapter option**, not part of the config. Routes are registered at build time, before the config can load.
+- **The admin path is read from the config's source.** Routes are registered at build time, before the config can load. Loading it at build time fails on Cloudflare (`cloudflare:workers`) and slows every start, and serving the admin from middleware misses Astro's page bundling. So the adapters parse `admin.path` statically, like `clientRef()`, and accept only a string or `process.env.NAME`.
 
 ## Admin
 

@@ -1,13 +1,12 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin, ViteDevServer } from "vite";
+import { loadEnv, type Plugin, type ViteDevServer } from "vite";
 import { adminChunk, adminInput } from "../admin/build.ts";
 import { clientModules } from "../admin/client-refs/client-modules.ts";
 import { clientReferences } from "../admin/client-refs/client-references.ts";
 import { faviconDefine } from "../admin/favicon.ts";
 import { adminHtml } from "../admin/html.ts";
-import { adminPath } from "../../admin/path.ts";
-import type { AdminOption } from "../admin/types.ts";
+import { configResolver, readAdminPath } from "../admin/read-admin-path.ts";
 import { JOBS_TASK, withJobsTask } from "../nitro-jobs.ts";
 import { developmentAuth } from "../dev-auth.ts";
 
@@ -19,8 +18,6 @@ const ADMIN_HTML_VIRTUAL = "\0tenon-admin-html";
 export type TenonAdminOptions = {
   /** Server configuration to scan for browser references. */
   entry?: string;
-  /** Path of the admin, e.g. `/cms`. Defaults to `/admin`. The host's server route MUST match it. */
-  path?: Exclude<AdminOption, false>;
   /**
    * Runs the due jobs every minute, through a Nitro task. Defaults to `true`. `false` leaves the clock to the host,
    * e.g. on Vercel Hobby, which allows a cron job once a day. Needs Nitro.
@@ -61,8 +58,8 @@ export default {
 /**
  * Vite plugin that adds the admin to Vite frameworks without an adapter, e.g. TanStack Start.
  * It builds the admin as a second client entry, exposes its page as `#tenon/admin-html` and keeps core
- * external in SSR builds. Serve the page from a server route for `/admin` and `/admin/*`, e.g.
- * `src/routes/cms.$.ts` for `/cms`.
+ * external in SSR builds. It reads the path from `admin.path` of the config at startup. Serve the page from a
+ * server route for that path and everything below it, e.g. `src/routes/cms.$.ts` for `/cms`.
  * With Nitro, it also schedules the task `tenon:jobs` every minute, unless `jobs` is `false`.
  * @example
  * // vite.config.ts
@@ -73,11 +70,10 @@ export default {
  * GET: () => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } })
  */
 export function tenonAdmin({
-  path: option = true,
   entry: configEntry = "./tenon.config.ts",
   jobs = true,
 }: TenonAdminOptions = {}): Plugin[] {
-  const path = adminPath(option)!;
+  let path = "";
   let server: ViteDevServer | undefined;
   let html = "";
   return [
@@ -88,10 +84,24 @@ export function tenonAdmin({
       name: "tenoncms:admin",
       ...(jobs && { nitro: jobsModule(configEntry) }),
 
-      config: (config, { command }) => {
+      async config(config, { command, mode }) {
         const root = resolve(config.root ?? process.cwd());
+        const admin = await readAdminPath(
+          resolve(root, configEntry),
+          configResolver,
+          loadEnv(mode, root, ""),
+        );
+        if (!admin.path)
+          throw new Error(
+            "tenoncms: tenonAdmin() serves the admin, but tenon.config.ts sets `admin: false`. Remove tenonAdmin() and the admin route, or set an admin path.",
+          );
+        path = admin.path;
+
         return {
-          define: faviconDefine(resolve(root, config.publicDir || "public")),
+          define: {
+            ...admin.define,
+            ...faviconDefine(resolve(root, config.publicDir || "public")),
+          },
           // Bundling core breaks libsql's native binding. Dev does not bundle, so Vite reloads core when `dist/` changes.
           ssr: command === "build" ? { external: ["tenoncms"] } : {},
         };

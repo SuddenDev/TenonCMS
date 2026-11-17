@@ -62,14 +62,14 @@ Invites, on the Astro example with a temp `DATABASE_URL` and no `TENON_SITE_URL`
 ```sh
 K=/tmp/jar2
 LINK=$(curl -s -b $J -H 'content-type: application/json' -H "origin: http://$B" \
-  -d "{\"email\":\"e@b.co\",\"role\":\"editor\",\"url\":\"http://$B/admin/invite\"}" $B/_tenon/invites \
+  -d '{"email":"e@b.co","role":"editor"}' $B/_tenon/invites \
   | node -pe 'JSON.parse(require("fs").readFileSync(0)).link')
 curl -s -c $K -H 'content-type: application/json' -H "origin: http://$B" \
   -d "{\"token\":\"${LINK#*token=}\",\"name\":\"Ed\",\"password\":\"password123\"}" $B/_tenon/invites/accept
 curl -s -o /dev/null -w '%{http_code}\n' -b $K $B/_tenon/invites
 ```
 
-Expect a link (201, or 502 with the link when `SMTP_URL` points at no running catcher), `{ user }` with the session cookie, then `403`: the editor cannot manage invites. In Chrome, the Bitwarden extension's `BIT-NOTIFICATION-BAR-ROOT` overlay can swallow clicks at the top right of the admin; check with `document.elementFromPoint()` before suspecting the UI.
+Expect a link under `admin.path` (`/admin/invite?token=…`; 201, or 502 with the link when `SMTP_URL` points at no running catcher), `{ user }` with the session cookie, then `403`: the editor cannot manage invites. In Chrome, the Bitwarden extension's `BIT-NOTIFICATION-BAR-ROOT` overlay can swallow clicks at the top right of the admin; check with `document.elementFromPoint()` before suspecting the UI.
 
 Menus, on the Astro example (`B=localhost:4321`): after the sign-up above, link a page from the main menu, then resolve it and render the header.
 
