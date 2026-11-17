@@ -11,3 +11,4 @@ uploads
 .uploads
 /packages/core/README.md
 .DS_Store
+.pnpm-store
