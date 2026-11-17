@@ -69,7 +69,7 @@
       "default": "./dist/integrations/nuxt/index.mjs"
     },
     "./admin": {
-      "types": "./dist/admin/index.d.ts",
+      "types": "./dist/admin/config.d.mts",
       "default": "./dist/admin/config.mjs"
     },
     "./admin/bar": {
