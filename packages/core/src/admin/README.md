@@ -64,4 +64,4 @@ The endpoint checks the body and the session, then builds the caller's local API
 
 ## Rich text extensions
 
-`admin.richtext.extensions` registers a server-safe Tiptap schema with a `clientRef()` browser implementation and optional toolbar controls. The merge retains server extensions separately from the JSON descriptor. See [rich text](../richtext/README.md) for the registration contract and field restrictions.
+The top-level `richtext.extensions` of `defineCms()` and `definePlugin()` register a server-safe Tiptap schema with a `clientRef()` browser implementation and optional toolbar controls. The richtext module merges them; `mergeAdmin()` copies only the `client` halves into the descriptor's `richtext.extensions`. See [rich text](../richtext/README.md) for the registration contract and field restrictions.

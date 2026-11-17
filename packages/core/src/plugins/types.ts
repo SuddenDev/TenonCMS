@@ -3,6 +3,7 @@ import type { JobsOptions } from "../jobs/config/define-task.ts";
 import type { Hono, MiddlewareHandler } from "hono";
 import type { Collection, Global, LocalApi, MediaHooks, RootHooks } from "../schema/index.ts";
 import type { LifecycleHooks } from "../lifecycle/types.ts";
+import type { RichtextOptions } from "../richtext/config/types.ts";
 
 /** Hono environment of a plugin's {@link Plugin.routes}: the local API bound to the session user, and the user. */
 export type RouteEnv = { Variables: { cms: LocalApi; user: CmsUser } };
@@ -60,6 +61,8 @@ export type Plugin<
    * `scheduledTasks` MAY name only the plugin's own tasks. A name the host or another plugin uses throws at startup.
    */
   jobs?: Omit<JobsOptions, "secret">;
+  /** Tiptap extensions for `richtext` fields, like the host's `richtext`. They merge before the host's. */
+  richtext?: RichtextOptions;
   /**
    * Custom fields, pages and admin bar items of the plugin, like the host's `admin`. A plugin sets neither the
    * bar's position nor `adminBar: false`. Plugins merge in the order of `plugins`, before the host.

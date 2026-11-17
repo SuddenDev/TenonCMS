@@ -11,6 +11,7 @@ import type { settings } from "../../presets/settings.ts";
 import type { RoleOptions } from "../../users/roles.ts";
 import type { DatabaseOptions } from "../../db/create-db.ts";
 import type { RobotsOptions, SitemapOptions } from "../../seo/config/types.ts";
+import type { RichtextOptions } from "../../richtext/config/types.ts";
 import type {
   Block,
   CheckRefs,
@@ -175,6 +176,11 @@ export type CmsOptions<
    * defined the same way.
    */
   presets?: PR;
+  /**
+   * Tiptap extensions for `richtext` fields, keyed by the feature name a field's `allowed` lists. Each has a `schema`
+   * that validates writes on the server and a `clientRef()` to the editor's browser code. Plugins add their own.
+   */
+  richtext?: RichtextOptions;
   /**
    * Branding, custom fields, custom pages and the admin bar. Inline or imported from your own module; check an
    * extracted object with `satisfies AdminOptions` from `tenoncms/admin`. Plugins add their own.

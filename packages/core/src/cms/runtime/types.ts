@@ -1,6 +1,7 @@
 import type { CmsUser } from "../../admin/index.d.ts";
 import type { ApiKeyCaller } from "../../api-keys/types.ts";
 import type { AdminRuntime } from "../../admin/merge/merge-options.ts";
+import type { RichtextRegistration } from "../../richtext/config/types.ts";
 import type { Localization } from "../config/options.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import type { EmailApi, EmailTemplates } from "../../email/types.ts";
@@ -51,6 +52,8 @@ export type Core = {
   localization?: Localization;
   /** The resolved `media` option. Missing without it. */
   media?: MediaCore;
+  /** The rich text extensions of the plugins and the host, by feature name. Writes validate against them. */
+  richtext: Record<string, RichtextRegistration>;
   /** Instance-owned server-side delivery. Rejects without email configuration. */
   email: EmailApi;
   /** The built-in email templates with the host's replacements. Missing without email configuration. */

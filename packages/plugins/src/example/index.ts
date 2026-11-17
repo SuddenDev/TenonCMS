@@ -154,15 +154,15 @@ export function ExamplePlugin({ admin = "/admin", renderer = "html" }: ExampleOp
           "content-disposition": 'attachment; filename="quotes.csv"',
         });
       }),
-    admin: {
-      richtext: {
-        extensions: {
-          exampleNotice: {
-            schema: Notice,
-            client: clientRef("tenoncms/plugins/example/admin/richtext#notice"),
-          },
+    richtext: {
+      extensions: {
+        exampleNotice: {
+          schema: Notice,
+          client: clientRef("tenoncms/plugins/example/admin/richtext#notice"),
         },
       },
+    },
+    admin: {
       fields: {
         rating: { mount: mount.field },
       },

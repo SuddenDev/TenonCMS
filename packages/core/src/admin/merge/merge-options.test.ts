@@ -47,6 +47,14 @@ describe("admin registration merge", () => {
     expect(pageLoaders.get("stats")?.load).toBe(load);
   });
 
+  it("sends only the client half of each rich text extension", () => {
+    const notice = { schema: [], client: clientRef("./notice") };
+    expect(mergeAdmin([], {}, undefined, { notice }).descriptor.richtext).toEqual({
+      extensions: { notice: { client: { clientRef: "./notice" } } },
+    });
+    expect(mergeAdmin([], {}).descriptor.richtext).toBeUndefined();
+  });
+
   it("rejects duplicate fields and pages", () => {
     const one = { mount: clientRef("./one") };
     expect(() =>

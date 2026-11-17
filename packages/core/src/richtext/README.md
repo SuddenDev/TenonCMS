@@ -52,22 +52,22 @@ Reverse discovery (in links) scans JSON only for owners whose schemas contain ri
 
 ## Plugin extensions
 
-A plugin or host adds `admin.richtext.extensions` entries. Each entry has a DOM-free `schema` Tiptap extension (or array) and a literal `clientRef()` called `client`:
+A plugin or host adds `richtext.extensions` entries, at the top level of `defineCms()` or `definePlugin()`. Each entry has a DOM-free `schema` Tiptap extension (or array) and a literal `clientRef()` called `client`:
 
 ```ts
-admin: {
-  richtext: {
-    extensions: {
-      notice: {
-        schema: Notice,
-        client: clientRef('my-plugin/admin#notice'),
-      },
+richtext: {
+  extensions: {
+    notice: {
+      schema: Notice,
+      client: clientRef('my-plugin/admin#notice'),
     },
   },
 }
 ```
 
 The browser export is `{ extensions: [Notice], controls?: [...] }`. Each control has a translated `label`, `run(editor)` and optional `active(editor)` / `disabled(editor)`. Browser implementations MUST use the same persisted node/mark names, attributes and content rules as their server schema. DOM node views belong only in the browser implementation. Attribute validators belong in the shared schema. Duplicate feature or extension names throw. Built-in feature names are reserved.
+
+`config/merge-richtext.ts` merges the registrations in plugin order, then the host's, into `core.richtext`. Writes and `checkRichtextConfig()` read them there. The admin's merge copies only the `client` halves into the `/schema` descriptor.
 
 The server schema stays on the server; `/schema` sends only the browser reference. Missing browser code or incompatible saved JSON prevents editing without changing the stored value. The bundled example plugin demonstrates `exampleNotice` in its `quotes.notes` field.
 
@@ -111,6 +111,7 @@ Use populated content for current media and internal-link URLs. The components d
 | ---------------------------- | -------------------------------------------------------------------- |
 | `index.ts`                   | Public exports for `tenoncms/richtext`.                              |
 | `config/types.ts`            | Document, reference, extension registration and editor contracts.    |
+| `config/merge-richtext.ts`   | Merges plugin and host extensions; rejects duplicate names.          |
 | `config/check-config.ts`     | Field feature checks after plugin registrations merge.               |
 | `runtime/extensions.ts`      | Built-in Tiptap features and the shared editor/server schema.        |
 | `runtime/validation.ts`      | JSON shape, URL safety, feature and content checks.                  |

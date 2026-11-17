@@ -95,14 +95,12 @@ import { Richtext } from "tenoncms/react";
 
 ## Add features from a plugin
 
-A plugin or the host adds `admin.richtext.extensions`. Each entry has a `schema` (a Tiptap extension without DOM code) and a `client`, the browser part. In the host, import it from a `.client.ts` module, so it is typed as `RichtextBrowserExtension` ([browser exports](./admin.md)). A plugin uses `clientRef()`:
+A plugin or the host adds `richtext.extensions`, next to `collections` in `defineCms()` or `definePlugin()`. Each entry has a `schema` (a Tiptap extension without DOM code) and a `client`, the browser part. In the host, import it from a `.client.ts` module, so it is typed as `RichtextBrowserExtension` ([browser exports](./admin.md)). A plugin uses `clientRef()`:
 
 ```ts
-admin: {
-  richtext: {
-    extensions: {
-      notice: { schema: Notice, client: clientRef("my-plugin/admin#notice") },
-    },
+richtext: {
+  extensions: {
+    notice: { schema: Notice, client: clientRef("my-plugin/admin#notice") },
   },
 }
 ```

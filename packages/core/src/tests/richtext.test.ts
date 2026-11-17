@@ -290,9 +290,7 @@ it("validates plugin content and preserves it on unrelated writes after the plug
     media: false,
     settings: false,
     collections,
-    admin: {
-      richtext: { extensions: { notice: { schema: Notice, client: clientRef("./notice.ts") } } },
-    },
+    richtext: { extensions: { notice: { schema: Notice, client: clientRef("./notice.ts") } } },
   });
   const body = {
     type: "doc" as const,
@@ -316,13 +314,11 @@ it("validates plugin content and preserves it on unrelated writes after the plug
     defineCms({
       ...base,
       media: false,
-      admin: {
-        richtext: {
-          extensions: {
-            other: {
-              schema: Node.create({ name: "paragraph", group: "block" }),
-              client: clientRef("./other.ts"),
-            },
+      richtext: {
+        extensions: {
+          other: {
+            schema: Node.create({ name: "paragraph", group: "block" }),
+            client: clientRef("./other.ts"),
           },
         },
       },

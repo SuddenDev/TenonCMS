@@ -11,7 +11,7 @@ import { checkRichtextShape } from "../../richtext/runtime/validation.ts";
 export type RichtextField = Base<RichtextDocument> & {
   type: "richtext";
   /**
-   * The features the editor offers: built-in names and keys of `admin.richtext.extensions`. Default: `heading`,
+   * The features the editor offers: built-in names and keys of `richtext.extensions`. Default: `heading`,
    * `bold`, `italic`, `link`, `bulletList`, `orderedList`, `blockquote` and every registered extension.
    */
   allowed?: readonly (RichtextFeature | (string & {}))[];

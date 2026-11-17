@@ -1,11 +1,13 @@
-import type { RichtextRegistration } from "../../richtext/config/types.ts";
-import { RICHTEXT_FEATURES, richtextSchema } from "../../richtext/runtime/extensions.ts";
-import { requireRef } from "../describe/registration-checks.ts";
+import type {
+  RichtextBrowserExtension,
+  RichtextRegistration,
+} from "../../richtext/config/types.ts";
 import type {
   ActionContext,
   ActionRegistration,
   AdminDescriptor,
   AdminOptions,
+  ClientRef,
   FieldLoadContext,
   PageLoadContext,
   PluginAdminOptions,
@@ -30,7 +32,6 @@ export type ActionEntry = {
  */
 export type AdminRuntime = {
   descriptor: AdminDescriptor;
-  richtext: Record<string, RichtextRegistration>;
   fieldLoaders: Map<string, Loader<FieldLoadContext>>;
   pageLoaders: Map<string, Loader<PageLoadContext>>;
   actions: Map<string, ActionEntry>;
@@ -47,16 +48,17 @@ const HOST = "tenon.config.ts";
  * Combines the active registrations in plugin order, then host order.
  * Fields, pages and actions MUST NOT repeat a key. The host's branding wins. Bar items replace by id.
  * @param name The `site.name` the admin shows.
+ * @param richtext The merged rich text extensions. The descriptor gets their `client` halves.
  */
 export function mergeAdmin(
   plugins: readonly Plugin[],
   host: AdminOptions = {},
   name?: string,
+  richtext: Record<string, RichtextRegistration> = {},
 ): AdminRuntime {
   const descriptor: AdminDescriptor = { ...(name && { name }), fields: {}, pages: {}, actions: {} };
   const fieldLoaders = new Map<string, Loader<FieldLoadContext>>();
   const pageLoaders = new Map<string, Loader<PageLoadContext>>();
-  const richtext: Record<string, RichtextRegistration> = Object.create(null);
   const barItems = new Map<string, DescribedItem>();
   const actions = new Map<string, ActionEntry>();
 
@@ -69,24 +71,6 @@ export function mergeAdmin(
     if (!admin) continue;
 
     addBranding(descriptor, admin, source);
-
-    for (const [name, registration] of Object.entries(admin.richtext?.extensions ?? {})) {
-      if (Object.hasOwn(richtext, name) || (RICHTEXT_FEATURES as readonly string[]).includes(name))
-        throw new Error(`tenoncms: duplicate rich text feature "${name}"`);
-
-      const client = requireRef(
-        registration.client,
-        `admin.richtext.extensions.${name}.client`,
-        source,
-      );
-      if (!registration.schema)
-        throw new Error(`tenoncms: rich text feature "${name}" needs a schema`);
-
-      richtext[name] = registration;
-      descriptor.richtext ??= { extensions: {} };
-      descriptor.richtext.extensions[name] = { client };
-    }
-
     addEntries("fields", descriptor.fields, fieldLoaders, admin.fields, describeField, source);
     addEntries("pages", descriptor.pages, pageLoaders, admin.pages, describePage, source);
     for (const [key, value] of Object.entries(admin.actions ?? {})) {
@@ -99,12 +83,16 @@ export function mergeAdmin(
     addBarItems(barItems, admin.adminBar, source, source === HOST);
   }
 
-  if (Object.keys(richtext).length)
-    richtextSchema({ allowed: [...RICHTEXT_FEATURES, ...Object.keys(richtext)] }, richtext);
+  // `mergeRichtext()` checked that each `client` is a `clientRef()`.
+  for (const [name, { client }] of Object.entries(richtext)) {
+    descriptor.richtext ??= { extensions: {} };
+    descriptor.richtext.extensions[name] = {
+      client: client as ClientRef<RichtextBrowserExtension>,
+    };
+  }
 
   return {
     descriptor,
-    richtext,
     fieldLoaders,
     pageLoaders,
     actions,

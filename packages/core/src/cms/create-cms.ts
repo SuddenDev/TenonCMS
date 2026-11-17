@@ -1,4 +1,5 @@
 import { checkRichtextConfig } from "../richtext/config/check-config.ts";
+import { mergeRichtext } from "../richtext/config/merge-richtext.ts";
 import { mergeAdmin } from "../admin/merge/merge-options.ts";
 import { consola } from "consola";
 import { createApp } from "../http/index.ts";
@@ -91,6 +92,7 @@ export function defineCms<
   settings: settingsOption,
   localization: localizationOption,
   site,
+  richtext: richtextOption,
   admin,
   roles: roleOptions,
   sitemap = {},
@@ -166,11 +168,12 @@ export function defineCms<
     ...(Object.keys(webhooks).length ? webhookTasks(webhooks) : {}),
   });
 
-  const adminRuntime = mergeAdmin(plugins, admin, siteConfig.name);
+  const richtext = mergeRichtext(plugins, richtextOption);
+  checkRichtextConfig(schema, richtext);
+  const adminRuntime = mergeAdmin(plugins, admin, siteConfig.name, richtext);
   const knownRoles = new Set(roles.map((r) => r.name));
   for (const [key, { access }] of adminRuntime.actions)
     checkRoles(knownRoles, `admin action "${key}"`, { run: access });
-  checkRichtextConfig(schema, adminRuntime.richtext);
 
   const count = (o: object) => Object.keys(o).length;
   consola
@@ -270,6 +273,7 @@ export function defineCms<
       localApi: (scope) => createLocalApi(core, scope),
       site: siteConfig,
       media,
+      richtext,
       admin: adminRuntime,
       lifecycle: { seed, onInit, afterImport, afterError },
       localized,

@@ -92,6 +92,8 @@ describe("admin registration types", () => {
     expect(admin.adminBar.position).toBe("top-right");
     // @ts-expect-error the name is `site.name`
     ({ name: "Host" }) satisfies AdminOptions;
+    // @ts-expect-error rich text is top-level `richtext`
+    ({ richtext: {} }) satisfies AdminOptions;
   });
 
   it("accepts explicitly typed references and checks the loader against them", () => {
@@ -211,6 +213,8 @@ describe("admin registration types", () => {
     const a: PluginAdminOptions = { adminBar: { position: "top-left" } };
     // @ts-expect-error only the host can disable the bar
     const b: PluginAdminOptions = { adminBar: false };
-    expect([plugin, a, b]).toBeTruthy();
+    // @ts-expect-error rich text is the plugin's top-level `richtext`
+    const c: PluginAdminOptions = { richtext: {} };
+    expect([plugin, a, b, c]).toBeTruthy();
   });
 });

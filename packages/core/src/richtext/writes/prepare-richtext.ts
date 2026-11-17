@@ -37,7 +37,7 @@ export function prepareRichtext(
       const unchanged =
         baseline && JSON.stringify(value) === JSON.stringify(storedRichtext(baseline));
       const active = held.active;
-      if (!loose && active && !unchanged) validateRichtext(value, held.field, core.admin.richtext);
+      if (!loose && active && !unchanged) validateRichtext(value, held.field, core.richtext);
 
       held.parent[held.key] = value;
     } catch (error) {
