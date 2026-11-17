@@ -528,7 +528,6 @@ export type AdminBarOptions = {
  * Loaders and rich text schema extensions run on the server. Browser implementations use `clientRef()`.
  * @example
  * admin: {
- *   name: "My site",
  *   fields: { color: { mount: clientRef("./src/admin/color.ts#mountColor") } },
  *   pages: {
  *     stats: {
@@ -542,8 +541,6 @@ export type AdminBarOptions = {
 export type AdminOptions = {
   /** Tiptap extensions supplied by the host or plugins. */
   richtext?: import("tenoncms/richtext").RichtextOptions;
-  /** Name of the CMS in the sidebar, the login and the page title. Defaults to `tenoncms`. */
-  name?: string;
   /**
    * Wide logo for the top bar and the login. One logo for both, or one per place. A place without a logo shows
    * the icon and the name.
@@ -637,6 +634,8 @@ export type AdminDescriptor = Omit<
   AdminOptions,
   "fields" | "pages" | "actions" | "adminBar" | "richtext"
 > & {
+  /** The `site.name` of `defineCms()`: the name in the sidebar, the login and the page title. */
+  name?: string;
   richtext?: {
     extensions: Record<
       string,

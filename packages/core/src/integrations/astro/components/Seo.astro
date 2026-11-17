@@ -1,4 +1,5 @@
 ---
+import cms from "#tenon/config";
 import { seoHead, type SeoTemplates } from "tenoncms/client";
 
 type Settings = NonNullable<Parameters<typeof seoHead>[1]>;
@@ -9,8 +10,10 @@ type Props = {
   /** The `seo` settings. Read in the request's locale when left out. */
   seo?: Settings["seo"];
   templates?: SeoTemplates | null;
+  /** The base of absolute URLs. Defaults to `site.url` of the config. */
+  site?: string;
 };
-const { page, templates } = Astro.props;
+const { page, templates, site = cms.site.url } = Astro.props;
 
 // The settings globals MAY be off. A missing one reads as `null`, and its tags fall back.
 const { tenon, locale } = Astro.locals;
@@ -27,7 +30,7 @@ const [general, seo] = await Promise.all([
   Astro.props.general === undefined ? read("general") : Astro.props.general,
   Astro.props.seo === undefined ? read("seo") : Astro.props.seo,
 ]);
-const head = seoHead(page ?? {}, { general, seo, templates });
+const head = seoHead(page ?? {}, { general, seo, templates, site });
 ---
 
 <title>{head.title}</title>

@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   getGlobal: vi.fn(),
   navigateTo: vi.fn(),
   useHead: vi.fn(),
-  event: undefined as { headers: Headers } | undefined,
+  event: undefined as { headers: Headers; context?: Record<string, unknown> } | undefined,
 }));
 const config = { locales: ["en", "de"], defaultLocale: "en" };
 const route = reactive({ path: "/posts/hello" });
@@ -231,9 +231,10 @@ it("shares reactive translation links and keeps a new page's registration when t
   expect(mocks.navigateTo).toHaveBeenLastCalledWith("/de");
 });
 
-it("puts the page's SEO tags and translations into the head", async () => {
+it("puts the page's SEO tags and translations into the head, absolute against `site.url`", async () => {
+  mocks.event = { headers: new Headers(), context: { tenonSiteUrl: "https://a.co" } };
   mocks.getGlobal.mockImplementation(async (name: string) =>
-    name === "general" ? { title: "Acme", url: "https://a.co" } : { noindex: false },
+    name === "general" ? { title: "Acme" } : { noindex: false },
   );
   const alternates = { en: "/posts/hello", de: "/de/posts/hallo", "x-default": "/posts/hello" };
   const page = ref({ title: "Hello", path: "/posts/hello", locale: "en", alternates });
@@ -256,4 +257,17 @@ it("puts the page's SEO tags and translations into the head", async () => {
 
   page.value = { ...page.value, seo: { noindex: true } } as never;
   expect(head().meta).toContainEqual({ name: "robots", content: "noindex, nofollow" });
+
+  // In the browser, the origin comes from the payload, not from a request.
+  mocks.event = undefined;
+  const hydrated = await setup(() => useTenonSeo(page));
+  expect(hydrated.value.canonical).toBe("https://a.co/posts/hello");
+});
+
+it("takes `site` as an override, and stays relative without a site URL", async () => {
+  mocks.getGlobal.mockImplementation(async () => ({}));
+  const page = ref({ title: "Hello", path: "/posts/hello" });
+  expect((await setup(() => useTenonSeo(page))).value.canonical).toBeUndefined();
+  const meta = await setup(() => useTenonSeo(page, { site: "https://b.co" }));
+  expect(meta.value.canonical).toBe("https://b.co/posts/hello");
 });

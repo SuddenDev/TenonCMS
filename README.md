@@ -115,7 +115,7 @@ pnpm install
 pnpm dev:astro      # or dev:nuxt, dev:tanstack, dev:standalone
 ```
 
-Each example needs a `.env` with a secret of 32 or more characters (`CMS_SECRET`, in Nuxt `NUXT_CMS_SECRET`): copy its `.env.example` and set one with `openssl rand -hex 32`. The example runs on its own port (Astro: `http://localhost:4321/admin`), and the admin playground with hot reload on `http://localhost:5173/admin/`.
+Each example needs a `.env` with a secret of 32 or more characters (`TENON_SECRET`, in Nuxt `NUXT_TENON_SECRET`): copy its `.env.example` and set one with `openssl rand -hex 32`. The example runs on its own port (Astro: `http://localhost:4321/admin`), and the admin playground with hot reload on `http://localhost:5173/admin/`.
 
 | Command                              | What it does                                                    |
 | ------------------------------------ | --------------------------------------------------------------- |

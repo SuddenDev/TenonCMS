@@ -36,7 +36,11 @@ export function useSeo(
     { immediate: true },
   );
 
-  const site = computed(() => ({ ...settings.value, templates: templates() }));
+  const site = computed(() => ({
+    ...settings.value,
+    templates: templates(),
+    site: schema.value.site,
+  }));
   const meta = computed(() => seoMeta({ ...root(), seo: group() }, site.value));
   // What the site renders without own values. Empty fields show it, so the template is visible.
   const defaults = computed(() => seoMeta({ ...root(), seo: {} }, site.value));
@@ -65,17 +69,17 @@ export function useSeo(
   // The permalink can depend on any field, so every edit asks again. A late answer for older data is dropped.
   let asked = 0;
   watchDebounced(
-    () => [JSON.stringify(root()), settings.value],
+    () => JSON.stringify(root()),
     async () => {
       const at = ++asked;
-      const next = await pageUrl(root(), settings.value, locale.value);
+      const next = await pageUrl(root(), locale.value);
       if (at === asked) url.value = next;
     },
     { debounce: 400, immediate: true },
   );
 
-  async function pageUrl(data: Record<string, unknown>, site: Settings, code?: string) {
-    const base = site.general?.url || schema.value.site || location.origin;
+  async function pageUrl(data: Record<string, unknown>, code?: string) {
+    const base = schema.value.site || location.origin;
     const target = owner?.value;
     const entry = target
       ? "global" in target

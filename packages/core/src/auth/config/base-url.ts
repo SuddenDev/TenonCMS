@@ -1,36 +1,20 @@
 import { getBaseURL, type BetterAuthOptions } from "better-auth";
 
+/**
+ * better-auth's `baseURL`: the given one (`auth.baseURL`, else `site.url`), then better-auth's URL environment
+ * variables, then in development a dynamic allowlist of loopback and adapter-configured hosts.
+ * @returns `undefined` in production without a URL, so better-auth derives it from the request.
+ */
 export function authBaseURL(
   baseURL?: BetterAuthOptions["baseURL"],
   requestOrigin?: string,
 ): BetterAuthOptions["baseURL"] {
   if (baseURL) return baseURL;
-  const env =
-    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-  if (env.TENON_BASE_URL) {
-    const message =
-      "TENON_BASE_URL MUST be an HTTP(S) origin, without credentials, path, query or fragment";
-    let url: URL;
-    try {
-      url = new URL(env.TENON_BASE_URL);
-    } catch {
-      throw new Error(message);
-    }
-    if (
-      !["http:", "https:"].includes(url.protocol) ||
-      url.username ||
-      url.password ||
-      url.pathname !== "/" ||
-      url.search ||
-      url.hash
-    )
-      throw new Error(message);
-    return url.origin;
-  }
-
   const fromEnv = getBaseURL(undefined, "/");
   if (fromEnv) return fromEnv;
 
+  const env =
+    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
   if (!isDevelopment(env)) return;
   const origin = env.__TENON_DEV_ORIGIN || requestOrigin;
 

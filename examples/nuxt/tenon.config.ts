@@ -7,7 +7,7 @@ import { pagesPreset } from "tenoncms/presets";
 import { posts } from "./collections/posts";
 import { authors } from "./collections/authors";
 
-const { cmsSecret, databaseUrl, uploadsDir } = useRuntimeConfig();
+const { tenonSecret, tenonSiteUrl, databaseUrl, uploadsDir } = useRuntimeConfig();
 
 export default defineCms({
   collections: { authors, posts },
@@ -23,5 +23,6 @@ export default defineCms({
   plugins: [ExamplePlugin({ renderer: "vue" })],
   database: libsql(databaseUrl),
   localization: { locales: ["en", "de"], defaultLocale: "en", fallback: false },
-  secret: cmsSecret,
+  secret: tenonSecret,
+  site: { url: tenonSiteUrl || undefined },
 });

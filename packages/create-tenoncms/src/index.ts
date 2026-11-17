@@ -20,7 +20,7 @@ type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 
 const HELP = `Usage: npm create tenoncms [dir] [options]
 
-  --site-name <name>    The site's name in the admin. Default: Tenon
+  --site-name <name>    The site's name (site.name). Default: Tenon
   --framework <name>    astro, nuxt, tanstack or standalone
   --template <name>     The starter. Default: minimal
   --target <name>       node, vercel or cloudflare (Astro only)

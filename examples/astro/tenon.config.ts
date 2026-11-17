@@ -1,4 +1,4 @@
-import { CMS_SECRET, DATABASE_URL, SITE_URL, SMTP_URL, EMAIL_FROM } from "astro:env/server";
+import { DATABASE_URL, EMAIL_FROM, SMTP_URL, TENON_SECRET, TENON_SITE_URL } from "astro:env/server";
 import { passkey } from "@better-auth/passkey";
 import { defineCms, defineGlobal } from "tenoncms";
 import { emailOTP, magicLink } from "tenoncms/auth";
@@ -91,7 +91,7 @@ export default defineCms({
   },
   plugins: [RedirectsPlugin({ locales: ["en", "de"] }), ExamplePlugin({ renderer: "html" })],
   database: libsql(DATABASE_URL),
-  secret: CMS_SECRET,
+  secret: TENON_SECRET,
   auth: { plugins: [passkey(), magicLink(), emailOTP()] },
   email: SMTP_URL
     ? {
@@ -99,9 +99,8 @@ export default defineCms({
         from: EMAIL_FROM,
       }
     : undefined,
-  site: SITE_URL,
+  site: { url: TENON_SITE_URL, name: "Example site" },
   admin: {
-    name: "Example site",
     media: { nav: { group: "Blog", icon: "images" } },
   },
 });

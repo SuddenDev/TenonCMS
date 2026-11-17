@@ -17,8 +17,8 @@ describe("admin registration", () => {
       defineCms({
         ...base,
         plugins: [plugin],
+        site: { name: "My CMS" },
         admin: {
-          name: "My CMS",
           logo: "/logo.svg",
           adminBar: { items: { help: { label: "Help", href: "/help" } } },
         },
@@ -43,6 +43,17 @@ describe("admin registration", () => {
       position: "bottom-center",
       branding: { name: "My CMS" },
     });
+  });
+
+  it("names the site `tenoncms` by default, in the brand and in better-auth", async () => {
+    const { cms, fetch } = setup(defineCms(base));
+    expect(await (await fetch(`${origin}/_tenon/admin-brand`)).json()).toMatchObject({
+      name: "tenoncms",
+    });
+    expect((await cms.auth()).options.appName).toBe("tenoncms");
+
+    const named = defineCms({ ...base, site: { name: "My CMS" } });
+    expect((await named.auth()).options.appName).toBe("My CMS");
   });
 
   it("sends loader flags but never runs or serializes a loader", async () => {

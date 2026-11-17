@@ -28,6 +28,8 @@ export type CoreAuth = {
   email?: { api: EmailApi; templates?: Partial<EmailTemplates> };
   /** better-auth's `appName` when the host sets none. Passkeys show it as the relying party's name. */
   appName?: string;
+  /** better-auth's `baseURL` when the host sets none: the `site.url` origin. */
+  siteUrl?: string;
   /** Defaults to the built-in roles. */
   roles?: Role[];
 };
@@ -41,7 +43,7 @@ export function authOptions<A extends AuthOptions>(
   db: Kysely<Database>,
   secret: string,
   host: A,
-  { email, appName = "tenoncms", roles = BUILT_IN_ROLES }: CoreAuth = {},
+  { email, appName = "tenoncms", siteUrl, roles = BUILT_IN_ROLES }: CoreAuth = {},
 ) {
   const { emailAndPassword, emailVerification, plugins = [], rateLimit, user, ...options } = host;
   const has = (id: string) => plugins.some((p) => p.id === id);
@@ -55,6 +57,7 @@ export function authOptions<A extends AuthOptions>(
   return {
     appName,
     ...options,
+    baseURL: options.baseURL ?? siteUrl,
     // Serverless instances do not share memory, so better-auth's default storage does not limit them.
     rateLimit: { storage: "database" as const, ...rateLimit },
     basePath: `${API_BASE}/auth`,

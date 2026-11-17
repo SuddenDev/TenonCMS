@@ -8,7 +8,13 @@ export default defineConfig({
   integrations: [tenonCms()],
   env: {
     schema: {
-      CMS_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
+      TENON_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
+      TENON_SITE_URL: envField.string({
+        context: "server",
+        access: "secret",
+        url: true,
+        optional: true,
+      }),
       DATABASE_DIR: envField.string({
         context: "server",
         access: "secret",

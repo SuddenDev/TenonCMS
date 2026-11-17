@@ -25,10 +25,14 @@ type SeoDoc = Record<string, unknown> & {
 /** Templates of one collection or global: the `templates` option of `seo()`. */
 export type SeoTemplates = { title?: string | null; description?: string | null };
 
-/** The `general` and `seo` globals, as read from the local API or the client, and the collection's templates. */
+/**
+ * The `general` and `seo` globals, as read from the local API or the client, the collection's templates, and `site`:
+ * the `site.url` of `defineCms()`, the base of absolute URLs.
+ */
 type SeoSettings = {
   templates?: SeoTemplates | null;
-  general?: { title?: string | null; tagline?: string | null; url?: string | null } | null;
+  site?: string | null;
+  general?: { title?: string | null; tagline?: string | null } | null;
   seo?: {
     title?: string | null;
     description?: string | null;
@@ -81,13 +85,13 @@ function urlOf(image: Image) {
  * - `description`: the document's `seo.description`, else `templates.description`, else the site's. `undefined` when
  *   it fills to nothing.
  * - `noindex`: `true` when the document's or the site's `seo.noindex` is `true`.
- * - `canonical`: the URL of the document's own locale in `alternates`, else `general.url` joined with the document's `permalink`, else its `path`. `undefined` unless one of them exists.
- * - `alternates`: `{ hreflang, href }[]` for the `<link rel="alternate">` tags, from `doc.alternates` (`x-default` included). Absolute against `general.url` when it is set. Empty without `doc.alternates`.
- * - `image`: URL of the document's `seo.image`, else of the site's. Absolute against `general.url` when it is set. Only a populated media document counts; an id string is ignored.
+ * - `canonical`: the URL of the document's own locale in `alternates`, else `site` joined with the document's `permalink`, else its `path`. `undefined` unless one of them exists.
+ * - `alternates`: `{ hreflang, href }[]` for the `<link rel="alternate">` tags, from `doc.alternates` (`x-default` included). Absolute against `site` when it is set. Empty without `doc.alternates`.
+ * - `image`: URL of the document's `seo.image`, else of the site's. Absolute against `site` when it is set. Only a populated media document counts; an id string is ignored.
  */
 export function seoMeta(doc: SeoDoc, settings: SeoSettings = {}) {
   const { general, seo, templates } = settings;
-  const base = general?.url || undefined;
+  const base = settings.site || undefined;
   const context = { ...doc, site: general ?? {} };
   const own = doc.seo?.title;
   const template = templates?.title || seo?.title || DEFAULT_SEO_TITLE;

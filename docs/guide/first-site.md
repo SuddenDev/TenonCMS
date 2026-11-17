@@ -34,39 +34,39 @@ Finished code to compare with: `examples/astro`.
     integrations: [tenonCms()],
     env: {
       schema: {
-        CMS_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
+        TENON_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
         DATABASE_URL: envField.string({
           context: "server",
           access: "secret",
           default: "file:./cms.db",
         }),
-        SITE_URL: envField.string({
+        TENON_SITE_URL: envField.string({
           context: "server",
-          access: "public",
+          access: "secret",
           url: true,
-          default: "http://localhost:4321",
+          optional: true,
         }),
       },
     },
   });
   ```
 
-- [ ] Create `.env` with `CMS_SECRET=$(openssl rand -hex 32)`.
+- [ ] Create `.env` with `TENON_SECRET=$(openssl rand -hex 32)`. Leave `TENON_SITE_URL` unset in development.
 
 ## 3. Create the instance
 
 - [ ] Add `tenon.config.ts` at the project root, with no collections yet:
 
   ```ts
-  import { CMS_SECRET, DATABASE_URL, SITE_URL } from "astro:env/server";
+  import { DATABASE_URL, TENON_SECRET, TENON_SITE_URL } from "astro:env/server";
   import { defineCms } from "tenoncms";
   import { libsql } from "tenoncms/libsql";
 
   export default defineCms({
     collections: {},
     database: libsql(DATABASE_URL),
-    secret: CMS_SECRET,
-    site: SITE_URL,
+    secret: TENON_SECRET,
+    site: { url: TENON_SITE_URL, name: "My site" },
   });
   ```
 
@@ -119,7 +119,7 @@ Only when you need it:
 ## 8. Deploy
 
 - [ ] `pnpm build`, then `node --env-file=.env ./dist/server/entry.mjs`.
-- [ ] Set `CMS_SECRET`, `DATABASE_URL` and `SITE_URL` (the public URL, used by the admin preview) on the server.
+- [ ] Set `TENON_SECRET`, `DATABASE_URL` and `TENON_SITE_URL` on the server. `site.url` is the public origin: sitemap, robots and preview URLs use it, and so do sign-in and admin links, unless the frontend runs elsewhere and you set `auth.baseURL` to the CMS origin.
 - [ ] Keep the database and uploads on a persistent disk, or use Turso and S3. See [Storage](media.md#storage).
 - [ ] Serverless or edge: see [Astro on Vercel](frameworks.md#astro-on-vercel) and [Astro on Cloudflare](frameworks.md#astro-on-cloudflare).
 - [ ] Back up the database file. It holds all content and users.

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { edit } from "tenoncms/preview";
-import { seoMeta } from "tenoncms/client";
 
 // `[[locale]]` is empty for the default locale (`/posts/x`) and the locale code otherwise (`/de/posts/x`).
 // `path` drops a valid prefix only, so `/xx/posts/x` keeps it and is a 404.
@@ -22,26 +21,14 @@ const {
       depth: 1,
     }) as const,
 );
-useAlternates(() => (status.value === "success" ? post.value?.alternates : null));
 watchEffect(() => {
   if (error.value) showError(error.value);
   else if (status.value === "success" && (!post.value || path.value !== `/posts/${slug.value}`))
     showError({ statusCode: 404, statusMessage: "Post not found", fatal: true });
 });
 
-const { data: general } = await cms.getGlobal("general");
-const meta = computed(() => seoMeta(post.value ?? {}, { general: general.value }));
-useHead(() => ({
-  title: post.value?.title,
-  link: [
-    ...(meta.value.canonical ? [{ rel: "canonical" as const, href: meta.value.canonical }] : []),
-    ...meta.value.alternates.map((a) => ({
-      rel: "alternate" as const,
-      hreflang: a.hreflang,
-      href: a.href,
-    })),
-  ],
-}));
+// Title, canonical and `hreflang` links, absolute against `site.url`. It also registers the alternates.
+await useTenonSeo(() => (status.value === "success" ? post.value : null));
 </script>
 
 <template>

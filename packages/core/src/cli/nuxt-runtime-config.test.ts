@@ -3,15 +3,15 @@ import { applyEnv } from "./nuxt-runtime-config.ts";
 
 describe("applyEnv", () => {
   it("reads NITRO_ before NUXT_, nested keys in snake case", () => {
-    const config = { cmsSecret: "", databaseUrl: "file:./cms.db", public: { apiBase: "" } };
+    const config = { tenonSecret: "", databaseUrl: "file:./cms.db", public: { apiBase: "" } };
     applyEnv(config, {
-      NUXT_CMS_SECRET: "secret",
+      NUXT_TENON_SECRET: "secret",
       NITRO_DATABASE_URL: "libsql://a",
       NUXT_DATABASE_URL: "libsql://b",
       NUXT_PUBLIC_API_BASE: "/api",
     });
     expect(config).toEqual({
-      cmsSecret: "secret",
+      tenonSecret: "secret",
       databaseUrl: "libsql://a",
       public: { apiBase: "/api" },
     });

@@ -213,13 +213,13 @@ function showLink(
   console.log(result.link);
 }
 
-// `TENON_BASE_URL` sets better-auth's `baseURL`, so it covers the usual case.
+// `auth.baseURL`, else `site.url`, sets better-auth's `baseURL`, so it covers the usual case.
 async function siteOrigin(cms: LocalCms, flags: UsersFlags) {
   const origin = configuredOrigin((await cms.auth()).options.baseURL);
   if (origin) return origin;
   if (!canAsk(flags))
     throw new Error(
-      "The site's URL is unknown. Set TENON_BASE_URL, e.g. TENON_BASE_URL=https://example.com.",
+      "The site's URL is unknown. Set `site.url` in tenon.config.ts, e.g. from TENON_SITE_URL=https://example.com.",
     );
   const answered = await answer(
     p.text({

@@ -10,7 +10,13 @@ export default defineConfig({
   integrations: [tenonCms()],
   env: {
     schema: {
-      CMS_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
+      TENON_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
+      TENON_SITE_URL: envField.string({
+        context: "server",
+        access: "secret",
+        url: true,
+        optional: true,
+      }),
       DATABASE_URL: secret(),
       // Any S3-compatible bucket. Neon's object storage hands out these names.
       AWS_ENDPOINT_URL_S3: envField.string({ context: "server", access: "secret", url: true }),

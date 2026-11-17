@@ -10,10 +10,14 @@ export function requireConfig(options: {
   secret: string | undefined;
   database: DatabaseOptions | undefined;
   storage: Storage | undefined;
+  siteUrl: string | undefined;
 }) {
-  const { secret, database, storage } = options;
+  const { secret, database, storage, siteUrl } = options;
   const problems = [
     ...(!secret || secret.length < 32 ? ["`secret` MUST be at least 32 characters"] : []),
+    ...(siteUrl && !isOrigin(siteUrl)
+      ? ["`site.url` MUST be an HTTP(S) origin, without credentials, path, query or fragment"]
+      : []),
     ...(database?.dialect
       ? (database.problems ?? []).map((p) => `\`database\`: ${p}`)
       : ["`database` is missing"]),
@@ -21,4 +25,17 @@ export function requireConfig(options: {
   ];
   if (problems.length)
     throw new Error(`tenoncms: invalid config\n${problems.map((p) => `- ${p}`).join("\n")}`);
+}
+
+function isOrigin(value: string) {
+  const url = URL.parse(value);
+  return (
+    !!url &&
+    ["http:", "https:"].includes(url.protocol) &&
+    !url.username &&
+    !url.password &&
+    url.pathname === "/" &&
+    !url.search &&
+    !url.hash
+  );
 }

@@ -154,19 +154,20 @@ const doc = await cms.findOne("pages", {
 const { title, description, noindex, canonical, alternates, image } = seoMeta(doc, {
   general,
   seo,
+  site: cms.site.url,
 });
 ```
 
-The second argument is optional. It takes the [settings](#settings) globals `general` and `seo`.
+The second argument is optional. It takes the [settings](#settings) globals `general` and `seo`, and `site`: the base of absolute URLs, `site.url` of `defineCms()` (`cms.site.url`).
 
 | Result        | Value                                                                                                                                                                                                     |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `title`       | The collection's template, else the site's, else `{title} · {site.title}`, with [placeholders](#placeholders) filled. The page's `seo.title` fills `{title}`, or is the whole title with `seo.fullTitle`. |
 | `description` | The page's `seo.description`, else the collection's template, else the site's, with placeholders filled. `undefined` when empty.                                                                          |
 | `noindex`     | `true` when the page's or the site's `seo.noindex` is.                                                                                                                                                    |
-| `canonical`   | The site `url` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`.                                                                       |
+| `canonical`   | `site` plus the page's `path`, or the page's own URL in `alternates` ([Localization](./localization.md)). Else `undefined`.                                                                               |
 | `alternates`  | `{ hreflang, href }` entries for `hreflang` tags. Needs the read option `alternates: true`.                                                                                                               |
-| `image`       | The page's `seo.image`, else the site's, as an absolute URL when the site has a `url`. Populate the image, or it does not count.                                                                          |
+| `image`       | The page's `seo.image`, else the site's, as an absolute URL when `site` is set. Populate the image, or it does not count.                                                                                 |
 
 ### Placeholders
 
@@ -231,7 +232,7 @@ hooks: {
 - A length hint under the title and the description: "Too short", "Almost there", "Good" or "Too long", with the characters left. It counts what the site renders, so placeholders and the site default count.
 - An **Auto-generate** button there, which copies the filled default into the field to edit it. For the title that is the part that fills `{title}`, unless it is the full title. An empty field shows the whole rendered default as its placeholder, template included, like `About · Acme`.
 - The rest of the title template as muted text right after the typed SEO title, like `Buy watches · Acme`, so the count makes sense. It hides with **Use as the full title**.
-- A search preview at the top, below the checks: the page URL (the site `url` plus the permalink), the title and the description.
+- A search preview at the top, below the checks: the page URL (`site.url` plus the permalink), the title and the description.
 
 The editor reads the `general` and `seo` globals of the content language and the collection's templates, and uses `seoMeta()`, so the preview is what the site renders. The lengths are fixed.
 
@@ -254,7 +255,7 @@ head: ({ loaderData }) => {
 
 ### In Nuxt
 
-`useTenonSeo(page)` puts the tags of `seoHead()` into the head: title, description, Open Graph, `robots`, the canonical link and the `hreflang` links. It reads the `general` and `seo` settings itself and registers the page's alternates for the [locale switch](./localization.md).
+`useTenonSeo(page)` puts the tags of `seoHead()` into the head: title, description, Open Graph, `robots`, the canonical link and the `hreflang` links. It reads the `general` and `seo` settings and `site.url` itself, and registers the page's alternates for the [locale switch](./localization.md). `{ site }` overrides the origin.
 
 ```vue
 <script setup lang="ts">
@@ -284,7 +285,7 @@ The CMS serves `/sitemap.xml` and `/robots.txt` with no config. The Astro and Nu
 - `lastmod` is the document's `updatedAt`.
 - Left out: drafts that were never published, documents with `seo.noindex`, collections whose read rule denies visitors, and collections with `sitemap: false`.
 - Everything is left out while the site's `seo.noindex` setting is on.
-- URLs are absolute. The base is the `url` of the `general` settings, else the `site` option, else the request's origin. Set `general.url` behind a proxy, so the URLs use the public host.
+- URLs are absolute. The base is `site.url` of `defineCms()`, else the request's origin. Set `site.url` behind a proxy, so the URLs use the public host.
 
 `/robots.txt` allows the whole site except the API (`/_tenon/`). Media under `/_tenon/media/` stays allowed. It points to the sitemap. With the site's `seo.noindex` on, it disallows everything. The admin page sends `noindex` itself.
 
@@ -334,7 +335,7 @@ export const GET = async () =>
   });
 ```
 
-`cms.sitemap()` returns what `/sitemap.xml` lists, `sitemap.entries` included. Its URLs are absolute when `general.url` or `site` is set. `sitemapXml()` writes URLs as given, so pass absolute ones. `robotsTxt({ rules, sitemaps })` renders a `robots.txt` the same way.
+`cms.sitemap()` returns what `/sitemap.xml` lists, `sitemap.entries` included. Its URLs are absolute when `site.url` is set. `sitemapXml()` writes URLs as given, so pass absolute ones. `robotsTxt({ rules, sitemaps })` renders a `robots.txt` the same way.
 
 ## Breadcrumbs
 
@@ -377,11 +378,11 @@ const trail = breadcrumbs(page); // [{ title: 'About', path: '/about' }, …, { 
 
 ## Settings
 
-Most sites need a title, a URL and SEO defaults. `defineCms()` adds two globals for that, `general` and `seo`, with no config:
+Most sites need a title and SEO defaults. `defineCms()` adds two globals for that, `general` and `seo`, with no config:
 
 | Global    | Fields                                                                                                             |
 | --------- | ------------------------------------------------------------------------------------------------------------------ |
-| `general` | `title` (required), `tagline`, `url` (`https://…`), `favicon` (image)                                              |
+| `general` | `title` (required), `tagline`, `favicon` (image). The site's URL is `site.url` of `defineCms()`                    |
 | `seo`     | `title` (template, empty is `{title} · {site.title}`), `description` (template), `image` (social image), `noindex` |
 
 With `localization` and an entry that has a localized group, array or blocks field, a third global, `translations`, holds the default structure setting of each such entry (see [Localization](./localization.md#same-content-structure-in-all-languages)). `settings: { translations: false }` drops it.

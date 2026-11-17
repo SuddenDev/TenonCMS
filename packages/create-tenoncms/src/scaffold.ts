@@ -10,6 +10,7 @@ import {
   type EnvSource,
   fillMarkers,
   SECRET_PART,
+  sitePart,
   type Part,
 } from "./stack.ts";
 
@@ -27,7 +28,7 @@ export type TemplateIndex = {
 
 export type Choices = {
   name: string;
-  /** The admin's name for the site. Default: `Tenon`. */
+  /** `site.name`. Default: `Tenon`. */
   siteName?: string;
   framework: string;
   template: string;
@@ -48,7 +49,7 @@ type PackageJson = Record<string, unknown> & {
   devDependencies?: Record<string, string>;
 };
 
-const SECRET = /^((?:NUXT_)?CMS_SECRET)=.*$/m;
+const SECRET = /^((?:NUXT_)?TENON_SECRET)=.*$/m;
 
 /**
  * The templates folder: `source` itself when it is a local folder, else a giget download of it into a temporary
@@ -73,7 +74,7 @@ export async function readIndex(root: string): Promise<TemplateIndex> {
  * storage, then `_auth/<method>/` for each sign-in method that has one. A target MAY have its own version of a database or storage in `_databases/` or `_storages/`. Later files
  * overwrite earlier ones; `package.json` files are merged instead. Then fills the markers of the copied files with each
  * layer's `part.json`, names the package, pins `tenoncms`, and writes the env file with a new
- * `CMS_SECRET`.
+ * `TENON_SECRET`.
  */
 export async function scaffold(root: string, dir: string, choices: Choices) {
   const index = await readIndex(root);
@@ -95,12 +96,7 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
 
   let pkg: PackageJson = {};
   const siteName = choices.siteName?.trim() || "Tenon";
-  const parts: Part[] = [
-    SECRET_PART,
-    {
-      files: { "tenon.config.ts": { options: [`admin: { name: ${JSON.stringify(siteName)} },`] } },
-    },
-  ];
+  const parts: Part[] = [SECRET_PART];
   for (const layer of layers) {
     const read = async (file: string) => JSON.parse(await readFile(join(layer, file), "utf8"));
     if (existsSync(join(layer, "package.json")))
@@ -111,7 +107,7 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
     );
     await cp(layer, dir, { recursive: true, force: true, filter: (src) => !skip.includes(src) });
   }
-  parts.push(authPart(auth));
+  parts.push(authPart(auth), sitePart(siteName));
 
   const source = index.frameworks[choices.framework] ?? {};
   for (const file of new Set(parts.flatMap((p) => Object.keys(p.files ?? {})))) {
@@ -130,9 +126,7 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
   const envFile = index.targets[choices.target]?.envFile ?? ".env";
   await writeFile(
     join(dir, `${envFile}.example`),
-    envExample(parts, source.runtimeConfig ? "NUXT_" : "") +
-      "\n# Public CMS origin. Set in production; development detects the origin automatically\n" +
-      "# TENON_BASE_URL=https://cms.example.com\n",
+    envExample(parts, source.runtimeConfig ? "NUXT_" : ""),
   );
 
   pkg.name = choices.name;

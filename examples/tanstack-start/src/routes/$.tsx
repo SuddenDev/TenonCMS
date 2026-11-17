@@ -17,7 +17,7 @@ const getPage = createServerFn()
     });
     if (!page) throw notFound();
     const [general, seo] = await Promise.all([api.getGlobal("general"), api.getGlobal("seo")]);
-    return { page, general, seo };
+    return { page, general, seo, site: cms.site.url };
   });
 
 // `/`, `/posts/$slug`, `/admin/$` and `/_tenon/$` win over this route, so a CMS page at `/` never shows.

@@ -6,7 +6,7 @@ editors get the admin bar on the site, with links into the admin. Nothing here t
 database except `server/resolve-url.ts`, which reads through the [local API](../cms/README.md). The preview cookie is
 read in [`auth/get-caller.ts`](../auth/get-caller.ts).
 
-The admin resolves relative preview URLs against the `site` option of `defineCms()` (default: its own origin). The
+The admin resolves relative preview URLs against `site.url` of `defineCms()` (default: its own origin). The
 page talks only to its `parent` (the admin's iframe) or `opener` (a tab the admin opened), and only after that window
 sent a first message from the origin of the `admin` option (a path for the site's own origin, or a full URL like
 `https://cms.example.com/admin`); it posts only to that origin. The admin accepts and posts only to the site's origin.

@@ -57,7 +57,7 @@ curl -s "$B/_tenon/collections/posts?locale=en&fallback=false"
 
 Expect 201 and the post with `"locale":"de"`, then `[]` (no English version, no fallback). Fetch `/de/posts/hallo` for the page.
 
-Invites, on the Astro example with a temp `DATABASE_URL` and `SITE_URL` matching the port (the invite page MUST be on its origin): after the sign-up above, invite and accept with a second cookie jar.
+Invites, on the Astro example with a temp `DATABASE_URL` and no `TENON_SITE_URL`, or one matching the port (the invite page MUST be on the origin of `auth.baseURL`, else `site.url`, else the request): after the sign-up above, invite and accept with a second cookie jar.
 
 ```sh
 K=/tmp/jar2

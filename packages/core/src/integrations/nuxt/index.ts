@@ -4,6 +4,7 @@ import {
   addImports,
   addPlugin,
   addServerHandler,
+  addServerPlugin,
   addTypeTemplate,
   addVitePlugin,
   createResolver,
@@ -92,6 +93,7 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
     // The preview runtime reads the admin path for the bars' links; `false` renders no admin bar.
     nuxt.options.runtimeConfig.public.tenon = { admin: path ?? false };
     addPlugin(`${runtime}/plugin`);
+    addServerPlugin(`${runtime}/server/site`);
 
     // Types `createClient()` from `tenoncms/client` without a type argument.
     addTypeTemplate(

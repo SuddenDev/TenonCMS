@@ -43,16 +43,16 @@ import { scheduleEndpoint } from "../schedule/endpoints/schedule.endpoint.ts";
  * Builds the Hono app behind `cms.fetch`. Open routes mount first and look up no caller. Then `optionalSession` looks
  * up the caller once for everything below it: content reads, then content writes (collections, globals, media) after
  * the plugins' `middleware`, both behind their access rules, and last the routes that need a session. Media routes
- * mount at `/media` when the `media` option is set. `site` goes out in `/schema` for the admin's preview.
+ * mount at `/media` when the `media` option is set. `site.url` goes out in `/schema` for the admin's preview.
  * `/sitemap.xml` and `/robots.txt` sit at the root, outside `API_BASE`.
  * @returns The app.
  */
-export function createApp(core: Core, site?: string) {
+export function createApp(core: Core) {
   const { plugins } = core;
   const media = core.media && mediaRoutes(core);
   const schemaEndpoint = readEndpoint(core.schema, {
     media,
-    site,
+    site: core.site.url,
     admin: core.admin.descriptor,
     localization: core.localization,
     roles: core.roles,
@@ -91,7 +91,7 @@ export function createApp(core: Core, site?: string) {
   signedIn.route("/", exitEndpoint());
   if (core.admin.bar) signedIn.route("/", adminBarEndpoint(core, core.admin.bar));
   signedIn.route("/", passwordEndpoint(core));
-  signedIn.route("/", invitesEndpoint(core, site));
+  signedIn.route("/", invitesEndpoint(core));
   signedIn.route("/", apiKeysEndpoint(core));
   signedIn.route("/", transferEndpoint(core));
   signedIn.route("/", locksEndpoint(core));
@@ -137,7 +137,7 @@ export function createApp(core: Core, site?: string) {
   const app = new Hono<Env>();
   app.onError(errorHandler(core));
   app.notFound((c) => c.json({ message: "Not Found" }, 404));
-  app.route("/", seoRoutes(core, site));
+  app.route("/", seoRoutes(core));
   app.route("/", api);
   return app;
 }

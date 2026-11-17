@@ -67,7 +67,7 @@ export type MediaOf<M> = [M] extends [false] ? {} : { media: MediaApi };
  * Which settings globals `defineCms()` adds. An omitted key is the default from `settings()` in `tenoncms/presets`.
  */
 export type SettingsOptions = {
-  /** Site title, tagline, URL and favicon. `false` drops it, a `Global` replaces it. Stored as `general`. */
+  /** Site title, tagline and favicon. `false` drops it, a `Global` replaces it. Stored as `general`. */
   general?: Global | false;
   /** Search and social defaults. `false` drops it, a `Global` replaces it. Stored as `seo`. */
   seo?: Global | false;
@@ -123,6 +123,21 @@ export type LocalizationOptions<L extends string = string> = {
 
 /** The `localization` option with its defaults applied. */
 export type Localization<L extends string = string> = Required<LocalizationOptions<L>>;
+
+export type SiteOptions = {
+  /**
+   * The origin of the public site, like `https://example.com`: no path, query, fragment or credentials. Sitemap and
+   * robots URLs and relative preview URLs resolve against it. Without it, they use the request's origin, and the
+   * admin's preview its own origin.
+   *
+   * It is also the default of `auth.baseURL`, the origin of the CMS (API and admin), which better-auth and every
+   * link into the admin use. An embedded CMS shares the site's origin, so setting `url` is enough. A frontend on
+   * another origin MUST set `auth.baseURL` to the CMS origin too.
+   */
+  url?: string;
+  /** The name of the site. Passkeys, emails, the admin and the admin bar show it. Defaults to `tenoncms`. */
+  name?: string;
+};
 
 export type CmsOptions<
   C extends Record<string, Collection>,
@@ -205,11 +220,8 @@ export type CmsOptions<
   settings?: S & NoInfer<ExactSettings<S>>;
   /** Content in several languages. Without it, nothing is localized and `localized` options throw. See {@link LocalizationOptions}. */
   localization?: LocalizationOptions<L>;
-  /**
-   * The URL of the site, like `https://example.com`. The admin's preview resolves relative preview URLs against it.
-   * Defaults to the admin's own origin. Live preview on another origin needs the site to run `preview()` too.
-   */
-  site?: string;
+  /** The public site. See {@link SiteOptions}. */
+  site?: SiteOptions;
   /**
    * `/sitemap.xml`: the published documents of every collection with a `permalink`. `entries` merges your own
    * routes. `false` turns it off. A collection opts out with `sitemap: false`.

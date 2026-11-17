@@ -173,6 +173,36 @@ describe("invites", () => {
     });
   });
 
+  it("links into the admin on `auth.baseURL`, while the sitemap uses `site.url`", async () => {
+    const cms = defineCms({
+      ...base,
+      collections: { posts: { permalink: "/posts/{slug}", fields: { slug: { type: "text" } } } },
+      site: { url: "https://site.example" },
+      auth: { ...base.auth, baseURL: "https://cms.example" },
+    });
+    const owner = setup(cms);
+    await owner.client.signUp(admin);
+    await cms.create("posts", { slug: "a" });
+    const page = "https://cms.example/admin/invite";
+
+    const { link } = await owner.client.invites.create({
+      email: "e@b.co",
+      role: "editor",
+      url: page,
+    });
+    expect(link).toMatch(`${page}?token=`);
+    expect(
+      await json(
+        await call(owner.fetch, "POST", "/invites", {
+          email: "f@b.co",
+          role: "editor",
+          url: "https://site.example/admin/invite",
+        }),
+      ),
+    ).toMatchObject({ status: 400, body: { errors: { url: expect.any(String) } } });
+    expect((await cms.sitemap()).map((e) => e.url)).toEqual(["https://site.example/posts/a"]);
+  });
+
   it("gives a resent invite a new token", async () => {
     const { invite, guest, owner } = await env();
     const { body } = await invite();

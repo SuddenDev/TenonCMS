@@ -45,11 +45,14 @@ import { posts } from "./collections/posts";
 export default defineCms({
   collections: { posts, authors },
   database: libsql("file:/absolute/path/cms.db"), // or libsql://… (Turso) with { url, authToken }
-  secret: process.env.CMS_SECRET!, // at least 32 characters
+  secret: process.env.TENON_SECRET!, // at least 32 characters
+  site: { url: process.env.TENON_SITE_URL, name: "My site" },
 });
 ```
 
-`defineCms()` checks `secret`, `database` and `media.storage` when the config loads. A missing or short secret, a database without its URL or a storage without its bucket or keys throws one error that lists every problem, so the server stops at startup. A build that loads the config, for example to prerender pages, needs these values too. A custom storage adapter MAY report its own missing options in `problems`.
+`site.url` is the origin of the public site, like `https://example.com`, without path, query, fragment or credentials. Sitemap and robots URLs and relative preview URLs resolve against it; without it they use the request's origin. It is also the default of `auth.baseURL`, the origin of the CMS (API and admin), which sign-in and every link into the admin use. An embedded CMS shares the site's origin, so `site.url` is enough. A frontend on another origin MUST also set `auth.baseURL` to the CMS origin. `site.name` (default `tenoncms`) shows in the admin, the admin bar, emails and passkeys. Core reads no env var for either: the config passes them. The instance has both as `cms.site`, with `url` as an origin.
+
+`defineCms()` checks `secret`, `database`, `media.storage` and `site.url` when the config loads. A missing or short secret, a database without its URL or a storage without its bucket or keys throws one error that lists every problem, so the server stops at startup. A build that loads the config, for example to prerender pages, needs these values too. A custom storage adapter MAY report its own missing options in `problems`.
 
 Each database has its own entry and driver, so you install only the one you use:
 

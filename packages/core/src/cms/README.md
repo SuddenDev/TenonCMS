@@ -19,7 +19,7 @@ Construction happens in this order:
 
 | Name      | Type       | Configuration option                    | Default                                 | Description                                                                                      |
 | --------- | ---------- | --------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `general` | Global     | `settings.general`: `Global` or `false` | Enabled                                 | Site title, tagline, URL and favicon.                                                            |
+| `general` | Global     | `settings.general`: `Global` or `false` | Enabled                                 | Site title, tagline and favicon.                                                                 |
 | `seo`     | Global     | `settings.seo`: `Global` or `false`     | Enabled                                 | Title and description templates, social image and indexing preference.                           |
 | `media`   | Collection | `media`: `MediaOptions` or `boolean`    | Enabled on Node.js; disabled on Workers | Uploads and file metadata. Defaults to `./.uploads` storage and IPX image processing on Node.js. |
 

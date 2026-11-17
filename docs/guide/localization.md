@@ -152,7 +152,7 @@ switchTarget(localization, "/about", "de", page.alternates);
 
 `switchTarget()` uses the document's alternate in the target locale, or that locale's homepage when the translation is missing. `localization` is `cms.localization` on the server. In the browser, `await client.localization()` fetches the public `GET /_tenon/localization` once per client (`null` without `localization`), so the browser never imports `tenon.config.ts`.
 
-`seoMeta()` turns `alternates` into `hreflang` tags. `alternates` is a list of `{ hreflang, href }`, absolute against the site `url`, and `canonical` is the URL of the page's own locale.
+`seoMeta()` turns `alternates` into `hreflang` tags. `alternates` is a list of `{ hreflang, href }`, absolute against `site.url`, and `canonical` is the URL of the page's own locale.
 
 ```astro
 ---

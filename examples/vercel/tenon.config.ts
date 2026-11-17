@@ -4,10 +4,11 @@ import {
   AWS_ENDPOINT_URL_S3,
   AWS_REGION,
   AWS_SECRET_ACCESS_KEY,
-  CMS_SECRET,
   DATABASE_URL,
   DEPLOY_HOOK_URL,
   S3_BUCKET,
+  TENON_SECRET,
+  TENON_SITE_URL,
 } from "astro:env/server";
 import { defineCms } from "tenoncms";
 import { ipx } from "tenoncms/media/ipx";
@@ -21,7 +22,8 @@ attachDatabasePool(database.pool);
 
 export default defineCms({
   database,
-  secret: CMS_SECRET,
+  secret: TENON_SECRET,
+  site: { url: TENON_SITE_URL },
   // The post pages are prerendered. Without a deploy hook there is no Deploy button.
   plugins: DEPLOY_HOOK_URL ? [deploy(DEPLOY_HOOK_URL)] : [],
   // The filesystem is read-only, so the default media on the local disk does not work here.

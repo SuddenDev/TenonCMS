@@ -66,6 +66,16 @@ function useClient(): Client {
   return client;
 }
 
+/**
+ * `site.url` of the config, in the payload. During SSR it comes from the request's `event.context`, which the Nitro
+ * plugin `server/site.ts` sets; the browser reads the payload.
+ */
+const useSiteUrl = () =>
+  useState<string | null>(
+    "tenon:site",
+    () => (useRequestEvent()?.context.tenonSiteUrl as string | undefined) ?? null,
+  );
+
 /** The localization config in the payload. The plugin loads it before the first page renders. */
 const useLocalization = () => useState<Config>("tenon:localization");
 
@@ -275,7 +285,8 @@ export function useAlternates(source: () => Alternates | undefined) {
  * Puts the `<head>` tags of `seoMeta()` on the page: title, description, Open Graph, robots, canonical and `hreflang`
  * links. Reads the `general` and `seo` settings and registers the page's alternates for
  * `switchLocale()`. Read the page with `alternates: true` for `hreflang` links; outside the pages preset, with
- * `permalink: true` for its canonical URL. Pass the collection's `templates` of `seo()` to use them.
+ * `permalink: true` for its canonical URL. Pass the collection's `templates` of `seo()` to use them. URLs are
+ * absolute against `site.url` of the config, or the `site` option.
  * @returns The reactive `seoMeta()` result, once the settings are read.
  * @example
  * const { data: page } = await useTenon().findOne('pages', { where: { path }, alternates: true })
@@ -283,7 +294,7 @@ export function useAlternates(source: () => Alternates | undefined) {
  */
 export function useTenonSeo(
   page: MaybeRefOrGetter<Record<string, any> | null | undefined>,
-  options: { templates?: SeoTemplates | null } = {},
+  options: { templates?: SeoTemplates | null; site?: string } = {},
 ) {
   // The settings globals MAY be off, so the read is untyped. A missing one reads as an error, and its tags fall back.
   const read = useTenon().getGlobal as unknown as (name: string) => Promise<unknown> & {
@@ -291,10 +302,12 @@ export function useTenonSeo(
   };
   const general = read("general");
   const seo = read("seo");
+  const site = options.site ?? useSiteUrl().value;
   const settings = () => ({
     general: general.data.value,
     seo: seo.data.value,
     templates: options.templates,
+    site,
   });
   const meta = computed(() => seoMeta(toValue(page) ?? {}, settings()));
   const head = computed(() => seoHead(toValue(page) ?? {}, settings()));

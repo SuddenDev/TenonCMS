@@ -25,7 +25,7 @@ export default defineConfig({
         test: {
           name: "node",
           exclude: ["**/node_modules/**", "**/*.workerd.test.ts"],
-          env: { TENON_BASE_URL: "http://localhost" },
+          env: { BETTER_AUTH_URL: "http://localhost" },
           sequence: { groupOrder: 0 },
         },
       },
@@ -35,7 +35,7 @@ export default defineConfig({
           name: "pglite",
           include: ["src/tests/*.test.ts", "src/db/{migrations,queries}/**/*.test.ts"],
           exclude: ["**/*.workerd.test.ts"],
-          env: { CMS_TEST_DB: "pglite", TENON_BASE_URL: "http://localhost" },
+          env: { CMS_TEST_DB: "pglite", BETTER_AUTH_URL: "http://localhost" },
           sequence: { groupOrder: 1 },
           // ponytail: each test clones a migrated PGlite (`setup.ts`), about 0.1 s per instance. Reset one database
           // per file instead if the suite gets too slow.
@@ -49,7 +49,7 @@ export default defineConfig({
           name: "sqlite",
           include: ["src/tests/*.test.ts", "src/db/{migrations,queries}/**/*.test.ts"],
           exclude: ["**/*.workerd.test.ts"],
-          env: { CMS_TEST_DB: "sqlite", TENON_BASE_URL: "http://localhost" },
+          env: { CMS_TEST_DB: "sqlite", BETTER_AUTH_URL: "http://localhost" },
           sequence: { groupOrder: 2 },
         },
       },

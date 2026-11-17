@@ -24,5 +24,6 @@ export default defineCms({
   },
   plugins: [ExamplePlugin()],
   database: libsql(process.env.DATABASE_URL ?? "file:./cms.db"),
-  secret: process.env.CMS_SECRET!,
+  secret: process.env.TENON_SECRET!,
+  site: { url: process.env.TENON_SITE_URL },
 });

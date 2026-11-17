@@ -1,4 +1,4 @@
-import type { AdminBarPosition, AdminOptions } from "../../admin/index.d.ts";
+import type { AdminBarPosition, AdminDescriptor } from "../../admin/index.d.ts";
 import { currentAdminLocale } from "../../admin/browser/locale.ts";
 import type { ResolvedBarItem } from "../../admin/load/resolve-bar-item.ts";
 
@@ -12,7 +12,7 @@ const HINT = "tenon-session";
 export type AdminBarData = {
   position: AdminBarPosition;
   items: ResolvedBarItem[];
-  branding?: Pick<AdminOptions, "name" | "logo" | "icon">;
+  branding?: Pick<AdminDescriptor, "name" | "logo" | "icon">;
 };
 
 /** The perspective the preview cookie selects: `drafts`, else `published`. */

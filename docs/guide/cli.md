@@ -10,7 +10,7 @@ Two commands: `npm create tenoncms` starts a project, and `tenon` backs it up, r
 npm create tenoncms
 ```
 
-It asks one question at a time: the folder, the site name (default `Tenon`, written to `admin.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, how people sign in to the admin, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
+It asks one question at a time: the folder, the site name (default `Tenon`, written to `site.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, how people sign in to the admin, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
 
 | Runs on                 | Database                                                                                | Media                                |
 | ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -30,9 +30,9 @@ Every question has a flag, so it also runs without a terminal:
 npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --auth passkey,magic-link --pm pnpm --yes
 ```
 
-It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `CMS_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.
+It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `TENON_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.
 
-The env example also includes `TENON_BASE_URL`, the public CMS origin to set in production. Leave it commented out in development so the adapter detects the server's current URL. Its name is `TENON_BASE_URL` in every framework, including Nuxt; core reads it directly.
+The config reads `site: { url: TENON_SITE_URL }`, the public origin to set in production; it is also the CMS origin for sign-in and admin links. Leave it commented out in development so the adapter detects the server's current URL. In Nuxt it is `NUXT_TENON_SITE_URL`, like every other variable. Core reads no env var itself.
 
 ## Back up
 
@@ -78,7 +78,7 @@ npx tenon users remove editor@example.com
 
 `users list` prints every user with ID, name, email, role and status. In a terminal with colors, the status is green when active and red when deactivated. `users deactivate` ends the user's sessions and blocks sign-in, like **Deactivate** in the admin; `users reactivate` lifts that. `users remove` deletes the user, like **Remove** in the admin. It cannot be undone; their content stays. Deactivate and remove ask first, remove with No as the default; without a terminal they need `--yes`. The last active admin cannot be deactivated or removed. These four work on the local project only, like `users recover`.
 
-`users create` and `users recover` build the link on the site's URL: `TENON_BASE_URL` (or `auth.baseURL`), else they ask, with `http://localhost:4321` as the default. Without a terminal, set `TENON_BASE_URL`.
+`users create` and `users recover` build the link on the CMS origin: `auth.baseURL`, else `site.url`, else they ask, with `http://localhost:4321` as the default. Without a terminal, set `site.url` (for example from `TENON_SITE_URL`).
 
 ## Local or remote
 

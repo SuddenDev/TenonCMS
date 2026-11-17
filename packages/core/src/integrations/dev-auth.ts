@@ -1,5 +1,5 @@
 import type { AddressInfo } from "node:net";
-import { loadEnv, type Plugin } from "vite";
+import type { Plugin } from "vite";
 
 export function developmentOrigin(
   address: AddressInfo,
@@ -26,10 +26,6 @@ export function developmentAuth(host?: string | boolean): Plugin {
           ),
         },
       };
-    },
-    configResolved(config) {
-      const env = loadEnv(config.mode, config.envDir, "TENON_BASE_URL");
-      if (env.TENON_BASE_URL) process.env.TENON_BASE_URL ??= env.TENON_BASE_URL;
     },
     configureServer(server) {
       server.httpServer?.on("listening", () => {

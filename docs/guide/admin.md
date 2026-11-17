@@ -118,7 +118,7 @@ Descriptions receive the current unsaved `value`, root document `data`, containi
 
 ## Branding
 
-- `name` shows in the top bar, on the login and in the page title (default `tenoncms`).
+- The name is `site.name` of `defineCms()`, not an `admin` option. It shows in the top bar, on the login, in the page title, in the admin bar, in emails and as the passkey name (default `tenoncms`).
 - `logo` (top bar and login) and `icon` (the tile beside the name when there is no logo) are URLs, or `{ light, dark }` pairs that follow the admin's theme.
 - `logo` MAY also set one image per place: `header` (the top bar) and `login`. A place without one shows the icon and the name. The site's admin bar uses the `header` logo when there is no `icon`.
 

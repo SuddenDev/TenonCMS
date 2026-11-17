@@ -11,8 +11,8 @@ export function settings() {
     general: {
       label: { en: "General", de: "Allgemein" },
       description: {
-        en: "Site title, tagline, URL and favicon.",
-        de: "Titel, Untertitel, URL und Favicon der Website.",
+        en: "Site title, tagline and favicon.",
+        de: "Titel, Untertitel und Favicon der Website.",
       },
       nav: { display: "settings", icon: "settings", order: 1 },
       fields: {
@@ -26,14 +26,6 @@ export function settings() {
           description: {
             en: "Short line that describes the site.",
             de: "Kurze Zeile, die die Website beschreibt.",
-          },
-        },
-        url: {
-          type: "text",
-          pattern: "https?://\\S+",
-          description: {
-            en: "Site URL, used for canonical and social links.",
-            de: "URL der Website, für kanonische Links und soziale Netzwerke.",
           },
         },
         favicon: {

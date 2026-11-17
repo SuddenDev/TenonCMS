@@ -54,13 +54,13 @@ describe("admin bar endpoint", () => {
     expect(await res.json()).toEqual({
       position: "bottom-center",
       items: builtIns("site"),
-      branding: {},
+      branding: { name: "tenoncms" },
     });
   });
 
   it("answers the configured position and branding", async () => {
     const { get } = await signedIn(
-      bar({ name: "Site", icon: "/i.svg", adminBar: { position: "top-right" } }),
+      bar({ icon: "/i.svg", adminBar: { position: "top-right" } }, { site: { name: "Site" } }),
     );
     expect(await (await get()).json()).toMatchObject({
       position: "top-right",

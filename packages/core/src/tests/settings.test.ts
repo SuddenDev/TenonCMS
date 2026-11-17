@@ -50,19 +50,6 @@ describe("presets", () => {
     for (const text of texts)
       expect(text).toEqual({ en: expect.any(String), de: expect.any(String) });
   });
-
-  it("checks the url pattern", async () => {
-    const cms = defineCms({
-      settings: { general: settings().general },
-      database: testDatabase(),
-      secret: "x".repeat(32),
-    });
-    await expect(cms.setGlobal("general", { title: "S", url: "a.b" })).rejects.toMatchObject({
-      errors: { url: expect.any(String) },
-    });
-    await cms.setGlobal("general", { title: "S", url: "https://a.b" });
-    expect((await cms.getGlobal("general")).url).toBe("https://a.b");
-  });
 });
 const opts = { database: testDatabase(), secret: "x".repeat(32) };
 const gen = (fields = {}) => ({ fields: { name: { type: "text" }, ...fields } }) as const;
@@ -75,7 +62,7 @@ describe("defineCms", () => {
     await expect(cms.setGlobal("general", { tagline: "x" })).rejects.toMatchObject({
       errors: { title: expect.any(String) },
     });
-    await cms.setGlobal("general", { title: "Site", url: "https://a.b" });
+    await cms.setGlobal("general", { title: "Site" });
     expect(await cms.getGlobal("general")).toMatchObject({ title: "Site" });
   });
 

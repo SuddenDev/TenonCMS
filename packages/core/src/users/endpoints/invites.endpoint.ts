@@ -20,18 +20,21 @@ const requireAdmin: MiddlewareHandler<Env> = async (c, next) => {
 
 /**
  * Protected invite routes, for admins only: `GET /invites`, `POST /invites`, `POST /invites/:id/resend` and
- * `DELETE /invites/:id`. Create and resend answer 502 with the result when sending failed.
- * @param site The invite page MUST be on its origin. Without it, on the request's.
+ * `DELETE /invites/:id`. Create and resend answer 502 with the result when sending failed. The invite page MUST be in
+ * the admin: on the origin of a fixed better-auth `baseURL` (`auth.baseURL`, else `site.url`), else on the request's.
  */
-export function invitesEndpoint(core: Core, site?: string) {
-  const origin = (url: string) => new URL(site ?? url).origin;
+export function invitesEndpoint(core: Core) {
+  const origin = async (url: string) => {
+    const { baseURL } = (await core.auth()).options;
+    return new URL(typeof baseURL === "string" ? baseURL : url).origin;
+  };
   return new Hono<Env>()
     .use("/invites", requireAdmin)
     .use("/invites/*", requireAdmin)
     .get("/invites", async (c) => c.json(await listInvites(core)))
     .post("/invites", async (c) => {
       const body = input(createBody, await parseBody(c.req));
-      const result = await createInvite(core, c.var.user, body, origin(c.req.url));
+      const result = await createInvite(core, c.var.user, body, await origin(c.req.url));
       return c.json(result, result.message ? 502 : 201);
     })
     .post("/invites/:id/resend", async (c) => {
@@ -41,7 +44,7 @@ export function invitesEndpoint(core: Core, site?: string) {
         c.var.user,
         c.req.param("id"),
         url,
-        origin(c.req.url),
+        await origin(c.req.url),
       );
       return c.json(result, result.message ? 502 : 200);
     })

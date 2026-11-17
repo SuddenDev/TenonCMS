@@ -20,7 +20,12 @@ describe("scaffold", () => {
       database: "libsql",
       storage: "local",
     });
-    expect(read(dir, "tenon.config.ts")).toContain('admin: { name: "My \\"Site\\"" },');
+    expect(read(dir, "tenon.config.ts")).toContain(
+      'site: { url: TENON_SITE_URL, name: "My \\"Site\\"" },',
+    );
+    expect(read(dir, "astro.config.ts")).toContain(
+      'TENON_SITE_URL: envField.string({ context: "server", access: "secret", url: true, optional: true }),',
+    );
   });
 
   it("layers the template, the shared target and the framework's target", async () => {
@@ -43,10 +48,10 @@ describe("scaffold", () => {
     });
     expect(pkg.scripts).toMatchObject({ dev: "astro dev", deploy: expect.any(String) });
     expect(read(dir, "tenon.config.ts")).toContain("database: durableObject(),");
-    expect(read(dir, "tenon.config.ts")).toContain("secret: CMS_SECRET,");
+    expect(read(dir, "tenon.config.ts")).toContain("secret: TENON_SECRET,");
     expect(read(dir, "astro.config.ts")).toContain("adapter: cloudflare(),");
-    expect(read(dir, ".dev.vars")).toMatch(/^CMS_SECRET=[0-9a-f]{64}$/m);
-    expect(read(dir, ".dev.vars.example")).toContain("# TENON_BASE_URL=https://cms.example.com");
+    expect(read(dir, ".dev.vars")).toMatch(/^TENON_SECRET=[0-9a-f]{64}$/m);
+    expect(read(dir, ".dev.vars.example")).toMatch(/^# TENON_SITE_URL=$/m);
     expect(read(dir, ".gitignore")).toMatch(/^\.wrangler$/m);
     expect(read(dir, ".gitignore")).toMatch(/^\.astro$/m);
     expect(existsSync(join(dir, "part.json"))).toBe(false);
@@ -65,13 +70,13 @@ describe("scaffold", () => {
       tenonVersion: "1.0.0",
     });
 
-    const secret = read(dir, ".env").match(/^CMS_SECRET=(.*)$/m)?.[1];
+    const secret = read(dir, ".env").match(/^TENON_SECRET=(.*)$/m)?.[1];
     expect(secret).toMatch(/^[0-9a-f]{64}$/);
     expect(read(dir, ".env.example")).toContain("change-me");
-    expect(read(dir, ".env.example")).toContain("# TENON_BASE_URL=https://cms.example.com");
+    expect(read(dir, ".env.example")).toMatch(/^# TENON_SITE_URL=$/m);
     expect(read(dir, ".env.example")).toMatch(/^S3_BUCKET=uploads$/m);
-    expect(read(dir, ".env.example")).toMatch(/^CMS_SECRET=.*\n\n(# .*\n)*# ?DATABASE_DIR=/m);
-    expect(read(dir, "tenon.config.ts")).toContain('admin: { name: "Tenon" },');
+    expect(read(dir, ".env.example")).toMatch(/^TENON_SECRET=.*\n\n(# .*\n)*# ?DATABASE_DIR=/m);
+    expect(read(dir, "tenon.config.ts")).toContain('site: { url: TENON_SITE_URL, name: "Tenon" },');
     expect(read(dir, "tenon.config.ts")).toContain("new PGlite(DATABASE_DIR)");
     expect(read(dir, "astro.config.ts")).toContain("DATABASE_DIR: envField.string(");
     expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty(
@@ -92,7 +97,8 @@ describe("scaffold", () => {
     });
 
     const nuxt = read(dir, "nuxt.config.ts");
-    expect(nuxt).toContain('cmsSecret: "",');
+    expect(nuxt).toContain('tenonSecret: "",');
+    expect(nuxt).toContain('tenonSiteUrl: "",');
     expect(nuxt).toContain('databaseUrl: "file:./cms.db",');
     expect(nuxt).toContain('databaseAuthToken: "",');
     expect(nuxt).toContain('s3Bucket: "",');
@@ -100,7 +106,8 @@ describe("scaffold", () => {
 
     const config = read(dir, "tenon.config.ts");
     expect(config).toContain("const config = useRuntimeConfig();");
-    expect(config).toContain("secret: config.cmsSecret,");
+    expect(config).toContain("secret: config.tenonSecret,");
+    expect(config).toContain('site: { url: config.tenonSiteUrl || undefined, name: "Tenon" },');
     expect(config).toContain("url: config.databaseUrl,");
     expect(config).toContain("authToken: config.databaseAuthToken || undefined,");
     expect(config).toContain("bucket: config.s3Bucket,");
@@ -109,11 +116,10 @@ describe("scaffold", () => {
     const example = read(dir, ".env.example");
     expect(example).toMatch(/^# NUXT_DATABASE_URL=file:\.\/cms\.db$/m);
     expect(example).toMatch(/^# NUXT_DATABASE_AUTH_TOKEN=$/m);
-    expect(example).toContain("# TENON_BASE_URL=https://cms.example.com");
-    expect(example).not.toContain("NUXT_TENON_BASE_URL");
+    expect(example).toMatch(/^# NUXT_TENON_SITE_URL=$/m);
     expect(example).toMatch(/^NUXT_S3_BUCKET=uploads$/m);
     expect(example).toMatch(/^NUXT_AWS_ENDPOINT_URL_S3=/m);
-    expect(read(dir, ".env")).toMatch(/^NUXT_CMS_SECRET=[0-9a-f]{64}$/m);
+    expect(read(dir, ".env")).toMatch(/^NUXT_TENON_SECRET=[0-9a-f]{64}$/m);
   });
 
   it("declares every runtimeConfig key that a Nuxt starter reads, with its NUXT_ variable", async () => {
@@ -134,13 +140,13 @@ describe("scaffold", () => {
 
           expect(config, combo).not.toContain("process.env");
           expect(config + nuxt, combo).not.toContain("@tenon-");
-          expect(keys, combo).toContain("cmsSecret");
+          expect(keys, combo).toContain("tenonSecret");
           for (const key of used) expect(keys, `${combo}: ${key}`).toContain(key);
           for (const key of keys) {
             const name = `NUXT_${key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}`;
             expect(example, `${combo}: ${name}`).toMatch(new RegExp(`^(# )?${name}=`, "m"));
           }
-          expect(example, combo).not.toMatch(/^(# )?(?!NUXT_|TENON_BASE_URL=)[A-Z_0-9]+=/m);
+          expect(example, combo).not.toMatch(/^(# )?(?!NUXT_)[A-Z_0-9]+=/m);
         }
   });
 

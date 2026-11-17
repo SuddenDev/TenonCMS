@@ -45,6 +45,8 @@ export type Core = {
    * every operation, which would be an import cycle.
    */
   localApi: (scope: Scope) => LocalApi;
+  /** The `site` option: `url` as an origin, missing without it; `name` defaults to `tenoncms`. */
+  site: { url?: string; name: string };
   /** The `localization` option with defaults. Missing without it. */
   localization?: Localization;
   /** The resolved `media` option. Missing without it. */

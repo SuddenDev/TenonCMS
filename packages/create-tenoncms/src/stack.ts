@@ -31,9 +31,29 @@ export type Part = {
 
 /** Every project has one. It comes first. */
 export const SECRET_PART: Part = {
-  files: { "tenon.config.ts": { options: ["secret: $CMS_SECRET,"] } },
-  env: [{ name: "CMS_SECRET", example: "change-me-to-at-least-32-random-chars-please", min: 32 }],
+  files: { "tenon.config.ts": { options: ["secret: $TENON_SECRET,"] } },
+  env: [{ name: "TENON_SECRET", example: "change-me-to-at-least-32-random-chars-please", min: 32 }],
 };
+
+/** The `site` block: the name, and the public origin from `TENON_SITE_URL`, which development leaves unset. */
+export function sitePart(name: string): Part {
+  return {
+    files: {
+      "tenon.config.ts": {
+        options: [`site: { url: $TENON_SITE_URL, name: ${JSON.stringify(name)} },`],
+      },
+    },
+    env: [
+      {
+        name: "TENON_SITE_URL",
+        comment:
+          "Public site origin. Set in production; development detects the origin automatically",
+        optional: true,
+        url: true,
+      },
+    ],
+  };
+}
 
 export const AUTH_METHODS = ["password", "passkey", "magic-link", "email-otp"] as const;
 export type AuthMethod = (typeof AUTH_METHODS)[number];

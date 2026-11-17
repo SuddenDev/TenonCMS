@@ -117,9 +117,6 @@ export function defineCms<
 
   /* ── Options ───────────────────────────────────────────────────────────────────────── */
 
-  if (site !== undefined && !/^https?:$/.test(URL.parse(site)?.protocol ?? ""))
-    throw new Error("tenoncms: `site` MUST be an http(s) URL");
-
   const roles = normalizeRoles(roleOptions);
   const populateOption = {
     depth: populateOptions.depth ?? 2,
@@ -136,7 +133,11 @@ export function defineCms<
       : mediaOption !== false
         ? defaultMedia(!!mediaOption)
         : undefined;
-  requireConfig({ secret, database, storage: mediaOptions?.storage });
+  requireConfig({ secret, database, storage: mediaOptions?.storage, siteUrl: site?.url });
+  const siteConfig = {
+    url: site?.url ? new URL(site.url).origin : undefined,
+    name: site?.name ?? "tenoncms",
+  };
   requireSignInMethod(host, !!emailOptions);
 
   /* ── Schema creation + validation ────────────────────────────────────────────────────── */
@@ -165,7 +166,7 @@ export function defineCms<
     ...(Object.keys(webhooks).length ? webhookTasks(webhooks) : {}),
   });
 
-  const adminRuntime = mergeAdmin(plugins, admin);
+  const adminRuntime = mergeAdmin(plugins, admin, siteConfig.name);
   const knownRoles = new Set(roles.map((r) => r.name));
   for (const [key, { access }] of adminRuntime.actions)
     checkRoles(knownRoles, `admin action "${key}"`, { run: access });
@@ -203,7 +204,8 @@ export function defineCms<
   // auth
   const coreAuth = {
     email: emailOptions && { api: email, templates: emailOptions.templates },
-    appName: adminRuntime.descriptor.name,
+    appName: siteConfig.name,
+    siteUrl: siteConfig.url,
     roles,
   };
 
@@ -266,6 +268,7 @@ export function defineCms<
       jobs: { ...jobs, wake },
       webhooks,
       localApi: (scope) => createLocalApi(core, scope),
+      site: siteConfig,
       media,
       admin: adminRuntime,
       lifecycle: { seed, onInit, afterImport, afterError },
@@ -276,7 +279,7 @@ export function defineCms<
       db: connect,
       localApi: (scope) => createLocalApi(starting, scope),
     };
-    return { core, auth, bindRequest, app: createApp(core, site) };
+    return { core, auth, bindRequest, app: createApp(core) };
   }
 
   /* ── Instance ──────────────────────────────────────────────────────────────────────── */
@@ -304,6 +307,8 @@ export function defineCms<
       populate: populateOption as { depth: D; maxDepth: number },
       /** The `localization` option with defaults, or `undefined`. `locales` keeps its literal types. */
       localization,
+      /** The `site` option: `url` as an origin, `undefined` without it; `name` defaults to `tenoncms`. */
+      site: siteConfig as { readonly url?: string; readonly name: string },
       // The local API is untyped. `Api` adds the schema's types.
       ...api,
 
@@ -332,10 +337,10 @@ export function defineCms<
       },
 
       /**
-       * The entries of `/sitemap.xml`, absolute against the site URL (the `general` settings' `url`, then `site`).
-       * Render them with `sitemapXml()` in a route of your own.
+       * The entries of `/sitemap.xml`, absolute against `site.url`, else as given. Render them with `sitemapXml()` in a
+       * route of your own.
        */
-      sitemap: () => sitemapEntries(core, { site }),
+      sitemap: () => sitemapEntries(core),
 
       /** Handles `/_tenon`, `/sitemap.xml` and `/robots.txt`. Mount it in any framework that speaks Request/Response. */
       fetch(request: Request): Promise<Response> {

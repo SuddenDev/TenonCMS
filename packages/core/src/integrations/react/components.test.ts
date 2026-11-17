@@ -118,7 +118,7 @@ describe("Picture", () => {
 describe("Seo", () => {
   it("renders the head tags of a page", () => {
     const page = { title: "Hi", path: "/hi", seo: { description: "D" } };
-    const out = html(h(Seo, { page, general: { title: "Acme", url: "https://a.co" } }));
+    const out = html(h(Seo, { page, general: { title: "Acme" }, site: "https://a.co" }));
     expect(out).toContain("<title>Hi · Acme</title>");
     expect(out).toContain('<meta name="description" content="D"/>');
     expect(out).toContain('<meta property="og:site_name" content="Acme"/>');

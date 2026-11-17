@@ -200,9 +200,9 @@ import { Seo } from "tenoncms/astro/components";
 ```tsx
 import { Seo } from "tenoncms/react";
 
-<Seo page={page} general={general} seo={seo} />;
+<Seo page={page} general={general} seo={seo} site={cms.site.url} />;
 ```
 
-- In Astro, `Seo` reads the `general` and `seo` settings in the request's locale. Pass them as props if you have read them already.
-- In React, pass the settings. React 19 moves the tags into `<head>` from anywhere in the tree. With TanStack Router, use `seoHead()` in `head()` instead.
+- In Astro, `Seo` reads the `general` and `seo` settings in the request's locale, and `site.url` of the config. Pass them as props if you have read them already; `site` overrides the origin.
+- In React, pass the settings and `site` (`cms.site.url`) from a server loader: the component has no CMS of its own. React 19 moves the tags into `<head>` from anywhere in the tree. With TanStack Router, use `seoHead()` in `head()` instead.
 - In Nuxt, use `useTenonSeo(page)`.

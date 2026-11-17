@@ -65,10 +65,10 @@ describe("preview", () => {
   });
 
   it("sends `preview`, `visualEditing` and `site` in the schema", async () => {
-    const { client } = setup(defineCms({ ...options, site: "https://example.com/blog" }));
+    const { client } = setup(defineCms({ ...options, site: { url: "https://example.com" } }));
     await client.signUp(admin);
     const schema = await client.getSchema();
-    expect(schema).toMatchObject({ site: "https://example.com/blog" });
+    expect(schema).toMatchObject({ site: "https://example.com" });
     expect(schema.collections?.posts.preview).toBe(true);
     expect(schema.collections?.notes.preview).toBe(true);
     expect(schema.collections?.linked).toMatchObject({ preview: true });
@@ -105,8 +105,16 @@ describe("preview", () => {
     expect(await status(client.previewGlobalUrl("home", {}))).toBe(401);
   });
 
-  it("rejects a `site` that is not an http(s) URL", () => {
-    expect(() => defineCms({ ...options, site: "/blog" })).toThrow("`site` MUST be an http(s) URL");
-    expect(() => defineCms({ ...options, site: "ftp://x.com" })).toThrow("`site` MUST be");
+  it.each([
+    "/blog",
+    "ftp://x.com",
+    "https://example.com/blog",
+    "https://example.com?token=secret",
+    "https://example.com#fragment",
+    "https://user:secret@example.com",
+  ])("rejects a `site.url` that is not an HTTP(S) origin: %s", (url) => {
+    expect(() => defineCms({ ...options, site: { url } })).toThrow(
+      "`site.url` MUST be an HTTP(S) origin",
+    );
   });
 });

@@ -27,8 +27,7 @@ describe("cms.users", () => {
     "works in %s without a base URL or a request",
     async (mode) => {
       vi.stubEnv("NODE_ENV", mode);
-      for (const name of ["TENON_BASE_URL", "BETTER_AUTH_URL", "__TENON_DEV_ORIGIN"])
-        vi.stubEnv(name, undefined);
+      for (const name of ["BETTER_AUTH_URL", "__TENON_DEV_ORIGIN"]) vi.stubEnv(name, undefined);
       try {
         const { cms } = setup(defineCms(base));
         await cms.users.create(admin);

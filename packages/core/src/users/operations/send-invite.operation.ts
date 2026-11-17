@@ -25,7 +25,7 @@ export async function sendInvite(
       role: { name: row.role, label: translate(label, "en") ?? row.role },
       url: link,
       inviter: inviter && { name: inviter.name, email: inviter.email },
-      site: core.admin.descriptor.name ?? "tenoncms",
+      site: core.site.name,
     });
     await core.email.send({ ...content, to: row.email });
     return { ...result, sent: true };

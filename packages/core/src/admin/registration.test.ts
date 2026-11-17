@@ -84,13 +84,14 @@ describe("admin registration types", () => {
 
   it("checks an extracted object with satisfies", () => {
     const admin = {
-      name: "Host",
       fields: { color: { mount: clientRef("./color") } },
       pages: { stats: { title: "Stats", mount: clientRef("./stats"), pageHeader: false } },
       adminBar: { position: "top-right", items: { a: { label: "A", href: "/a" } } },
     } satisfies AdminOptions;
     defineCms({ ...base, admin });
-    expect(admin.name).toBe("Host");
+    expect(admin.adminBar.position).toBe("top-right");
+    // @ts-expect-error the name is `site.name`
+    ({ name: "Host" }) satisfies AdminOptions;
   });
 
   it("accepts explicitly typed references and checks the loader against them", () => {

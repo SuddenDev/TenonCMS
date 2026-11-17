@@ -46,7 +46,7 @@ With `@astrojs/cloudflare` as the adapter, the CMS runs inside a Durable Object.
 ```ts
 // tenon.config.ts
 import { durableObject } from "tenoncms/cloudflare";
-export default defineCms({ database: durableObject(), secret: CMS_SECRET /* ... */ });
+export default defineCms({ database: durableObject(), secret: TENON_SECRET /* ... */ });
 
 // src/worker.ts, set as `main` in wrangler.jsonc
 import { handle } from "@astrojs/cloudflare/handler";
@@ -101,7 +101,7 @@ export default defineCms({
 - Database: Postgres, for example Neon. Use its pooled connection string. `attachDatabasePool()` closes idle connections before Vercel suspends the function.
 - Media: the function's disk is read-only, so the default media on the local disk does not work. Without a `media` option there is no media library, and `media: true` throws. Use `s3()` with any S3-compatible bucket, or `r2()` with keys. See [media](media.md#s3-and-r2). The browser uploads straight to the bucket, so Vercel's 4.5 MB request limit does not apply. The bucket needs CORS. Without `publicUrl` it stays private: the function serves files, and Vercel's CDN keeps them for an hour.
 - Rate limits: core keeps them in the database, so instances share them. `auth: { rateLimit: { storage: "memory" } }` turns that off.
-- Leave `site` unset if you use preview deployments. Passkeys only work on the host they were created on.
+- `site.url` also fixes the auth origin. With preview deployments, leave `TENON_SITE_URL` unset there, or set `auth.baseURL` with `allowedHosts` (see [auth options](auth-and-access.md#auth-options)). Passkeys only work on the host they were created on.
 - In a monorepo, the build command MUST build the CMS packages first.
 - Prerendered pages read the database at build time, so `DATABASE_URL` MUST be set for builds too. They show the last deploy: give the collection a `preview` URL that renders per request, and redeploy through a [deploy hook](webhooks.md#a-deploy-button). `examples/vercel` does both.
 
@@ -113,7 +113,7 @@ Neon has Postgres and S3-compatible object storage in one project.
 2. Copy the pooled connection string (host with `-pooler`) as `DATABASE_URL`.
 3. Create a bucket in the project's object storage and keep its access private. Copy the S3 endpoint, access key, secret key and region as `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION`, and the bucket name as `S3_BUCKET`.
 4. CORS: a new Neon bucket allows `PUT` from every origin and exposes `ETag`, which uploads need. To limit it to your site, send `PutBucketCors` with the S3 API.
-5. In Vercel, set those variables and `CMS_SECRET` (`openssl rand -hex 32`). Deploy, open `/admin` and create the first admin.
+5. In Vercel, set those variables, `TENON_SECRET` (`openssl rand -hex 32`) and `TENON_SITE_URL` (the production origin). Deploy, open `/admin` and create the first admin.
 
 Neon stores lifecycle rules but does not run them, so unfinished multipart uploads are not cleaned up by the bucket. Each Neon branch has its own buckets.
 
@@ -123,7 +123,7 @@ Neon stores lifecycle rules but does not run them, so unfinished multipart uploa
 // nuxt.config.ts
 export default defineNuxtConfig({
   modules: ["tenoncms/nuxt"], // reads ./tenon.config.ts, options: tenonCms: { entry, admin }
-  runtimeConfig: { cmsSecret: "", databaseUrl: `file:${resolve("cms.db")}` },
+  runtimeConfig: { tenonSecret: "", tenonSiteUrl: "", databaseUrl: `file:${resolve("cms.db")}` },
 });
 ```
 

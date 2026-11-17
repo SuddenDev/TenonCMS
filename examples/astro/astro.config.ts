@@ -7,7 +7,7 @@ export default defineConfig({
   integrations: [tenonCms()],
   env: {
     schema: {
-      CMS_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
+      TENON_SECRET: envField.string({ context: "server", access: "secret", min: 32 }),
       SMTP_URL: envField.string({ context: "server", access: "secret", optional: true }),
       EMAIL_FROM: envField.string({
         context: "server",
@@ -19,11 +19,11 @@ export default defineConfig({
         access: "secret",
         default: "file:./cms.db",
       }),
-      SITE_URL: envField.string({
+      TENON_SITE_URL: envField.string({
         context: "server",
-        access: "public",
+        access: "secret",
         url: true,
-        default: "http://localhost:4321",
+        optional: true,
       }),
     },
   },

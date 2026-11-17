@@ -23,9 +23,9 @@ A backup is a `full` archive unless `--content-only`. It writes `<file>.part` an
 
 `users.command.ts` → `target.ts` `loadConfig()` → `cms.users.signInLink()`
 
-`users recover` refuses `--url`: it needs the database, not a session, so it works when nobody can sign in. `users create` invites with `cms.users.invite()`, or with `--url` through `client.invites.create()` and the session of `tenon login`; `--password` calls `cms.users.create()`. The site's origin is `configuredOrigin()` of better-auth's `baseURL` (a string when `TENON_BASE_URL` or `auth.baseURL` is set), else a question. `deliveryNote()` says whether the link was emailed; the link is printed either way.
+`users recover` refuses `--url`: it needs the database, not a session, so it works when nobody can sign in. `users create` invites with `cms.users.invite()`, or with `--url` through `client.invites.create()` and the session of `tenon login`; `--password` calls `cms.users.create()`. The site's origin is `configuredOrigin()` of better-auth's `baseURL` (a string when `auth.baseURL` or `site.url` is set), else a question. `deliveryNote()` says whether the link was emailed; the link is printed either way.
 
-`users list`, `deactivate`, `reactivate` and `remove` call the same-named `cms.users` methods, and refuse `--url` like `recover` (`localOnly()`). Deactivate and remove confirm first unless `--yes`; remove defaults to No. `formatUsers()` prints the list as a table and colors the status when `stdout.hasColors()`. The role prompt of `users create` is a select of `roleOptions()`: `cms.users.roles()` locally, the `roles` of `GET /schema` with `--url`. These commands and `--password` need no `TENON_BASE_URL`; only a link does.
+`users list`, `deactivate`, `reactivate` and `remove` call the same-named `cms.users` methods, and refuse `--url` like `recover` (`localOnly()`). Deactivate and remove confirm first unless `--yes`; remove defaults to No. `formatUsers()` prints the list as a table and colors the status when `stdout.hasColors()`. The role prompt of `users create` is a select of `roleOptions()`: `cms.users.roles()` locally, the `roles` of `GET /schema` with `--url`. These commands and `--password` need no `site.url`; only a link does.
 
 ## Files
 

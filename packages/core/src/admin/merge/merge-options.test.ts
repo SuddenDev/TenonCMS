@@ -5,19 +5,19 @@ import { adminBrand, mergeAdmin } from "./merge-options.ts";
 const load = () => ({ ok: true });
 
 describe("admin registration merge", () => {
-  it("merges plugins before the host and lets the host's branding win", () => {
+  it("merges plugins before the host, lets the host's branding win and names the site", () => {
     const { descriptor } = mergeAdmin(
       [
         {
           name: "first",
           admin: {
-            name: "Plugin",
             logo: "/plugin.svg",
             fields: { color: { mount: clientRef("./color") } },
           },
         },
       ],
-      { name: "Host", pages: { stats: { mount: clientRef("./stats"), title: "Stats" } } },
+      { pages: { stats: { mount: clientRef("./stats"), title: "Stats" } } },
+      "Host",
     );
     expect(descriptor).toEqual({
       name: "Host",

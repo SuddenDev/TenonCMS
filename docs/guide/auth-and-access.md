@@ -96,7 +96,7 @@ import { passkey } from "@better-auth/passkey";
 export default defineCms({ auth: { plugins: [passkey()] } /* ... */ });
 ```
 
-The admin then shows passkey sign-in and the passkey list in the account settings. The relying party ID is the host name of the request; pass `passkey({ rpID })` when the admin runs on a subdomain of the site. Its display name is better-auth's `appName`, which defaults to the admin `name`. Adding a passkey needs a recent sign-in.
+The admin then shows passkey sign-in and the passkey list in the account settings. The relying party ID is the host name of the request; pass `passkey({ rpID })` when the admin runs on a subdomain of the site. Its display name is better-auth's `appName`, which defaults to `site.name`. Adding a passkey needs a recent sign-in.
 
 ### Password reset
 
@@ -135,9 +135,9 @@ defineCms({
 ```
 
 - Core owns `database`, `basePath` and `secret`. `emailAndPassword` is on unless you set `enabled: false`. See [sign-in methods](#sign-in-methods).
-- Set `TENON_BASE_URL=https://cms.example.com` in production. It MUST be the public CMS origin, without an admin or API path. Tenon supplies better-auth's base URL internally. `site` stays separate, because the frontend MAY run on another origin.
+- Set `site.url` in production, like `site: { url: process.env.TENON_SITE_URL }`. It is the default of `auth.baseURL`, the CMS origin that sessions, passkeys, `tenon login` and every link into the admin (invites, sign-in links, password reset) use. An embedded CMS shares the site's origin, so `site.url` is enough. When the frontend runs on another origin, also set `auth.baseURL` to the CMS origin, without an admin or API path. Core reads no env var for either.
 - Development needs no URL setting: the adapters detect the actual server URL and port. Auth accepts localhost, IPv4/IPv6 loopback addresses and the configured development hostname, and resolves URLs per request. The detected URL is the fallback for server calls without a request, such as API key creation and invite acceptance. Development hosts are never automatic in production.
-- An explicit `auth.baseURL` takes precedence over `TENON_BASE_URL`, followed by better-auth's existing URL environment variables (including `BETTER_AUTH_URL`), then the detected development URL. A host without an adapter MUST supply its own URL for server calls before its first development request. In production, without any URL, better-auth keeps its request-derived behavior and warning.
+- An explicit `auth.baseURL` takes precedence over `site.url`, followed by better-auth's existing URL environment variables (including `BETTER_AUTH_URL`), then the detected development URL. A host without an adapter MUST supply its own URL for server calls before its first development request. In production, without any URL, better-auth keeps its request-derived behavior and warning.
 - For several production hosts, set `auth.baseURL: { allowedHosts: ["cms.example.com", "preview.example.com"], fallback: "https://cms.example.com" }`. The fallback is needed for Tenon's server calls without a request. List only hosts you control. Proxy headers are trusted only when `auth.advanced.trustedProxyHeaders` is `true`.
 - `modelName` is not accepted. Core reads the `user` table by name, so auth tables keep their default names.
 - Only the first user can sign up without a session (`/auth-status` reports `setup`). After that, a request MAY create a user only with the session of a user whose role is `admin`, on every endpoint (email sign-up, social sign-in, magic link, other plugins). Anything else returns 403. Server code that calls better-auth without a request is trusted.

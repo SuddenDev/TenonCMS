@@ -2,7 +2,7 @@ import type { Core } from "../cms/runtime/types.ts";
 import { outerScope } from "../cms/runtime/operation-context.ts";
 import { ForbiddenError } from "../errors.ts";
 import type { SitemapEntry } from "../helpers/sitemap-xml.ts";
-import { isSiteNoindex, siteUrl } from "./site.ts";
+import { isSiteNoindex } from "./site.ts";
 
 type Row = Record<string, any>;
 
@@ -10,12 +10,10 @@ type Row = Record<string, any>;
  * The sitemap: every published document a visitor MAY read in a collection with a `permalink`, one entry per locale
  * with its alternates, then the host's `sitemap.entries`. Leaves out documents with `seo.noindex` and collections
  * with `sitemap: false`. Empty with `sitemap: false` or while the `seo` settings say `noindex`.
- * @returns The entries, absolute against {@link siteUrl}, or as given without a site URL.
+ * @param origin The request's origin, the base without `site.url`.
+ * @returns The entries, absolute against `site.url`, else `origin`, else as given.
  */
-export async function sitemapEntries(
-  core: Core,
-  { site, origin }: { site?: string; origin?: string } = {},
-) {
+export async function sitemapEntries(core: Core, origin?: string) {
   if (!core.sitemap || (await isSiteNoindex(core))) return [];
   const cms = core.localApi(outerScope({ user: null, perspective: "published" }));
 
@@ -32,7 +30,7 @@ export async function sitemapEntries(
   const entries = core.sitemap.entries
     ? await core.sitemap.entries({ cms, entries: generated })
     : generated;
-  const base = await siteUrl(core, site, origin);
+  const base = core.site.url ?? origin;
   return base ? entries.map((e) => absolute(e, base)) : entries;
 }
 

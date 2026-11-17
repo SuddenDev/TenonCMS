@@ -108,13 +108,14 @@ describe("sitemap.xml", () => {
     expect(res.text).toMatch(/<lastmod>\d{4}-\d\d-\d\dT/);
   });
 
-  it("uses the site URL from the general settings, then `site`", async () => {
-    const cms = site({ site: "https://site.example" });
+  it("uses `site.url` over the request's origin", async () => {
+    const cms = site({ site: { url: "https://site.example" } });
     await cms.create("posts", { title: "A", slug: "a" });
     expect(locs((await get(cms, "/sitemap.xml")).text)).toEqual(["https://site.example/posts/a"]);
-
-    await cms.setGlobal("general", { title: "Acme", url: "https://acme.example/" });
-    expect(locs((await get(cms, "/sitemap.xml")).text)).toEqual(["https://acme.example/posts/a"]);
+    expect((await cms.sitemap()).map((e) => e.url)).toEqual(["https://site.example/posts/a"]);
+    expect((await get(cms, "/robots.txt")).text).toContain(
+      "Sitemap: https://site.example/sitemap.xml",
+    );
   });
 
   it("leaves out collections with `sitemap: false` and ones visitors cannot read", async () => {

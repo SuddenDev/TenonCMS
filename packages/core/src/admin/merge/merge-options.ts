@@ -40,15 +40,20 @@ export type AdminRuntime = {
 
 type Source = [name: string, admin: AdminOptions | PluginAdminOptions | undefined];
 
-const BRANDING = ["name", "logo", "icon", "favicon", "media"] as const;
+const BRANDING = ["logo", "icon", "favicon", "media"] as const;
 const HOST = "tenon.config.ts";
 
 /**
  * Combines the active registrations in plugin order, then host order.
  * Fields, pages and actions MUST NOT repeat a key. The host's branding wins. Bar items replace by id.
+ * @param name The `site.name` the admin shows.
  */
-export function mergeAdmin(plugins: readonly Plugin[], host: AdminOptions = {}): AdminRuntime {
-  const descriptor: AdminDescriptor = { fields: {}, pages: {}, actions: {} };
+export function mergeAdmin(
+  plugins: readonly Plugin[],
+  host: AdminOptions = {},
+  name?: string,
+): AdminRuntime {
+  const descriptor: AdminDescriptor = { ...(name && { name }), fields: {}, pages: {}, actions: {} };
   const fieldLoaders = new Map<string, Loader<FieldLoadContext>>();
   const pageLoaders = new Map<string, Loader<PageLoadContext>>();
   const richtext: Record<string, RichtextRegistration> = Object.create(null);

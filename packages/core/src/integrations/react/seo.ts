@@ -8,16 +8,19 @@ export type SeoProps = {
   general?: Settings["general"];
   seo?: Settings["seo"];
   templates?: SeoTemplates | null;
+  /** The base of absolute URLs: `site.url` of the config (`cms.site.url`). */
+  site?: string;
 };
 
 /**
  * Renders the `<head>` tags of `seoHead()` for a page. React 19 moves them into `<head>` from anywhere in the tree.
- * Pass the `general` and `seo` settings globals, which it does not read itself.
+ * Pass the `general` and `seo` settings globals and `cms.site.url`, which it does not read itself: the component has
+ * no CMS of its own, so a server loader reads them.
  * @example
- * <Seo page={page} general={general} seo={seo} />
+ * <Seo page={page} general={general} seo={seo} site={site} />
  */
-export function Seo({ page, general, seo, templates }: SeoProps) {
-  const head = seoHead(page ?? {}, { general, seo, templates });
+export function Seo({ page, general, seo, templates, site }: SeoProps) {
+  const head = seoHead(page ?? {}, { general, seo, templates, site });
   return createElement(
     Fragment,
     null,

@@ -37,7 +37,7 @@ describe("development auth origins", () => {
   let client: ReturnType<typeof development>["client"];
   beforeEach(() => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("TENON_BASE_URL", undefined);
+    vi.stubEnv("BETTER_AUTH_URL", undefined);
     vi.stubEnv("__TENON_DEV_ORIGIN", "http://localhost:4329");
     ({ cms, client } = development());
   });
@@ -145,6 +145,20 @@ describe("development auth origins", () => {
   });
 });
 
+describe("auth base URL", () => {
+  it("defaults to `site.url`, and `auth.baseURL` wins", async () => {
+    const site = defineCms({ ...base, site: { url: "https://site.example/" } });
+    expect((await site.auth()).options.baseURL).toBe("https://site.example");
+
+    const both = defineCms({
+      ...base,
+      site: { url: "https://site.example" },
+      auth: { ...base.auth, baseURL: "https://cms.example" },
+    });
+    expect((await both.auth()).options.baseURL).toBe("https://cms.example");
+  });
+});
+
 describe("database", () => {
   it("creates CMS and auth tables on first access", async () => {
     const { database, tables } = testDb();
@@ -192,11 +206,11 @@ describe("auth", () => {
     expect(await status(client.request("/auth/passkey/generate-authenticate-options"))).toBe(404);
   });
 
-  it("offers passkeys with the host's plugin, named after the admin", async () => {
+  it("offers passkeys with the host's plugin, named after the site", async () => {
     const { client } = setup(
       defineCms({
         ...base,
-        admin: { name: "Acme" },
+        site: { name: "Acme" },
         auth: { plugins: [passkey({ rpID: "cms.test" })] },
       }),
     );
