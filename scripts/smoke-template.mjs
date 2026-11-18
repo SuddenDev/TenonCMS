@@ -1,16 +1,18 @@
 // Scaffolds one framework and target from ./templates against the packed tarballs, then installs and builds it.
 // Run `pnpm tarball` first.
-// Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template] [auth]
+// Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template] [auth] [email] [images]
 // An omitted database or storage is the target's default. `auth` is a comma list for `--auth`; the default is password.
+// `email` is `--email`; the default is none. `images` is `--images`; the default is the target's first.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const [framework, target, database, storage, template = "minimal", auth] = process.argv.slice(2);
+const [framework, target, database, storage, template = "minimal", auth, email, images] =
+  process.argv.slice(2);
 if (!framework || !target)
   throw new Error(
-    "Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template] [auth]",
+    "Usage: node scripts/smoke-template.mjs <framework> <target> [database] [storage] [template] [auth] [email] [images]",
   );
 
 const root = resolve(import.meta.dirname, "..");
@@ -19,7 +21,16 @@ const tarballs = {
   tenoncms: join(root, `dist/tenoncms-${version}.tgz`),
 };
 // Outside the repository, so pnpm does not treat it as a workspace package.
-const name = [framework, template, target, database, storage, auth?.replaceAll(",", "-")]
+const name = [
+  framework,
+  template,
+  target,
+  database,
+  storage,
+  auth?.replaceAll(",", "-"),
+  email,
+  images,
+]
   .filter(Boolean)
   .join("-");
 const dir = join(mkdtempSync(join(tmpdir(), "tenon-smoke-")), name);
@@ -42,6 +53,8 @@ run(
     ...(database ? ["--database", database] : []),
     ...(storage ? ["--storage", storage] : []),
     ...(auth ? ["--auth", auth] : []),
+    ...(email ? ["--email", email] : []),
+    ...(images ? ["--images", images] : []),
     "--pm",
     "pnpm",
     "--no-install",

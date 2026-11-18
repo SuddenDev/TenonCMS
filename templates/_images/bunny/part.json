@@ -1,0 +1,16 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { bunny } from \"tenoncms/media/bunny\";"],
+      "media": ["images: { provider: bunny({ baseURL: $BUNNY_URL }) },"]
+    }
+  },
+  "env": [
+    {
+      "name": "BUNNY_URL",
+      "comment": "Your Bunny pull zone with Optimizer. Its origin serves the bucket, or <site>/_tenon/media/files/ for local files.",
+      "example": "https://example.b-cdn.net",
+      "url": true
+    }
+  ]
+}

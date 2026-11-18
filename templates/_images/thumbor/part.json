@@ -1,0 +1,23 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { thumbor } from \"tenoncms/media/thumbor\";"],
+      "media": [
+        "images: { provider: thumbor({ baseURL: $THUMBOR_URL, key: $THUMBOR_KEY, origin: $TENON_SITE_URL }) },"
+      ]
+    }
+  },
+  "env": [
+    {
+      "name": "THUMBOR_URL",
+      "comment": "Your Thumbor server. It loads files from TENON_SITE_URL.",
+      "example": "https://thumbor.example.test",
+      "url": true
+    },
+    {
+      "name": "THUMBOR_KEY",
+      "comment": "Security key. Unset means unsigned URLs.",
+      "optional": true
+    }
+  ]
+}

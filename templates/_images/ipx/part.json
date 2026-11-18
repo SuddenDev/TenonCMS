@@ -1,0 +1,8 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { ipx } from \"tenoncms/media/ipx\";"],
+      "media": ["images: { provider: ipx({ prerender: true }) },"]
+    }
+  }
+}

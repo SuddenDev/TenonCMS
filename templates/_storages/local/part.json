@@ -1,7 +1,8 @@
 {
   "files": {
     "tenon.config.ts": {
-      "options": ["// By default, media files are located in ./.uploads.", "media: true,"]
+      "imports": ["import { local } from \"tenoncms/media/local\";"],
+      "media": ["storage: local({ dir: \".uploads\" }),"]
     }
   }
 }

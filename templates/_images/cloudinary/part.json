@@ -1,0 +1,16 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { cloudinary } from \"tenoncms/media/cloudinary\";"],
+      "media": ["images: { provider: cloudinary({ baseURL: $CLOUDINARY_BASE_URL }) },"]
+    }
+  },
+  "env": [
+    {
+      "name": "CLOUDINARY_BASE_URL",
+      "comment": "Your Cloudinary delivery URL with an auto-upload folder. Its origin serves the bucket, or <site>/_tenon/media/files/ for local files.",
+      "example": "https://res.cloudinary.com/demo/image/upload/tenon",
+      "url": true
+    }
+  ]
+}

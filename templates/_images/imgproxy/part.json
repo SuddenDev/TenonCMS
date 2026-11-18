@@ -1,0 +1,29 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { imgproxy } from \"tenoncms/media/imgproxy\";"],
+      "media": [
+        "images: {",
+        "  provider: imgproxy({ baseURL: $IMGPROXY_URL, key: $IMGPROXY_KEY, salt: $IMGPROXY_SALT }),",
+        "},"
+      ]
+    }
+  },
+  "env": [
+    {
+      "name": "IMGPROXY_URL",
+      "comment": "Your imgproxy server. Set IMGPROXY_BASE_URL on it to the site or bucket origin.",
+      "example": "https://imgproxy.example.test",
+      "url": true
+    },
+    {
+      "name": "IMGPROXY_KEY",
+      "comment": "Signing key and salt, hex. Unset means unsigned URLs.",
+      "optional": true
+    },
+    {
+      "name": "IMGPROXY_SALT",
+      "optional": true
+    }
+  ]
+}

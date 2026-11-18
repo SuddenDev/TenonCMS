@@ -25,20 +25,55 @@
       "label": "Node",
       "hint": "a server you run",
       "databases": ["libsql", "postgres", "pglite", "sqlite"],
-      "storages": ["local", "s3"]
+      "storages": ["local", "s3"],
+      "images": [
+        "ipx",
+        "none",
+        "cloudflare-url",
+        "netlify",
+        "imgix",
+        "cloudinary",
+        "imagekit",
+        "bunny",
+        "imgproxy",
+        "thumbor"
+      ]
     },
     "vercel": {
       "label": "Vercel",
       "hint": "serverless functions",
       "databases": ["libsql", "postgres"],
-      "storages": ["s3"]
+      "storages": ["s3"],
+      "images": [
+        "none",
+        "vercel",
+        "ipx",
+        "cloudflare-url",
+        "imgix",
+        "cloudinary",
+        "imagekit",
+        "bunny",
+        "imgproxy",
+        "thumbor"
+      ]
     },
     "cloudflare": {
       "label": "Cloudflare",
       "hint": "Workers",
       "envFile": ".dev.vars",
       "databases": ["durable-object"],
-      "storages": ["r2"]
+      "storages": ["r2"],
+      "images": [
+        "cloudflare",
+        "cloudflare-url",
+        "none",
+        "imgix",
+        "cloudinary",
+        "imagekit",
+        "bunny",
+        "imgproxy",
+        "thumbor"
+      ]
     }
   },
   "databases": {
@@ -51,6 +86,27 @@
   "storages": {
     "local": { "label": "Local disk", "hint": "./.uploads" },
     "s3": { "label": "S3-compatible bucket", "hint": "AWS, R2, Neon, MinIO…" },
-    "r2": { "label": "R2", "hint": "with Cloudflare Images" }
+    "r2": { "label": "R2", "hint": "a Workers binding" }
+  },
+  "images": {
+    "ipx": { "label": "IPX", "hint": "WebP variants rendered by sharp on your server, adds ipx" },
+    "none": { "label": "None", "hint": "originals only" },
+    "cloudflare": { "label": "Cloudflare Images", "hint": "rendered through the Images binding" },
+    "cloudflare-url": {
+      "label": "Cloudflare image transformations",
+      "hint": "/cdn-cgi/image on your zone"
+    },
+    "vercel": { "label": "Vercel Image Optimization", "hint": "needs images in the Vercel config" },
+    "netlify": { "label": "Netlify Image CDN", "hint": "only when deployed on Netlify" },
+    "imgix": { "label": "imgix" },
+    "cloudinary": { "label": "Cloudinary" },
+    "imagekit": { "label": "ImageKit" },
+    "bunny": { "label": "Bunny Optimizer" },
+    "imgproxy": { "label": "imgproxy", "hint": "self-hosted" },
+    "thumbor": { "label": "Thumbor", "hint": "self-hosted" }
+  },
+  "emails": {
+    "none": { "label": "None", "hint": "add one later in tenon.config.ts" },
+    "smtp": { "label": "SMTP", "hint": "adds nodemailer" }
   }
 }

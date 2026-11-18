@@ -10,24 +10,28 @@ Two commands: `npm create tenoncms` starts a project, and `tenon` backs it up, r
 npm create tenoncms
 ```
 
-It asks one question at a time: the folder, the site name (default `Tenon`, written to `site.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, how people sign in to the admin, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
+It asks one question at a time: the folder, the site name (default `Tenon`, written to `site.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, how images are resized, how the CMS sends email, how people sign in to the admin, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
 
 | Runs on                 | Database                                                                                | Media                                |
 | ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------ |
 | Node                    | SQLite / Turso (libSQL: a local file, or Turso by URL), Postgres, PGlite, `node:sqlite` | Local disk (`./.uploads`), S3 bucket |
 | Vercel                  | SQLite / Turso (a file in development, Turso on Vercel), Postgres                       | S3-compatible bucket                 |
-| Cloudflare (Astro only) | Durable Object                                                                          | R2, images through Cloudflare Images |
+| Cloudflare (Astro only) | Durable Object                                                                          | R2                                   |
+
+Images offer the [providers](./media.md#image-providers) that work where the site runs. On Node the default is IPX, which adds `ipx` (and sharp) to `package.json`. On Vercel it is none, and on Cloudflare the Images binding. Hosted providers add their URL variable to `.env.example`; Vercel Image Optimization also needs [`images` in the Vercel config](./media.md#vercel). Each choice writes `images: { provider: … }` next to `storage` in `media`.
+
+Email offers none (the default) or SMTP. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, change it to port 587 and `secure: false`. See [Email](./email.md).
 
 Sign-in offers any mix of password (the default), passkey, magic link and email code. At least one is required. See [Sign-in methods](./auth-and-access.md#sign-in-methods).
 
 - Password alone writes nothing: it is core's default. Without password, `tenon.config.ts` gets `emailAndPassword: { enabled: false }`.
 - Passkey adds `@better-auth/passkey` to `package.json` and its plugin to `tenon.config.ts`.
-- Magic link and email code add `magicLink()` and `emailOTP()` from `tenoncms/auth`. They need [email](./email.md), which the scaffolder does not set up. Until then, `npx tenon users recover <email>` prints a sign-in link.
+- Magic link and email code add `magicLink()` and `emailOTP()` from `tenoncms/auth`. They need [email](./email.md): choose SMTP, or add an adapter later. Until then, `npx tenon users recover <email>` prints a sign-in link.
 
 Every question has a flag, so it also runs without a terminal:
 
 ```sh
-npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --auth passkey,magic-link --pm pnpm --yes
+npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --images imgix --email smtp --auth passkey,magic-link --pm pnpm --yes
 ```
 
 It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `TENON_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.

@@ -1,0 +1,16 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { imgix } from \"tenoncms/media/imgix\";"],
+      "media": ["images: { provider: imgix({ baseURL: $IMGIX_URL }) },"]
+    }
+  },
+  "env": [
+    {
+      "name": "IMGIX_URL",
+      "comment": "Your imgix domain. Its origin serves the bucket, or <site>/_tenon/media/files/ for local files.",
+      "example": "https://example.imgix.net",
+      "url": true
+    }
+  ]
+}

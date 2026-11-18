@@ -1,0 +1,8 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { netlify } from \"tenoncms/media/netlify\";"],
+      "media": ["// Works on Netlify and in `netlify dev`.", "images: { provider: netlify() },"]
+    }
+  }
+}

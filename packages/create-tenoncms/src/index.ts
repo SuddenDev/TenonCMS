@@ -17,6 +17,15 @@ const AUTH_OPTIONS: { value: AuthMethod; label: string; hint?: string }[] = [
   { value: "email-otp", label: "Email code", hint: "a one-time code by email" },
 ];
 type PackageManager = (typeof PACKAGE_MANAGERS)[number];
+/** The variable with the URL of each hosted image provider. */
+const IMAGE_URLS: Record<string, string> = {
+  imgix: "IMGIX_URL",
+  cloudinary: "CLOUDINARY_BASE_URL",
+  imagekit: "IMAGEKIT_URL",
+  bunny: "BUNNY_URL",
+  imgproxy: "IMGPROXY_URL",
+  thumbor: "THUMBOR_URL",
+};
 
 const HELP = `Usage: npm create tenoncms [dir] [options]
 
@@ -26,6 +35,9 @@ const HELP = `Usage: npm create tenoncms [dir] [options]
   --target <name>       node, vercel or cloudflare (Astro only)
   --database <name>     node: libsql, postgres, pglite or sqlite. vercel: libsql or postgres
   --storage <name>      node: local or s3. vercel: s3
+  --images <name>       How images are resized. node: ipx, none, cloudflare-url, netlify, imgix, cloudinary,
+                        imagekit, bunny, imgproxy, thumbor. vercel: none, vercel, ipx, … cloudflare: cloudflare, …
+  --email <name>        none or smtp. Default: none
   --auth <list>         Sign-in methods: password, passkey, magic-link, email-otp. Default: password
   --pm <name>           npm, pnpm, yarn or bun
   --install, --no-install
@@ -56,6 +68,8 @@ async function main() {
       target: { type: "string" },
       database: { type: "string" },
       storage: { type: "string" },
+      images: { type: "string" },
+      email: { type: "string" },
       auth: { type: "string" },
       pm: { type: "string" },
       install: { type: "boolean" },
@@ -119,7 +133,7 @@ async function main() {
     index.frameworks[framework]!.targets.includes(key),
   );
   const target = await choose(targets, flags.target, "Where will it run?", ask);
-  const { databases, storages, envFile = ".env" } = index.targets[target]!;
+  const { databases, storages, images: providers, envFile = ".env" } = index.targets[target]!;
   const env = index.frameworks[framework]!.runtimeConfig ? "NUXT_" : "";
   // The target's order: its first database and storage are the defaults.
   const database = await choose(
@@ -134,6 +148,13 @@ async function main() {
     "Where should media files go?",
     ask,
   );
+  const images = await choose(
+    Object.fromEntries(providers.map((id) => [id, index.images[id]!])),
+    flags.images,
+    "How should images be resized?",
+    ask,
+  );
+  const email = await choose(index.emails, flags.email, "How should the CMS send email?", ask);
   const auth =
     authFlag ??
     (ask
@@ -173,6 +194,8 @@ async function main() {
     target,
     database,
     storage,
+    images,
+    email,
     auth,
     pm,
     tenonVersion: await latestTenon(),
@@ -198,7 +221,14 @@ async function main() {
     p.log.info(
       `On Vercel, set the variables of ${envFile} in the project settings.${database === "libsql" ? ` ${env}DATABASE_URL MUST be a Turso URL there.` : ""}`,
     );
-  if (auth.includes("magic-link") || auth.includes("email-otp"))
+  if (IMAGE_URLS[images]) p.log.info(`Set ${env}${IMAGE_URLS[images]} in ${envFile}.`);
+  if (images === "vercel")
+    p.log.info(
+      "Vercel Image Optimization needs `images` in the Vercel config: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/media.md#vercel",
+    );
+  if (email === "smtp")
+    p.log.info(`Set the SMTP server and sender in ${envFile}: ${env}SMTP_* and ${env}EMAIL_FROM.`);
+  else if (auth.includes("magic-link") || auth.includes("email-otp"))
     p.log.info(
       "Magic links and email codes need `email` in tenon.config.ts: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/email.md. Until then, `npx tenon users recover <email>` prints a sign-in link.",
     );

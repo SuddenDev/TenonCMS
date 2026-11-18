@@ -195,6 +195,57 @@ describe("scaffold", () => {
     );
   });
 
+  it("puts the image provider into the storage's media block", async () => {
+    const choices = {
+      name: "a",
+      framework: "standalone",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    };
+    const dir = project();
+    await scaffold(templates, dir, { ...choices, images: "ipx" });
+    expect(read(dir, "tenon.config.ts")).toContain(
+      '  media: {\n    storage: local({ dir: ".uploads" }),\n    images: { provider: ipx({ prerender: true }) },\n  },\n',
+    );
+    expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty("ipx");
+
+    const hosted = project();
+    await scaffold(templates, hosted, { ...choices, images: "imgix" });
+    expect(read(hosted, "tenon.config.ts")).toContain(
+      "images: { provider: imgix({ baseURL: process.env.IMGIX_URL! }) },",
+    );
+    expect(read(hosted, ".env.example")).toMatch(/^IMGIX_URL=https:/m);
+    expect(JSON.parse(read(hosted, "package.json")).dependencies).not.toHaveProperty("ipx");
+
+    const plain = project();
+    await scaffold(templates, plain, choices);
+    expect(read(plain, "tenon.config.ts")).not.toContain("images:");
+  });
+
+  it("adds the SMTP email adapter and its package only when chosen", async () => {
+    const choices = {
+      name: "a",
+      framework: "standalone",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    };
+    const dir = project();
+    await scaffold(templates, dir, { ...choices, email: "smtp" });
+    expect(read(dir, "tenon.config.ts")).toContain('import { smtp } from "tenoncms/email/smtp";');
+    expect(read(dir, "tenon.config.ts")).toContain("adapter: smtp({");
+    expect(read(dir, ".env.example")).toMatch(/^SMTP_HOST=/m);
+    expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty("nodemailer");
+
+    const plain = project();
+    await scaffold(templates, plain, choices);
+    expect(read(plain, "tenon.config.ts")).not.toContain("email:");
+    expect(JSON.parse(read(plain, "package.json")).dependencies).not.toHaveProperty("nodemailer");
+  });
+
   it("takes the target's own version of a database", async () => {
     const dir = project();
     await scaffold(templates, dir, {

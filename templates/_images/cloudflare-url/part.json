@@ -1,0 +1,11 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { cloudflare } from \"tenoncms/media/cloudflare\";"],
+      "media": [
+        "// Needs image transformations on the Cloudflare zone of the site.",
+        "images: { provider: cloudflare() },"
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": [
+        "import { env } from \"cloudflare:workers\";",
+        "import { cloudflare } from \"tenoncms/media/cloudflare\";"
+      ],
+      "media": ["images: { provider: cloudflare({ binding: env.IMAGES }) },"]
+    }
+  }
+}

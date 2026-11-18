@@ -43,7 +43,7 @@ jobs:
         run: echo "include=$(node scripts/template-matrix.mjs)" >> "$GITHUB_OUTPUT"
 
   templates:
-    name: ${{ matrix.framework }}/${{ matrix.template }} on ${{ matrix.target }} (${{ matrix.database }}, ${{ matrix.storage }}${{ matrix.auth && format(', {0}', matrix.auth) || '' }})
+    name: ${{ matrix.framework }}/${{ matrix.template }} on ${{ matrix.target }} (${{ matrix.database }}, ${{ matrix.storage }}${{ matrix.auth && format(', {0}', matrix.auth) || '' }}${{ matrix.email && format(', {0}', matrix.email) || '' }}${{ matrix.images && format(', {0}', matrix.images) || '' }})
     needs: template-matrix
     runs-on: ubuntu-latest
     strategy:
@@ -59,4 +59,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm tarball
-      - run: node scripts/smoke-template.mjs ${{ matrix.framework }} ${{ matrix.target }} ${{ matrix.database }} ${{ matrix.storage }} ${{ matrix.template }} ${{ matrix.auth }}
+      - run: node scripts/smoke-template.mjs ${{ matrix.framework }} ${{ matrix.target }} ${{ matrix.database }} ${{ matrix.storage }} ${{ matrix.template }} ${{ matrix.auth || 'password' }} ${{ matrix.email || 'none' }} ${{ matrix.images }}

@@ -1,0 +1,16 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { imagekit } from \"tenoncms/media/imagekit\";"],
+      "media": ["images: { provider: imagekit({ baseURL: $IMAGEKIT_URL }) },"]
+    }
+  },
+  "env": [
+    {
+      "name": "IMAGEKIT_URL",
+      "comment": "Your ImageKit URL endpoint. Its origin serves the bucket, or <site>/_tenon/media/files/ for local files.",
+      "example": "https://ik.imagekit.io/example",
+      "url": true
+    }
+  ]
+}
