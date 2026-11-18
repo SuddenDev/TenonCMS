@@ -15,6 +15,7 @@
     "@better-auth/passkey": "1.7.14",
     "@libsql/client": "^0.18.0",
     "astro": "^7.4.2",
+    "nodemailer": "^10.2.1",
     "tenoncms": "workspace:*"
   },
   "devDependencies": {

@@ -4,7 +4,7 @@ Every instance has a media library: uploads into folders, `image` and `file` fie
 
 ## Setup
 
-Without a `media` option, or with `media: true`, files go to `./.uploads` and images get WebP variants at quality 85, rendered at upload. That is `local({ dir: resolve('.uploads') })` and `ipx({ prerender: true })`. `media: false` turns the library off.
+Without a `media` option, or with `media: true`, files go to `./.uploads` and images are served as uploaded. That is `local({ dir: resolve('.uploads') })` without `images`. For resized WebP variants, add an [image provider](#image-providers). `media: false` turns the library off.
 
 For your own storage, limits or images, pass an object:
 

@@ -72,7 +72,7 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `storage/s3/multipart.ts`                         | Multipart uploads to presigned URLs, and multipart copies above 5 GB.                                              |
 | `storage/s3/encoding.ts`                          | RFC 3986 key paths and XML text.                                                                                   |
 | `storage/r2/index.ts`                             | `r2()`, `tenoncms/media/r2`: R2 through a bucket binding with proxied uploads, or through `s3()` with API keys.    |
-| `default.ts`                                      | Local storage and prerendered IPX; `tenoncms/media/default`.                                                       |
+| `default.ts`                                      | Local storage in `./.uploads`, originals only; `tenoncms/media/default`.                                           |
 | `workerd.ts`                                      | What Workers resolve for local, IPX and the default: errors instead of Node code.                                  |
 
 The storage and provider files are their own package entries, so `node:fs` and `ipx` never reach a bundle that does not import them.

@@ -4,7 +4,13 @@ Email is optional and runs on the server. The CMS uses it for password resets, e
 
 ## Configure
 
-Set a transport and a sender once:
+`create-tenoncms` sets this up when you choose SMTP. Otherwise, install Nodemailer, which `tenoncms` does not install for you:
+
+```sh
+npm install nodemailer
+```
+
+Then set a transport and a sender once:
 
 ```ts
 import { defineCms } from "tenoncms";
@@ -24,7 +30,7 @@ export default defineCms({
 });
 ```
 
-- `smtp()` uses Nodemailer 10's ESM build and connects only when sending.
+- `smtp()` uses Nodemailer 10's ESM build and connects only when sending. `nodemailer` is an optional peer dependency of `tenoncms`.
 - For STARTTLS, use port 587 and `secure: false`. The adapter requires TLS by default.
 - Workers: Nodemailer documents support with Node.js compatibility. Use port 465 with `secure: true` and leave pooling off. Port 25 is blocked. This does not enable the CMS's other planned Workers features.
 

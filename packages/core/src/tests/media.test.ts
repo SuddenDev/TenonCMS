@@ -827,7 +827,7 @@ describe("moves and deletes", () => {
 });
 
 describe("default media", () => {
-  it("uses local storage in ./.uploads and prerendered WebP at quality 85", async () => {
+  it("uses local storage in ./.uploads and serves originals", async () => {
     const { defaultMedia } = await import("../media/default.ts");
     const { createMediaCore } = await import("../media/runtime/create-media-core.ts");
     const media = createMediaCore(defaultMedia(false)!, {
@@ -841,11 +841,7 @@ describe("default media", () => {
     expect(existsSync(join(process.cwd(), ".uploads", key))).toBe(true);
     await media.storage.delete(key);
     rmdirSync(join(process.cwd(), ".uploads"));
-    expect(media.images).toMatchObject({
-      format: "webp",
-      quality: 85,
-      provider: { prerender: true },
-    });
+    expect(media.images).toBeUndefined();
   });
 
   it("is on without a media option and with media: true, off with media: false", () => {
