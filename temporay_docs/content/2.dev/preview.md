@@ -1,6 +1,6 @@
 # Live preview and the admin bar
 
-Code: `packages/core/src/preview/` (see its README). User docs: [live preview](../guide/live-preview.md).
+Code: `packages/core/src/preview/` (see its README). User docs: [live preview](../1.guide/live-preview.md).
 
 ## Two halves
 

@@ -4,7 +4,7 @@ How to use tenoncms in your project. Each page starts with the idea, then shows 
 
 New here? Follow [Your first site](first-site.md), or read [Framework setup](frameworks.md) and [Schema and fields](schema.md) first, then pick what you need.
 
-Building or changing tenoncms itself? See the [developer docs](../dev/README.md).
+Building or changing tenoncms itself? See the [developer docs](../2.dev/index.md).
 
 **Get started**
 

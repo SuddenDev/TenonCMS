@@ -13,24 +13,24 @@ Packages:
 
 Read the doc for an area before you change it. Update it in the same change.
 
-| Area                                                   | Read                                                         |
-| ------------------------------------------------------ | ------------------------------------------------------------ |
-| What a host sees (features and options)                | [docs/guide/](docs/guide/)                                   |
-| Core layout, `defineCms()`, options, presets           | [docs/dev/core.md](docs/dev/core.md)                         |
-| Field types, type inference, validation                | [docs/dev/schema.md](docs/dev/schema.md)                     |
-| Reads, writes, population, integrity                   | [docs/dev/content.md](docs/dev/content.md)                   |
-| Media                                                  | [docs/dev/media.md](docs/dev/media.md)                       |
-| Client, HTTP, auth, users, database                    | [docs/dev/server.md](docs/dev/server.md)                     |
-| Plugins                                                | [docs/dev/plugins.md](docs/dev/plugins.md)                   |
-| Live preview, admin bar                                | [docs/dev/preview.md](docs/dev/preview.md)                   |
-| Admin (core contract and Vue app)                      | [docs/dev/admin.md](docs/dev/admin.md)                       |
-| Astro, Nuxt, Vite adapters                             | [docs/dev/integrations.md](docs/dev/integrations.md)         |
-| Examples                                               | [docs/dev/examples.md](docs/dev/examples.md)                 |
-| Why it is built this way                               | [docs/dev/design-decisions.md](docs/dev/design-decisions.md) |
-| Known traps (check when something behaves strangely)   | [docs/dev/gotchas.md](docs/dev/gotchas.md)                   |
-| Curl smoke tests for adapters, media, locales, invites | [docs/dev/smoke-tests.md](docs/dev/smoke-tests.md)           |
-| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)   |
-| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                       |
+| Area                                                   | Read                                                                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| What a host sees (features and options)                | [temporary_docs/content/1.guide/](temporary_docs/content/1.guide/)                                   |
+| Core layout, `defineCms()`, options, presets           | [temporary_docs/content/2.dev/core.md](temporary_docs/content/2.dev/core.md)                         |
+| Field types, type inference, validation                | [temporary_docs/content/2.dev/schema.md](temporary_docs/content/2.dev/schema.md)                     |
+| Reads, writes, population, integrity                   | [temporary_docs/content/2.dev/content.md](temporary_docs/content/2.dev/content.md)                   |
+| Media                                                  | [temporary_docs/content/2.dev/media.md](temporary_docs/content/2.dev/media.md)                       |
+| Client, HTTP, auth, users, database                    | [temporary_docs/content/2.dev/server.md](temporary_docs/content/2.dev/server.md)                     |
+| Plugins                                                | [temporary_docs/content/2.dev/plugins.md](temporary_docs/content/2.dev/plugins.md)                   |
+| Live preview, admin bar                                | [temporary_docs/content/2.dev/preview.md](temporary_docs/content/2.dev/preview.md)                   |
+| Admin (core contract and Vue app)                      | [temporary_docs/content/2.dev/admin.md](temporary_docs/content/2.dev/admin.md)                       |
+| Astro, Nuxt, Vite adapters                             | [temporary_docs/content/2.dev/integrations.md](temporary_docs/content/2.dev/integrations.md)         |
+| Examples                                               | [temporary_docs/content/2.dev/examples.md](temporary_docs/content/2.dev/examples.md)                 |
+| Why it is built this way                               | [temporary_docs/content/2.dev/design-decisions.md](temporary_docs/content/2.dev/design-decisions.md) |
+| Known traps (check when something behaves strangely)   | [temporary_docs/content/2.dev/gotchas.md](temporary_docs/content/2.dev/gotchas.md)                   |
+| Curl smoke tests for adapters, media, locales, invites | [temporary_docs/content/2.dev/smoke-tests.md](temporary_docs/content/2.dev/smoke-tests.md)           |
+| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)                                           |
+| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                                                               |
 
 ## Commands
 
@@ -57,7 +57,7 @@ Read the doc for an area before you change it. Update it in the same change.
 - `packages/core/src/tests/*.test.ts` is the integration suite, one file per area (`access`, `drafts`, `media`, `richtext` and so on; list the folder). Add HTTP behavior there.
   - Each test builds a real `defineCms()` on `:memory:` libsql and drives it through `createClient()`.
   - `setup.ts` has the shared schema and helpers: `fresh()`, `relational()`, `seed()`, `localized()` / `seeded()`, `withMedia()`. `fixtures.ts` has tiny images.
-- Examples and adapters have no tests yet. Verify them with the [smoke tests](docs/dev/smoke-tests.md).
+- Examples and adapters have no tests yet. Verify them with the [smoke tests](temporary_docs/content/2.dev/smoke-tests.md).
 
 ## Rules that apply everywhere
 

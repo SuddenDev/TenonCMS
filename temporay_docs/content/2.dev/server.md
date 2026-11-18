@@ -23,9 +23,9 @@ The Hono app mounts feature routes in a fixed order. The order is the security m
 
 ## Jobs
 
-- Jobs are rows in `cms_jobs`: a queue in our own table, so it runs on every dialect. See [design decisions](design-decisions.md#jobs) and the [jobs README](../../packages/core/src/jobs/README.md).
+- Jobs are rows in `cms_jobs`: a queue in our own table, so it runs on every dialect. See [design decisions](design-decisions.md#jobs) and the [jobs README](../../../packages/core/src/jobs/README.md).
 - `GET|POST /jobs/run` is open but behind `bearerAuth` with `jobs.secret`. It is mounted only when the secret is set, so without one the path is 404 for a signed-in caller (and 401 without a session, like any unknown path).
-- `GET /jobs/cron` lists the cron entries with the next and the last run. Each tick seeds the next slot first, see the [jobs README](../../packages/core/src/jobs/README.md#cron).
+- `GET /jobs/cron` lists the cron entries with the next and the last run. Each tick seeds the next slot first, see the [jobs README](../../../packages/core/src/jobs/README.md#cron).
 - `POST /collections/:name/:id/schedule` and `POST /globals/:name/schedule` are content write routes (CSRF and `optionalSession`, then the `update` rule), mounted next to the collection and global writes in `http/app.ts`.
 - The other `/jobs` routes sit behind `session`. A key never reaches them (`apiKeyReach()`). Each checks the `update` rule of the job's document for a scheduled job, and the `access` rule of the job's task for any other: admins by default.
 - A claim is one `UPDATE … RETURNING`. Postgres adds `FOR UPDATE SKIP LOCKED`; SQLite serializes writers. A lease of five minutes lets another runner take over a job whose host died.
@@ -38,7 +38,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 ## Auth
 
 - Auth is better-auth. The host's `auth` options pass through. Core owns the database, base path and secret.
-- `auth/config/base-url.ts` resolves the origin when the provider is created: explicit `auth.baseURL`, else `site.url` (passed in by `authOptions()`), better-auth's URL environment variables, then the adapter's development origin. Core reads no env var of its own for it. `requireConfig()` checks at `defineCms()` that `site.url` is an HTTP(S) origin without credentials, path, query or fragment. Development uses a dynamic host allowlist and the actual listener as the requestless fallback. Without a listener (the CLI, a script), `cms.users` seeds the fallback itself. `site.url` is the public site (sitemap, robots, relative preview URLs); `auth.baseURL` is the CMS origin (better-auth and links into the admin). See [auth options](../guide/auth-and-access.md#auth-options).
+- `auth/config/base-url.ts` resolves the origin when the provider is created: explicit `auth.baseURL`, else `site.url` (passed in by `authOptions()`), better-auth's URL environment variables, then the adapter's development origin. Core reads no env var of its own for it. `requireConfig()` checks at `defineCms()` that `site.url` is an HTTP(S) origin without credentials, path, query or fragment. Development uses a dynamic host allowlist and the actual listener as the requestless fallback. Without a listener (the CLI, a script), `cms.users` seeds the fallback itself. `site.url` is the public site (sitemap, robots, relative preview URLs); `auth.baseURL` is the CMS origin (better-auth and links into the admin). See [auth options](../1.guide/auth-and-access.md#auth-options).
 - The first user becomes `admin`. After that, only an admin session can create users. Sign-up is open only during setup.
 - With password off, `POST /setup` (`users/endpoints/setup.endpoint.ts`) creates the first admin from `{ name, email }`: 404 while password is on, 409 once a user exists. `checkCreate()` reads "no user yet" before the insert, so concurrent creates can both become admin. `setUpFirstAdmin()` runs its calls one at a time in the process; separate instances can still race. Sign-up with a password has the same race.
 - Invite accept and `/setup` share `createAndSignIn()` (`users/operations/`): `createUser()` without a request, then the server-only `signInUser`, so they work whichever methods are on.
@@ -82,5 +82,5 @@ The browser client mirrors the local API over HTTP and is typed from the schema.
 - Relation ids sit in the JSON. Reverse lookups scan the JSON, with one nested step per list level. Id lists go in as one JSON parameter, so there is no variable limit.
 - A localized query joins the locale table twice (requested and default). Qualify every column.
 - **Migrations** are code in the bundle, run lazily on first use, before better-auth's. Add a new key; never edit one that shipped. On Postgres both run in one transaction under `pg_advisory_xact_lock`, so serverless instances that start together on a fresh database wait for each other. SQLite has no lock between processes.
-- Postgres and PGlite run the same queries, with a branch where the SQL differs. See the [db README](../../packages/core/src/db/README.md#postgres).
+- Postgres and PGlite run the same queries, with a branch where the SQL differs. See the [db README](../../../packages/core/src/db/README.md#postgres).
 - The libsql and PGlite drivers are our own thin Kysely dialects. `node:sqlite` uses Kysely's `SqliteDialect` over a `better-sqlite3`-shaped wrapper. Postgres uses Kysely's `PostgresDialect` over a `pg` pool that reads `bigint` as a number.

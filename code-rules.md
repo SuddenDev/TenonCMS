@@ -86,7 +86,7 @@ Good JSDoc states a rule the signature cannot, such as this security-relevant ab
 - Name a test for the behavior and the condition. Assert returned data, stored state and errors, not call order, unless order is the contract.
 - A bug fix MUST start with a test that fails for the right reason. Cover empty, invalid, unauthorized and rollback cases. Type tests MUST also prove rejection.
 - Split an integration suite by behavior when it gets hard to navigate. Keep fixtures small and share only setup that repeats.
-- Adapter changes need the [smoke tests](docs/dev/smoke-tests.md). Core unit tests do not prove an adapter.
+- Adapter changes need the [smoke tests](temporary_docs/content/2.dev/smoke-tests.md). Core unit tests do not prove an adapter.
 
 ## 9. Keep safety and side effects visible
 

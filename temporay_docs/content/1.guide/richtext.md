@@ -110,4 +110,4 @@ richtext: {
 - Duplicate names throw, and built-in feature names are reserved.
 - The `example` plugin shows `exampleNotice` in its `quotes.notes` field.
 
-How it works inside core: [packages/core/src/richtext/README.md](../../packages/core/src/richtext/README.md).
+How it works inside core: [packages/core/src/richtext/README.md](../../../packages/core/src/richtext/README.md).

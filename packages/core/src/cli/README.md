@@ -1,6 +1,6 @@
 # cli
 
-The `tenon` bin of `tenoncms` (also `tenoncms`): `backup`, `restore`, `upgrade`, `login`, `logout`, `users` and `media`. The guide is [The CLI](../../../../docs/guide/cli.md). Scaffolding is the separate `create-tenoncms` package.
+The `tenon` bin of `tenoncms` (also `tenoncms`): `backup`, `restore`, `upgrade`, `login`, `logout`, `users` and `media`. The guide is [The CLI](../../../../docs/content/1.guide/cli.md). Scaffolding is the separate `create-tenoncms` package.
 
 It is its own build entry (`dist/cli/index.mjs`), so no host bundle includes it. It runs the host's `vite`, an optional peer dependency, and imports mostly what the package exports: the client, `readArchiveManifest()` and the archive types from `client/`, and `clientModules()` from `integrations/vite/`. `commands/users.command.ts` also imports two internal files with no server code: `translate()` from [admin/browser/text.ts](../admin/browser/text.ts) and `BUILT_IN_ROLES` from [users/roles.ts](../users/roles.ts).
 

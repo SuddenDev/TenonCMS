@@ -1,7 +1,7 @@
 # Framework integrations
 
 `clientModules()` runs before other loaders. In server environments it serves `.client` modules as reference exports without evaluating their browser dependencies. In browser environments its resolver rejects `.server` files, Node built-ins and known server-only Tenon entries. It checks only imports of modules the browser environment transforms, so Vite's dependency scan and the registry crawl, which read server files without transforming them, pass. In dev, `clientReferences()` watches scanned files through the server watcher and invalidates the registry on updates. It MUST NOT use `addWatchFile()` there: Vite adds those files to the registry's imports, and Nuxt's browser warmup would transform server dependencies. Builds use `addWatchFile()` for build watching. Nuxt also installs this plugin with `server: true` in Nitro’s Rollup config; Vite hosts use the environment consumer.
-Code: `packages/core/src/integrations/` (see its README). User docs: [framework setup](../guide/frameworks.md).
+Code: `packages/core/src/integrations/` (see its README). User docs: [framework setup](../1.guide/frameworks.md).
 
 ## Shared approach
 
@@ -26,7 +26,7 @@ Code: `packages/core/src/integrations/` (see its README). User docs: [framework 
 
 ## Job clock
 
-`cms.jobs.run()` has no timer of its own (see [jobs](../../packages/core/src/jobs/README.md)). Each adapter starts one, and the option `jobs: false` turns it off.
+`cms.jobs.run()` has no timer of its own (see [jobs](../../../packages/core/src/jobs/README.md)). Each adapter starts one, and the option `jobs: false` turns it off.
 
 - **Nitro hosts (Nuxt, TanStack Start, standalone):** the task `tenon:jobs` runs `cms.jobs.run()` every minute through `scheduledTasks["* * * * *"]`. `withJobsTask()` (`integrations/nitro-jobs.ts`) adds the task to the host's own entry instead of replacing it.
   - Nuxt (Nitro 2): the module sets `experimental.tasks` and the task in `nitro:config`. The handler is the plain object in `nuxt/runtime/server/jobs-task.ts`, so it imports nothing from Nitro. It reaches the config through `#tenon/config`.

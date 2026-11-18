@@ -14,26 +14,26 @@ Packages:
 
 Read the doc for an area before you change it. Update it in the same change.
 
-| Area                                                   | Read                                                                                                                  |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| What a host sees (features and options)                | [docs/guide/](docs/guide/README.md)                                                                                   |
-| Developer docs index                                   | [docs/dev/](docs/dev/README.md)                                                                                       |
-| Architecture, `defineCms()`, module map                | [docs/dev/core.md](docs/dev/core.md)                                                                                  |
-| Field types, type inference, validation                | [docs/dev/schema.md](docs/dev/schema.md)                                                                              |
-| Reads, writes, population, integrity                   | [docs/dev/content.md](docs/dev/content.md)                                                                            |
-| Media                                                  | [docs/dev/media.md](docs/dev/media.md)                                                                                |
-| Client, HTTP, auth, users, database                    | [docs/dev/server.md](docs/dev/server.md)                                                                              |
-| Plugins                                                | [docs/dev/plugins.md](docs/dev/plugins.md)                                                                            |
-| Live preview, admin bar                                | [docs/dev/preview.md](docs/dev/preview.md)                                                                            |
-| Admin (core contract and Vue app)                      | [docs/dev/admin.md](docs/dev/admin.md)                                                                                |
-| Astro, Nuxt, Vite, Cloudflare adapters                 | [docs/dev/integrations.md](docs/dev/integrations.md)                                                                  |
-| Examples                                               | [docs/dev/examples.md](docs/dev/examples.md)                                                                          |
-| Why it is built this way                               | [docs/dev/design-decisions.md](docs/dev/design-decisions.md)                                                          |
-| Known traps (check when something behaves strangely)   | [docs/dev/gotchas.md](docs/dev/gotchas.md)                                                                            |
-| The `tenon` CLI and `create-tenoncms`                  | [docs/guide/cli.md](docs/guide/cli.md), `packages/core/src/cli/README.md`, [templates/README.md](templates/README.md) |
-| Curl smoke tests for adapters, media, locales, invites | [docs/dev/smoke-tests.md](docs/dev/smoke-tests.md)                                                                    |
-| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)                                                            |
-| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                                                                                |
+| Area                                                   | Read                                                                                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What a host sees (features and options)                | [temporary_docs/content/1.guide/](temporary_docs/content/1.guide/index.md)                                                                                    |
+| Developer docs index                                   | [temporary_docs/content/2.dev/](temporary_docs/content/2.dev/index.md)                                                                                        |
+| Architecture, `defineCms()`, module map                | [temporary_docs/content/2.dev/core.md](temporary_docs/content/2.dev/core.md)                                                                                  |
+| Field types, type inference, validation                | [temporary_docs/content/2.dev/schema.md](temporary_docs/content/2.dev/schema.md)                                                                              |
+| Reads, writes, population, integrity                   | [temporary_docs/content/2.dev/content.md](temporary_docs/content/2.dev/content.md)                                                                            |
+| Media                                                  | [temporary_docs/content/2.dev/media.md](temporary_docs/content/2.dev/media.md)                                                                                |
+| Client, HTTP, auth, users, database                    | [temporary_docs/content/2.dev/server.md](temporary_docs/content/2.dev/server.md)                                                                              |
+| Plugins                                                | [temporary_docs/content/2.dev/plugins.md](temporary_docs/content/2.dev/plugins.md)                                                                            |
+| Live preview, admin bar                                | [temporary_docs/content/2.dev/preview.md](temporary_docs/content/2.dev/preview.md)                                                                            |
+| Admin (core contract and Vue app)                      | [temporary_docs/content/2.dev/admin.md](temporary_docs/content/2.dev/admin.md)                                                                                |
+| Astro, Nuxt, Vite, Cloudflare adapters                 | [temporary_docs/content/2.dev/integrations.md](temporary_docs/content/2.dev/integrations.md)                                                                  |
+| Examples                                               | [temporary_docs/content/2.dev/examples.md](temporary_docs/content/2.dev/examples.md)                                                                          |
+| Why it is built this way                               | [temporary_docs/content/2.dev/design-decisions.md](temporary_docs/content/2.dev/design-decisions.md)                                                          |
+| Known traps (check when something behaves strangely)   | [temporary_docs/content/2.dev/gotchas.md](temporary_docs/content/2.dev/gotchas.md)                                                                            |
+| The `tenon` CLI and `create-tenoncms`                  | [temporary_docs/content/1.guide/cli.md](temporary_docs/content/1.guide/cli.md), `packages/core/src/cli/README.md`, [templates/README.md](templates/README.md) |
+| Curl smoke tests for adapters, media, locales, invites | [temporary_docs/content/2.dev/smoke-tests.md](temporary_docs/content/2.dev/smoke-tests.md)                                                                    |
+| Code style and naming                                  | [code-rules.md](code-rules.md), [GLOSSARY.md](GLOSSARY.md)                                                                                                    |
+| One module in detail (also rich text, email, access)   | `packages/core/src/<module>/README.md`                                                                                                                        |
 
 ## Commands
 
@@ -49,7 +49,7 @@ Read the doc for an area before you change it. Update it in the same change.
   - Watch: `pnpm --filter tenoncms test:watch`.
   - One test: `npx vitest run --project node <file> -t '<name>'` in `packages/core`. `pnpm ... test -- -t` does not filter.
 - `pnpm tarball`, then `pnpm smoke:templates <framework> <target> [database] [storage] [template]`: scaffolds a starter against the packed `tenoncms`, installs, builds and runs `tenon backup --dry-run`. CI runs the jobs of `scripts/template-matrix.mjs`.
-- `pnpm release`: bumps every version with bumpp, commits, tags and pushes; the tag publishes to npm. See [docs/dev/releasing.md](docs/dev/releasing.md).
+- `pnpm release`: bumps every version with bumpp, commits, tags and pushes; the tag publishes to npm. See [temporary_docs/content/2.dev/releasing.md](temporary_docs/content/2.dev/releasing.md).
 - `pnpm lint` (oxlint) / `pnpm fmt` (oxfmt): the husky pre-commit hook runs lint-staged (`oxlint --fix`, then `oxfmt`). `pnpm install` enables it via `prepare`.
   - oxfmt cannot format `.astro`, so those files use Prettier with `prettier-plugin-astro` (`.prettierrc.json`).
   - In `*.test.ts`, unused vars and expressions are allowed, because the type tests rely on them.
@@ -63,7 +63,7 @@ Read the doc for an area before you change it. Update it in the same change.
   - Each test builds a real `defineCms()` on `:memory:` libsql and drives it through `createClient()`. The Vitest projects `pglite` and `sqlite` run the suite again on PGlite and `node:sqlite`. Use `testDatabase()` / `testDb()` from `setup.ts`, never a literal `libsql(":memory:")`.
   - `setup.ts` has the shared schema and helpers: `fresh()`, `relational()`, `seed()`, `localized()` / `seeded()`, `withMedia()`. `fixtures.ts` has tiny images.
 - `*.workerd.test.ts` runs in workerd (Vitest project `workerd`), inside the Worker of `src/tests/workerd/`. `tsc` skips these files, because the Workers types clash with the DOM and Node types.
-- Examples and adapters have no tests yet. Verify them with the [smoke tests](docs/dev/smoke-tests.md).
+- Examples and adapters have no tests yet. Verify them with the [smoke tests](temporary_docs/content/2.dev/smoke-tests.md).
 
 ## Rules that apply everywhere
 

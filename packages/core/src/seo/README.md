@@ -1,6 +1,6 @@
 # seo
 
-`/sitemap.xml` and `/robots.txt`, served by `cms.fetch` at the site root, outside `API_BASE`. User docs: [Pages and SEO](../../../../docs/guide/pages-and-seo.md#sitemap-and-robotstxt).
+`/sitemap.xml` and `/robots.txt`, served by `cms.fetch` at the site root, outside `API_BASE`. User docs: [Pages and SEO](../../../../docs/content/1.guide/pages-and-seo.md#sitemap-and-robotstxt).
 
 ## Follow a sitemap request
 

@@ -40,9 +40,9 @@ npm run dev
 
 Open `/admin` and create the first admin account. Only the first user can sign up; admins invite everyone else under **Users**.
 
-See for more information [The CLI](docs/guide/cli.md).
+See for more information [The CLI](temporary_docs/content/1.guide/cli.md).
 
-To add Tenon to an existing app instead, see [Your first site](docs/guide/first-site.md) and [Framework setup](docs/guide/frameworks.md).
+To add Tenon to an existing app instead, see [Your first site](temporary_docs/content/1.guide/first-site.md) and [Framework setup](temporary_docs/content/1.guide/frameworks.md).
 
 ## A first collection
 
@@ -68,16 +68,16 @@ const [post] = await cms.find("posts", { where: { slug: "hello" }, limit: 1 });
 
 ## Guides
 
-All guides are listed in [docs/guide](docs/guide/README.md). A few to start with:
+All guides are listed in [temporary_docs/content/1.guide](temporary_docs/content/1.guide/index.md). A few to start with:
 
-| Guide                                            | What it covers                                |
-| ------------------------------------------------ | --------------------------------------------- |
-| [Schema and fields](docs/guide/schema.md)        | Field types, options, validation, conditions  |
-| [Reading and writing](docs/guide/reading.md)     | `find`, filters, `select`, the browser client |
-| [Media](docs/guide/media.md)                     | Uploads, storage, responsive images           |
-| [Live preview](docs/guide/live-preview.md)       | The visual editor and the admin bar           |
-| [Auth and access](docs/guide/auth-and-access.md) | Roles, invites, access rules                  |
-| [Backup](docs/guide/backup.md)                   | Export, import, full backups                  |
+| Guide                                                                | What it covers                                |
+| -------------------------------------------------------------------- | --------------------------------------------- |
+| [Schema and fields](temporary_docs/content/1.guide/schema.md)        | Field types, options, validation, conditions  |
+| [Reading and writing](temporary_docs/content/1.guide/reading.md)     | `find`, filters, `select`, the browser client |
+| [Media](temporary_docs/content/1.guide/media.md)                     | Uploads, storage, responsive images           |
+| [Live preview](temporary_docs/content/1.guide/live-preview.md)       | The visual editor and the admin bar           |
+| [Auth and access](temporary_docs/content/1.guide/auth-and-access.md) | Roles, invites, access rules                  |
+| [Backup](temporary_docs/content/1.guide/backup.md)                   | Export, import, full backups                  |
 
 ## Roadmap
 
@@ -132,7 +132,7 @@ Before a pull request:
 - Update the docs of the area in the same change.
 - Use [conventional commits](https://www.conventionalcommits.org): `feat:`, `fix:`, `docs:`. The release notes are generated from them.
 
-Where to read more: [CLAUDE.md](CLAUDE.md) (commands and rules), [docs/dev](docs/dev/README.md) (architecture), [code-rules.md](code-rules.md) (style), [releasing](docs/dev/releasing.md).
+Where to read more: [CLAUDE.md](CLAUDE.md) (commands and rules), [temporary_docs/content/2.dev](temporary_docs/content/2.dev/index.md) (architecture), [code-rules.md](code-rules.md) (style), [releasing](temporary_docs/content/2.dev/releasing.md).
 
 ```
 packages/core             tenoncms: schema, API, admin integration, adapters

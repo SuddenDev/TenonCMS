@@ -224,13 +224,13 @@ async function main() {
   if (IMAGE_URLS[images]) p.log.info(`Set ${env}${IMAGE_URLS[images]} in ${envFile}.`);
   if (images === "vercel")
     p.log.info(
-      "Vercel Image Optimization needs `images` in the Vercel config: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/media.md#vercel",
+      "Vercel Image Optimization needs `images` in the Vercel config: https://github.com/SuddenDev/TenonCMS/blob/main/docs/content/1.guide/media.md#vercel",
     );
   if (email === "smtp")
     p.log.info(`Set the SMTP server and sender in ${envFile}: ${env}SMTP_* and ${env}EMAIL_FROM.`);
   else if (auth.includes("magic-link") || auth.includes("email-otp"))
     p.log.info(
-      "Magic links and email codes need `email` in tenon.config.ts: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/email.md. Until then, `npx tenon users recover <email>` prints a sign-in link.",
+      "Magic links and email codes need `email` in tenon.config.ts: https://github.com/SuddenDev/TenonCMS/blob/main/docs/content/1.guide/email.md. Until then, `npx tenon users recover <email>` prints a sign-in link.",
     );
   p.outro(
     auth.includes("password")
