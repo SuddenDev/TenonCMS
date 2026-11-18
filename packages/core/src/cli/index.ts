@@ -3,6 +3,7 @@ import { parseArgs, styleText } from "node:util";
 import * as p from "@clack/prompts";
 import { backupCommand } from "./commands/backup.command.ts";
 import { loginCommand, logoutCommand } from "./commands/login.command.ts";
+import { mediaCommand } from "./commands/media.command.ts";
 import { restoreCommand } from "./commands/restore.command.ts";
 import { Cancelled } from "./ui.ts";
 import { upgradeCommand } from "./commands/upgrade.command.ts";
@@ -25,6 +26,7 @@ Commands
   users reactivate <email>
                        Let a deactivated user sign in again
   users remove <email> Delete the user. It cannot be undone. Asks first
+  media regenerate     Bring stored image variants in line with media.images, after changing it. Local only
 
 Where (backup, restore, users create)
   --url <url>          A running instance (TENON_URL). Without it, tenon.config.ts is loaded here
@@ -41,6 +43,7 @@ Options
   --role <role>        users create: the role. Default: admin for the first user, else editor
   --password           users create: create the user with a password instead of an invite, locally only
   --no-open            login: print the link instead of opening the browser
+  --force              media regenerate: render every variant again, e.g. after a sharp upgrade
 `;
 
 const OPTIONS = {
@@ -56,6 +59,7 @@ const OPTIONS = {
   media: { type: "boolean" },
   backup: { type: "boolean" },
   open: { type: "boolean" },
+  force: { type: "boolean" },
   help: { type: "boolean", short: "h" },
 } as const;
 
@@ -78,6 +82,7 @@ async function main() {
   else if (command === "login") await loginCommand(arg, flags);
   else if (command === "logout") await logoutCommand(arg, flags);
   else if (command === "users") await usersCommand(arg, value, flags);
+  else if (command === "media") await mediaCommand(arg, flags);
   else throw new Error(`Unknown command ${command}. Run tenon --help.`);
   p.outro("Done");
 }

@@ -1,6 +1,6 @@
 # cli
 
-The `tenon` bin of `tenoncms` (also `tenoncms`): `backup`, `restore`, `upgrade`, `login`, `logout` and `users`. The guide is [The CLI](../../../../docs/guide/cli.md). Scaffolding is the separate `create-tenoncms` package.
+The `tenon` bin of `tenoncms` (also `tenoncms`): `backup`, `restore`, `upgrade`, `login`, `logout`, `users` and `media`. The guide is [The CLI](../../../../docs/guide/cli.md). Scaffolding is the separate `create-tenoncms` package.
 
 It is its own build entry (`dist/cli/index.mjs`), so no host bundle includes it. It runs the host's `vite`, an optional peer dependency, and imports mostly what the package exports: the client, `readArchiveManifest()` and the archive types from `client/`, and `clientModules()` from `integrations/vite/`. `commands/users.command.ts` also imports two internal files with no server code: `translate()` from [admin/browser/text.ts](../admin/browser/text.ts) and `BUILT_IN_ROLES` from [users/roles.ts](../users/roles.ts).
 
@@ -29,6 +29,12 @@ A backup is a `full` archive unless `--content-only`. It writes `<file>.part` an
 
 `users list`, `deactivate`, `reactivate` and `remove` call the same-named `cms.users` methods, and refuse `--url` like `recover` (`localOnly()`). Deactivate and remove confirm first unless `--yes`; remove defaults to No. `formatUsers()` prints the list as a table and colors the status when `stdout.hasColors()`. The role prompt of `users create` is a select of `roleOptions()`: `cms.users.roles()` locally, the `roles` of `GET /schema` with `--url`. These commands and `--password` need no `site.url`; only a link does.
 
+## Follow a regenerate
+
+`commands/media.command.ts` → `target.ts` `loadConfig()` → `cms.media.regenerate()`
+
+`media regenerate` refuses `--url`, like the local `users` commands: it renders with the project's provider and storage. `--force` passes `force: true`. `regenerateReport()` turns the counts into the spinner's message, plus a hint when images without a provider lack admin previews.
+
 ## Files
 
 | File                          | Role                                                                          |
@@ -43,3 +49,4 @@ A backup is a `full` archive unless `--content-only`. It writes `<file>.part` an
 | `commands/login.command.ts`   | `tenon login` (device flow, RFC 8628 polling) and `tenon logout`              |
 | `commands/upgrade.command.ts` | `tenon upgrade`: npm registry, lockfile, `<pm> add`                           |
 | `commands/users.command.ts`   | `tenon users create`, `list`, `recover`, `deactivate`, `reactivate`, `remove` |
+| `commands/media.command.ts`   | `tenon media regenerate`, `regenerateReport()`                                |

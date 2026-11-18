@@ -193,7 +193,9 @@ The admin then makes its own small previews, so the media grid does not load eve
 
 ### After changing image options
 
-Run `cms.media.regenerate()`, or "Regenerate variants" on the admin's Media page. It deletes stored variants the options no longer produce and, with `prerender`, renders missing ones. `force: true` re-renders all of them, for example after a sharp upgrade. `POST /_tenon/media/:id/regenerate` does one file.
+Run `npx tenon media regenerate` in the project, or `cms.media.regenerate()` from your own code. It deletes stored variants the options no longer produce and, with `prerender`, renders missing ones. `--force` (`force: true`) renders all of them again, for example after a sharp upgrade. `POST /_tenon/media/:id/regenerate` does one file. A restore with media files runs it for you.
+
+The CLI loads `tenon.config.ts` and renders with your storage, so a config that runs only on Cloudflare calls `cms.media.regenerate()` there, for example from a route or a job. Without a provider it only deletes leftover variants and tells you how many previews are missing; the admin makes those.
 
 It works with rendering providers and without a provider, where it keeps only the thumbnails and reports the missing ones as `needsThumbnail`. With a URL provider nothing is stored, and new URLs take effect on their own.
 

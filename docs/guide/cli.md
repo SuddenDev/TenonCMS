@@ -80,6 +80,15 @@ npx tenon users remove editor@example.com
 
 `users create` and `users recover` build the link on the CMS origin: `auth.baseURL`, else `site.url`, else they ask, with `http://localhost:4321` as the default. Without a terminal, set `site.url` (for example from `TENON_SITE_URL`).
 
+## Media
+
+```sh
+npx tenon media regenerate
+npx tenon media regenerate --force
+```
+
+Run it after you change `media.images`: sizes, presets, format or the provider. It deletes stored variants the options no longer produce and, with `prerender`, renders the missing ones. `--force` renders every variant again, for example after a sharp upgrade. It works on the local project only, because it renders with your provider and storage. Without a provider, it says how many admin previews are missing: "Create missing previews" on the admin's Media page makes them. See [Media](./media.md#after-changing-image-options).
+
 ## Local or remote
 
 Without `--url`, the CLI loads `tenon.config.ts` and opens the database itself, like your dev server. That works for SQLite, Postgres and PGlite. A Cloudflare config only runs on Cloudflare, so use `--url` there.
