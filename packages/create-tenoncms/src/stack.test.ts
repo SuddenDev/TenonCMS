@@ -44,6 +44,18 @@ describe("fillMarkers", () => {
     expect(text).not.toContain("@tenon-");
   });
 
+  it("groups the media lines of every part into one block, where the first one is", () => {
+    const text = fillMarkers(config, "tenon.config.ts", [
+      { files: { "tenon.config.ts": { options: ["secret: 1,"] } } },
+      { files: { "tenon.config.ts": { media: ["storage: local(),"] } } },
+      { files: { "tenon.config.ts": { options: ["site: 2,"] } } },
+      { files: { "tenon.config.ts": { media: ["images: {", "  provider: ipx(),", "},"] } } },
+    ]);
+    expect(text).toContain(
+      "  secret: 1,\n  media: {\n    storage: local(),\n    images: {\n      provider: ipx(),\n    },\n  },\n  site: 2,\n",
+    );
+  });
+
   it("imports the variables it uses from the env module", () => {
     const text = fillMarkers(config, "tenon.config.ts", parts, { envModule: "astro:env/server" });
     expect(text).toContain(

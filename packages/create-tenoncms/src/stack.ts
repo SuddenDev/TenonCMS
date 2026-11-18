@@ -16,7 +16,8 @@ export type EnvVar = {
  */
 export type EnvSource = { envModule?: string; runtimeConfig?: boolean };
 
-type Blocks = { imports?: string[]; setup?: string[]; options?: string[] };
+/** `media` lines go inside one `media: { … }` option, shared by the storage and image layers. */
+type Blocks = { imports?: string[]; setup?: string[]; options?: string[]; media?: string[] };
 
 /**
  * `part.json` of a layer: the code it adds per file, its environment variables, `.gitignore` lines, and `builds`: the
@@ -130,7 +131,7 @@ export function fillMarkers(
 
   const blocks = parts.flatMap((part) => part.files?.[file] ?? []);
   const setup = blocks.flatMap((block) => block.setup ?? []).map(code);
-  const options = blocks.flatMap((block) => block.options ?? []).map(code);
+  const options = withMedia(blocks).map(code);
   const imports = [...new Set(blocks.flatMap((block) => block.imports ?? []))];
   if (envModule && used.size) imports.unshift(importLine([...used].sort(), envModule));
   if (runtimeConfig && used.size) setup.unshift("const config = useRuntimeConfig();");
@@ -171,6 +172,16 @@ export function envExample(parts: Part[], prefix = "") {
         .join("\n"),
     );
   return `${blocks.join("\n\n")}\n`;
+}
+
+// The options of `blocks`, with every `media` line in one `media` block where the first one is.
+function withMedia(blocks: Blocks[]) {
+  const media = blocks.flatMap((block) => block.media ?? []);
+  const first = blocks.findIndex((block) => block.media?.length);
+  return blocks.flatMap((block, i) => [
+    ...(block.options ?? []),
+    ...(i === first ? ["media: {", ...media.map((line) => `  ${line}`), "},"] : []),
+  ]);
 }
 
 function importLine(names: string[], from: string) {
