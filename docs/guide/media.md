@@ -34,7 +34,7 @@ export default defineCms({
 | `maxSize`                         | 100 MB                         | Largest accepted file                              |
 | `accept`                          | all types                      | Allowed MIME types, `type/*` wildcards allowed     |
 | `images`                          | `false`                        | Responsive variants, or `false` for originals only |
-| `images.provider`                 | required with `images`         | `ipx()`, `cloudflare()`, or your own               |
+| `images.provider`                 | required with `images`         | One of the [providers](#image-providers), or yours |
 | `images.format`, `images.quality` | `'webp'`, `85`                 | Default modifiers                                  |
 | `images.sizes`                    | `[320, 640, 1024, 1536, 1920]` | Widths for `srcset`                                |
 | `images.presets`                  | `{}`                           | Named modifier sets                                |
@@ -44,7 +44,7 @@ export default defineCms({
 - With `media: false`, core adds no routes, and `image` and `file` fields throw at startup.
 - `media` is a reserved collection, plugin and route name.
 - `nuxt preview` runs the server from inside `.output/`, so a relative `./.uploads` lands in the build output. Pass an absolute `dir` there, as the Nuxt example does.
-- On Cloudflare Workers (the `workerd` export condition), `tenoncms/media/local`, `tenoncms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `r2()` (or `s3()`) and `cloudflare()`.
+- On Cloudflare Workers (the `workerd` export condition), `tenoncms/media/local`, `tenoncms/media/ipx` and the default throw, because they need a filesystem and sharp. There, no `media` option means no media library, and `media: true` throws. Use `r2()` (or `s3()`) and `cloudflare()` or a hosted provider.
 - In a read-only working directory, as in serverless functions on Vercel, AWS Lambda or Netlify, the default cannot keep uploads. There too, no `media` option means no media library, and `media: true` throws. Use `s3()` or `r2()` with keys.
 
 ## Image and file fields
@@ -136,11 +136,47 @@ Unfinished uploads are aborted after 24 hours. An upload can have up to 10 000 p
 
 ## Image providers
 
-- **`ipx({ prerender? })`** from `tenoncms/media/ipx` (`ipx` and sharp come with tenoncms): core renders variants on first request at `/_tenon/media/img/<modifiers>/<key>` and stores them under `.variants/<key>/`. Only modifier sets your config can produce are served. `prerender: true` renders them all right after upload.
-- **`cloudflare({ binding?, prerender? })`** from `tenoncms/media/cloudflare`:
-  - With `binding: env.IMAGES` (the Images binding), core renders variants through Cloudflare Images like `ipx()` does: at `/_tenon/media/img/<modifiers>/<key>`, stored under `.variants/<key>/`. `wrangler dev` renders them locally.
-  - Without it: URLs for Cloudflare's image transformations (`/cdn-cgi/image/...`) on your zone. Core renders nothing.
-- **Your own**: an object with `getImage(src, modifiers)` that returns `{ url }`, for imgproxy, Bunny or Vercel. Add `render(key, modifiers, storage)` if core should serve the variants.
+Without `images`, every image is served as uploaded. A provider adds resized variants and a `srcset`. Each one is its own entry, `tenoncms/media/<name>`, so a site loads only the one it uses. `npm create tenoncms` asks for one.
+
+Two kinds exist. A **rendering** provider makes the variants itself; core serves them at `/_tenon/media/img/<modifiers>/<key>` and stores them under `.variants/<key>/`. Only modifier sets your config can produce are served, and `prerender: true` renders them all right after upload. A **URL** provider only builds URLs for an image service; core renders and stores nothing.
+
+| Provider                                      | Kind                      | Runs on                                                  | Modifiers it ignores                            |
+| --------------------------------------------- | ------------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| `ipx({ prerender? })`                         | rendering, sharp          | Node, Bun, Vercel functions                              | none                                            |
+| `cloudflare({ binding, prerender? })`         | rendering, Images binding | Cloudflare Workers                                       | none                                            |
+| `cloudflare()`                                | URL, `/cdn-cgi/image/…`   | any site on a Cloudflare zone with image transformations | none                                            |
+| `vercel({ sizes? })`                          | URL, `/_vercel/image`     | Vercel                                                   | `height`, `fit`, `format`, `background`, `blur` |
+| `netlify({ baseURL? })`                       | URL, `/.netlify/images`   | Netlify, `netlify dev`                                   | `background`, `blur`                            |
+| `imgix({ baseURL })`                          | URL                       | anywhere                                                 | none                                            |
+| `cloudinary({ baseURL, origin? })`            | URL                       | anywhere                                                 | none                                            |
+| `imagekit({ baseURL })`                       | URL                       | anywhere                                                 | none                                            |
+| `bunny({ baseURL })`                          | URL                       | anywhere                                                 | `fit`, `format`, `background`                   |
+| `imgproxy({ baseURL, key?, salt?, origin? })` | URL, self-hosted          | anywhere                                                 | none                                            |
+| `thumbor({ baseURL, key?, origin? })`         | URL, self-hosted          | anywhere                                                 | none                                            |
+
+```ts
+import { imgix } from "tenoncms/media/imgix";
+
+media: {
+  storage: s3({ /* … */ }),
+  images: { provider: imgix({ baseURL: "https://my-site.imgix.net" }) },
+},
+```
+
+- **`ipx()`** needs `ipx` installed: `npm install ipx@4.0.0-beta.1`. `tenoncms` does not install it, because sharp is a large native package.
+- **`cloudflare()`**: with `binding: env.IMAGES`, core renders through Cloudflare Images, and `wrangler dev` renders locally. Without a binding, URLs go to `/cdn-cgi/image/` on the zone that serves the site, so the site MUST be proxied by Cloudflare with image transformations on. That works for a Node or Vercel site too.
+- **imgix, ImageKit, Bunny, Cloudinary** (`…/image/upload`): the URL is `<baseURL>/<key>`. Point the service's origin at the bucket, or at `https://<site>/_tenon/media/files/` for local files. Cloudinary's `baseURL` is `https://res.cloudinary.com/<cloud>/image/upload/<folder>` with an auto-upload mapping of `<folder>`, or `…/image/upload` for files you uploaded to Cloudinary yourself (the key without its extension is the public id). `…/image/fetch` fetches the file URL instead; `origin` makes local URLs absolute.
+- **imgproxy and Thumbor** load the file URL. Set `IMGPROXY_BASE_URL` on imgproxy, or pass `origin` (the site, e.g. `https://example.com`) so local URLs are absolute. With `key` and `salt` (hex) imgproxy URLs are signed, and with `key` Thumbor URLs are. Without them they are `unsafe`, which the server MUST allow.
+- **Netlify**: a file on another origin, such as a bucket, MUST be listed in `remote_images` of `netlify.toml`.
+- **Your own**: an object with `getImage(src, modifiers)` that returns `{ url }`. Add `render(key, modifiers, storage)` if core should serve the variants. The URL providers port the mappings of [Nuxt Image](https://image.nuxt.com/providers), so other Nuxt Image providers translate the same way.
+
+### Vercel
+
+`vercel()` returns the originals outside Vercel, so development needs nothing. On Vercel, Image Optimization MUST be enabled with the same widths as `images.sizes` (default `[320, 640, 1024, 1536, 1920]`). A width in between is rounded up to the next allowed one. Vercel picks the format itself.
+
+- Astro: `adapter: vercel({ imagesConfig: { sizes: [320, 640, 1024, 1536, 1920], domains: [] } })`.
+- Nuxt, TanStack Start and standalone (Nitro): `vercel: { config: { images: { sizes: [320, 640, 1024, 1536, 1920] } } }` in the Nitro config, which is `nitro` in `nuxt.config.ts`.
+- Files in a bucket: set `publicUrl` on `s3()`, and allow its host in `remotePatterns` of the same `images` block.
 
 SVG and images above `images.maxSize` get the original as `src` and an empty `srcset`.
 

@@ -3,6 +3,7 @@ import type { MediaHooks, Modifiers, Schema } from "../../schema/index.ts";
 import type { ImageOptions } from "../../schema/fields/image.ts";
 import { pathKey, relationPaths } from "../../schema/traversal/relation-paths.ts";
 import { allowlist } from "../images/allowlist.ts";
+import { DEFAULT_SIZES } from "../images/modifiers.ts";
 import type { Images } from "../images/types.ts";
 import type { ImagesOptions, MediaOptions } from "../config/options.ts";
 import type { Storage } from "../storage/types.ts";
@@ -57,7 +58,7 @@ function withDefaults(images: ImagesOptions): Images {
   return {
     format: "webp",
     quality: 85,
-    sizes: [320, 640, 1024, 1536, 1920],
+    sizes: DEFAULT_SIZES,
     presets: {},
     maxSize: 50 * MB,
     ...images,

@@ -48,12 +48,16 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `operations/folders.operation.ts`                 | Lists the folders of the files the caller MAY read.                                                                |
 | `operations/download-archive.operation.ts`        | Streams selected originals into a ZIP and cancels the active storage read.                                         |
 | `operations/delete.operation.ts`                  | Deletes the document; schedules files and hooks after outer commit.                                                |
+| `operations/set-thumbnail.operation.ts`           | Stores the admin's thumbnail of a raster image, only without `media.images`.                                       |
 | `operations/regenerate.operation.ts`              | Brings stored variants in line with the image options.                                                             |
 | `library/names.ts`                                | Filename and folder rules, storage keys, free names and MIME matching. Browser-safe.                               |
 | `library/names-in.ts`                             | Names used by documents and unfinished uploads, and pending deletions. Server-only: database and module state.     |
 | `library/selection.ts`                            | Folder containment, recursive file selection and move destinations. Browser-safe.                                  |
 | `images/`                                         | Provider types, modifiers, variant selection, allowlist, `/img` path parsing and URL decoration.                   |
-| `images/ipx.ts`, `images/cloudflare.ts`           | Providers; `tenoncms/media/ipx` and `tenoncms/media/cloudflare` (Images binding or `/cdn-cgi/image` URLs).         |
+| `images/ipx.ts`, `images/cloudflare.ts`           | Rendering providers; `tenoncms/media/ipx` and `tenoncms/media/cloudflare` (also `/cdn-cgi/image` URLs).            |
+| `images/<url provider>.ts`                        | `vercel`, `netlify`, `imgix`, `cloudinary`, `imagekit`, `bunny`, `imgproxy`, `thumbor`.                            |
+| `images/provider-params.ts`                       | Maps modifiers to a provider's parameter names in a stable order.                                                  |
+| `variants/thumbnail.ts`                           | The thumbnail's variant id, URL and checks (WebP or JPEG, 200 KB, 1024 px).                                        |
 | `variants/keys.ts`                                | Variant key layout and listing.                                                                                    |
 | `variants/render-variants.ts`                     | Renders and stores one or many variants.                                                                           |
 | `variants/move-variants.ts`, `delete-variants.ts` | Moves or deletes a file with its variants.                                                                         |
@@ -75,7 +79,7 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `default.ts`                                      | Local storage in `./.uploads`, originals only; `tenoncms/media/default`.                                           |
 | `workerd.ts`                                      | What Workers resolve for local, IPX and the default: errors instead of Node code.                                  |
 
-The storage and provider files are their own package entries, so `node:fs` and `ipx` never reach a bundle that does not import them.
+The storage and provider files are their own package entries, so `node:fs`, `ipx` and `node:crypto` never reach a bundle that does not import them. `ipx` is an optional peer dependency. The URL providers port Nuxt Image's modifier mappings.
 
 Rules:
 

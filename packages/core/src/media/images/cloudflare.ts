@@ -1,18 +1,26 @@
 import { API_BASE } from "../../client/index.ts";
-import type { Modifiers } from "../../schema/fields/image.ts";
 import { encodeKey } from "../storage/types.ts";
 import { modifierId } from "./modifiers.ts";
+import { type Fit, providerParams } from "./provider-params.ts";
 import type { ImageProvider } from "./types.ts";
 
 // Cloudflare's names for sharp's `fit`, as in Nuxt Image.
-const FIT: Record<NonNullable<Modifiers["fit"]>, string> = {
+const FIT: Record<Fit, string> = {
   cover: "cover",
   contain: "contain",
   fill: "scale-down",
   outside: "crop",
   inside: "pad",
 };
-const ORDER = ["width", "height", "fit", "format", "quality", "background", "blur"] as const;
+const URL_PARAMS = {
+  width: "width",
+  height: "height",
+  fit: "fit",
+  format: "format",
+  quality: "quality",
+  background: "background",
+  blur: "blur",
+};
 const TRANSFORM = ["width", "height", "fit", "background", "blur"] as const;
 
 /** The part of an Images binding that {@link cloudflare} uses. */
@@ -48,8 +56,8 @@ export function cloudflare({ binding, prerender = false }: CloudflareOptions = {
   if (!binding)
     return {
       getImage({ url }, modifiers) {
-        const options = ORDER.filter((k) => modifiers[k] !== undefined)
-          .map((k) => `${k}=${k === "fit" ? FIT[modifiers.fit!] : modifiers[k]}`)
+        const options = providerParams(modifiers, URL_PARAMS, FIT)
+          .map(([name, value]) => `${name}=${value}`)
           .join(",");
         return { url: `/cdn-cgi/image/${options}/${url.replace(/^\//, "")}` };
       },

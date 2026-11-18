@@ -12,6 +12,9 @@ export function modifiersFor(images: Images, field: ImageOptions = {}): Modifier
   });
 }
 
+/** The default `images.sizes`: widths for `srcset`. */
+export const DEFAULT_SIZES = [320, 640, 1024, 1536, 1920];
+
 /** IPX short names of the modifiers. */
 export const SHORT: Record<keyof Modifiers, string> = {
   width: "w",

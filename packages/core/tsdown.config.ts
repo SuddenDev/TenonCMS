@@ -28,12 +28,20 @@ export default defineConfig({
     "src/presets/index.ts",
     "src/email/smtp.ts",
     "src/auth/plugins.ts",
-    // Own entries, so `node:fs`, `ipx` and `aws4fetch` stay out of bundles that do not use them.
+    // Own entries, so `node:fs`, `ipx`, `node:crypto` and `aws4fetch` stay out of bundles that do not use them.
     "src/media/storage/local/index.ts",
     "src/media/storage/s3/index.ts",
     "src/media/storage/r2/index.ts",
     "src/media/images/ipx.ts",
     "src/media/images/cloudflare.ts",
+    "src/media/images/vercel.ts",
+    "src/media/images/netlify.ts",
+    "src/media/images/imgix.ts",
+    "src/media/images/cloudinary.ts",
+    "src/media/images/imagekit.ts",
+    "src/media/images/bunny.ts",
+    "src/media/images/imgproxy.ts",
+    "src/media/images/thumbor.ts",
     "src/media/default.ts",
     // Cloudflare Workers resolve `local`, `ipx` and `default` here, by the `workerd` export condition.
     "src/media/workerd.ts",

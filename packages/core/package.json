@@ -162,6 +162,38 @@
       "types": "./dist/media/images/cloudflare.d.mts",
       "default": "./dist/media/images/cloudflare.mjs"
     },
+    "./media/vercel": {
+      "types": "./dist/media/images/vercel.d.mts",
+      "default": "./dist/media/images/vercel.mjs"
+    },
+    "./media/netlify": {
+      "types": "./dist/media/images/netlify.d.mts",
+      "default": "./dist/media/images/netlify.mjs"
+    },
+    "./media/imgix": {
+      "types": "./dist/media/images/imgix.d.mts",
+      "default": "./dist/media/images/imgix.mjs"
+    },
+    "./media/cloudinary": {
+      "types": "./dist/media/images/cloudinary.d.mts",
+      "default": "./dist/media/images/cloudinary.mjs"
+    },
+    "./media/imagekit": {
+      "types": "./dist/media/images/imagekit.d.mts",
+      "default": "./dist/media/images/imagekit.mjs"
+    },
+    "./media/bunny": {
+      "types": "./dist/media/images/bunny.d.mts",
+      "default": "./dist/media/images/bunny.mjs"
+    },
+    "./media/imgproxy": {
+      "types": "./dist/media/images/imgproxy.d.mts",
+      "default": "./dist/media/images/imgproxy.mjs"
+    },
+    "./media/thumbor": {
+      "types": "./dist/media/images/thumbor.d.mts",
+      "default": "./dist/media/images/thumbor.mjs"
+    },
     "./media/default": {
       "types": "./dist/media/default.d.mts",
       "workerd": "./dist/media/workerd.mjs",

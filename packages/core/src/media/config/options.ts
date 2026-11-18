@@ -5,7 +5,7 @@ import type { Access } from "../../access/types.ts";
 
 /** The `media.images` option: responsive image variants. */
 export type ImagesOptions = {
-  /** Builds variant URLs: `ipx()` from `tenoncms/media/ipx`, `cloudflare()` from `tenoncms/media/cloudflare`, or your own. */
+  /** Builds variant URLs: a provider from `tenoncms/media/<name>` (`ipx`, `cloudflare`, `vercel`, `netlify`, `imgix`, `cloudinary`, `imagekit`, `bunny`, `imgproxy`, `thumbor`), or your own. */
   provider: ImageProvider;
   /** Default output format. Default `'webp'`. */
   format?: string;
