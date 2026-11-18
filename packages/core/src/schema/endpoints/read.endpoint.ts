@@ -9,7 +9,7 @@ import type { Role } from "../../users/roles.ts";
 
 /** What `/schema` sends next to the collections and globals. */
 type SchemaExtras = {
-  media?: { regenerate: boolean };
+  media?: { thumbnails: boolean };
   site?: string;
   admin?: AdminDescriptor;
   localization?: Localization;
@@ -35,7 +35,7 @@ export function readEndpoint(
     for (const [name, entry] of Object.entries(schema[kind] ?? {}))
       if (entry.permalink) publicSchema[kind][name].preview = true;
   // What the admin needs to know of the media options.
-  if (media) publicSchema.media = { regenerate: media.regenerate };
+  if (media) publicSchema.media = { thumbnails: media.thumbnails };
   publicSchema.admin = admin;
   if (site) publicSchema.site = site;
   if (localization)

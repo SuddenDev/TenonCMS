@@ -13,17 +13,13 @@ import { Progress } from "@/shared/components/ui/progress";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
   DropdownMenuSeparator,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { Button } from "@/shared/components/ui/button";
 import Icon from "@/shared/components/Icon.vue";
+import { storeThumbnail } from "@/modules/media/thumbnail";
 
 const route = useRoute();
 const router = useRouter();
@@ -51,24 +47,30 @@ const renameError = ref("");
 const { t } = useI18n();
 useHead({ title: () => t("nav.media") });
 
-// One request per image, so no request runs long. Variants of deleted files are cleaned by `cms.media.regenerate()` only.
-const job = ref<{ done: number; total: number; rendered: number; removed: number } | null>(null);
-async function regenerate(force: boolean) {
+// Without an image provider, only the browser can make previews. Regenerate tells per image whether one is missing; one
+// request per image, so no request runs long. Providers regenerate with `tenon media regenerate` instead.
+const job = ref<{ done: number; total: number; created: number } | null>(null);
+async function createPreviews() {
   error.value = "";
   const images = (await client.find("media", { populate: false })).filter((d) =>
     String(d.mimeType).startsWith("image/"),
   );
-  job.value = { done: 0, total: images.length, rendered: 0, removed: 0 };
+  job.value = { done: 0, total: images.length, created: 0 };
   try {
     for (const d of images) {
-      const result = await client.media.regenerate(d.id, { force });
-      job.value.rendered += result.rendered;
-      job.value.removed += result.removed;
+      const { needsThumbnail } = await client.media.regenerate(d.id);
+      if (needsThumbnail && (await remakeThumbnail(d.id, d.url))) job.value.created++;
       job.value.done++;
     }
   } catch (e) {
     error.value = (e as Error).message;
   }
+}
+
+// A file the browser cannot load, e.g. from a bucket without CORS, keeps showing the original.
+async function remakeThumbnail(id: string, url: string) {
+  const res = await fetch(url).catch(() => undefined);
+  return res?.ok ? storeThumbnail(id, await res.blob()) : false;
 }
 
 function startRename() {
@@ -103,32 +105,20 @@ async function rename(to: string) {
     @open="(id) => router.push({ path: route.path, query: { ...route.query, file: id } })"
   >
     <template #actions>
-      <DropdownMenu v-if="schema.media?.regenerate">
+      <DropdownMenu v-if="folder || schema.media?.thumbnails">
         <DropdownMenuTrigger as-child>
           <Button type="button" size="icon" variant="ghost" :aria-label="t('common.advanced')">
             <Icon name="ellipsis" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="min-w-48">
-          <template v-if="folder">
-            <DropdownMenuItem @select="startRename">{{ t("media.renameFolder") }}</DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </template>
-          <DropdownMenuGroup>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>{{ t("common.advanced") }}</DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent class="min-w-48">
-                  <DropdownMenuItem @select="regenerate(false)">{{
-                    t("media.regenerate")
-                  }}</DropdownMenuItem>
-                  <DropdownMenuItem @select="regenerate(true)">{{
-                    t("media.rerender")
-                  }}</DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-          </DropdownMenuGroup>
+          <DropdownMenuItem v-if="folder" @select="startRename">{{
+            t("media.renameFolder")
+          }}</DropdownMenuItem>
+          <DropdownMenuSeparator v-if="folder && schema.media?.thumbnails" />
+          <DropdownMenuItem v-if="schema.media?.thumbnails" @select="createPreviews">{{
+            t("media.createPreviews")
+          }}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </template>
@@ -140,10 +130,10 @@ async function rename(to: string) {
           class="mb-1 h-1.5"
         />
         <p v-if="job.done < job.total">
-          {{ t("media.regenerating", { done: job.done, total: job.total }) }}
+          {{ t("media.creatingPreviews", { done: job.done, total: job.total }) }}
         </p>
         <p v-else>
-          {{ t("media.regenerated", { rendered: job.rendered, removed: job.removed }) }}
+          {{ t("media.previewsCreated", { count: job.created }) }}
           <Button type="button" variant="link" size="xs" @click="job = null">{{
             t("common.dismiss")
           }}</Button>

@@ -278,6 +278,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
         request("DELETE", `/media/${enc(id)}`, undefined, options),
       regenerate: (id: string, options: { force?: boolean } = {}) =>
         request("POST", `/media/${enc(id)}/regenerate`, options),
+      setThumbnail: (id: string, data: Blob) => request("PUT", `/media/${enc(id)}/thumbnail`, data),
       folders: () => request("GET", "/media/folders"),
     },
 

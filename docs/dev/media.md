@@ -34,6 +34,7 @@ These keep storage and database from drifting apart. Keep the order.
 - A variant is a stored rendering for a set of modifiers (size, format, quality). Keys follow one scheme under a `.variants` folder.
 - Variants are made on demand, or ahead of time with `prerender`.
 - A provider that can render can also regenerate: it removes obsolete variants and can re-render missing ones.
+- Without a provider, the admin makes thumbnails in the browser (canvas, WebP or JPEG) and stores them as the variant `thumbnail`. This keeps the media grid light without a server-side image library. Regenerate then reports missing thumbnails, and the browser makes them.
 - Defaults: WebP, quality 85.
 
 ## Names

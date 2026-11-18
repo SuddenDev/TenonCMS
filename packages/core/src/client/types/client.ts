@@ -507,8 +507,8 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
     collections?: Collections<C>;
     /** Globals by name. */
     globals?: Globals<C>;
-    /** Set when the media library is on. `regenerate`: the image provider stores variants, see `media.regenerate()`. */
-    media?: { regenerate: boolean };
+    /** Set when the media library is on. `thumbnails`: no image provider is set, so the admin makes its own previews. */
+    media?: { thumbnails: boolean };
     /** The `site` option: the base of preview URLs. */
     site?: string;
     admin?: AdminDescriptor;

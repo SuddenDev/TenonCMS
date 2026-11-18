@@ -6,7 +6,7 @@ The admin media library, file details and `image` / `file` field picker. Request
 
 `composables/useFileHandler.ts` → `uploads.ts` → `components/MediaUploadProgress.vue`
 
-`useFileHandler()` filters dialog selections and files from `useDropZone()`. The drop zone reads directory batches and preserves relative paths. `uploadFiles()` checks field restrictions, uploads through `client.media.upload()` and keeps one progress toast across overlapping batches and navigation. Successful results retain input order. Failed and cancelled uploads remain visible; only a fully successful queue produces a success toast. `MediaField.vue` also uses this queue for its upload input.
+`useFileHandler()` filters dialog selections and files from `useDropZone()`. The drop zone reads directory batches and preserves relative paths. `uploadFiles()` checks field restrictions, uploads through `client.media.upload()` and keeps one progress toast across overlapping batches and navigation. When the result has `thumbnail` (a raster image without an image provider), `storeThumbnail()` draws a 320 px preview on a canvas and stores it; a failure leaves the original in the grid. Successful results retain input order. Failed and cancelled uploads remain visible; only a fully successful queue produces a success toast. `MediaField.vue` also uses this queue for its upload input.
 
 ## Follow a library action
 
@@ -25,9 +25,10 @@ The view binds the folder to the route and opens `MediaFile.vue` in a sheet thro
 | `index.ts`                                            | Module exports.                                                                             |
 | `media.ts`                                            | Folder children, field restrictions, file labels, icons, download URLs and range selection. |
 | `uploads.ts`                                          | Shared upload queue, cancellation and notifications.                                        |
+| `thumbnail.ts`                                        | Browser-made thumbnails without an image provider: size, canvas, WebP or JPEG, upload.      |
 | `composables/useFileHandler.ts`                       | File dialogs, filtering and callback state.                                                 |
 | `composables/useDropZone.ts`                          | File and directory drops, drag feedback and read errors.                                    |
-| `views/Media.vue`                                     | Folder routing, detail sheet and image regeneration.                                        |
+| `views/Media.vue`                                     | Folder routing, detail sheet, and "Create missing previews" without an image provider.      |
 | `views/MediaFile.vue`                                 | File metadata, preview, save and deletion.                                                  |
 | `components/MediaLibrary.vue`                         | Library loading, navigation, views, selection, shortcuts, uploads and renames.              |
 | `components/MediaField.vue`                           | Field value, drag and arrow-key reordering, upload input and picker dialog.                 |

@@ -29,7 +29,8 @@ export type MediaClient = {
   delete(id: string, options?: DeleteOptions): Promise<null>;
   /**
    * Brings the stored variants of one file in line with the current image options. `force` re-renders all of them.
-   * Throws a `CmsError` with status `404` for a missing file, or when the image provider stores no variants.
+   * Throws a `CmsError` with status `404` for a missing file, or when the image provider stores no variants. Without
+   * `media.images`, `needsThumbnail` is `1` when the admin should make the file's thumbnail.
    * `POST /_tenon/media/:id/regenerate`
    */
   regenerate(
@@ -38,7 +39,13 @@ export type MediaClient = {
       /** Re-renders every variant, not only missing ones. */
       force?: boolean;
     },
-  ): Promise<{ rendered: number; removed: number }>;
+  ): Promise<{ rendered: number; removed: number; needsThumbnail?: number }>;
+  /**
+   * Stores the thumbnail of a raster image: a WebP or JPEG of at most 200 KB and 1024 px per side. Only without
+   * `media.images`, else `404`.
+   * `PUT /_tenon/media/:id/thumbnail`
+   */
+  setThumbnail(id: string, data: Blob): Promise<MediaRead>;
   /**
    * Lists every folder with its parents, sorted. The root is left out.
    * `GET /_tenon/media/folders`

@@ -11,7 +11,7 @@ import {
 import { local } from "../media/storage/local/index.ts";
 import { modifierId } from "../media/images/modifiers.ts";
 import type { Modifiers } from "../schema/index.ts";
-import { png, png300 } from "./fixtures.ts";
+import { jpeg, png, png300, webp } from "./fixtures.ts";
 import { admin, base, setup, status, tmpDir, withMedia } from "./setup.ts";
 
 const bytes = (n: number) => Uint8Array.from({ length: n }, (_, i) => i % 251);
@@ -933,7 +933,7 @@ describe("regenerate", () => {
   it("has a route per file and tells /schema, 404 without render", async () => {
     const m = await setupStale(true);
     await m.client.signUp(admin);
-    expect((await m.client.getSchema()).media).toEqual({ regenerate: true });
+    expect((await m.client.getSchema()).media).toEqual({ thumbnails: false });
     const res = await m.fetchWithSession(`/media/${m.doc.id}/regenerate`, json({ force: false }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ rendered: 1, removed: 1 });
@@ -943,10 +943,101 @@ describe("regenerate", () => {
     expect((await m.fetchWithSession("/media/nope/regenerate", json({}))).status).toBe(404);
     const plain = withMedia({ images: { provider: { getImage: () => ({ url: "" }) } } });
     await plain.client.signUp(admin);
-    expect((await plain.client.getSchema()).media).toEqual({ regenerate: false });
+    expect((await plain.client.getSchema()).media).toEqual({ thumbnails: false });
     const doc = await plain.cms.media.upload(png300, { filename: "x.png", mimeType: "image/png" });
     expect((await plain.fetchWithSession(`/media/${doc.id}/regenerate`, json({}))).status).toBe(
       404,
     );
+  });
+});
+
+describe("admin thumbnails without an image provider", () => {
+  const upload = (m: ReturnType<typeof withMedia>) =>
+    m.cms.media.upload(png300, { folder: "a", filename: "x.png", mimeType: "image/png" });
+  const blob = (data: Uint8Array) => new Blob([data as BlobPart], { type: "image/webp" });
+
+  it("serves the original until a thumbnail is stored, then the thumbnail", async () => {
+    const m = withMedia();
+    const doc = await upload(m);
+    expect(doc.thumbnail).toBe("/_tenon/media/thumbnail/a/x.png");
+    const before = await m.fetchWithSession("/media/thumbnail/a/x.png");
+    expect(before.status).toBe(302);
+    expect(before.headers.get("location")).toBe("/_tenon/media/files/a/x.png");
+
+    await m.client.signUp(admin);
+    await m.client.media.setThumbnail(doc.id, blob(webp));
+    const after = await m.fetchWithSession("/media/thumbnail/a/x.png");
+    expect(after.headers.get("content-type")).toBe("image/webp");
+    expect(new Uint8Array(await after.arrayBuffer())).toEqual(webp);
+  });
+
+  it("accepts only a small WebP or JPEG thumbnail of a raster image", async () => {
+    const m = withMedia();
+    const doc = await upload(m);
+    const pdf = await m.cms.media.upload(text("%PDF-1.4"), {
+      filename: "x.pdf",
+      mimeType: "application/pdf",
+    });
+    const invalid = { errors: { "": expect.any(String) } };
+    await expect(m.cms.media.setThumbnail(doc.id, png)).rejects.toMatchObject(invalid);
+    await expect(m.cms.media.setThumbnail(doc.id, bytes(300 * 1024))).rejects.toMatchObject(
+      invalid,
+    );
+    await expect(m.cms.media.setThumbnail(pdf.id, webp)).rejects.toMatchObject(invalid);
+    expect(await m.cms.media.setThumbnail("nope", webp)).toBeUndefined();
+    expect(await m.cms.media.setThumbnail(doc.id, jpeg)).toMatchObject({ id: doc.id });
+  });
+
+  it("needs the update rule", async () => {
+    const m = withMedia({ access: { update: () => false } });
+    const doc = await upload(m);
+    await m.client.signUp(admin);
+    expect(await status(m.client.media.setThumbnail(doc.id, blob(webp)))).toBe(403);
+  });
+
+  it("moves and deletes the thumbnail with its file", async () => {
+    const m = withMedia();
+    const doc = await upload(m);
+    await m.cms.media.setThumbnail(doc.id, webp);
+    await m.cms.media.update(doc.id, { folder: "b" });
+    expect(files(m.dir)).toContain(".variants/b/x.png/thumbnail");
+    await m.cms.media.delete(doc.id);
+    expect(files(m.dir)).toEqual([]);
+  });
+
+  it("lets regenerate report missing thumbnails and remove other variants", async () => {
+    const m = withMedia();
+    const doc = await upload(m);
+    await local({ dir: m.dir }).put(
+      ".variants/a/x.png/f_webp&q_85&w_200",
+      text("old"),
+      "image/webp",
+    );
+    expect(await m.cms.media.regenerate(doc.id)).toEqual({
+      rendered: 0,
+      removed: 1,
+      needsThumbnail: 1,
+    });
+    await m.cms.media.setThumbnail(doc.id, webp);
+    expect(await m.cms.media.regenerate(doc.id)).toMatchObject({ removed: 0, needsThumbnail: 0 });
+    expect(await m.cms.media.regenerate(doc.id, { force: true })).toMatchObject({
+      needsThumbnail: 1,
+    });
+    expect(files(m.dir)).toContain(".variants/a/x.png/thumbnail");
+    await m.client.signUp(admin);
+    expect((await m.client.getSchema()).media).toEqual({ thumbnails: true });
+  });
+
+  it("is off with an image provider, which removes old thumbnails on regenerate", async () => {
+    const { provider } = spy();
+    const m = withMedia({ images: { provider: { ...provider, prerender: true } } });
+    const doc = await upload(m);
+    expect(doc).not.toHaveProperty("thumbnail");
+    await local({ dir: m.dir }).put(".variants/a/x.png/thumbnail", webp, "image/webp");
+    expect(await m.cms.media.regenerate(doc.id)).toMatchObject({ removed: 1 });
+    await expect(m.cms.media.setThumbnail(doc.id, webp)).rejects.toThrow(/media.images/);
+    await m.client.signUp(admin);
+    expect((await m.client.getSchema()).media).toMatchObject({ thumbnails: false });
+    expect(await status(m.client.media.setThumbnail(doc.id, blob(webp)))).toBe(404);
   });
 });

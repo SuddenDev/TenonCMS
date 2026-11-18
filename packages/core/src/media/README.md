@@ -90,4 +90,5 @@ Rules:
 - Media documents live in `cms_documents`. `cms_media_key_idx` keeps `key` unique; `/files` and `/img` look documents up with `mediaByKey()`, which uses it.
 - Variants live under `.variants/<key>/<modifiers>`, so `storage.list('.variants/<key>/')` finds one file's variants. Regeneration uses this layout for orphan cleanup.
 - `.variants` and `.tmp` are reserved folder names.
+- Without `media.images`, the admin makes a thumbnail of each raster image in the browser and stores it as the variant `thumbnail` through `setThumbnail()`. `GET /thumbnail/<key>` serves it, or redirects to the original. `regenerate()` keeps only thumbnails then and counts the missing ones in `needsThumbnail`, which the admin's "Create missing previews" asks per file; with a provider it deletes them as stale variants. Developers run `regenerate()` through `tenon media regenerate`; the admin has no regenerate action for providers.
 - S3 multipart completion MUST set `Content-Type: application/xml` before signing its XML body, including completion of multipart copies.

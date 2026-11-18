@@ -20,7 +20,7 @@ export const client = createClient<{ schema: Schema }>();
 
 export const schema = ref<
   Schema & {
-    media?: { regenerate: boolean };
+    media?: { thumbnails: boolean };
     site?: string;
     admin?: AdminDescriptor;
     localization?: { locales: string[]; defaultLocale: string };

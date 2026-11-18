@@ -10,16 +10,19 @@ import { updateEndpoints } from "./update.endpoint.ts";
 import { regenerateEndpoints } from "./regenerate.endpoint.ts";
 import { deleteEndpoints } from "./delete.endpoint.ts";
 import { downloadEndpoint } from "./download.endpoint.ts";
+import { thumbnailFileEndpoints, thumbnailWriteEndpoints } from "./thumbnail.endpoint.ts";
 
 /**
- * The media routes in three groups. `files` (`/files`, `/img`) mount before the caller lookup and check
+ * The media routes in three groups. `files` (`/files`, `/img`, `/thumbnail`) mount before the caller lookup and check
  * `media.access.read` per file. `reads` and `writes` mount behind it, like the other content routes.
- * @returns The groups, and `regenerate`, which tells `/schema` whether variants can be regenerated.
+ * @returns The groups, and `thumbnails` for `/schema`: whether the admin makes its own previews because `media.images`
+ * is off.
  */
 export function mediaRoutes(core: Core) {
   const files = new Hono<Env>();
   files.route("/", filesEndpoints(core));
   files.route("/", imagesEndpoints(core));
+  files.route("/", thumbnailFileEndpoints(core));
 
   const reads = foldersReadEndpoints(core);
 
@@ -29,7 +32,8 @@ export function mediaRoutes(core: Core) {
   writes.route("/", foldersWriteEndpoints(core));
   writes.route("/", updateEndpoints(core));
   writes.route("/", regenerateEndpoints(core));
+  writes.route("/", thumbnailWriteEndpoints(core));
   writes.route("/", deleteEndpoints(core));
 
-  return { files, reads, writes, regenerate: Boolean(mediaOf(core).images?.provider.render) };
+  return { files, reads, writes, thumbnails: !mediaOf(core).images };
 }

@@ -59,7 +59,7 @@ attachments: { type: 'file', many: true, accept: ['application/pdf'] },
 download: { type: 'file', folder: 'downloads' },
 ```
 
-- A populated `image` has `url` (the original), `src`, `srcset`, `width`, `height`, `alt`, `mimeType`, `size`, `folder`, `filename` and `key`. A `file` is the same without `src`, `srcset` and the dimensions. With `populate: false` both are ids.
+- A populated `image` has `url` (the original), `src`, `srcset`, `thumbnail` (only [without a provider](#without-a-provider)), `width`, `height`, `alt`, `mimeType`, `size`, `folder`, `filename` and `key`. A `file` is the same without `src`, `srcset` and the dimensions. With `populate: false` both are ids.
 - `src` and `srcset` come from the field's `image` options: `images.format` and `quality`, then the preset, then the field's own modifiers. Widths at or above the original's are dropped. A fixed `width` without `sizes` gives `1x` / `2x`.
 - `accept` and `maxSize` are checked on write against the file (400 on the field). An `image` field takes `image/*` only.
 - `onDelete` defaults to `'restrict'`: deleting a used file is a 409 with `references`. `'set-null'` is allowed, `'cascade'` is not.
@@ -180,11 +180,22 @@ media: {
 
 SVG and images above `images.maxSize` get the original as `src` and an empty `srcset`.
 
+### Without a provider
+
+Images are served as uploaded, so your site can render them with its own tools: Nuxt Image or Astro's `<Image>` take `url`, `width` and `height` of a populated image. Keep in mind that their default optimizers use sharp too.
+
+The admin then makes its own small previews, so the media grid does not load every original. On upload, the browser draws each raster image at 320 px on the short side (at most 1024 px on the long side) and stores it as WebP, or JPEG in browsers without a WebP encoder. No package, no work on the server.
+
+- Reads of raster images get `thumbnail`: `/_tenon/media/thumbnail/<key>`. It redirects to the original until the thumbnail exists, for example for a HEIC file the browser cannot decode, or a file from `cms.media.upload()` or an import.
+- "Create missing previews" in the Media page's menu makes the missing ones, for example after an import, from files uploaded before this feature, or after you turn a provider off. A file the browser cannot fetch, such as one in a bucket without CORS, keeps showing the original.
+- `cms.media.setThumbnail(id, bytes)` and `PUT /_tenon/media/:id/thumbnail` store one. They need `media.access.update` and take a WebP or JPEG of at most 200 KB and 1024 px per side.
+- Thumbnails move and are deleted with their file. Once you set a provider, regenerating deletes them like any variant the options no longer produce.
+
 ### After changing image options
 
 Run `cms.media.regenerate()`, or "Regenerate variants" on the admin's Media page. It deletes stored variants the options no longer produce and, with `prerender`, renders missing ones. `force: true` re-renders all of them, for example after a sharp upgrade. `POST /_tenon/media/:id/regenerate` does one file.
 
-It exists only for providers with `render`. With `cloudflare()` without a binding nothing is stored, and new URLs take effect on their own.
+It works with rendering providers and without a provider, where it keeps only the thumbnails and reports the missing ones as `needsThumbnail`. With a URL provider nothing is stored, and new URLs take effect on their own.
 
 ## Media hooks
 

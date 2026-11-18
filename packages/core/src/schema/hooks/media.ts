@@ -37,6 +37,8 @@ export type MediaRead = MediaDoc & {
   src?: string;
   /** Images: variants for `<img srcset>`. */
   srcset?: string;
+  /** Raster images without `media.images`: the admin's small preview, or the original until there is one. */
+  thumbnail?: string;
 };
 
 /** What an upload declares before any bytes arrive. */
@@ -71,12 +73,19 @@ export type MediaApi = {
    * Brings stored variants in line with the current image options: deletes the ones the options no longer produce and, with
    * `prerender`, renders missing ones. `force` re-renders every variant (without `prerender`: deletes them all, so they
    * render again on request). Without `id`, runs for every file and deletes variants of files that no longer exist.
-   * Returns `undefined` for a missing document. Throws when the image provider has no `render`, because nothing is stored.
+   * Without `media.images`, a file keeps only its admin thumbnail, and `needsThumbnail` counts the files whose thumbnail
+   * the admin should make. Returns `undefined` for a missing document. Throws when the image provider has no `render`,
+   * because nothing is stored.
    */
   regenerate(
     id?: string,
     options?: { force?: boolean },
-  ): Promise<{ rendered: number; removed: number } | undefined>;
+  ): Promise<{ rendered: number; removed: number; needsThumbnail?: number } | undefined>;
+  /**
+   * Stores the admin's thumbnail of a raster image: a WebP or JPEG of at most 200 KB and 1024 px per side. Only without
+   * `media.images`. Checks `media.access.update`. Returns `undefined` for a missing document.
+   */
+  setThumbnail(id: string, data: Uint8Array): Promise<MediaRead | undefined>;
 };
 
 type Args<E> = HookArgs & E;

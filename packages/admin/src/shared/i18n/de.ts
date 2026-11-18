@@ -746,6 +746,8 @@ export default {
     choose: "Auswählen",
     chooseFile: "Datei auswählen",
     chooseFiles: "Dateien auswählen",
+    createPreviews: "Fehlende Vorschauen erstellen",
+    creatingPreviews: "Vorschauen werden erstellt: {done} von {total} Bildern",
     deleteText:
       "Die Datei wird aus dem Speicher entfernt. Das kann nicht rückgängig gemacht werden.",
     deleteTitle: "{name} löschen?",
@@ -768,12 +770,10 @@ export default {
     notAllowedHere: "{name} ist hier nicht erlaubt",
     notFound: "Nicht gefunden",
     notMoved: "Einige Dateien wurden nicht verschoben. Zum Wiederholen erneut umbenennen.",
-    regenerate: "Varianten neu erzeugen",
+    previewsCreated:
+      "Fertig: keine Vorschau erstellt. | Fertig: 1 Vorschau erstellt. | Fertig: {count} Vorschauen erstellt.",
     readingFiles: "Dateien werden gelesen …",
-    regenerated: "Fertig: {rendered} Varianten erzeugt, {removed} entfernt.",
-    regenerating: "Varianten werden erzeugt: {done} von {total} Bildern",
     renameFolder: "Ordner umbenennen oder verschieben …",
-    rerender: "Alle Varianten neu rendern",
     root: "Stammordner",
     select: "Übernehmen",
     selectedCount: "Keine Dateien ausgewählt | 1 Datei ausgewählt | {count} Dateien ausgewählt",

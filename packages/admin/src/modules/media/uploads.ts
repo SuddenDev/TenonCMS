@@ -5,6 +5,7 @@ import { i18n } from "@/shared/i18n";
 import { fits, type MediaRules } from "./media";
 import type { FileWithPath } from "./composables/useFileHandler";
 import MediaUploadProgress from "./components/MediaUploadProgress.vue";
+import { storeThumbnail } from "./thumbnail";
 
 /** Progress and cancellation state for one file in the shared upload queue. */
 export type Upload = {
@@ -89,6 +90,8 @@ async function uploadFile(file: FileWithPath, upload: Upload, folder: string, ru
         upload.loaded = loaded;
       },
     });
+    // `thumbnail` is set only for raster images without an image provider.
+    if ((doc as MediaRead).thumbnail) await storeThumbnail(doc.id, file);
     upload.loaded = upload.total;
     upload.status = "completed";
     return doc as MediaRead;

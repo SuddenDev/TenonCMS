@@ -21,10 +21,13 @@ export function createRequest(
     );
     const search = params.size ? `?${params}` : "";
 
+    // A `Blob` goes as it is, with its own type. Anything else is JSON.
+    const raw = body instanceof Blob;
+    const type = raw ? body.type || "application/octet-stream" : "application/json";
     const res = await fetchFn(`${baseUrl}${API_BASE}${path}${search}`, {
       method,
-      headers: body === undefined ? auth : { ...auth, "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: body === undefined ? auth : { ...auth, "content-type": type },
+      body: body === undefined ? undefined : raw ? body : JSON.stringify(body),
     });
 
     const data = res.status === 204 ? null : await res.json().catch(() => null);

@@ -9,7 +9,7 @@ defineProps<{ doc?: MediaRead | null; sizes: string }>();
 <template>
   <img
     v-if="doc?.mimeType.startsWith('image/')"
-    :src="doc.src ?? doc.url"
+    :src="doc.srcset ? doc.src : (doc.thumbnail ?? doc.src ?? doc.url)"
     :srcset="doc.srcset || undefined"
     :sizes
     :alt="doc.alt ?? ''"
