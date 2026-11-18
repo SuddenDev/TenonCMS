@@ -130,7 +130,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - `Object.assign(el, { dataset: ... })` throws, because `dataset` is a getter. Use `setAttribute`.
 - `:name` on a `<slot>` sets the slot's name, not a prop. Pass a prop called `name` as `v-bind="{ name, field }"`.
 - vue-i18n compiles messages. `{`, `}`, `@`, `$` and `|` are syntax. Write a literal one as `{'@'}`, and use `|` only between plural forms.
-- Generated shadcn-vue components import icons from the icon library statically, which pulls every icon into the bundle. Replace them with the `Icon` component. The CLI also prepends a Google Fonts `@import` to the stylesheet (remove it), and some registry items import `cn` from a package named `cn` (import it from the admin's utils and drop the dependency).
+- Generated shadcn-vue components import icons from the icon library statically, which pulls every icon into the bundle. Replace them with the `Icon` component. The CLI also prepends a Google Fonts `@import` to the stylesheet (remove it). Run the CLI with `pnpm dlx shadcn-vue`: it is not a dependency, because its only runtime part, `tailwind.css`, is copied to `packages/admin/src/shared/shadcn.css`. Copy it again when a new component needs a newer version.
 - The `Icon` component forces its own size, so a size class on it does nothing. Set a font size on its parent.
 - The shadcn `CommandItem` throws outside a `CommandGroup`, and its check mark needs the `group-data-[state=checked]` variant, because reka sets `data-state`.
 - A named import from the icon library next to the `Icon` component's dynamic import pulls the whole library in statically. The admin bar imports its glyphs one by one from deep paths.

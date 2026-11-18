@@ -4,7 +4,7 @@
 @source "../shared/components/Themed.vue";
 @source "../shared/components/ui/{dropdown-menu,switch,button}";
 @import "tw-animate-css";
-@import "shadcn-vue/tailwind.css";
+@import "../shared/shadcn.css";
 @import "../shared/theme.css";
 @custom-variant dark (&:is(.dark *));
 

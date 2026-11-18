@@ -17,7 +17,7 @@
 /* The admin bar builds its own CSS. */
 @source not "./admin-bar";
 @import "tw-animate-css";
-@import "shadcn-vue/tailwind.css";
+@import "./shared/shadcn.css";
 @import "./shared/theme.css";
 @custom-variant dark (&:is(.dark *));
 
