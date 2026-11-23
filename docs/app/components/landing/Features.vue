@@ -4,6 +4,7 @@ const blocks = [
     id: "schema",
     label: "Schema",
     icon: "i-lucide-braces",
+    // image: "/images/art-institute-of-chicago-ONe3eufNvz4-unsplash.jpg",
     title: "Your schema is plain TypeScript",
     description:
       "Collections and globals are plain TypeScript in your repo. Their types flow into your pages.",
@@ -30,6 +31,7 @@ export const posts = defineCollection({
     id: "local-api",
     label: "Local API",
     icon: "i-lucide-zap",
+    // image: "/images/art-institute-of-chicago-aA_j18OXe4Y-unsplash.jpg",
     title: "Read content without HTTP",
     description:
       "Server code calls the CMS directly. The HTTP API is a thin layer over the same functions.",
@@ -49,6 +51,7 @@ export const posts = defineCollection({
     id: "config",
     label: "Config",
     icon: "i-lucide-settings-2",
+    // image: "/images/europeana-F8TZ_99yZdc-unsplash.jpg",
     title: "One config file",
     description:
       "Database, media, email and sign-in are easy to configure in one file. The admin and the API become routes of your app.",
@@ -76,6 +79,7 @@ export default defineCms({
     id: "cli",
     label: "CLI",
     icon: "i-lucide-terminal",
+    // image: "/images/henrik-donnestad-HO1Evlp1p1o-unsplash.jpg",
     title: "Mangage your CMS through the CLI",
     description:
       "The tenon command comes with the package. It backs up a project, restores it, upgrades it and manages its users.",
@@ -171,6 +175,7 @@ onBeforeUnmount(() => observer?.disconnect());
               body: 'flex-0',
               footer: 'mt-0',
               wrapper: 'lg:justify-center',
+              container: 'lg:min-h-112',
             }"
           >
             <template #header>
