@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { ContentNavigationItem } from "@nuxt/content";
+import type { ContentNavigationLink } from "#ui/types";
 import { getFirstPagePath } from "docus/app/composables/useSubNavigation";
 
 const appConfig = useAppConfig();
 const route = useRoute();
-const navigation = inject<Ref<ContentNavigationItem[]>>("navigation");
+const navigation = inject<Ref<ContentNavigationLink[]>>("navigation");
 
 const sections = computed(() =>
   (navigation?.value ?? [])

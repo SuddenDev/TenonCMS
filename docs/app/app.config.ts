@@ -38,10 +38,23 @@ export default defineAppConfig({
         "tanstack start": "i-simple-icons-tanstack",
       },
     },
-    // The sidebar has no guide line and no marker on the active page.
+    // The sidebar has no guide line, no marker on the active page and no indent for child pages.
     contentNavigation: {
       slots: {
-        listWithChildren: "border-s-0",
+        // listWithChildren: "ms-1 border-s-0",
+        listWithChildren: "ms-0 border-s-0",
+      },
+      variants: {
+        level: {
+          false: {
+            itemWithChildren: "mb-6 data-[state=open]:mb-6",
+            // itemWithChildren: "mb-3 border-b border-default pb-3 last:mb-0 last:border-b-0 data-[state=open]:mb-3",
+          },
+          true: {
+            item: "ms-0 ps-0",
+            itemWithChildren: "ms-0 ps-0",
+          },
+        },
       },
       defaultVariants: {
         highlight: false,
