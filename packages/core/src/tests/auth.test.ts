@@ -492,6 +492,43 @@ describe("sign-in methods", () => {
     expect(await guest.client.getSession()).toMatchObject({ user: { email: admin.email } });
   });
 
+  it("keeps the first admin's password and sessions after a magic link", async () => {
+    const sent: Sent = [];
+    const cms = defineCms({
+      ...base,
+      ...withEmail(sent),
+      auth: { ...base.auth, plugins: [magicLink()] },
+    });
+    const owner = setup(cms);
+    await owner.client.signUp(admin);
+    const guest = setup(cms);
+    await post(guest.fetch, "/auth/sign-in/magic-link", { email: admin.email });
+    await guest.fetch(linkIn(sent[0]), { redirect: "manual" });
+
+    expect(await owner.client.getSession()).toMatchObject({ user: { email: admin.email } });
+    const { email, password } = admin;
+    expect(await setup(cms).client.signIn({ email, password })).toMatchObject({ email });
+  });
+
+  it("keeps the password of a user from cms.users.create() after a magic link", async () => {
+    const sent: Sent = [];
+    const cms = defineCms({
+      ...base,
+      ...withEmail(sent),
+      auth: { ...base.auth, plugins: [magicLink()] },
+    });
+    await setup(cms).client.signUp(admin);
+    const editor = { name: "Editor", email: "editor@b.co", password: admin.password };
+    await cms.users.create(editor);
+    const guest = setup(cms);
+    await post(guest.fetch, "/auth/sign-in/magic-link", { email: editor.email });
+    await guest.fetch(linkIn(sent[0]), { redirect: "manual" });
+
+    expect(await guest.client.getSession()).toMatchObject({ user: { email: editor.email } });
+    const { email, password } = editor;
+    expect(await setup(cms).client.signIn({ email, password })).toMatchObject({ email });
+  });
+
   it("creates no user from a magic link", async () => {
     const sent: Sent = [];
     const urls: string[] = [];

@@ -63,7 +63,8 @@ export type UsersApi = {
   }): Promise<InviteResult & { message?: string }>;
   /**
    * Creates a user directly. The first user becomes an admin, whatever `role` says. Without `password` the user signs
-   * in another way, e.g. with {@link UsersApi.signInLink}.
+   * in another way, e.g. with {@link UsersApi.signInLink}. The email counts as verified, so a first magic link keeps
+   * the password.
    */
   create(input: {
     email: string;
