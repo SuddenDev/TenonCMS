@@ -41,7 +41,7 @@ const links = [
 
     <LandingImageBg
       src="/images/smithsonian-oUvoYlq2J_s-unsplash.jpg"
-      class="relative px-4 py-12 sm:px-10 sm:py-20"
+      class="relative px-2 py-12 sm:px-10 sm:py-20"
     >
       <LandingHeroImage class="relative z-5 mx-auto max-w-6xl" />
     </LandingImageBg>
