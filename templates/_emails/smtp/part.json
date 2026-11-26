@@ -2,12 +2,13 @@
   "files": {
     "tenon.config.ts": {
       "imports": ["import { smtp } from \"tenoncms/email/smtp\";"],
+      "setup": ["const smtpPort = Number($SMTP_PORT);"],
       "options": [
         "email: {",
         "  adapter: smtp({",
         "    host: $SMTP_HOST,",
-        "    port: 465,",
-        "    secure: true,",
+        "    port: smtpPort,",
+        "    secure: smtpPort === 465,",
         "    auth: { user: $SMTP_USER, pass: $SMTP_PASSWORD },",
         "  }),",
         "  from: $EMAIL_FROM,",
@@ -16,10 +17,11 @@
     }
   },
   "env": [
+    { "name": "SMTP_HOST", "example": "smtp.example.test" },
     {
-      "name": "SMTP_HOST",
-      "comment": "SMTP over TLS on port 465. For STARTTLS, use port 587 and secure: false in tenon.config.ts.",
-      "example": "smtp.example.test"
+      "name": "SMTP_PORT",
+      "comment": "Port 465 connects with TLS. Any other port, such as 587, upgrades with STARTTLS.",
+      "default": "465"
     },
     { "name": "SMTP_USER", "example": "" },
     { "name": "SMTP_PASSWORD", "example": "" },

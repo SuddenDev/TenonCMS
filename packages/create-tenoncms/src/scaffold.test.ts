@@ -240,7 +240,12 @@ describe("scaffold", () => {
     await scaffold(templates, dir, { ...choices, email: "smtp" });
     expect(read(dir, "tenon.config.ts")).toContain('import { smtp } from "tenoncms/email/smtp";');
     expect(read(dir, "tenon.config.ts")).toContain("adapter: smtp({");
+    expect(read(dir, "tenon.config.ts")).toContain(
+      'const smtpPort = Number(process.env.SMTP_PORT ?? "465");',
+    );
+    expect(read(dir, "tenon.config.ts")).toContain("secure: smtpPort === 465,");
     expect(read(dir, ".env.example")).toMatch(/^SMTP_HOST=/m);
+    expect(read(dir, ".env.example")).toMatch(/^# SMTP_PORT=465$/m);
     expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty("nodemailer");
 
     const plain = project();

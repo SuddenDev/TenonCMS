@@ -20,7 +20,7 @@ It asks one question at a time: the folder, the site name (default `Tenon`, writ
 
 Images offer the [providers](./media.md#image-providers) that work where the site runs. On Node the default is IPX, which adds `ipx` (and sharp) to `package.json`. On Vercel it is none, and on Cloudflare the Images binding. Hosted providers add their URL variable to `.env.example`; Vercel Image Optimization also needs [`images` in the Vercel config](./media.md#vercel). Each choice writes `images: { provider: … }` next to `storage` in `media`.
 
-Email offers none (the default) or SMTP. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, change it to port 587 and `secure: false`. See [Email](./email.md).
+Email offers none (the default) or SMTP. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, set `SMTP_PORT` to 587. See [Email](./email.md).
 
 Sign-in offers any mix of password (the default), passkey, magic link and email code. At least one is required. See [Sign-in methods](./auth-and-access.md#sign-in-methods).
 
