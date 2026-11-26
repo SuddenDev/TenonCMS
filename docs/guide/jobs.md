@@ -92,10 +92,10 @@ Nothing runs a job until something ticks. The adapters bring a clock, so on most
 | TanStack Start, standalone (`tenonAdmin()`) | The same Nitro task                                                                             |
 | Astro on Node (and `astro dev`)             | An interval in the server process, every minute, started by the first request                   |
 | Cloudflare (Durable Object)                 | The object's alarm. It wakes when a job is due, and the first request after a restart starts it |
-| Astro on Vercel, any other serverless host  | None. Use [the clock route](#the-clock-route)                                                   |
+| Vercel, any other serverless host           | None. Use [the clock route](#the-clock-route)                                                   |
 
-- The Nitro task needs a host that runs scheduled tasks: Node, Bun, Deno, Cloudflare Cron Triggers and Vercel Cron Jobs. Nitro sets up the platform's cron for you, and every host has its own limits on how often it may run.
-- **Vercel Hobby** allows a cron job once a day, and a deploy with an every-minute cron fails. On Hobby, set `jobs: false` and ping [the clock route](#the-clock-route) from an outside service, or use the Pro plan.
+- The Nitro task needs a host that runs scheduled tasks: Node, Bun, Deno and Cloudflare Cron Triggers. Nitro 3 (TanStack Start, standalone) also turns it into a Vercel Cron Job. Nitro 2 (Nuxt) does not, so on Vercel the Nuxt task never runs.
+- **Vercel Hobby** allows a cron job once a day, and a deploy with an every-minute cron fails. So the Vercel starters of `npm create tenoncms` set `jobs: false`. Ping [the clock route](#the-clock-route) from an outside service, or, on the Pro plan, remove `jobs: false` (TanStack Start, standalone) or add the route to `vercel.json` under `crons`.
 - The Astro interval stops with the process. A job that is due while the server is down runs on the first tick after the start.
 - Turn the built-in clock off with `jobs: false` on the Astro integration, the Nuxt module (`tenonCms: { jobs: false }`) or `tenonAdmin({ jobs: false })`. Then call `cms.jobs.run()` yourself or use the clock route.
 

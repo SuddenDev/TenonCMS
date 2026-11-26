@@ -282,6 +282,42 @@ describe("scaffold", () => {
     expect(existsSync(join(dir, "_databases"))).toBe(false);
   });
 
+  it("sets up Vercel's image optimization and turns the job cron off on Vercel", async () => {
+    const configs = {
+      astro: "astro.config.ts",
+      nuxt: "nuxt.config.ts",
+      tanstack: "vite.config.ts",
+      standalone: "vite.config.ts",
+    };
+    for (const [framework, file] of Object.entries(configs)) {
+      const dir = project();
+      await scaffold(templates, dir, {
+        name: "a",
+        framework,
+        template: "minimal",
+        target: "vercel",
+        database: "postgres",
+        storage: "s3",
+        images: "vercel",
+      });
+      const config = read(dir, file);
+      expect(config).toContain("sizes: [320, 640, 1024, 1536, 1920], domains: []");
+      // Astro has no Nitro cron on Vercel.
+      if (framework !== "astro") expect(config).toContain("jobs: false");
+    }
+
+    const node = project();
+    await scaffold(templates, node, {
+      name: "a",
+      framework: "nuxt",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    });
+    expect(read(node, "nuxt.config.ts")).not.toMatch(/@tenon|vercel|jobs/);
+  });
+
   it("lists only what each framework supports", async () => {
     const index = await readIndex(templates);
     expect(index.frameworks.nuxt!.targets).not.toContain("cloudflare");

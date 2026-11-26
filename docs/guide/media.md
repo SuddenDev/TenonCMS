@@ -181,6 +181,7 @@ media: {
 - Astro: `adapter: vercel({ imagesConfig: { sizes: [320, 640, 1024, 1536, 1920], domains: [] } })`.
 - Nuxt, TanStack Start and standalone (Nitro): `vercel: { config: { images: { sizes: [320, 640, 1024, 1536, 1920] } } }` in the Nitro config, which is `nitro` in `nuxt.config.ts`.
 - Files in a bucket: set `publicUrl` on `s3()`, and allow its host in `remotePatterns` of the same `images` block.
+- The Vercel starter of `npm create tenoncms` writes this config with the default widths. Change both lists together.
 
 SVG and images above `images.maxSize` get the original as `src` and an empty `srcset`.
 
