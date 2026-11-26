@@ -132,7 +132,7 @@ With the binding:
 
 - `wrangler dev` simulates the bucket.
 - Parts go through the Worker and, with `tenonObject()`, through the CMS object. Each part is held in memory, and `partSize` is at least 5 MB, as R2 requires.
-- A move reads and writes the file, because bindings cannot copy.
+- A move reads and writes the file, because bindings cannot copy. It copies one part at a time, so a large file does not fill the Worker's memory. It does not stream one binding into the other: inside a Durable Object transaction that stream never ends.
 
 With keys, set `region: 'eu'` for a bucket created with that data location. Requests then go to `<account>.eu.r2.cloudflarestorage.com`.
 
