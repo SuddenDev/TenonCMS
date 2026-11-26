@@ -227,6 +227,54 @@ describe("s3", () => {
   });
 });
 
+describe("s3 with a prefix", () => {
+  const prefixed = { ...options, prefix: "site-a" };
+
+  it("keeps every object under the prefix", async () => {
+    const { calls, fetch } = fake((c) =>
+      c.method === "HEAD" ? new Response(null, { headers: { "content-length": "10" } }) : undefined,
+    );
+    const storage = s3({ ...prefixed, fetch });
+    await storage.delete("x.jpg");
+    await storage.move("a/x.jpg", "b/y.jpg");
+    expect(calls.map((c) => c.url.pathname)).toEqual([
+      "/b/site-a/x.jpg",
+      "/b/site-a/a/x.jpg",
+      "/b/site-a/b/y.jpg",
+      "/b/site-a/a/x.jpg",
+    ]);
+    expect(calls[2].headers.get("x-amz-copy-source")).toBe("/b/site-a/a/x.jpg");
+    expect(new URL(await storage.partUrl!("x.jpg", "u1", 1, 60)).pathname).toBe("/b/site-a/x.jpg");
+  });
+
+  it("lists inside the prefix and returns keys without it", async () => {
+    const { calls, fetch } = fake(
+      () =>
+        new Response(
+          "<ListBucketResult><Contents><Key>site-a/.variants/a.png/w_1</Key></Contents></ListBucketResult>",
+        ),
+    );
+    expect(await s3({ ...prefixed, fetch }).list(".variants/a.png/")).toEqual([
+      ".variants/a.png/w_1",
+    ]);
+    expect(calls[0].url.pathname).toBe("/b/");
+    expect(calls[0].url.searchParams.get("prefix")).toBe("site-a/.variants/a.png/");
+  });
+
+  it("adds the prefix to public URLs, not to the URLs that core serves", () => {
+    expect(s3(prefixed).url("a b/x.jpg")).toBe("https://media.example.com/site-a/a%20b/x.jpg");
+    const { publicUrl: _, ...unlisted } = prefixed;
+    expect(s3(unlisted).url("a b/x.jpg")).toBe("/_tenon/media/files/a%20b/x.jpg");
+  });
+
+  it("ignores slashes around the prefix, and an empty prefix", () => {
+    expect(s3({ ...options, prefix: "/site-a/b/" }).url("x.jpg")).toBe(
+      "https://media.example.com/site-a/b/x.jpg",
+    );
+    expect(s3({ ...options, prefix: "" }).url("x.jpg")).toBe("https://media.example.com/x.jpg");
+  });
+});
+
 describe("s3 options", () => {
   it("reports missing options instead of throwing", () => {
     const missing = undefined as unknown as string;

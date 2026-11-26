@@ -99,10 +99,14 @@ await cms.media.delete(doc.id);
 
 ### S3 and R2
 
-`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl?, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket.
+`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, prefix?, publicUrl?, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket.
 
 - `publicUrl` is where the bucket is public. File URLs are then `<publicUrl>/<key>`.
 - Without `publicUrl`, the bucket stays private. Core serves files at `/_tenon/media/files/<key>`, reading them from the bucket.
+- `prefix` is a folder inside the bucket that holds every file, e.g. `staging`. Several sites can then share one bucket.
+  - Public file URLs are `<publicUrl>/<prefix>/<key>`. The URLs that core serves do not change.
+  - Changing it does not move the files that are already stored.
+  - Lifecycle rules for `.tenon/` and CDN paths MUST include the prefix.
 
 - Bucket CORS MUST allow `PUT` from the admin origin and expose the `ETag` header. Without `ETag` an upload fails with a message that names the CORS setting.
 - Add a lifecycle rule that aborts incomplete multipart uploads after one day.

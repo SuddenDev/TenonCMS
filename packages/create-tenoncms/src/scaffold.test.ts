@@ -75,6 +75,8 @@ describe("scaffold", () => {
     expect(read(dir, ".env.example")).toContain("change-me");
     expect(read(dir, ".env.example")).toMatch(/^# TENON_SITE_URL=$/m);
     expect(read(dir, ".env.example")).toMatch(/^S3_BUCKET=uploads$/m);
+    expect(read(dir, ".env.example")).toMatch(/^# S3_PREFIX=$/m);
+    expect(read(dir, "tenon.config.ts")).toContain("prefix: S3_PREFIX,");
     expect(read(dir, ".env.example")).toMatch(/^TENON_SECRET=.*\n\n(# .*\n)*# ?DATABASE_DIR=/m);
     expect(read(dir, "tenon.config.ts")).toContain('site: { url: TENON_SITE_URL, name: "Tenon" },');
     expect(read(dir, "tenon.config.ts")).toContain("new PGlite(DATABASE_DIR)");
@@ -112,6 +114,7 @@ describe("scaffold", () => {
     expect(config).toContain("authToken: config.databaseAuthToken || undefined,");
     expect(config).toContain("bucket: config.s3Bucket,");
     expect(config).toContain("endpoint: config.awsEndpointUrlS3,");
+    expect(config).toContain("prefix: config.s3Prefix || undefined,");
 
     const example = read(dir, ".env.example");
     expect(example).toMatch(/^# NUXT_DATABASE_URL=file:\.\/cms\.db$/m);

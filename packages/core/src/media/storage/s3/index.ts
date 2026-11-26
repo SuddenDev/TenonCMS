@@ -16,8 +16,13 @@ export type S3Options = {
    */
   endpoint?: string;
   /**
-   * Public URL of the bucket, e.g. a custom domain or the R2 public URL. File URLs are `<publicUrl>/<key>`. Default: the bucket stays private and
-   * core serves files at `/_tenon/media/files/<key>`.
+   * Folder inside the bucket that holds every file, e.g. `staging`. Several sites can then share one bucket. Changing it
+   * does not move the files that are already stored. Default: the bucket root.
+   */
+  prefix?: string;
+  /**
+   * Public URL of the bucket, e.g. a custom domain or the R2 public URL. File URLs are `<publicUrl>/<key>`, with the
+   * `prefix` before the key. Default: the bucket stays private and core serves files at `/_tenon/media/files/<key>`.
    */
   publicUrl?: string;
   /** Part size of uploads in bytes. At least 5 MB, as S3 requires. Default 16 MB. */
@@ -97,13 +102,14 @@ export function s3(options: S3Options): Storage {
       const keys: string[] = [];
       let token: string | undefined;
       do {
-        const query: Record<string, string> = { "list-type": "2", prefix };
+        const query: Record<string, string> = { "list-type": "2", prefix: client.prefix + prefix };
         if (token) query["continuation-token"] = token;
-        const res = await client.fetchSigned("", query);
+        const res = await client.fetchBucket(query);
         const text = await res.text();
         if (!res.ok)
           throw new Error(`S3 list ${prefix} failed: ${res.status} ${tag(text, "Code") ?? text}`);
-        for (const [, key] of text.matchAll(/<Key>([^<]*)<\/Key>/g)) keys.push(unescapeXml(key));
+        for (const [, key] of text.matchAll(/<Key>([^<]*)<\/Key>/g))
+          keys.push(unescapeXml(key).slice(client.prefix.length));
         token = text.includes("<IsTruncated>true</IsTruncated>")
           ? tag(text, "NextContinuationToken")
           : undefined;
@@ -126,7 +132,7 @@ export function s3(options: S3Options): Storage {
 
     url: (key) =>
       publicUrl
-        ? `${publicUrl.replace(/\/$/, "")}/${encodePath(key)}`
+        ? `${publicUrl.replace(/\/$/, "")}/${encodePath(client.prefix + key)}`
         : `${API_BASE}/media/files/${encodeKey(key)}`,
   };
 }
