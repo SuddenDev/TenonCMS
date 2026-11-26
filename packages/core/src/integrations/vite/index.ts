@@ -25,11 +25,12 @@ export type TenonAdminOptions = {
   jobs?: boolean;
 };
 
-// The part of Nitro's module API that `jobsModule()` uses. Core does not depend on Nitro.
+// The part of Nitro's module API that `nitroModule()` uses. Core does not depend on Nitro.
 type NitroLike = {
   options: {
     rootDir: string;
     dev: boolean;
+    traceDeps?: (string | RegExp)[];
     experimental: { tasks?: boolean };
     tasks: Record<string, { handler?: string; description?: string }>;
     scheduledTasks: Record<string, string | (string | undefined)[] | undefined>;
@@ -37,6 +38,9 @@ type NitroLike = {
     virtual: Record<string, string>;
   };
 };
+
+// Vite's `Plugin` type does not know Nitro's key.
+type NitroPlugin = Plugin & { nitro: ReturnType<typeof nitroModule> };
 
 const JOBS_HANDLER = "#tenon/jobs-task";
 const JOBS_EXIT = "#tenon/jobs-exit";
@@ -49,9 +53,14 @@ const JOBS_EXIT_PLUGIN = `export default (nitroApp) => {
 };`;
 
 // A Nitro module. Nitro registers every Vite plugin that carries a `nitro` key.
-function jobsModule(entry: string) {
+function nitroModule(entry: string, jobs: boolean) {
   return {
     setup({ options }: NitroLike) {
+      // PGlite loads its `.data` and `.wasm` files next to its own module, so it MUST stay a package in the output.
+      // Bundled, Nitro leaves these files behind.
+      (options.traceDeps ??= []).push("@electric-sql/pglite");
+      if (!jobs) return;
+
       options.experimental.tasks = true;
       options.virtual[JOBS_HANDLER] =
         `import cms from ${JSON.stringify(resolve(options.rootDir, entry))};
@@ -75,7 +84,8 @@ export default {
  * It builds the admin as a second client entry, exposes its page as `#tenon/admin-html` and keeps core
  * external in SSR builds. It reads the path from `admin.path` of the config at startup. Serve the page from a
  * server route for that path and everything below it, e.g. `src/routes/cms.$.ts` for `/cms`.
- * With Nitro, it also schedules the task `tenon:jobs` every minute, unless `jobs` is `false`.
+ * With Nitro, it also schedules the task `tenon:jobs` every minute, unless `jobs` is `false`, and keeps PGlite a package
+ * in the server output.
  * @example
  * // vite.config.ts
  * plugins: [tanstackStart(), tenonAdmin()]
@@ -91,13 +101,13 @@ export function tenonAdmin({
   let path = "";
   let server: ViteDevServer | undefined;
   let html = "";
-  return [
+  const plugins: (Plugin | NitroPlugin)[] = [
     developmentAuth(),
     clientModules(),
     clientReferences(configEntry),
     {
       name: "tenoncms:admin",
-      ...(jobs && { nitro: jobsModule(configEntry) }),
+      nitro: nitroModule(configEntry, jobs),
 
       async config(config, { command, mode }) {
         const root = resolve(config.root ?? process.cwd());
@@ -155,6 +165,7 @@ export function tenonAdmin({
       },
     },
   ];
+  return plugins;
 }
 
 export { clientModules, type ClientModulesOptions } from "../admin/client-refs/client-modules.ts";
