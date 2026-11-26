@@ -2,14 +2,14 @@
 const props = withDefaults(
   defineProps<{
     /** Which options to list. */
-    only?: "common" | "layout";
+    section?: "common" | "admin";
     /** `false` lists the options without the toggle, like on the fields overview. */
     collapsible?: boolean;
   }>(),
   { collapsible: true },
 );
 
-type Option = { name: string; type: string; description: string; layout?: true; adminOnly?: true };
+type Option = { name: string; type: string; description: string; adminOnly?: true };
 
 const fields = "/docs/core/content-modeling/fields";
 
@@ -90,7 +90,6 @@ const options: Option[] = [
   {
     name: "width",
     type: '"1/4" | "1/3" | "1/2" | "2/3" | "3/4" | "full"',
-    layout: true,
     adminOnly: true,
     description:
       'The share of the row the field takes. Fields next to each other fill a row. In a narrow form, every field takes the full width. Default `"full"`.',
@@ -98,7 +97,6 @@ const options: Option[] = [
   {
     name: "separator",
     type: "true | string",
-    layout: true,
     adminOnly: true,
     description:
       "A line above the field, to break up a long form. A string adds a heading above the line.",
@@ -106,7 +104,6 @@ const options: Option[] = [
   {
     name: "tab",
     type: "string | string[]",
-    layout: true,
     adminOnly: true,
     description:
       "The tab that shows this field. Define the tabs with `tabs` on the collection, global, group or list item.",
@@ -114,14 +111,13 @@ const options: Option[] = [
   {
     name: "fieldset",
     type: "string",
-    layout: true,
     adminOnly: true,
     description: "The box that holds this field. Define the boxes with `fieldsets`.",
   },
 ];
 
 const shown = computed(() =>
-  props.only ? options.filter((o) => !!o.layout === (props.only === "layout")) : options,
+  options.filter((o) => !props.section || !!o.adminOnly === (props.section === "admin")),
 );
 
 const adminOnly = [{ label: "Admin only", color: "note" as const }];
