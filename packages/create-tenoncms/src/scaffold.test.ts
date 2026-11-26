@@ -227,6 +227,19 @@ describe("scaffold", () => {
     expect(read(plain, "tenon.config.ts")).not.toContain("images:");
   });
 
+  it("hands every method of the API to the CMS in TanStack Start", async () => {
+    const dir = project();
+    await scaffold(templates, dir, {
+      name: "a",
+      framework: "tanstack",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    });
+    expect(read(dir, "src/routes/[_]tenon.$.ts")).toContain("handlers: { ANY: handle }");
+  });
+
   it("adds the SMTP email adapter and its package only when chosen", async () => {
     const choices = {
       name: "a",
