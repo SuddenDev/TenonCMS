@@ -29,14 +29,24 @@ export type TenonAdminOptions = {
 type NitroLike = {
   options: {
     rootDir: string;
+    dev: boolean;
     experimental: { tasks?: boolean };
     tasks: Record<string, { handler?: string; description?: string }>;
     scheduledTasks: Record<string, string | (string | undefined)[] | undefined>;
+    plugins?: string[];
     virtual: Record<string, string>;
   };
 };
 
 const JOBS_HANDLER = "#tenon/jobs-task";
+const JOBS_EXIT = "#tenon/jobs-exit";
+
+// Nitro keeps the timers of its scheduled tasks after the server closed, so the process would stay up after SIGTERM.
+// This runtime plugin exits once the `close` hooks ran. It registers its hook one microtask late, so the close hooks
+// of the host's plugins run first.
+const JOBS_EXIT_PLUGIN = `export default (nitroApp) => {
+  queueMicrotask(() => nitroApp.hooks.hook("close", () => globalThis.process?.exit?.()));
+};`;
 
 // A Nitro module. Nitro registers every Vite plugin that carries a `nitro` key.
 function jobsModule(entry: string) {
@@ -51,6 +61,11 @@ export default {
 };`;
       options.tasks[JOBS_TASK] = { handler: JOBS_HANDLER, description: "Runs the due jobs" };
       options.scheduledTasks = withJobsTask(options.scheduledTasks);
+
+      // In development the process belongs to Vite.
+      if (options.dev) return;
+      options.virtual[JOBS_EXIT] = JOBS_EXIT_PLUGIN;
+      (options.plugins ??= []).push(JOBS_EXIT);
     },
   };
 }
