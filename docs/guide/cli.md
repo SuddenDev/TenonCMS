@@ -34,7 +34,7 @@ Every question has a flag, so it also runs without a terminal:
 npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --images imgix --email smtp --auth passkey,magic-link --pm pnpm --yes
 ```
 
-It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `TENON_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.
+It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `TENON_SECRET`. On Cloudflare, `wrangler.jsonc` names the Worker after the folder and its R2 bucket `<name>-media`, so two sites on one account stay apart, and `astro.config.ts` turns Astro sessions off, so no KV namespace is needed. Fill in what it says, run `dev`, open `/admin` and create the first admin.
 
 The config reads `site: { url: TENON_SITE_URL }`, the public origin to set in production; it is also the CMS origin for sign-in and admin links. Leave it commented out in development so the adapter detects the server's current URL. In Nuxt it is `NUXT_TENON_SITE_URL`, like every other variable. Core reads no env var itself.
 

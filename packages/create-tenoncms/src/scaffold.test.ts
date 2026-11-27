@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { mergePackageJson, readIndex, scaffold, toPackageName } from "./scaffold.ts";
+import { mergePackageJson, readIndex, scaffold, toPackageName, toWorkerName } from "./scaffold.ts";
 
 const templates = resolve(import.meta.dirname, "../../../templates");
 const project = () => join(mkdtempSync(join(tmpdir(), "create-tenoncms-")), "site");
@@ -318,6 +318,23 @@ describe("scaffold", () => {
     expect(read(node, "nuxt.config.ts")).not.toMatch(/@tenon|vercel|jobs/);
   });
 
+  it("names the Worker and its bucket after the project and turns Astro sessions off on Cloudflare", async () => {
+    const dir = project();
+    await scaffold(templates, dir, {
+      name: "my_site.v2",
+      framework: "astro",
+      template: "minimal",
+      target: "cloudflare",
+      database: "durable-object",
+      storage: "r2",
+    });
+    const wrangler = read(dir, "wrangler.jsonc");
+    expect(wrangler).toContain('"name": "my-site-v2",');
+    expect(wrangler).toContain('"bucket_name": "my-site-v2-media",');
+    expect(wrangler).not.toContain("tenon-site");
+    expect(read(dir, "astro.config.ts")).toContain("session: false,");
+  });
+
   it("lists only what each framework supports", async () => {
     const index = await readIndex(templates);
     expect(index.frameworks.nuxt!.targets).not.toContain("cloudflare");
@@ -341,5 +358,11 @@ describe("package.json", () => {
   it("turns a folder name into a package name", () => {
     expect(toPackageName("My Site!")).toBe("my-site");
     expect(toPackageName(".hidden")).toBe("hidden");
+  });
+
+  it("turns a package name into a Worker name that leaves room for `-media`", () => {
+    expect(toWorkerName("my_site~2")).toBe("my-site-2");
+    expect(toWorkerName("a".repeat(70))).toBe("a".repeat(57));
+    expect(toWorkerName("___")).toBe("tenon-site");
   });
 });
