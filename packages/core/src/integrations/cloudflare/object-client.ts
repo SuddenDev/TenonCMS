@@ -1,4 +1,4 @@
-import { createClient } from "../../client/create-client.ts";
+import { createRequestClient } from "../../client/create-request-client.ts";
 import type { RegisteredCms } from "../../client/types/index.ts";
 import type { Schema } from "../../schema/index.ts";
 
@@ -15,13 +15,8 @@ export function createObjectClient<C extends { schema: Schema } = RegisteredCms>
   request: Request,
   stub: DurableObjectStub,
 ) {
-  const cookie = request.headers.get("cookie");
-  return createClient<C>({
+  return createRequestClient<C>(request, {
     baseUrl: new URL(request.url).origin,
-    fetch: (input, init) => {
-      const forwarded = new Request(input, init);
-      if (cookie) forwarded.headers.set("cookie", cookie);
-      return stub.fetch(forwarded);
-    },
+    fetch: (input, init) => stub.fetch(new Request(input, init)),
   });
 }

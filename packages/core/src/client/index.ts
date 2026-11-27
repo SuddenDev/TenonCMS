@@ -1,4 +1,5 @@
 export { createClient } from "./create-client.ts";
+export { createRequestClient } from "./create-request-client.ts";
 export { CmsError } from "./errors.ts";
 export { API_BASE, API_KEY_HEADER, LOCK_TTL } from "./constants.ts";
 // `format.ts` imports only `read-zip.ts`, which has no imports.

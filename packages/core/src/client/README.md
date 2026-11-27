@@ -14,23 +14,28 @@
 
 ## Files
 
-| Path                | Responsibility                                                                                 |
-| ------------------- | ---------------------------------------------------------------------------------------------- |
-| `index.ts`          | Public exports and the augmentable `Register` interface.                                       |
-| `types/index.ts`    | Barrel of the public types. Internal helpers stay out.                                         |
-| `types/client.ts`   | `Client`, `Session`, `Perspective`, `DeviceCode`, `LocaleOption` and `DiscardOption`.          |
-| `types/schema.ts`   | The HTTP view of the schema (`Collections`, `Globals`), `RegisteredCms`, and read helpers.     |
-| `types/options.ts`  | `ClientOptions`, `FindOptions` and `UploadOptions`.                                            |
-| `types/media.ts`    | `MediaClient`.                                                                                 |
-| `create-client.ts`  | `createClient()`: binds content, global, auth, preview and media methods.                      |
-| `create-request.ts` | `createRequest()`: binds origin and `fetch`, serializes requests, parses replies.              |
-| `read-query.ts`     | `readQuery()`: serializes `populate`, `depth`, `select`, `locale`, `fallback`, `alternates`.   |
-| `upload.ts`         | `createUpload()` and `sendFile()`: multipart upload with parallel parts, retries and progress. |
-| `errors.ts`         | `CmsError`, with status and parsed body.                                                       |
-| `constants.ts`      | `API_BASE` (the path of the HTTP API), `API_KEY_HEADER`, `LOCK_TTL` and `DEVICE_CLIENT_ID`.    |
-| `register.d.ts`     | Fills `Register` with the host's `cms` type.                                                   |
+| Path                       | Responsibility                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `index.ts`                 | Public exports and the augmentable `Register` interface.                                       |
+| `types/index.ts`           | Barrel of the public types. Internal helpers stay out.                                         |
+| `types/client.ts`          | `Client`, `Session`, `Perspective`, `DeviceCode`, `LocaleOption` and `DiscardOption`.          |
+| `types/schema.ts`          | The HTTP view of the schema (`Collections`, `Globals`), `RegisteredCms`, and read helpers.     |
+| `types/options.ts`         | `ClientOptions`, `FindOptions` and `UploadOptions`.                                            |
+| `types/media.ts`           | `MediaClient`.                                                                                 |
+| `create-client.ts`         | `createClient()`: binds content, global, auth, preview and media methods.                      |
+| `create-request-client.ts` | `createRequestClient()`: the client of one page request on another server, with its cookie.    |
+| `create-request.ts`        | `createRequest()`: binds origin and `fetch`, serializes requests, parses replies.              |
+| `read-query.ts`            | `readQuery()`: serializes `populate`, `depth`, `select`, `locale`, `fallback`, `alternates`.   |
+| `upload.ts`                | `createUpload()` and `sendFile()`: multipart upload with parallel parts, retries and progress. |
+| `errors.ts`                | `CmsError`, with status and parsed body.                                                       |
+| `constants.ts`             | `API_BASE` (the path of the HTTP API), `API_KEY_HEADER`, `LOCK_TTL` and `DEVICE_CLIENT_ID`.    |
+| `register.d.ts`            | Fills `Register` with the host's `cms` type.                                                   |
 
 Each client keeps its own closures, so two clients with different origins or `fetch` functions do not share state.
+
+## Request client
+
+`createRequestClient(request, { baseUrl })` is for server code that renders one page, such as a site on another origin than the CMS. It wraps `fetch` so that every call to the origin of `baseUrl` carries the page request's `cookie` header, and no other header of it. Direct storage URLs (S3 parts) never get the cookie. Without a cookie it reads as a visitor. It belongs to one request and MUST NOT be shared. Its writes with a JSON body pass; a write without one (`publish()`, `delete()`, upload parts) answers 403, because Hono's `csrf()` treats a missing content type as a form and a server sends no `Origin`. `createObjectClient()` of `tenoncms/cloudflare` is this client over a Durable Object stub.
 
 `requestPasswordReset({ email, redirectTo })` asks Better Auth to send a reset link. Its response does not reveal whether an account exists. `resetPassword({ token, newPassword })` consumes that link's single-use token and does not sign in. Both methods use the existing auth endpoints; the host must configure email delivery or its own `sendResetPassword` callback.
 
