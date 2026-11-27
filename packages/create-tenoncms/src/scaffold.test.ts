@@ -176,7 +176,7 @@ describe("scaffold", () => {
   it("writes the sign-in methods and adds the passkey package", async () => {
     const choices = {
       name: "a",
-      framework: "standalone",
+      framework: "tanstack",
       template: "minimal",
       target: "node",
       database: "libsql",
@@ -288,6 +288,35 @@ describe("scaffold", () => {
     expect(example).toMatch(/^R2_BUCKET=/m);
     expect(example).toMatch(/^CLOUDFLARE_EMAIL_API_TOKEN=/m);
     expect(existsSync(join(dir, "_emails"))).toBe(false);
+  });
+
+  it("reads the CMS origin from TENON_CMS_URL only in the standalone starter", async () => {
+    const standalone = project();
+    await scaffold(templates, standalone, {
+      name: "a",
+      framework: "standalone",
+      template: "minimal",
+      target: "vercel",
+      database: "postgres",
+      storage: "s3",
+      auth: ["password", "passkey"],
+    });
+    expect(read(standalone, "tenon.config.ts")).toContain(
+      "  auth: {\n    baseURL: process.env.TENON_CMS_URL,\n    plugins: [passkey()],\n  },\n",
+    );
+    expect(read(standalone, ".env.example")).toMatch(/^# TENON_CMS_URL=$/m);
+
+    const astro = project();
+    await scaffold(templates, astro, {
+      name: "a",
+      framework: "astro",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    });
+    expect(read(astro, "tenon.config.ts")).not.toContain("TENON_CMS_URL");
+    expect(read(astro, ".env.example")).not.toContain("TENON_CMS_URL");
   });
 
   it("adds the Cloudflare email adapter and its binding only when chosen", async () => {

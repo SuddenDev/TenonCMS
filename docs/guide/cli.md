@@ -20,6 +20,8 @@ It asks one question at a time: the folder, the site name (default `Tenon`, writ
 
 R2 on Cloudflare uses the bucket binding `MEDIA`. On Node and Vercel it uses API keys: `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `.env.example`, and the bucket needs [CORS](./media.md#s3-and-r2), as with S3.
 
+The standalone starter reads `TENON_CMS_URL` into `auth.baseURL`. Set it with `TENON_SITE_URL` when a site on another origin reads the CMS, as in [the headless example](../../examples/headless-site/README.md).
+
 Images offer the [providers](./media.md#image-providers) that work where the site runs. On Node the default is IPX, which adds `ipx` (and sharp) to `package.json`. On Vercel it is none, and on Cloudflare the Images binding. Hosted providers add their URL variable to `.env.example`; Vercel Image Optimization also needs [`images` in the Vercel config](./media.md#vercel). Each choice writes `images: { provider: … }` next to `storage` in `media`.
 
 Email offers none (the default), SMTP or Cloudflare Email Service. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, set `SMTP_PORT` to 587. Cloudflare Email Service adds `cloudflareEmail()` to `tenon.config.ts`; the sender's domain MUST be onboarded to Email Service. On Cloudflare it uses the `send_email` binding `EMAIL` in `wrangler.jsonc` and adds `EMAIL_FROM` to `.dev.vars.example`. On Node and Vercel it uses the REST API and adds `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_API_TOKEN` and `EMAIL_FROM` to `.env.example`. See [Email](./email.md).

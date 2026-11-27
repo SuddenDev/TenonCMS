@@ -17,8 +17,11 @@ import {
 type Option = { label: string; hint?: string };
 /** `templates/index.json`: what the prompts offer. */
 export type TemplateIndex = {
-  /** `envModule` or `runtimeConfig`: where the config reads its environment variables. Default: `process.env`. */
-  frameworks: Record<string, Option & EnvSource & { targets: string[] }>;
+  /**
+   * `envModule` or `runtimeConfig`: where the config reads its environment variables. Default: `process.env`.
+   * `headless`: the CMS can serve a site on another origin, so `auth.baseURL` reads `TENON_CMS_URL`.
+   */
+  frameworks: Record<string, Option & EnvSource & { targets: string[]; headless?: boolean }>;
   templates: Record<string, Option & { frameworks: string[] }>;
   /** `envFile`: the file for local secrets. Default: `.env`. */
   targets: Record<
@@ -126,9 +129,9 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
     );
     await cp(layer, dir, { recursive: true, force: true, filter: (src) => !skip.includes(src) });
   }
-  parts.push(authPart(auth), sitePart(siteName));
-
   const source = index.frameworks[choices.framework] ?? {};
+  parts.push(authPart(auth, { headless: source.headless }), sitePart(siteName));
+
   for (const file of new Set(parts.flatMap((p) => Object.keys(p.files ?? {})))) {
     const path = join(dir, file);
     if (!existsSync(path)) throw new Error(`A part writes to ${file}, but the template has none`);
