@@ -3,7 +3,7 @@
     "tenon.config.ts": {
       "imports": ["import { vercel } from \"tenoncms/media/vercel\";"],
       "media": [
-        "// Needs `images` in the Vercel config: https://github.com/SuddenDev/TenonCMS/blob/main/docs/content/1.guide/media.md#vercel",
+        "// Needs `images` in the Vercel config: https://github.com/SuddenDev/TenonCMS/blob/main/temporary_docs/content/1.guide/media.md#vercel",
         "images: { provider: vercel() },"
       ]
     }

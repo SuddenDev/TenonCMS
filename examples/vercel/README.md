@@ -14,7 +14,7 @@ Copy the environment file only on the first run. If `.env` already exists, set t
 
 Open <http://localhost:4323/admin>, create the first admin, and upload a file in Media. Completion should succeed. Open the file, rename or move it, then delete it. Upload an image to also check its generated variants.
 
-The app uses `postgres()` and `s3()` in [tenon.config.ts](tenon.config.ts). For Neon or another hosted service, replace the database URL and S3 environment values; see the [Neon guide](../../docs/content/1.guide/frameworks.md#with-neon).
+The app uses `postgres()` and `s3()` in [tenon.config.ts](tenon.config.ts). For Neon or another hosted service, replace the database URL and S3 environment values; see the [Neon guide](../../temporary_docs/content/1.guide/frameworks.md#with-neon).
 
 ## Adapter tests
 
