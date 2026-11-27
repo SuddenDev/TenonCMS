@@ -15,7 +15,7 @@ export default defineConfig({
       { find: /^tenoncms\/admin$/, replacement: core("admin/config.ts") },
       { find: /^tenoncms\/admin\/bar$/, replacement: core("admin/bar.d.ts") },
       { find: /^tenoncms\/media\/default$/, replacement: core("media/default.ts") },
-      { find: "#tenon/client-registry", replacement: core("admin/test-registry.ts") },
+      { find: "#tenon/client-registry", replacement: core("admin/empty-registry.ts") },
     ],
   },
 });

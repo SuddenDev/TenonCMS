@@ -20,6 +20,23 @@ export function clientReferences(entry = "./tenon.config.ts", projectRoot?: stri
   const watched = new Set<string>();
   return {
     name: "tenoncms:client-references",
+    // Vite's resolver reads the `imports` of tenoncms, which map the registry to an empty one for sites without
+    // this plugin. This plugin MUST resolve the specifier before that.
+    enforce: "pre",
+    // The dependency optimizer runs none of the host's plugins. It MUST leave the specifier to this plugin, or a
+    // pre-bundled `tenoncms/preview` holds the empty registry in dev.
+    config: () => ({
+      optimizeDeps: {
+        rolldownOptions: {
+          plugins: [
+            {
+              name: "tenoncms:client-registry-external",
+              resolveId: (id) => (id === REGISTRY ? { id, external: true } : undefined),
+            },
+          ],
+        },
+      },
+    }),
     configureServer(devServer) {
       server = devServer;
     },

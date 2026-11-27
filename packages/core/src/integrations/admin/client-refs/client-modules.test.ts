@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { realpath, writeFile } from "node:fs/promises";
+import { readFile, realpath, writeFile } from "node:fs/promises";
 import { build, createServer, type InlineConfig, type Plugin } from "vite";
 import { afterEach, expect, it, vi } from "vitest";
 import { clientModules } from "./client-modules.ts";
@@ -47,6 +47,45 @@ it("keeps browser imports and closures out of the server, and registers them for
   expect(browser).toContain("./price.client.ts#description");
   expect(browser).toContain("browserOnly");
   expect(browser).toMatch(/1000|1e3/);
+});
+
+it("serves the registry before the empty fallback in the package's `imports`, also when pre-bundled", async () => {
+  const root = await tempProject({
+    "node_modules/cms/package.json": JSON.stringify({
+      name: "cms",
+      type: "module",
+      exports: "./index.js",
+      imports: { "#tenon/client-registry": "./empty-registry.js" },
+    }),
+    "node_modules/cms/empty-registry.js": `export default { fallback: true };`,
+    "node_modules/cms/index.js": `export const registry = () => import('#tenon/client-registry');`,
+    "tenon.config.ts": `import { label } from './label.client.ts'; export default { label };`,
+    "label.client.ts": `export const label = 'Label';`,
+    "entry.ts": `export { registry } from 'cms';`,
+  });
+  const browser = await bundle(root, "entry.ts");
+  expect(browser).toContain("./label.client.ts#label");
+  expect(browser).not.toContain("fallback");
+
+  const server = await createServer({
+    configFile: false,
+    root,
+    logLevel: "silent",
+    plugins: [clientModules(), clientReferences()],
+    server: { middlewareMode: true, ws: false, watch: null },
+    optimizeDeps: { include: ["cms"], noDiscovery: true },
+  });
+  try {
+    await server.environments.client.transformRequest("/entry.ts");
+    const deps = join(server.config.cacheDir, "deps");
+    const optimized = await vi.waitFor(() => readFile(join(deps, "cms.js"), "utf8"), {
+      timeout: 5000,
+    });
+    expect(optimized).toContain("#tenon/client-registry");
+    expect(optimized).not.toContain("fallback");
+  } finally {
+    await server.close();
+  }
 });
 
 it.each(["./secret.server.ts", "node:fs"])(
