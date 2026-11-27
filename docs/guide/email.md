@@ -32,7 +32,7 @@ export default defineCms({
 
 - `smtp()` uses Nodemailer 10's ESM build and connects only when sending. `nodemailer` is an optional peer dependency of `tenoncms`.
 - For STARTTLS, use port 587 and `secure: false`. The adapter requires TLS by default.
-- Workers: `smtp()` works with Node.js compatibility, on port 465 with `secure: true` or on port 587 with STARTTLS. Port 25 is blocked. Leave pooling off. Nodemailer's own DNS lookup fails on Workers, so there the adapter lets the runtime resolve the host.
+- Workers: `smtp()` works with Node.js compatibility, on port 465 with `secure: true` or on port 587 with STARTTLS. Port 25 is blocked. Leave pooling off. Nodemailer's own DNS lookup fails on Workers, so there the adapter lets the runtime resolve the host. [Cloudflare Email Service](#cloudflare-email-service) needs no SMTP server.
 
 `smtp()` passes Nodemailer's native options through to `nodemailer.createTransport()`: authentication, TLS, timeouts, pooling. Your options override the adapter's `requireTLS: true` default.
 
@@ -49,6 +49,54 @@ adapter: smtp({
   tls: { minVersion: "TLSv1.2" },
 }),
 ```
+
+## Cloudflare Email Service
+
+`cloudflareEmail()` from `tenoncms/email/cloudflare` sends through [Cloudflare Email Service](https://developers.cloudflare.com/email-service/). It needs no SMTP server and no package. Like [`r2()`](./media.md#r2), it has two modes:
+
+|         | `cloudflareEmail(env.EMAIL)`                                         | `cloudflareEmail({ accountId, apiToken, fetch? })`             |
+| ------- | -------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Through | A `send_email` binding (`env` from `cloudflare:workers`)             | The REST API, with an API token                                |
+| Runs on | Workers only                                                         | Node, Vercel and Workers                                       |
+| Errors  | The binding's `Error`, with a `code` such as `E_SENDER_NOT_VERIFIED` | An `Error` with Cloudflare's number as `code`, such as `10208` |
+
+On Workers, with the binding:
+
+```ts
+import { env } from "cloudflare:workers";
+import { cloudflareEmail } from "tenoncms/email/cloudflare";
+
+export default defineCms({
+  // Your collections, database and secret…
+  email: {
+    adapter: cloudflareEmail(env.EMAIL),
+    from: "My Site <hello@example.com>",
+  },
+});
+```
+
+```jsonc
+// wrangler.jsonc
+"send_email": [{ "name": "EMAIL" }],
+```
+
+Anywhere else, with an API token that has the permission `Email Sending Write`:
+
+```ts
+email: {
+  adapter: cloudflareEmail({
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+    apiToken: process.env.CLOUDFLARE_EMAIL_API_TOKEN!,
+  }),
+  from: "My Site <hello@example.com>",
+},
+```
+
+- The sender's domain MUST be onboarded to Email Service in the Cloudflare dashboard.
+- On the Workers Free plan, Email Service sends only to verified destination addresses. Invites and sign-in links to anyone else need the Workers Paid plan. This holds for both modes.
+- `wrangler dev` only logs each mail of the binding and saves it to a local file. Add `"remote": true` to the binding to send real mail from `wrangler dev`.
+- The API mode also rejects when a recipient bounces permanently. Other recipients can already have the message, so do not retry blindly.
+- Cloudflare Email Service also accepts SMTP. Use `smtp()` for that.
 
 ## Send from your code
 
