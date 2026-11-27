@@ -4,6 +4,8 @@ import { defineCollection } from "tenoncms";
 export const posts = defineCollection({
   label: "Posts",
   titleField: "title",
+  // `examples/headless-site` serves posts at this path. Without a site there is no permalink and no preview button.
+  permalink: process.env.TENON_SITE_URL ? "/posts/{slug}" : undefined,
   fields: {
     title: { type: "text", required: true, description: titleDescription },
     slug: { type: "slug", from: "title", required: true, unique: true },
