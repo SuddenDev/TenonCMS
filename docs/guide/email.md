@@ -32,7 +32,7 @@ export default defineCms({
 
 - `smtp()` uses Nodemailer 10's ESM build and connects only when sending. `nodemailer` is an optional peer dependency of `tenoncms`.
 - For STARTTLS, use port 587 and `secure: false`. The adapter requires TLS by default.
-- Workers: Nodemailer documents support with Node.js compatibility. Use port 465 with `secure: true` and leave pooling off. Port 25 is blocked. This does not enable the CMS's other planned Workers features.
+- Workers: `smtp()` works with Node.js compatibility, on port 465 with `secure: true` or on port 587 with STARTTLS. Port 25 is blocked. Leave pooling off. Nodemailer's own DNS lookup fails on Workers, so there the adapter lets the runtime resolve the host.
 
 `smtp()` passes Nodemailer's native options through to `nodemailer.createTransport()`: authentication, TLS, timeouts, pooling. Your options override the adapter's `requireTLS: true` default.
 
