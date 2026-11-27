@@ -1,8 +1,18 @@
 import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
-import { mergePackageJson, readIndex, scaffold, toPackageName, toWorkerName } from "./scaffold.ts";
+import { describe, expect, it, vi } from "vitest";
+import {
+  fetchTemplates,
+  mergePackageJson,
+  readIndex,
+  scaffold,
+  toPackageName,
+  toWorkerName,
+} from "./scaffold.ts";
+
+const giget = vi.hoisted(() => ({ downloadTemplate: vi.fn() }));
+vi.mock("giget", () => giget);
 
 const templates = resolve(import.meta.dirname, "../../../templates");
 const project = () => join(mkdtempSync(join(tmpdir(), "create-tenoncms-")), "site");
@@ -445,6 +455,32 @@ describe("scaffold", () => {
     for (const target of Object.values(index.targets))
       for (const id of target.emails) expect(index.emails[id]).toBeDefined();
     expect(index.templates.minimal!.frameworks).toContain("standalone");
+  });
+});
+
+describe("fetchTemplates", () => {
+  const zlibError = () =>
+    Object.assign(new Error("zlib: unexpected end of file"), { name: "ZlibError" });
+
+  it("downloads again after a broken tarball, which another scaffold can cause in giget's shared cache", async () => {
+    giget.downloadTemplate.mockReset();
+    giget.downloadTemplate
+      .mockRejectedValueOnce(zlibError())
+      .mockResolvedValueOnce({ dir: "/tmp/templates" });
+    await expect(fetchTemplates("gh:owner/repo/templates")).resolves.toBe("/tmp/templates");
+    expect(giget.downloadTemplate).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after 3 broken tarballs, and at once on any other error", async () => {
+    giget.downloadTemplate.mockReset();
+    giget.downloadTemplate.mockRejectedValue(zlibError());
+    await expect(fetchTemplates("gh:owner/repo/templates")).rejects.toThrow("zlib");
+    expect(giget.downloadTemplate).toHaveBeenCalledTimes(3);
+
+    giget.downloadTemplate.mockReset();
+    giget.downloadTemplate.mockRejectedValue(new Error("Failed to download"));
+    await expect(fetchTemplates("gh:owner/repo/templates")).rejects.toThrow("Failed to download");
+    expect(giget.downloadTemplate).toHaveBeenCalledTimes(1);
   });
 });
 

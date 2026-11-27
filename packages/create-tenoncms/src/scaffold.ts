@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { appendFile, cp, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { setTimeout as sleep } from "node:timers/promises";
 import { join, resolve } from "node:path";
 import {
   type AuthMethod,
@@ -74,15 +75,25 @@ const SECRET = /^((?:NUXT_)?TENON_SECRET)=.*$/m;
 /**
  * The templates folder: `source` itself when it is a local folder, else a giget download of it into a temporary
  * folder.
+ * @throws The last error after 3 broken tarballs, or the first error of any other kind.
  */
 export async function fetchTemplates(source: string) {
   if (existsSync(source)) return resolve(source);
   const { downloadTemplate } = await import("giget");
-  const { dir } = await downloadTemplate(source, {
-    dir: await mkdtemp(join(tmpdir(), "create-tenoncms-")),
-    force: true,
-  });
-  return dir;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const { dir } = await downloadTemplate(source, {
+        dir: await mkdtemp(join(tmpdir(), "create-tenoncms-")),
+        force: true,
+      });
+      return dir;
+    } catch (error) {
+      // giget writes its cache file in place. A scaffold that extracts it while another one downloads reads a broken
+      // tarball. The next try finds the other download finished.
+      if (attempt === 3 || (error as Error).name !== "ZlibError") throw error;
+      await sleep(500 * attempt);
+    }
+  }
 }
 
 export async function readIndex(root: string): Promise<TemplateIndex> {
