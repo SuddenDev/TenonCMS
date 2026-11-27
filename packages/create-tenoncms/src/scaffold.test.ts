@@ -267,6 +267,26 @@ describe("scaffold", () => {
     expect(JSON.parse(read(plain, "package.json")).dependencies).not.toHaveProperty("nodemailer");
   });
 
+  it("adds @libsql/client only with the libSQL database", async () => {
+    for (const framework of ["astro", "tanstack"]) {
+      for (const database of ["libsql", "sqlite", "postgres", "pglite"]) {
+        const dir = project();
+        await scaffold(templates, dir, {
+          name: "a",
+          framework,
+          template: "minimal",
+          target: "node",
+          database,
+          storage: "local",
+        });
+        const { dependencies } = JSON.parse(read(dir, "package.json"));
+        expect("@libsql/client" in dependencies, `${framework} with ${database}`).toBe(
+          database === "libsql",
+        );
+      }
+    }
+  });
+
   it("takes the target's own version of a database", async () => {
     const dir = project();
     await scaffold(templates, dir, {
