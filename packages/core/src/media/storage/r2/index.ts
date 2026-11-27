@@ -62,8 +62,13 @@ export type R2ApiOptions = {
   /** Secret access key of an R2 API token. */
   secretAccessKey: string;
   /**
-   * Public URL of the bucket, e.g. its custom domain. File URLs are `<publicUrl>/<key>`. Default: the bucket stays private and
-   * core serves files at `/_tenon/media/files/<key>`.
+   * Folder inside the bucket that holds every file, e.g. `staging`. Several sites can then share one bucket. Changing it
+   * does not move the files that are already stored. Default: the bucket root.
+   */
+  prefix?: string;
+  /**
+   * Public URL of the bucket, e.g. its custom domain. File URLs are `<publicUrl>/<key>`, with the `prefix` before the
+   * key. Default: the bucket stays private and core serves files at `/_tenon/media/files/<key>`.
    */
   publicUrl?: string;
   /** Part size of uploads in bytes. At least 5 MB, as R2 requires. Default 16 MB. */

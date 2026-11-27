@@ -121,12 +121,13 @@ Files and variants that core serves carry `Cache-Control: public, max-age=300, s
 
 `r2()` from `tenoncms/media/r2` has two modes:
 
-|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                 | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, publicUrl?, partSize? })` |
-| ------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Through       | A bucket binding (`env` from `cloudflare:workers`)         | R2's S3 API, same as `s3()` with `region: 'auto'`                                         |
-| Runs on       | Workers only                                               | Node and Workers                                                                          |
-| Keys and CORS | Not needed                                                 | Needed, see [S3 and R2](#s3-and-r2)                                                       |
-| `publicUrl`   | Optional. Core serves files at `/_tenon/media/files/<key>` | Optional, as with `s3()`                                                                  |
+|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                 | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, prefix?, publicUrl?, partSize? })` |
+| ------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Through       | A bucket binding (`env` from `cloudflare:workers`)         | R2's S3 API, same as `s3()` with `region: 'auto'`                                                  |
+| Runs on       | Workers only                                               | Node and Workers                                                                                   |
+| Keys and CORS | Not needed                                                 | Needed, see [S3 and R2](#s3-and-r2)                                                                |
+| `publicUrl`   | Optional. Core serves files at `/_tenon/media/files/<key>` | Optional, as with `s3()`                                                                           |
+| `prefix`      | None. Give each site its own bucket                        | Optional, as with `s3()`                                                                           |
 
 With the binding:
 
