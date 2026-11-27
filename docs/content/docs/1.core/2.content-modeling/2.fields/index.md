@@ -20,24 +20,24 @@ export const posts = defineCollection({
 
 ## Field types
 
-| Type                                                                | Stores                                       |
-| ------------------------------------------------------------------- | -------------------------------------------- |
-| [`array`](/docs/core/content-modeling/fields/array)                 | A list of items with the same fields         |
-| [`blocks`](/docs/core/content-modeling/fields/blocks)               | A list of page sections of different types   |
-| [`boolean`](/docs/core/content-modeling/fields/boolean)             | `true` or `false`                            |
-| [`date`, `datetime`](/docs/core/content-modeling/fields/date)       | A calendar day, or a moment in UTC           |
-| [`file`](/docs/core/content-modeling/fields/file)                   | Any file from the media library              |
-| [`group`](/docs/core/content-modeling/fields/group)                 | Fields nested under one key                  |
-| [`image`](/docs/core/content-modeling/fields/image)                 | An image from the media library              |
-| [`link`](/docs/core/content-modeling/fields/link)                   | A link to a document, a URL or a file        |
-| [`number`](/docs/core/content-modeling/fields/number)               | A number                                     |
-| [`relation`, `join`](/docs/core/content-modeling/fields/relation)   | Ids of other documents, and the reverse side |
-| [`richtext`](/docs/core/content-modeling/fields/rich-text)          | A structured document with formatting        |
-| [`select`](/docs/core/content-modeling/fields/select)               | One or more of the listed `options`          |
-| [`size`](/docs/core/content-modeling/fields/size)                   | A number with a CSS unit, `{ value, unit }`  |
-| [`slug`](/docs/core/content-modeling/fields/slug)                   | A URL part, like `about-us`                  |
-| [`text`, `textarea`](/docs/core/content-modeling/fields/text)       | A string                                     |
-| [`custom:<name>`](/docs/core/customization/custom-fields-and-pages) | Any value, with your own input in the admin  |
+| Type                                                              | Stores                                       |
+| ----------------------------------------------------------------- | -------------------------------------------- |
+| [`array`](/docs/core/content-modeling/fields/array)               | A list of items with the same fields         |
+| [`blocks`](/docs/core/content-modeling/fields/blocks)             | A list of page sections of different types   |
+| [`boolean`](/docs/core/content-modeling/fields/boolean)           | `true` or `false`                            |
+| [`date`, `datetime`](/docs/core/content-modeling/fields/date)     | A calendar day, or a moment in UTC           |
+| [`file`](/docs/core/content-modeling/fields/file)                 | Any file from the media library              |
+| [`group`](/docs/core/content-modeling/fields/group)               | Fields nested under one key                  |
+| [`image`](/docs/core/content-modeling/fields/image)               | An image from the media library              |
+| [`link`](/docs/core/content-modeling/fields/link)                 | A link to a document, a URL or a file        |
+| [`number`](/docs/core/content-modeling/fields/number)             | A number                                     |
+| [`relation`, `join`](/docs/core/content-modeling/fields/relation) | Ids of other documents, and the reverse side |
+| [`richtext`](/docs/core/content-modeling/fields/rich-text)        | A structured document with formatting        |
+| [`select`](/docs/core/content-modeling/fields/select)             | One or more of the listed `options`          |
+| [`size`](/docs/core/content-modeling/fields/size)                 | A number with a CSS unit, `{ value, unit }`  |
+| [`slug`](/docs/core/content-modeling/fields/slug)                 | A URL part, like `about-us`                  |
+| [`text`, `textarea`](/docs/core/content-modeling/fields/text)     | A string                                     |
+| [`custom:<name>`](/docs/core/customization/custom-fields)         | Any value, with your own input in the admin  |
 
 ## Common options
 
