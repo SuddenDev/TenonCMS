@@ -22,8 +22,9 @@
 | `api-key-caller.ts`                     | `apiKeyCaller()`: verifies an API key and returns `{ id, name, permissions }`.                                                 |
 | `config/api-keys.ts`                    | `apiKeys()`: better-auth's `apiKey()`; `apiKeyRoutesOff()` closes its HTTP routes; `newApiKeySecret()` for rolling.            |
 | `middleware/api-key.middleware.ts`      | `csrfUnlessApiKey()`; `apiKeyReach()`: behind `session`, a key reaches only `/schema` and, with `backup`, the transfer routes. |
-| `middleware/session.middleware.ts`      | `optionalSession()` binds the CMS API to the caller once; `session` requires a session.                                        |
-| `middleware/session-hint.middleware.ts` | `sessionHint()`: mirrors the session cookie in the readable `tenon-session` hint cookie.                                       |
+| `middleware/session.middleware.ts`      | `optionalSession()` binds the CMS API to the caller once and clears a stale hint on a 401; `session` requires a session.       |
+| `middleware/session-hint.middleware.ts` | `sessionHint()`: mirrors the session cookie in the readable `tenon-session` hint; `clearStaleSessionHint()`.                   |
+| `cookie-domain.ts`                      | `cookieDomain()`: the `Domain` of better-auth's session cookie, for the hint and the preview cookie.                           |
 | `endpoints/provider.endpoint.ts`        | Delegates GET and POST auth requests to better-auth.                                                                           |
 | `endpoints/status.endpoint.ts`          | Public `GET /auth-status`: `signUpStatus()`, `signInMethods()` and the email code length, `no-store`.                          |
 | `endpoints/password.endpoint.ts`        | Protected `POST /account/password`: better-auth's server-only `setPassword()`.                                                 |
@@ -46,5 +47,9 @@ The admin's `/forgot-password` and `/reset-password` screens use Better Auth's r
 options (`getCookies()`) and compares names without the secure prefix. A set session cookie sets `tenon-session=1`
 (not `HttpOnly`, `Lax`, path `/`, `Secure` when the session cookie is); a cleared or expired one clears it. The hint
 grants nothing. The site's preview runtime reads it only to decide whether asking for the admin bar is worth a request.
+The hint and the preview cookie take `cookieDomain()`: the `Domain` that better-auth's `getCookies()` gives the session
+cookie, e.g. with `advanced.crossSubDomainCookies`. Without one they stay host-only. Page code cannot clear a cookie
+with a `Domain`, so `optionalSession()` calls `clearStaleSessionHint()` for a 401 without a session: it clears the
+hint when the request carries one.
 
 `signInUser()` and `manageUsers()` are core's plugins with endpoints. Server code reaches better-auth's internal adapter only through them, as `ctx.context.internalAdapter`. `signInUser({ userId })` and `createSignInLink({ email })` are `SERVER_ONLY`, so better-call never routes them; call them through `auth.api` with `returnHeaders` to forward the session cookies. A sign-in link token is `newToken()`; the verification table stores `tenon-sign-in:<hashToken(token)>` with the user id, for an hour. `GET /sign-in-link?token=` consumes it (so it works once; an expired value reads as missing), ends all the user's sessions, creates one, sets the cookie and redirects to `callbackURL` (checked with `originCheck`) or `${adminPath}/?settings=security`. A missing, used or expired token redirects to `errorCallbackURL` (also checked) or `${adminPath}/login`, with `?error=INVALID_TOKEN`, like better-auth's magic link. Without `adminPath`, both go to `/`. `users/operations/sign-in-link.operation.ts` builds the link and emails it. `users/operations/create-and-sign-in.operation.ts` calls `signInUser` after creating a user, for invite accept and `POST /setup`.

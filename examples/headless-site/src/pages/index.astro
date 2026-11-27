@@ -1,0 +1,20 @@
+---
+import { edit } from "tenoncms/preview";
+import Layout from "../components/Layout.astro";
+import { cmsClient } from "../lib/cms";
+
+const posts = await cmsClient(Astro.request).find("posts");
+---
+
+<Layout title="Posts">
+  <h1>Posts</h1>
+  <ul>
+    {posts.map((post) => (
+      <li>
+        <a href={`/posts/${post.slug}`} data-cms={edit("posts", post.id, "title")}>
+          {post.title}
+        </a>
+      </li>
+    ))}
+  </ul>
+</Layout>

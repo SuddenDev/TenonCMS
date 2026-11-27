@@ -10,7 +10,7 @@ import { posts } from "./collections/posts";
 export default defineCms({
   collections: { posts },
   presets: [
-    // Headless: no site renders the pages, so there is no permalink and no preview button.
+    // `examples/headless-site` renders posts only, so pages have no permalink and no preview button.
     pagesPreset({
       permalink: undefined,
       seo: true,
@@ -26,4 +26,6 @@ export default defineCms({
   database: libsql(process.env.DATABASE_URL ?? "file:./cms.db"),
   secret: process.env.TENON_SECRET!,
   site: { url: process.env.TENON_SITE_URL },
+  // The CMS origin. A site on another origin MUST set it next to `site.url`, or sign-in uses the site's origin.
+  auth: { baseURL: process.env.TENON_CMS_URL },
 });

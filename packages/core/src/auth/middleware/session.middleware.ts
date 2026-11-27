@@ -3,11 +3,12 @@ import type { Core } from "../../cms/runtime/types.ts";
 import { outerScope } from "../../cms/runtime/operation-context.ts";
 import type { Env } from "../../http/middleware/types.ts";
 import { caller } from "../get-caller.ts";
+import { clearStaleSessionHint } from "./session-hint.middleware.ts";
 
 /**
  * Looks up the request's caller once: sets `c.var.cms` and `c.var.perspective` for the session's user, the API key,
  * or neither, plus `c.var.user` with a session and `c.var.apiKey` with a key. Content reads and writes run behind it
- * alone, so their access rules decide.
+ * alone, so their access rules decide. A 401 without a session clears the session hint.
  * @returns The Hono middleware.
  */
 export function optionalSession(core: Core): MiddlewareHandler<Env> {
@@ -18,6 +19,8 @@ export function optionalSession(core: Core): MiddlewareHandler<Env> {
     c.set("perspective", visitor.perspective);
     c.set("cms", core.localApi(outerScope(visitor)));
     await next();
+
+    if (!visitor.user && c.res.status === 401) await clearStaleSessionHint(c, core);
   };
 }
 

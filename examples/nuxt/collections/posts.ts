@@ -23,7 +23,7 @@ export const posts = defineCollection({
       description: "Lowercase letters, digits and dashes. Filled from the title when empty.",
     },
     author: { type: "relation", collection: "authors", label: "Author" },
-    publishedAt: { type: "date", label: "Published at" },
+    date: { type: "datetime", label: "Date" },
     category: { type: "select", options: ["news", "guide"], default: "news" },
     featured: { type: "boolean" },
     featuredNote: {

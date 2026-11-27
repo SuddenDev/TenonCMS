@@ -254,6 +254,22 @@ importers:
         specifier: ^4.154.0
         version: 4.154.0(@cloudflare/workers-types@5.20261028.1)(@types/node@26.6.5)
 
+  examples/headless-site:
+    dependencies:
+      '@astrojs/node':
+        specifier: ^11.1.9
+        version: 11.1.9(astro@7.4.3(@types/node@26.6.5)(@vercel/functions@3.10.4(ws@8.22.0))(aws4fetch@1.0.20)(db0@0.4.2)(esbuild@0.28.2)(ioredis@5.11.1(supports-color@10.2.2))(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.51.2)(yaml@2.9.1))(supports-color@10.2.2)
+      astro:
+        specifier: ^7.4.2
+        version: 7.4.3(@types/node@26.6.5)(@vercel/functions@3.10.4(ws@8.22.0))(aws4fetch@1.0.20)(db0@0.4.2)(esbuild@0.28.2)(ioredis@5.11.1(supports-color@10.2.2))(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.51.2)(yaml@2.9.1)
+      tenoncms:
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   examples/nuxt:
     dependencies:
       '@libsql/client':

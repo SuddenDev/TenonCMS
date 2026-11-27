@@ -26,7 +26,7 @@ function Post() {
   return (
     <main>
       <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
-      {post.publishedAt && <time dateTime={post.publishedAt}>{post.publishedAt}</time>}
+      {post.date && <time dateTime={post.date}>{post.date}</time>}
       <p data-cms={edit("posts", post.id, "body")} style={{ whiteSpace: "pre-wrap" }}>
         {post.body}
       </p>

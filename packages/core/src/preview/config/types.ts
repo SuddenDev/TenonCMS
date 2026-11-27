@@ -55,7 +55,8 @@ export type PreviewOptions = {
   morph?: boolean;
   /**
    * The admin path, for the bars' links. Its origin is the only one the live preview trusts, so an admin on another
-   * origin needs a full URL, like `https://cms.example.com/admin`. `false` renders no admin bar. Defaults to `/admin`.
+   * origin needs a full URL, like `https://cms.example.com/admin`. The admin bar calls the CMS API on that origin,
+   * with its cookies. `false` renders no admin bar. Defaults to `/admin`.
    */
   admin?: string | false;
 };

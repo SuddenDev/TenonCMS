@@ -65,6 +65,7 @@ download: { type: 'file', folder: 'downloads' },
 - `onDelete` defaults to `'restrict'`: deleting a used file is a 409 with `references`. `'set-null'` is allowed, `'cascade'` is not.
 - `folder` is where "Upload new" in the admin uploads to.
 - `populate` and `select` take `true` on an image or file, nothing deeper.
+- URLs that core serves, like `/_tenon/media/files/<key>`, are relative to the CMS. When the site runs on another origin (`site.url` set, and a fixed `auth.baseURL` on a different origin), reads return them absolute on `auth.baseURL`, `srcset` entries and rich text images included. URLs that are already absolute, from `publicUrl` or a hosted provider, stay as they are.
 
 ## The media API
 

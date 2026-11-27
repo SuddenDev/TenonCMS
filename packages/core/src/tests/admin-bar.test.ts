@@ -381,4 +381,44 @@ describe("session hint cookie", () => {
       "tenon-session=1; Max-Age=604800; Path=/; Secure; SameSite=Lax",
     );
   });
+
+  const subdomains = () =>
+    defineCms({
+      ...base,
+      auth: {
+        ...base.auth,
+        advanced: { crossSubDomainCookies: { enabled: true, domain: "example.com" } },
+      },
+    });
+
+  it("has the session cookie's domain, like the preview cookie, when set and when cleared", async () => {
+    const { fetch } = setup(subdomains());
+    const previewCookie = async (method: string) =>
+      (await fetch(`${origin}/_tenon/preview`, { method })).headers
+        .getSetCookie()
+        .find((c) => c.startsWith("tenon-preview="));
+
+    expect(hint(await post(fetch, "/sign-up/email", admin))).toContain("Domain=example.com");
+    expect(await previewCookie("POST")).toMatch(/^tenon-preview=drafts;.*Domain=example\.com/);
+    expect(await previewCookie("DELETE")).toMatch(
+      /^tenon-preview=; Max-Age=0;.*Domain=example\.com/,
+    );
+    expect(hint(await post(fetch, "/sign-out"))).toMatch(
+      /^tenon-session=; Max-Age=0;.*Domain=example\.com/,
+    );
+  });
+
+  it("is cleared by a 401 for a request that carries it", async () => {
+    const cms = subdomains();
+    const bar = (headers: HeadersInit = {}) =>
+      cms.fetch(new Request(`${origin}/_tenon/admin-bar?url=/&mode=site`, { headers }));
+
+    const stale = await bar({ cookie: "tenon-session=1" });
+    expect(stale.status).toBe(401);
+    expect(hint(stale)).toMatch(/^tenon-session=; Max-Age=0;.*Domain=example\.com/);
+
+    const none = await bar();
+    expect(none.status).toBe(401);
+    expect(none.headers.getSetCookie()).toEqual([]);
+  });
 });

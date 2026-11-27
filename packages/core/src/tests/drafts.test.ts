@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { createRequestClient } from "../client/index.ts";
 import { ValidationError } from "../errors.ts";
 import { defineCms } from "../index.ts";
 import { page } from "../presets/index.ts";
@@ -218,22 +219,24 @@ describe("preview over HTTP", () => {
   });
 });
 
+/** Signs up the admin and returns its session cookie. */
+async function session() {
+  const res = await cms.fetch(
+    new Request(`${origin}/_tenon/auth/sign-up/email`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin },
+      body: JSON.stringify(admin),
+    }),
+  );
+  return res.headers
+    .getSetCookie()
+    .map((c) => c.split(";")[0])
+    .join("; ");
+}
+
 describe("withSession", () => {
   const request = (cookie?: string) =>
     new Request(origin, { headers: cookie ? { cookie } : undefined });
-  async function session() {
-    const res = await cms.fetch(
-      new Request(`${origin}/_tenon/auth/sign-up/email`, {
-        method: "POST",
-        headers: { "content-type": "application/json", origin },
-        body: JSON.stringify(admin),
-      }),
-    );
-    return res.headers
-      .getSetCookie()
-      .map((c) => c.split(";")[0])
-      .join("; ");
-  }
   beforeEach(() => unpublished(ids.p.id, { title: "Draft" }));
 
   it("reads published content without a preview cookie", async () => {
@@ -273,6 +276,28 @@ describe("withSession", () => {
     await (await hooked.withSession(request())).find("tags");
     await (await hooked.withSession(request(cookie))).withDrafts().find("tags");
     expect(users).toEqual([admin.email, null, admin.email]);
+  });
+});
+
+describe("request client of another server", () => {
+  beforeEach(() => unpublished(ids.p.id, { title: "Draft" }));
+  const titles = async (cookie?: string) => {
+    const page = new Request("https://www.example.com/blog", {
+      headers: cookie ? { cookie } : undefined,
+    });
+    const client = createRequestClient<typeof cms>(page, {
+      baseUrl: origin,
+      fetch: (input, init) => cms.fetch(new Request(input, init)),
+    });
+    return (await client.find("posts")).map((p) => p.title);
+  };
+
+  it("reads drafts with the editor's session and preview cookies, else published", async () => {
+    const cookie = await session();
+    expect(await titles(`${cookie}; tenon-preview=drafts`)).toEqual(["Draft"]);
+    expect(await titles(cookie)).toEqual([]);
+    expect(await titles("tenon-preview=drafts")).toEqual([]);
+    expect(await titles()).toEqual([]);
   });
 });
 

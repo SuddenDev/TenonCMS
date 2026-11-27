@@ -1,4 +1,5 @@
 import type { DatabaseOptions } from "../../db/create-db.ts";
+import type { CorsOptions } from "../../http/middleware/site-cors.middleware.ts";
 import type { Storage } from "../../media/storage/types.ts";
 
 /**
@@ -11,13 +12,15 @@ export function requireConfig(options: {
   database: DatabaseOptions | undefined;
   storage: Storage | undefined;
   siteUrl: string | undefined;
+  cors?: CorsOptions;
 }) {
-  const { secret, database, storage, siteUrl } = options;
+  const { secret, database, storage, siteUrl, cors } = options;
   const problems = [
     ...(!secret || secret.length < 32 ? ["`secret` MUST be at least 32 characters"] : []),
     ...(siteUrl && !isOrigin(siteUrl)
       ? ["`site.url` MUST be an HTTP(S) origin, without credentials, path, query or fragment"]
       : []),
+    ...(cors && !cors.origin && !siteUrl ? ["`cors` needs an `origin`, or `site.url`"] : []),
     ...(database?.dialect
       ? (database.problems ?? []).map((p) => `\`database\`: ${p}`)
       : ["`database` is missing"]),

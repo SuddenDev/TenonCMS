@@ -20,6 +20,9 @@
     "dist"
   ],
   "type": "module",
+  "imports": {
+    "#tenon/client-registry": "./dist/admin/empty-registry.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",

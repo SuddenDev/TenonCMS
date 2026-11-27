@@ -45,6 +45,37 @@ preview();
 
 `preview({ admin: "/cms" })` sets the admin path for the links (default `/admin`). `admin: false` turns the admin bar off on the site. The Astro and Nuxt adapters pass `admin.path` of the config, or `false` with `admin: false`.
 
+When the CMS runs on another origin, pass the admin's full URL: `preview({ admin: "https://cms.example.com/admin" })`. The live preview then trusts only that origin, and the admin bar sends its requests to `https://cms.example.com/_tenon` with that origin's cookies. A site without a Tenon adapter can bundle `tenoncms/preview` with any bundler. Its admin bar shows links and menus, but skips items with browser code (`clientRef()`), because only the adapters build that list.
+
+The CMS on another origin MUST share the site: a parent domain (`www.example.com` and `cms.example.com`) or two localhost ports. Set on the CMS:
+
+```ts
+defineCms({
+  site: { url: "https://www.example.com" },
+  auth: {
+    baseURL: "https://cms.example.com",
+    advanced: { crossSubDomainCookies: { enabled: true, domain: "example.com" } },
+  },
+});
+```
+
+- `site.url` is the origin that CORS allows, so the bar's requests can send cookies and read the answers. CORS covers the admin bar and content routes only.
+- `auth.baseURL` is the CMS origin.
+- `crossSubDomainCookies` puts the session cookie, the session hint and the preview cookie on `example.com`, where the site sees them. Set `domain` to the parent domain; without it, the cookies stay on the CMS host. Two localhost ports need no `crossSubDomainCookies`, because cookies ignore ports.
+
+To allow more origins, or to change what they may send, set `cors`. It takes the options of [Hono's `cors()`](https://hono.dev/docs/middleware/builtin/cors) and replaces the defaults key by key: the origin of `site.url`, credentials, `GET` and `POST`, and the request header `content-type`.
+
+```ts
+defineCms({
+  // An `origin` replaces `site.url`, so list the site too.
+  cors: { origin: ["https://www.example.com", "https://staging.example.com"] },
+});
+```
+
+`cors` also covers only the admin bar and content routes. For any other route, add Hono's `cors()` yourself as a plugin's `publicMiddleware`; then you decide what another origin can reach, sign-in included.
+
+Page code on an allowed origin can then use the admin bar and read and write content as the signed-in editor. Sign-in, users, API keys and invites stay closed to it. Sharing the session cookie across subdomains also lets the site server and every other subdomain of `example.com` act as the signed-in editor. Turn it on only when you control all of them.
+
 ### Keep content out of edit mode
 
 `visualEditing: false` on a collection or global keeps editors from picking it on a page. "On this page" leaves it out, and edit mode neither outlines nor opens its elements. A click on one opens the marked element around it, if there is one. Live preview of unsaved changes still applies. Use it for content that visitors write, like comments.

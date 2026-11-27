@@ -22,6 +22,8 @@ export default defineConfig({
     "src/admin/vue/vue.ts",
     "src/admin/react/react.ts",
     "src/preview/index.ts",
+    // The package's `imports` map `#tenon/client-registry` to it.
+    "src/admin/empty-registry.ts",
     "src/integrations/vue/preview.ts",
     "src/integrations/react/preview.ts",
     "src/integrations/vite/index.ts",

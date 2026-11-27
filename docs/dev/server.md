@@ -6,7 +6,7 @@ Code: `packages/core/src/http/`, `auth/`, `users/`, `client/`, `db/` (each has a
 
 The Hono app mounts feature routes in a fixed order. The order is the security model, so keep it.
 
-1. CMS binding, then public plugin middleware
+1. CORS for the origin of `site.url` or the `cors` option, the CMS binding, then public plugin middleware
 2. Session hint cookie on `/auth/*`, `/invites/accept` and `/setup`, then auth routes and the **open** routes: admin branding, auth status, invites check and accept, `/setup`, `/localization`, public plugin routes, `/jobs/run` (only with `jobs.secret`), media files and images
 3. **CSRF** (skipped with an API key), then `optionalSession` (one caller lookup per request)
 4. Content **reads** (collections, globals, media folders)
@@ -16,7 +16,8 @@ The Hono app mounts feature routes in a fixed order. The order is the security m
 - Routes after `optionalSession` MUST use the request's scoped `cms`, user and perspective. They MUST NOT look up the session again.
 - Every write route outside the content writes MUST sit behind `session`.
 - Public plugin routes run before CSRF and session, so a plugin that writes there MUST protect itself.
-- Hono's CSRF only checks form-like content types. JSON is safe because browsers preflight cross-origin JSON and we send no CORS headers. Public JSON endpoints that run before CSRF MUST reject other content types.
+- CORS (`siteCors()` in `http/middleware/`) is Hono's `cors()`. It runs only for a request with an `Origin` on the routes a page of the site calls: `/admin-bar`, `/admin/load`, `/preview`, `/localization`, `/collections` and `/globals`. Every other request passes untouched, and without `site.url` and the `cors` option nothing changes. The defaults allow the origin of `site.url`, credentials, `GET` and `POST`, and the one request header `content-type`. The host's `cors` option holds Hono's options and replaces the defaults key by key; `requireConfig()` throws when it has no `origin` and there is no `site.url`. Another origin gets no `Access-Control-Allow-Origin`, so a browser refuses its preflight and its reads. It runs first, because a preflight carries no cookies. A new route is closed to other origins until it is added to `SITE_ROUTES`, whatever the option says. `/auth` MUST stay out: `/auth/get-session` answers the session token. A host that needs CORS elsewhere adds Hono's `cors()` as a plugin's `publicMiddleware`, which runs on every route.
+- Hono's CSRF only checks form-like content types. Other bodies need a preflight from another origin, and only an origin that CORS allows passes one (`site.url` by default), on the routes CORS covers. There its page code reads and writes content as the signed-in editor. Public JSON endpoints that run before CSRF MUST reject other content types.
 - Without a session, a path that matches no public route answers 401, not 404.
 - Unexpected errors are logged and answered without their message.
 - With `admin: false` (`core.admin` is missing), the admin routes are not mounted: `/admin-brand`, `/admin-bar`, `POST /admin/load`, `POST /admin/actions/:key` and the device login under `/auth/device/*`. `/schema` has no `admin`, so no rich text `client` halves either; writes still validate against `core.richtext`.
@@ -42,7 +43,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 - The first user becomes `admin`. After that, only an admin session can create users. Sign-up is open only during setup.
 - With password off, `POST /setup` (`users/endpoints/setup.endpoint.ts`) creates the first admin from `{ name, email }`: 404 while password is on, 409 once a user exists. `checkCreate()` reads "no user yet" before the insert, so concurrent creates can both become admin. `setUpFirstAdmin()` runs its calls one at a time in the process; separate instances can still race. Sign-up with a password has the same race.
 - Invite accept and `/setup` share `createAndSignIn()` (`users/operations/`): `createUser()` without a request, then the server-only `signInUser`, so they work whichever methods are on.
-- A readable `tenon-session` cookie mirrors the session cookie. It grants nothing; it only lets the site decide whether to ask for the admin bar.
+- A readable `tenon-session` cookie mirrors the session cookie. It grants nothing; it only lets the site decide whether to ask for the admin bar. It and the `tenon-preview` cookie take the `Domain` of better-auth's session cookie (`cookieDomain()` in `auth/cookie-domain.ts`), when set and when cleared, so with `advanced.crossSubDomainCookies` a site on a sibling host reads them. Without a domain they stay host-only. A 401 without a session clears a hint the request carries (`optionalSession()`), because page code cannot clear a cookie with a `Domain`.
 - Sign-in methods (`auth/config/sign-in-methods.ts`): password is on unless `emailAndPassword.enabled === false`; passkey, magic link and email OTP are on with a plugin of id `passkey`, `magic-link` or `email-otp`. A magic link or email OTP counts only when its plugin can send. `defineCms()` throws when no method is on, and warns when only email methods are on without email. `/auth-status` reports the four flags and `emailOtpLength`.
 - `tenoncms/auth` (`auth/plugins.ts`) exports `magicLink()` and `emailOTP()`: better-auth's plugins with `Partial` options and `disableSignUp: true`. Both copy their options when created, so `withEmailSender()` (`auth/config/email-sign-in.ts`) creates a host plugin without a sender again, with core's `magicLink` or `emailOtp` email. The magic-link sender skips unknown addresses.
 - `lastPasskey()` refuses `/passkey/delete-passkey` for a user's last passkey while password is off and no email method can send.
@@ -59,7 +60,7 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 - `apiKey` sits on `Scope`, `HookArgs` and `AccessArgs`. `decide()` checks the grid in the local API, so it holds for `withSession()` too. Writes that run no rule (upload parts, completion, abort) call `requireKeyGrant()`.
 - `session` lets a key through to `apiKeyReach()`, which allows only `/schema` with `schema: ["read"]`. Every other route behind `session` answers 403 to a key, plugin `routes` included: their `RouteEnv` promises `c.var.user`.
 - `createdBy` / `updatedBy` hold `actorId(scope)`: the user id, or `key:<id>`. better-auth ids hold no `:`. Uploads record the same actor.
-- CSRF is skipped for a request with the header. A cross-site form cannot set it, and a cross-origin fetch with it needs a preflight, which fails.
+- CSRF is skipped for a request with the header. A cross-site form cannot set it, and a cross-origin fetch with it needs a preflight, which fails unless the host's `cors` option allows `x-api-key`. A key wins over the cookie, so such a request never acts as the signed-in user.
 - Only admins manage keys. better-auth's `/api-key/*` routes are closed over HTTP (`apiKeyRoutesOff()`). Core's `/api-keys` creates keys through better-auth without a request. Revoking sets `enabled = 0`; deleting removes the row. better-auth has no rotation, so rolling replaces `key` and `start` in place with `newApiKeySecret()`, which uses better-auth's exported `defaultKeyHasher` and the length `apiKeys()` sets.
 - Verifying a key writes its `lastRequest`. better-auth's per-key rate limit is off.
 
@@ -74,6 +75,8 @@ Filters, `populate` and `select` come in as query strings. The parsers build nes
 ## Client
 
 The browser client mirrors the local API over HTTP and is typed from the schema. The admin uses the same client. It is browser-safe: no server imports. Types come from a registered config type; an unresolved alias silently becomes `any`, so keep the negative type tests.
+
+`createRequestClient(request, { baseUrl })` is the same client for the server of a site on another origin. It forwards the page request's `cookie` to the origin of `baseUrl` only, so `caller()` sees the editor's session and the preview cookie, or a visitor without them. `createObjectClient()` builds on it.
 
 ## Database
 

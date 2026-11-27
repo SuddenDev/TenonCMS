@@ -40,7 +40,8 @@ const page = () => location.pathname + location.search;
  * of an item (`onClick`, `mount`) loads only after the CMS confirmed the session. The items load again when the
  * page's path or query changes and when the window gets focus. Edit mode, scrolling and DOM changes only
  * update the context.
- * @param admin Path of the admin, for the links.
+ * @param admin The `admin` option, a path or a full URL. The links point to it, and the bar calls the CMS on its
+ * origin.
  * @param onEdit Called when the user flips the edit switch of a preview tab.
  */
 export function startAdminBar(
@@ -98,7 +99,7 @@ export function startAdminBar(
     items: fillItems(items, { admin }),
     perspective: perspective(),
     edit,
-    setPerspective,
+    setPerspective: (value) => setPerspective(value, admin),
     setEdit: onEdit,
   });
   const render = () => {
@@ -156,7 +157,7 @@ export function startAdminBar(
   async function load() {
     const current = ++generation;
     const asked = mode;
-    const loaded = await loadAdminBar(page(), asked);
+    const loaded = await loadAdminBar(page(), asked, admin);
     if (stopped || current !== generation) return;
     if (loaded === "unauthorized") return endSession();
     if (!loaded) return;
@@ -183,7 +184,7 @@ export function startAdminBar(
     const current = generation;
     const token = {};
     reloads.set(id, token);
-    const loaded = await loadAdminBarItem(id, page());
+    const loaded = await loadAdminBarItem(id, page(), admin);
     const fresh = () => !stopped && current === generation && reloads.get(id) === token;
     if (!fresh()) return;
     if (loaded === "unauthorized") return endSession();

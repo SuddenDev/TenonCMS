@@ -207,6 +207,28 @@ describe("defineCms checks", () => {
     });
   });
 
+  it("throws for a top-level field named like a key that core adds to a document", () => {
+    const text = { type: "text" } as const;
+    for (const key of ["id", "createdAt", "updatedBy", "publishedAt", "hasDraft"]) {
+      expect(define({ c: { fields: { [key]: text } } })).toThrow(
+        `field "c.${key}" is a reserved field name`,
+      );
+      expect(define({}, { g: { fields: { [key]: text } } })).toThrow(/reserved field name/);
+    }
+    expect(
+      define({ c: { fields: { g: { type: "group", fields: { publishedAt: text } } } } }),
+    ).not.toThrow();
+  });
+
+  it("reserves the locale keys only in localized entries", () => {
+    const l = { locales: ["en", "de"], defaultLocale: "en" };
+    const fields = { locale: { type: "text" } } as const;
+    expect(define({ c: { fields, localized: true } }, {}, l)).toThrow(
+      `field "c.locale" is a reserved field name`,
+    );
+    expect(define({ c: { fields } }, {}, l)).not.toThrow();
+  });
+
   it("throws for an invalid pattern, also under a condition", () => {
     expect(define({ c: { fields: { a: { type: "text", pattern: "(" } } } })).toThrow();
     expect(
