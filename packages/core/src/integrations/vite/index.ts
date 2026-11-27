@@ -58,7 +58,9 @@ function nitroModule(entry: string, jobs: boolean) {
     setup({ options }: NitroLike) {
       // PGlite loads its `.data` and `.wasm` files next to its own module, so it MUST stay a package in the output.
       // Bundled, Nitro leaves these files behind.
-      (options.traceDeps ??= []).push("@electric-sql/pglite");
+      // Bundled, both entries of `@libsql/client` share one chunk that imports the native `libsql`. Kept a package,
+      // `@libsql/client/web` loads without it for a remote URL.
+      (options.traceDeps ??= []).push("@electric-sql/pglite", "@libsql/client");
       if (!jobs) return;
 
       options.experimental.tasks = true;
@@ -84,8 +86,8 @@ export default {
  * It builds the admin as a second client entry, exposes its page as `#tenon/admin-html` and keeps core
  * external in SSR builds. It reads the path from `admin.path` of the config at startup. Serve the page from a
  * server route for that path and everything below it, e.g. `src/routes/cms.$.ts` for `/cms`.
- * With Nitro, it also schedules the task `tenon:jobs` every minute, unless `jobs` is `false`, and keeps PGlite a package
- * in the server output.
+ * With Nitro, it also schedules the task `tenon:jobs` every minute, unless `jobs` is `false`, and keeps PGlite and
+ * `@libsql/client` packages in the server output.
  * @example
  * // vite.config.ts
  * plugins: [tanstackStart(), tenonAdmin()]
