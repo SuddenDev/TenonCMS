@@ -18,7 +18,7 @@ It asks one question at a time: the folder, the site name (default `Tenon`, writ
 | Vercel                  | SQLite / Turso (a file in development, Turso on Vercel), Postgres                       | S3-compatible bucket, R2                 |
 | Cloudflare (Astro only) | Durable Object                                                                          | R2                                       |
 
-R2 on Cloudflare uses the bucket binding `MEDIA`. On Node and Vercel it uses API keys: `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `.env.example`, and the bucket needs [CORS](./media.md#s3-and-r2), as with S3.
+R2 on Cloudflare uses the bucket binding `MEDIA`. On Node and Vercel it uses API keys: `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `.env.example`, and the bucket needs [CORS](./media.md#s3-and-r2), as with S3. The optional `R2_PREFIX` and `S3_PREFIX` keep every file in one folder of the bucket, so several sites can share it.
 
 The standalone starter reads `TENON_CMS_URL` into `auth.baseURL`. Set it with `TENON_SITE_URL` when a site on another origin reads the CMS, as in [the headless example](../../examples/headless-site/README.md).
 

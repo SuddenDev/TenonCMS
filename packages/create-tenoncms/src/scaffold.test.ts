@@ -281,11 +281,13 @@ describe("scaffold", () => {
     const config = read(dir, "tenon.config.ts");
     expect(config).toContain("accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,");
     expect(config).toContain("accessKeyId: process.env.R2_ACCESS_KEY_ID!,");
+    expect(config).toContain("prefix: process.env.R2_PREFIX,");
     expect(config).toContain("apiToken: process.env.CLOUDFLARE_EMAIL_API_TOKEN!,");
     expect(config).not.toContain("cloudflare:workers");
     const example = read(dir, ".env.example");
     expect(example.match(/^CLOUDFLARE_ACCOUNT_ID=/gm)).toHaveLength(1);
     expect(example).toMatch(/^R2_BUCKET=/m);
+    expect(example).toMatch(/^# R2_PREFIX=$/m);
     expect(example).toMatch(/^CLOUDFLARE_EMAIL_API_TOKEN=/m);
     expect(existsSync(join(dir, "_emails"))).toBe(false);
   });
