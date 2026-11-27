@@ -46,6 +46,7 @@ defineCms({
 - `site.url` is the public site. CORS allows its origin. Relative preview URLs open on it.
 - `auth.baseURL` is the CMS origin. Sign-in and links into the admin use it.
 - A headless CMS MUST set both. With only `site.url`, auth uses the site's origin. Sign-in in the admin then fails with `INVALID_ORIGIN`, and media URLs stay relative.
+- A project from `create-tenoncms --framework standalone` reads both variables already.
 - With both set to different origins, media URLs come back absolute on the CMS: `http://localhost:3200/_tenon/media/...`. URLs that are already absolute, like those of a hosted image provider, stay as they are.
 - While `TENON_SITE_URL` is set, posts get `permalink: "/posts/{slug}"`, so the admin's preview opens them on the site. Pages get no permalink, because this site does not render them. Without `TENON_SITE_URL`, the CMS runs alone as before.
 

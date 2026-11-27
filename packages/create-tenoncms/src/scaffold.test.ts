@@ -1,8 +1,18 @@
 import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
-import { mergePackageJson, readIndex, scaffold, toPackageName, toWorkerName } from "./scaffold.ts";
+import { describe, expect, it, vi } from "vitest";
+import {
+  fetchTemplates,
+  mergePackageJson,
+  readIndex,
+  scaffold,
+  toPackageName,
+  toWorkerName,
+} from "./scaffold.ts";
+
+const giget = vi.hoisted(() => ({ downloadTemplate: vi.fn() }));
+vi.mock("giget", () => giget);
 
 const templates = resolve(import.meta.dirname, "../../../templates");
 const project = () => join(mkdtempSync(join(tmpdir(), "create-tenoncms-")), "site");
@@ -176,7 +186,7 @@ describe("scaffold", () => {
   it("writes the sign-in methods and adds the passkey package", async () => {
     const choices = {
       name: "a",
-      framework: "standalone",
+      framework: "tanstack",
       template: "minimal",
       target: "node",
       database: "libsql",
@@ -281,13 +291,44 @@ describe("scaffold", () => {
     const config = read(dir, "tenon.config.ts");
     expect(config).toContain("accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,");
     expect(config).toContain("accessKeyId: process.env.R2_ACCESS_KEY_ID!,");
+    expect(config).toContain("prefix: process.env.R2_PREFIX,");
     expect(config).toContain("apiToken: process.env.CLOUDFLARE_EMAIL_API_TOKEN!,");
     expect(config).not.toContain("cloudflare:workers");
     const example = read(dir, ".env.example");
     expect(example.match(/^CLOUDFLARE_ACCOUNT_ID=/gm)).toHaveLength(1);
     expect(example).toMatch(/^R2_BUCKET=/m);
+    expect(example).toMatch(/^# R2_PREFIX=$/m);
     expect(example).toMatch(/^CLOUDFLARE_EMAIL_API_TOKEN=/m);
     expect(existsSync(join(dir, "_emails"))).toBe(false);
+  });
+
+  it("reads the CMS origin from TENON_CMS_URL only in the standalone starter", async () => {
+    const standalone = project();
+    await scaffold(templates, standalone, {
+      name: "a",
+      framework: "standalone",
+      template: "minimal",
+      target: "vercel",
+      database: "postgres",
+      storage: "s3",
+      auth: ["password", "passkey"],
+    });
+    expect(read(standalone, "tenon.config.ts")).toContain(
+      "  auth: {\n    baseURL: process.env.TENON_CMS_URL,\n    plugins: [passkey()],\n  },\n",
+    );
+    expect(read(standalone, ".env.example")).toMatch(/^# TENON_CMS_URL=$/m);
+
+    const astro = project();
+    await scaffold(templates, astro, {
+      name: "a",
+      framework: "astro",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    });
+    expect(read(astro, "tenon.config.ts")).not.toContain("TENON_CMS_URL");
+    expect(read(astro, ".env.example")).not.toContain("TENON_CMS_URL");
   });
 
   it("adds the Cloudflare email adapter and its binding only when chosen", async () => {
@@ -414,6 +455,32 @@ describe("scaffold", () => {
     for (const target of Object.values(index.targets))
       for (const id of target.emails) expect(index.emails[id]).toBeDefined();
     expect(index.templates.minimal!.frameworks).toContain("standalone");
+  });
+});
+
+describe("fetchTemplates", () => {
+  const zlibError = () =>
+    Object.assign(new Error("zlib: unexpected end of file"), { name: "ZlibError" });
+
+  it("downloads again after a broken tarball, which another scaffold can cause in giget's shared cache", async () => {
+    giget.downloadTemplate.mockReset();
+    giget.downloadTemplate
+      .mockRejectedValueOnce(zlibError())
+      .mockResolvedValueOnce({ dir: "/tmp/templates" });
+    await expect(fetchTemplates("gh:owner/repo/templates")).resolves.toBe("/tmp/templates");
+    expect(giget.downloadTemplate).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after 3 broken tarballs, and at once on any other error", async () => {
+    giget.downloadTemplate.mockReset();
+    giget.downloadTemplate.mockRejectedValue(zlibError());
+    await expect(fetchTemplates("gh:owner/repo/templates")).rejects.toThrow("zlib");
+    expect(giget.downloadTemplate).toHaveBeenCalledTimes(3);
+
+    giget.downloadTemplate.mockReset();
+    giget.downloadTemplate.mockRejectedValue(new Error("Failed to download"));
+    await expect(fetchTemplates("gh:owner/repo/templates")).rejects.toThrow("Failed to download");
+    expect(giget.downloadTemplate).toHaveBeenCalledTimes(1);
   });
 });
 

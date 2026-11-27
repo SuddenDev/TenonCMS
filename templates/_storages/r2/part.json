@@ -6,6 +6,7 @@
         "storage: r2({",
         "  accountId: $CLOUDFLARE_ACCOUNT_ID,",
         "  bucket: $R2_BUCKET,",
+        "  prefix: $R2_PREFIX,",
         "  accessKeyId: $R2_ACCESS_KEY_ID,",
         "  secretAccessKey: $R2_SECRET_ACCESS_KEY,",
         "}),"
@@ -20,6 +21,11 @@
       "example": ""
     },
     { "name": "R2_SECRET_ACCESS_KEY", "example": "" },
-    { "name": "R2_BUCKET", "example": "uploads" }
+    { "name": "R2_BUCKET", "example": "uploads" },
+    {
+      "name": "R2_PREFIX",
+      "comment": "Optional folder inside the bucket, so several sites can share it.",
+      "optional": true
+    }
   ]
 }

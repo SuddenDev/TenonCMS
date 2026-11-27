@@ -10,6 +10,7 @@
     "standalone": {
       "label": "Standalone",
       "hint": "headless: API and admin only",
+      "headless": true,
       "targets": ["node", "vercel"]
     }
   },

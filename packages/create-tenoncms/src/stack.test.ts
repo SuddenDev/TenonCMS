@@ -142,6 +142,14 @@ describe("authPart", () => {
     );
   });
 
+  it("reads the CMS origin for a headless CMS, also with password alone", () => {
+    const part = authPart(["password"], { headless: true });
+    expect(filled(part)).toContain("  auth: {\n    baseURL: process.env.TENON_CMS_URL,\n  },\n");
+    expect(part.env).toEqual([
+      expect.objectContaining({ name: "TENON_CMS_URL", optional: true, url: true }),
+    ]);
+  });
+
   it("keeps password on when it is picked", () => {
     const text = filled(authPart(["password", "email-otp"]));
     expect(text).not.toContain("emailAndPassword");

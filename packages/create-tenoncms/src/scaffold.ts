@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { appendFile, cp, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { setTimeout as sleep } from "node:timers/promises";
 import { join, resolve } from "node:path";
 import {
   type AuthMethod,
@@ -17,8 +18,11 @@ import {
 type Option = { label: string; hint?: string };
 /** `templates/index.json`: what the prompts offer. */
 export type TemplateIndex = {
-  /** `envModule` or `runtimeConfig`: where the config reads its environment variables. Default: `process.env`. */
-  frameworks: Record<string, Option & EnvSource & { targets: string[] }>;
+  /**
+   * `envModule` or `runtimeConfig`: where the config reads its environment variables. Default: `process.env`.
+   * `headless`: the CMS can serve a site on another origin, so `auth.baseURL` reads `TENON_CMS_URL`.
+   */
+  frameworks: Record<string, Option & EnvSource & { targets: string[]; headless?: boolean }>;
   templates: Record<string, Option & { frameworks: string[] }>;
   /** `envFile`: the file for local secrets. Default: `.env`. */
   targets: Record<
@@ -71,15 +75,25 @@ const SECRET = /^((?:NUXT_)?TENON_SECRET)=.*$/m;
 /**
  * The templates folder: `source` itself when it is a local folder, else a giget download of it into a temporary
  * folder.
+ * @throws The last error after 3 broken tarballs, or the first error of any other kind.
  */
 export async function fetchTemplates(source: string) {
   if (existsSync(source)) return resolve(source);
   const { downloadTemplate } = await import("giget");
-  const { dir } = await downloadTemplate(source, {
-    dir: await mkdtemp(join(tmpdir(), "create-tenoncms-")),
-    force: true,
-  });
-  return dir;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const { dir } = await downloadTemplate(source, {
+        dir: await mkdtemp(join(tmpdir(), "create-tenoncms-")),
+        force: true,
+      });
+      return dir;
+    } catch (error) {
+      // giget writes its cache file in place. A scaffold that extracts it while another one downloads reads a broken
+      // tarball. The next try finds the other download finished.
+      if (attempt === 3 || (error as Error).name !== "ZlibError") throw error;
+      await sleep(500 * attempt);
+    }
+  }
 }
 
 export async function readIndex(root: string): Promise<TemplateIndex> {
@@ -126,9 +140,9 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
     );
     await cp(layer, dir, { recursive: true, force: true, filter: (src) => !skip.includes(src) });
   }
-  parts.push(authPart(auth), sitePart(siteName));
-
   const source = index.frameworks[choices.framework] ?? {};
+  parts.push(authPart(auth, { headless: source.headless }), sitePart(siteName));
+
   for (const file of new Set(parts.flatMap((p) => Object.keys(p.files ?? {})))) {
     const path = join(dir, file);
     if (!existsSync(path)) throw new Error(`A part writes to ${file}, but the template has none`);
