@@ -29,7 +29,7 @@ Deletion registers `deleteWithVariants()` and `afterDelete` with the same transa
 | `index.ts`                                        | Public option, storage and provider types, the reserved collection and `mediaApi`.                                 |
 | `api.ts`                                          | `cms.media` of one scope.                                                                                          |
 | `config/`                                         | `MediaOptions` / `ImagesOptions` and the reserved collection definition.                                           |
-| `runtime/create-media-core.ts`                    | Resolves the option with defaults, checks presets and providers, builds the allowlist; `mediaOf()`.                |
+| `runtime/create-media-core.ts`                    | Resolves the option with defaults, checks presets and providers, builds the allowlist and the origin; `mediaOf()`. |
 | `runtime/read-media.ts`                           | `loadMedia()` and `readMedia()`, which adds URLs with the global image options.                                    |
 | `runtime/run-media-hooks.ts`                      | Runs host hooks, then plugin hooks in registration order.                                                          |
 | `runtime/image-attrs.ts`                          | `imageAttrs()` and `pictureAttrs()`: `<img>` and `<picture>` attributes of a populated image. Type imports only.   |
@@ -92,3 +92,4 @@ Rules:
 - `.variants` and `.tmp` are reserved folder names.
 - Without `media.images`, the admin makes a thumbnail of each raster image in the browser and stores it as the variant `thumbnail` through `setThumbnail()`. `GET /thumbnail/<key>` serves it, or redirects to the original. `regenerate()` keeps only thumbnails then and counts the missing ones in `needsThumbnail`, which the admin's "Create missing previews" asks per file; with a provider it deletes them as stale variants. Developers run `regenerate()` through `tenon media regenerate`; the admin has no regenerate action for providers.
 - S3 multipart completion MUST set `Content-Type: application/xml` before signing its XML body, including completion of multipart copies.
+- `decorate()` (`images/decorate.ts`) gives every read its URLs: content reads, link targets and rich text images, and `readMedia()`. Relative URLs (`/_tenon/media/files`, `/img`, `/thumbnail`, a provider's path) get `MediaCore.origin` only when `site.url` is set, `auth.baseURL` is a string, and their origins differ. An embedded host and a dynamic base URL keep relative URLs. Absolute URLs stay as they are. The provider gets the stored URL of the original, never the prefixed one.

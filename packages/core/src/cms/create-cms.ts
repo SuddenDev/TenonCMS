@@ -216,7 +216,9 @@ export function defineCms<
   };
 
   // media
-  const media = mediaOptions && createMediaCore(mediaOptions, schema);
+  const media =
+    mediaOptions &&
+    createMediaCore(mediaOptions, schema, { siteUrl: siteConfig.url, baseURL: host.baseURL });
 
   /** The part of an instance bound to one database: connection, auth and the HTTP app. */
   function bindDatabase(database: DatabaseOptions, wake: (at: number) => void = () => {}) {

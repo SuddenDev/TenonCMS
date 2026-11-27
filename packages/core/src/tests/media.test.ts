@@ -9,10 +9,11 @@ import {
   type Plugin,
 } from "../index.ts";
 import { local } from "../media/storage/local/index.ts";
+import { ipx } from "../media/images/ipx.ts";
 import { modifierId } from "../media/images/modifiers.ts";
 import type { Modifiers } from "../schema/index.ts";
 import { jpeg, png, png300, webp } from "./fixtures.ts";
-import { admin, base, setup, status, tmpDir, withMedia } from "./setup.ts";
+import { admin, base, fastAuth, setup, status, tmpDir, withMedia } from "./setup.ts";
 
 const bytes = (n: number) => Uint8Array.from({ length: n }, (_, i) => i % 251);
 const text = (s: string) => new TextEncoder().encode(s);
@@ -1039,5 +1040,87 @@ describe("admin thumbnails without an image provider", () => {
     await m.client.signUp(admin);
     expect((await m.client.getSchema()).media).toMatchObject({ thumbnails: false });
     expect(await status(m.client.media.setThumbnail(doc.id, blob(webp)))).toBe(404);
+  });
+});
+
+describe("URLs for a site on another origin", () => {
+  const cmsOrigin = "https://cms.example.com";
+  const siteOrigin = "https://www.example.com";
+  const withIpx = { images: { provider: ipx(), sizes: [100, 200] } };
+  const collections = {
+    posts: {
+      fields: {
+        hero: { type: "image" },
+        body: { type: "richtext", allowed: ["image"] },
+        download: { type: "link" },
+      },
+    },
+  };
+
+  // Every URL of a media document, an image field, a rich text image and a link to a file, `srcset` entries included.
+  async function readUrls(options: object, media: Partial<MediaOptions> = {}) {
+    const { cms } = withMedia(media, { ...options, collections });
+    const image = await cms.media.upload(png300, { filename: "a.png", mimeType: "image/png" });
+    const pdf = await cms.media.upload(text("%PDF"), {
+      filename: "a.pdf",
+      mimeType: "application/pdf",
+    });
+    const body = {
+      type: "doc",
+      content: [{ type: "image", attrs: { reference: { collection: "media", id: image.id } } }],
+    };
+    const download = { reference: { collection: "media", id: pdf.id } };
+    const post = await cms.create("posts", { hero: image.id, body, download } as never);
+    const read = (await cms.findById("posts", post.id)) as any;
+
+    const urlsOf = (doc: any) => [
+      ...[doc.url, doc.src, doc.thumbnail].filter(Boolean),
+      ...(doc.srcset ? doc.srcset.split(", ").map((entry: string) => entry.split(" ")[0]) : []),
+    ];
+    return [
+      ...urlsOf(image),
+      ...(await cms.find("media")).flatMap(urlsOf),
+      ...urlsOf(read.hero),
+      ...urlsOf(read.body.content[0].attrs),
+      read.download.href,
+    ] as string[];
+  }
+
+  it.each([
+    ["an image provider", withIpx, "/_tenon/media/img/"],
+    ["admin thumbnails", {}, "/_tenon/media/thumbnail/"],
+  ])("are absolute on the CMS origin with %s", async (_, media, variant) => {
+    const auth = { ...fastAuth, baseURL: `${cmsOrigin}/` };
+    const urls = await readUrls({ site: { url: siteOrigin }, auth }, media);
+    for (const url of urls) expect(url).toMatch(/^https:\/\/cms\.example\.com\/_tenon\/media\//);
+    expect(urls).toContainEqual(expect.stringContaining(`${cmsOrigin}${variant}`));
+  });
+
+  it.each([
+    ["without site.url", { auth: { ...fastAuth, baseURL: cmsOrigin } }],
+    ["with only site.url", { site: { url: siteOrigin } }],
+    [
+      "with site.url on the CMS origin",
+      { site: { url: cmsOrigin }, auth: { ...fastAuth, baseURL: cmsOrigin } },
+    ],
+    [
+      "with a dynamic base URL",
+      {
+        site: { url: siteOrigin },
+        auth: { ...fastAuth, baseURL: { allowedHosts: ["cms.example.com"] } },
+      },
+    ],
+  ])("stay relative %s", async (_, options) => {
+    const urls = await readUrls(options, withIpx);
+    for (const url of urls) expect(url).toMatch(/^\/_tenon\/media\//);
+  });
+
+  it("keeps URLs that are already absolute", async () => {
+    const provider = {
+      getImage: (src: { key: string }) => ({ url: `https://img.test/${src.key}` }),
+    };
+    const auth = { ...fastAuth, baseURL: cmsOrigin };
+    const urls = await readUrls({ site: { url: siteOrigin }, auth }, { images: { provider } });
+    expect(urls).toContain("https://img.test/a.png");
   });
 });
