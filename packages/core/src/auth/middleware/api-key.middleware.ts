@@ -5,7 +5,8 @@ import type { Env } from "../../http/middleware/types.ts";
 
 /**
  * Hono's CSRF check, skipped for a request with an API key: a cross-site form cannot set the header, and a
- * cross-origin `fetch` with it needs a preflight, which fails without CORS headers. Server-side callers send no
+ * cross-origin `fetch` with it needs a preflight, which fails unless the host's `cors` option allows the header. A
+ * key wins over the cookie, so such a request never acts as the signed-in user. Server-side callers send no
  * `Origin`, so the check would refuse them.
  * @returns The Hono middleware.
  */

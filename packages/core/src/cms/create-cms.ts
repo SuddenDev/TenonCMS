@@ -92,6 +92,7 @@ export function defineCms<
   settings: settingsOption,
   localization: localizationOption,
   site,
+  cors,
   richtext: richtextOption,
   admin,
   roles: roleOptions,
@@ -135,7 +136,7 @@ export function defineCms<
       : mediaOption !== false
         ? defaultMedia(!!mediaOption)
         : undefined;
-  requireConfig({ secret, database, storage: mediaOptions?.storage, siteUrl: site?.url });
+  requireConfig({ secret, database, storage: mediaOptions?.storage, siteUrl: site?.url, cors });
   const siteConfig = {
     url: site?.url ? new URL(site.url).origin : undefined,
     name: site?.name ?? "tenoncms",
@@ -274,6 +275,7 @@ export function defineCms<
       webhooks,
       localApi: (scope) => createLocalApi(core, scope),
       site: siteConfig,
+      cors,
       media,
       richtext,
       admin: adminRuntime,

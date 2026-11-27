@@ -5,6 +5,7 @@ import type { RichtextRegistration } from "../../richtext/config/types.ts";
 import type { Localization } from "../config/options.ts";
 import type { MediaCore } from "../../media/runtime/create-media-core.ts";
 import type { EmailApi, EmailTemplates } from "../../email/types.ts";
+import type { CorsOptions } from "../../http/middleware/site-cors.middleware.ts";
 import type { Role } from "../../users/roles.ts";
 import { type Plugin } from "../../plugins/index.ts";
 import { type Fields, type LocalApi, type RootHooks, type Schema } from "../../schema/index.ts";
@@ -48,6 +49,8 @@ export type Core = {
   localApi: (scope: Scope) => LocalApi;
   /** The `site` option: `url` as an origin, missing without it; `name` defaults to `tenoncms`. */
   site: { url?: string; name: string };
+  /** The `cors` option: Hono's `cors()` options over core's defaults. Missing without it. */
+  cors?: CorsOptions;
   /** The `localization` option with defaults. Missing without it. */
   localization?: Localization;
   /** The resolved `media` option. Missing without it. */

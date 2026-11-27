@@ -7,6 +7,7 @@ import type { Core } from "../cms/runtime/types.ts";
 import { mediaRoutes } from "../media/endpoints/routes.ts";
 import type { Env } from "./middleware/types.ts";
 import { withCms } from "./middleware/with-cms.middleware.ts";
+import { siteCors } from "./middleware/site-cors.middleware.ts";
 import { optionalSession, session, withSession } from "../auth/middleware/session.middleware.ts";
 import { providerEndpoint } from "../auth/endpoints/provider.endpoint.ts";
 import { statusEndpoint } from "../auth/endpoints/status.endpoint.ts";
@@ -87,8 +88,8 @@ export function createApp(core: Core) {
 
   const signedIn = new Hono<Env>();
   signedIn.route("/", schemaEndpoint);
-  signedIn.route("/", enterEndpoint());
-  signedIn.route("/", exitEndpoint());
+  signedIn.route("/", enterEndpoint(core));
+  signedIn.route("/", exitEndpoint(core));
   if (admin?.bar) signedIn.route("/", adminBarEndpoint(admin.bar, admin.descriptor));
   signedIn.route("/", passwordEndpoint(core));
   signedIn.route("/", invitesEndpoint(core));
@@ -111,7 +112,12 @@ export function createApp(core: Core) {
   api.onError(errorHandler(core));
   api.notFound((c) => c.json({ message: "Not Found" }, 404));
 
-  api.use(withCms(core), ...pluginMiddleware(plugins, "publicMiddleware"));
+  // A preflight carries no cookies, so CORS MUST answer it before any other middleware.
+  api.use(
+    siteCors(core.site.url, core.cors),
+    withCms(core),
+    ...pluginMiddleware(plugins, "publicMiddleware"),
+  );
   api.use("/auth/*", sessionHint(core));
   api.use("/invites/accept", sessionHint(core));
   api.use("/setup", sessionHint(core), noStore);

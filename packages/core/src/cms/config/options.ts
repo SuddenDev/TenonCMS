@@ -1,6 +1,7 @@
 import type { AdminOptions } from "../../admin/index.d.ts";
 import type { AuthOptions } from "../../auth/config/options.ts";
 import type { EmailOptions } from "../../email/types.ts";
+import type { CorsOptions } from "../../http/middleware/site-cors.middleware.ts";
 import type { mediaCollection } from "../../media/config/collection.ts";
 import type { MediaOptions } from "../../media/config/options.ts";
 import type { JobsOptions } from "../../jobs/config/define-task.ts";
@@ -229,6 +230,17 @@ export type CmsOptions<
   localization?: LocalizationOptions<L>;
   /** The public site. See {@link SiteOptions}. */
   site?: SiteOptions;
+  /**
+   * CORS for pages on another origin: the options of Hono's `cors()`, over core's defaults. The defaults allow the
+   * origin of `site.url`, with credentials, `GET` and `POST`, and the request header `content-type`. An `origin`
+   * here replaces `site.url`, so list the site too. Without `site.url` and `origin`, no CORS header is sent.
+   *
+   * It covers only the routes a page calls: the admin bar's, `/localization`, `/collections` and `/globals`. For any
+   * other route, add Hono's `cors()` as a plugin's `publicMiddleware`.
+   * @example
+   * cors: { origin: ["https://www.example.com", "https://staging.example.com"] }
+   */
+  cors?: CorsOptions;
   /**
    * `/sitemap.xml`: the published documents of every collection with a `permalink`. `entries` merges your own
    * routes. `false` turns it off. A collection opts out with `sitemap: false`.
