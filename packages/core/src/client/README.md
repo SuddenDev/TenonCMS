@@ -8,7 +8,7 @@
 
 `create-client.ts` → `read-query.ts` → `create-request.ts` → `errors.ts`
 
-`createClient()` binds each method to its route and splits `where` and `limit` from the read options. `readQuery()` turns `populate` and `select` objects into dotted paths. `request()` builds the URL under `API_BASE`, sends the body as JSON and parses the response. A non-2xx status throws a `CmsError` with the status and the parsed body.
+`createClient()` binds each method to its route and splits `where` and `limit` from the read options. `readQuery()` turns `populate` and `select` objects into dotted paths. `request()` builds the URL under `API_BASE`, sends the body as JSON and parses the response with `readReply()`. A non-2xx status throws a `CmsError` with the status and the parsed body. So does a 2xx answer that is not JSON, such as a host page for a method that the host's route does not hand to the CMS. Only a `204` resolves to `null` without a body.
 
 `client.media.upload()` runs through `upload.ts`: it creates an upload, sends the parts 4 at a time with retries, and completes it. On failure or abort it deletes the upload.
 

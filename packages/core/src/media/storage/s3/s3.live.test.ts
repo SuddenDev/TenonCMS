@@ -4,11 +4,13 @@ import { s3 } from "./index.ts";
 
 // Runs only against a real bucket, e.g. MinIO: `docker run -p 9000:9000 minio/minio server /data`, then
 // S3_TEST_ENDPOINT=http://localhost:9000 S3_TEST_KEY=minioadmin S3_TEST_SECRET=minioadmin npx vitest run s3.live
+// S3_TEST_PREFIX runs it with the `prefix` option.
 const endpoint = process.env.S3_TEST_ENDPOINT;
 const options = {
   bucket: process.env.S3_TEST_BUCKET ?? "tenon-test",
   region: process.env.S3_TEST_REGION ?? "us-east-1",
   endpoint,
+  prefix: process.env.S3_TEST_PREFIX,
   accessKeyId: process.env.S3_TEST_KEY ?? "",
   secretAccessKey: process.env.S3_TEST_SECRET ?? "",
   publicUrl: `${endpoint}/tenon-test`,
@@ -50,6 +52,7 @@ describe.skipIf(!endpoint)("s3 against a real bucket", { timeout: 60_000 }, () =
     expect(await storage.get(key)).toBeUndefined();
     const whole = await storage.get(moved);
     expect(new Uint8Array(await new Response(whole!.body).arrayBuffer())).toEqual(data);
+    expect(await storage.list(`${key}.`)).toEqual([moved]);
     await storage.delete(moved);
     expect(await storage.get(moved)).toBeUndefined();
   });

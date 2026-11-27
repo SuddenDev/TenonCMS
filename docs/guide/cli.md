@@ -20,7 +20,7 @@ It asks one question at a time: the folder, the site name (default `Tenon`, writ
 
 Images offer the [providers](./media.md#image-providers) that work where the site runs. On Node the default is IPX, which adds `ipx` (and sharp) to `package.json`. On Vercel it is none, and on Cloudflare the Images binding. Hosted providers add their URL variable to `.env.example`; Vercel Image Optimization also needs [`images` in the Vercel config](./media.md#vercel). Each choice writes `images: { provider: … }` next to `storage` in `media`.
 
-Email offers none (the default) or SMTP. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, change it to port 587 and `secure: false`. See [Email](./email.md).
+Email offers none (the default) or SMTP. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, set `SMTP_PORT` to 587. See [Email](./email.md).
 
 Sign-in offers any mix of password (the default), passkey, magic link and email code. At least one is required. See [Sign-in methods](./auth-and-access.md#sign-in-methods).
 
@@ -34,7 +34,7 @@ Every question has a flag, so it also runs without a terminal:
 npm create tenoncms my-site -- --site-name "My Site" --framework nuxt --target node --database postgres --storage s3 --images imgix --email smtp --auth passkey,magic-link --pm pnpm --yes
 ```
 
-It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `TENON_SECRET`. Fill in what it says, run `dev`, open `/admin` and create the first admin.
+It writes the database, media and secret straight into `tenon.config.ts`, the adapter and env schema into `astro.config.ts` (Astro), and the variables they read into `.env.example`, one block per database, storage and so on. `.env` (`.dev.vars` on Cloudflare) is a copy with a random `TENON_SECRET`. On Cloudflare, `wrangler.jsonc` names the Worker after the folder and its R2 bucket `<name>-media`, so two sites on one account stay apart, and `astro.config.ts` turns Astro sessions off, so no KV namespace is needed. Fill in what it says, run `dev`, open `/admin` and create the first admin.
 
 The config reads `site: { url: TENON_SITE_URL }`, the public origin to set in production; it is also the CMS origin for sign-in and admin links. Leave it commented out in development so the adapter detects the server's current URL. In Nuxt it is `NUXT_TENON_SITE_URL`, like every other variable. Core reads no env var itself.
 

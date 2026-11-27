@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { mergePackageJson, readIndex, scaffold, toPackageName } from "./scaffold.ts";
+import { mergePackageJson, readIndex, scaffold, toPackageName, toWorkerName } from "./scaffold.ts";
 
 const templates = resolve(import.meta.dirname, "../../../templates");
 const project = () => join(mkdtempSync(join(tmpdir(), "create-tenoncms-")), "site");
@@ -75,6 +75,8 @@ describe("scaffold", () => {
     expect(read(dir, ".env.example")).toContain("change-me");
     expect(read(dir, ".env.example")).toMatch(/^# TENON_SITE_URL=$/m);
     expect(read(dir, ".env.example")).toMatch(/^S3_BUCKET=uploads$/m);
+    expect(read(dir, ".env.example")).toMatch(/^# S3_PREFIX=$/m);
+    expect(read(dir, "tenon.config.ts")).toContain("prefix: S3_PREFIX,");
     expect(read(dir, ".env.example")).toMatch(/^TENON_SECRET=.*\n\n(# .*\n)*# ?DATABASE_DIR=/m);
     expect(read(dir, "tenon.config.ts")).toContain('site: { url: TENON_SITE_URL, name: "Tenon" },');
     expect(read(dir, "tenon.config.ts")).toContain("new PGlite(DATABASE_DIR)");
@@ -112,6 +114,7 @@ describe("scaffold", () => {
     expect(config).toContain("authToken: config.databaseAuthToken || undefined,");
     expect(config).toContain("bucket: config.s3Bucket,");
     expect(config).toContain("endpoint: config.awsEndpointUrlS3,");
+    expect(config).toContain("prefix: config.s3Prefix || undefined,");
 
     const example = read(dir, ".env.example");
     expect(example).toMatch(/^# NUXT_DATABASE_URL=file:\.\/cms\.db$/m);
@@ -224,6 +227,19 @@ describe("scaffold", () => {
     expect(read(plain, "tenon.config.ts")).not.toContain("images:");
   });
 
+  it("hands every method of the API to the CMS in TanStack Start", async () => {
+    const dir = project();
+    await scaffold(templates, dir, {
+      name: "a",
+      framework: "tanstack",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    });
+    expect(read(dir, "src/routes/[_]tenon.$.ts")).toContain("handlers: { ANY: handle }");
+  });
+
   it("adds the SMTP email adapter and its package only when chosen", async () => {
     const choices = {
       name: "a",
@@ -237,13 +253,38 @@ describe("scaffold", () => {
     await scaffold(templates, dir, { ...choices, email: "smtp" });
     expect(read(dir, "tenon.config.ts")).toContain('import { smtp } from "tenoncms/email/smtp";');
     expect(read(dir, "tenon.config.ts")).toContain("adapter: smtp({");
+    expect(read(dir, "tenon.config.ts")).toContain(
+      'const smtpPort = Number(process.env.SMTP_PORT ?? "465");',
+    );
+    expect(read(dir, "tenon.config.ts")).toContain("secure: smtpPort === 465,");
     expect(read(dir, ".env.example")).toMatch(/^SMTP_HOST=/m);
+    expect(read(dir, ".env.example")).toMatch(/^# SMTP_PORT=465$/m);
     expect(JSON.parse(read(dir, "package.json")).dependencies).toHaveProperty("nodemailer");
 
     const plain = project();
     await scaffold(templates, plain, choices);
     expect(read(plain, "tenon.config.ts")).not.toContain("email:");
     expect(JSON.parse(read(plain, "package.json")).dependencies).not.toHaveProperty("nodemailer");
+  });
+
+  it("adds @libsql/client only with the libSQL database", async () => {
+    for (const framework of ["astro", "tanstack"]) {
+      for (const database of ["libsql", "sqlite", "postgres", "pglite"]) {
+        const dir = project();
+        await scaffold(templates, dir, {
+          name: "a",
+          framework,
+          template: "minimal",
+          target: "node",
+          database,
+          storage: "local",
+        });
+        const { dependencies } = JSON.parse(read(dir, "package.json"));
+        expect("@libsql/client" in dependencies, `${framework} with ${database}`).toBe(
+          database === "libsql",
+        );
+      }
+    }
   });
 
   it("takes the target's own version of a database", async () => {
@@ -259,6 +300,59 @@ describe("scaffold", () => {
 
     expect(read(dir, "tenon.config.ts")).toContain("attachDatabasePool(database.pool);");
     expect(existsSync(join(dir, "_databases"))).toBe(false);
+  });
+
+  it("sets up Vercel's image optimization and turns the job cron off on Vercel", async () => {
+    const configs = {
+      astro: "astro.config.ts",
+      nuxt: "nuxt.config.ts",
+      tanstack: "vite.config.ts",
+      standalone: "vite.config.ts",
+    };
+    for (const [framework, file] of Object.entries(configs)) {
+      const dir = project();
+      await scaffold(templates, dir, {
+        name: "a",
+        framework,
+        template: "minimal",
+        target: "vercel",
+        database: "postgres",
+        storage: "s3",
+        images: "vercel",
+      });
+      const config = read(dir, file);
+      expect(config).toContain("sizes: [320, 640, 1024, 1536, 1920], domains: []");
+      // Astro has no Nitro cron on Vercel.
+      if (framework !== "astro") expect(config).toContain("jobs: false");
+    }
+
+    const node = project();
+    await scaffold(templates, node, {
+      name: "a",
+      framework: "nuxt",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "local",
+    });
+    expect(read(node, "nuxt.config.ts")).not.toMatch(/@tenon|vercel|jobs/);
+  });
+
+  it("names the Worker and its bucket after the project and turns Astro sessions off on Cloudflare", async () => {
+    const dir = project();
+    await scaffold(templates, dir, {
+      name: "my_site.v2",
+      framework: "astro",
+      template: "minimal",
+      target: "cloudflare",
+      database: "durable-object",
+      storage: "r2",
+    });
+    const wrangler = read(dir, "wrangler.jsonc");
+    expect(wrangler).toContain('"name": "my-site-v2",');
+    expect(wrangler).toContain('"bucket_name": "my-site-v2-media",');
+    expect(wrangler).not.toContain("tenon-site");
+    expect(read(dir, "astro.config.ts")).toContain("session: false,");
   });
 
   it("lists only what each framework supports", async () => {
@@ -284,5 +378,11 @@ describe("package.json", () => {
   it("turns a folder name into a package name", () => {
     expect(toPackageName("My Site!")).toBe("my-site");
     expect(toPackageName(".hidden")).toBe("hidden");
+  });
+
+  it("turns a package name into a Worker name that leaves room for `-media`", () => {
+    expect(toWorkerName("my_site~2")).toBe("my-site-2");
+    expect(toWorkerName("a".repeat(70))).toBe("a".repeat(57));
+    expect(toWorkerName("___")).toBe("tenon-site");
   });
 });

@@ -68,7 +68,7 @@ export default { fetch: handle } satisfies ExportedHandler<Env>;
 - `Astro.locals.tenon` is the [HTTP client](reading.md) over the object, not the local API. It forwards the request's cookie, so the session user's access rules apply, and the preview cookie shows drafts. Compared with the local API: no `withSession()` or `withDrafts()` (the cookie decides), `localization()` is an async method, new drafts go through `createDraft()`, and there is no `email` or `auth`. Writes need a session or an API key.
 - Pages that read the CMS MUST NOT be prerendered: no object exists at build time. Set `output: "server"`. A prerendered page that reads it fails the build.
 - The server bundle is minified, because every wake of the object parses it again.
-- Media: `r2(env.MEDIA)` and `cloudflare({ binding: env.IMAGES })`, with `env` from `cloudflare:workers`. See [media](media.md#r2). The adapter adds the `IMAGES` binding and a KV `SESSION` binding by default; `wrangler deploy` creates the bucket and namespace for bindings without an ID, once R2 is enabled on the account.
+- Media: `r2(env.MEDIA)` and `cloudflare({ binding: env.IMAGES })`, with `env` from `cloudflare:workers`. See [media](media.md#r2). The adapter adds the `IMAGES` binding, and a KV `SESSION` binding for Astro sessions unless `session: false` is set. Tenon does not use Astro sessions, so the starter sets it. `wrangler deploy` creates the bucket and namespace for bindings without an ID, once R2 is enabled on the account.
 
 ### Astro on Vercel
 
@@ -164,7 +164,7 @@ No module is needed. A splat server route hands API requests to the CMS, `tenonA
 const handle = ({ request }: { request: Request }) => cms.fetch(request);
 
 export const Route = createFileRoute("/_tenon/$")({
-  server: { handlers: { GET: handle, POST: handle, PUT: handle, DELETE: handle } },
+  server: { handlers: { ANY: handle } },
 });
 ```
 

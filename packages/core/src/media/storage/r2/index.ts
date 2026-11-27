@@ -62,8 +62,13 @@ export type R2ApiOptions = {
   /** Secret access key of an R2 API token. */
   secretAccessKey: string;
   /**
-   * Public URL of the bucket, e.g. its custom domain. File URLs are `<publicUrl>/<key>`. Default: the bucket stays private and
-   * core serves files at `/_tenon/media/files/<key>`.
+   * Folder inside the bucket that holds every file, e.g. `staging`. Several sites can then share one bucket. Changing it
+   * does not move the files that are already stored. Default: the bucket root.
+   */
+  prefix?: string;
+  /**
+   * Public URL of the bucket, e.g. its custom domain. File URLs are `<publicUrl>/<key>`, with the `prefix` before the
+   * key. Default: the bucket stays private and core serves files at `/_tenon/media/files/<key>`.
    */
   publicUrl?: string;
   /** Part size of uploads in bytes. At least 5 MB, as R2 requires. Default 16 MB. */
@@ -76,7 +81,7 @@ const MB = 1024 ** 2;
 
 /**
  * Stores media files in R2 through a bucket binding, e.g. `r2(env.MEDIA)` with `env` from `cloudflare:workers`. Needs no
- * keys and no CORS. Uploads stream through the Worker part by part; each part is held in memory. Workers only.
+ * keys and no CORS. Uploads and moves go through the Worker part by part; each part is held in memory. Workers only.
  */
 export function r2(bucket: R2Bucket, options?: R2Options): Storage;
 /**
@@ -96,9 +101,10 @@ export function r2(source: R2Bucket | R2ApiOptions, options?: R2Options): Storag
 }
 
 function r2Binding(bucket: R2Bucket, { partSize = 16 * MB, publicUrl }: R2Options = {}): Storage {
+  const part = Math.max(partSize, 5 * MB);
   return {
     problems: bucket ? [] : ["the bucket binding is missing"],
-    partSize: Math.max(partSize, 5 * MB),
+    partSize: part,
 
     createUpload: (key, { mimeType }) =>
       bucket.createMultipartUpload(key, { httpMetadata: { contentType: mimeType } }),
@@ -142,11 +148,18 @@ function r2Binding(bucket: R2Bucket, { partSize = 16 * MB, publicUrl }: R2Option
       return keys;
     },
 
-    // ponytail: R2 bindings cannot copy, so a move reads the file through the Worker.
+    // ponytail: R2 bindings cannot copy, so a move reads the file through the Worker, one part at a time.
+    // It MUST NOT pipe the body of `get()` into `put()`: inside a Durable Object transaction, such as a CMS write on
+    // `durableObject()`, that stream never ends.
     async move(from, to) {
       const file = await bucket.get(from);
       if (!file) return;
-      await bucket.put(to, file.body, { httpMetadata: file.httpMetadata });
+      const { size, httpMetadata } = file;
+      if (size <= part) await bucket.put(to, await readAtMost(file.body, size), { httpMetadata });
+      else {
+        await file.body.cancel();
+        await copyInParts(bucket, from, to, file, part);
+      }
       await bucket.delete(from);
     },
 
@@ -157,6 +170,31 @@ function r2Binding(bucket: R2Bucket, { partSize = 16 * MB, publicUrl }: R2Option
         ? `${publicUrl.replace(/\/$/, "")}/${encodeKey(key)}`
         : `${API_BASE}/media/files/${encodeKey(key)}`,
   };
+}
+
+// A multipart upload of `from` to `to`. R2 needs every part but the last of the same size.
+async function copyInParts(
+  bucket: R2Bucket,
+  from: string,
+  to: string,
+  file: R2Object,
+  part: number,
+) {
+  const { uploadId } = await bucket.createMultipartUpload(to, { httpMetadata: file.httpMetadata });
+  const upload = bucket.resumeMultipartUpload(to, uploadId);
+  try {
+    const parts = [];
+    for (let offset = 0; offset < file.size; offset += part) {
+      const length = Math.min(part, file.size - offset);
+      const range = await bucket.get(from, { range: { offset, length } });
+      if (!range) throw new Error(`tenoncms: ${from} was deleted during its move`);
+      parts.push(await upload.uploadPart(parts.length + 1, await readAtMost(range.body, length)));
+    }
+    await upload.complete(parts);
+  } catch (error) {
+    await upload.abort().catch(() => {});
+    throw error;
+  }
 }
 
 // R2 needs the length of a part up front, so the part is read into memory.

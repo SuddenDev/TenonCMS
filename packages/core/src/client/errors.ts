@@ -1,4 +1,7 @@
-/** Thrown by client methods when the API answers with a non-2xx status. */
+/**
+ * Thrown by client methods when the API answers with a non-2xx status, or with a 2xx status and a body that is not
+ * JSON.
+ */
 export class CmsError extends Error {
   constructor(
     /** HTTP status, e.g. `401` without a session or `400` for invalid data. */
