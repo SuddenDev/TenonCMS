@@ -37,6 +37,10 @@
       "types": "./dist/email/smtp.d.mts",
       "default": "./dist/email/smtp.mjs"
     },
+    "./email/cloudflare": {
+      "types": "./dist/email/cloudflare.d.mts",
+      "default": "./dist/email/cloudflare.mjs"
+    },
     "./register": {
       "types": "./dist/client/register.d.ts"
     },

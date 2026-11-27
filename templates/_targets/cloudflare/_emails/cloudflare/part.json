@@ -1,0 +1,30 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": [
+        "import { env } from \"cloudflare:workers\";",
+        "import { cloudflareEmail } from \"tenoncms/email/cloudflare\";"
+      ],
+      "options": [
+        "email: {",
+        "  // The binding is in wrangler.jsonc.",
+        "  adapter: cloudflareEmail(env.EMAIL),",
+        "  from: $EMAIL_FROM,",
+        "},"
+      ]
+    },
+    "wrangler.jsonc": {
+      "options": [
+        "// Cloudflare Email Service. `wrangler dev` only logs each mail; add \"remote\": true to send real mail.",
+        "\"send_email\": [{ \"name\": \"EMAIL\" }],"
+      ]
+    }
+  },
+  "env": [
+    {
+      "name": "EMAIL_FROM",
+      "comment": "The sender. Its domain MUST be onboarded to Cloudflare Email Service.",
+      "example": "My Site <hello@example.test>"
+    }
+  ]
+}

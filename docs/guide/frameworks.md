@@ -69,6 +69,7 @@ export default { fetch: handle } satisfies ExportedHandler<Env>;
 - Pages that read the CMS MUST NOT be prerendered: no object exists at build time. Set `output: "server"`. A prerendered page that reads it fails the build.
 - The server bundle is minified, because every wake of the object parses it again.
 - Media: `r2(env.MEDIA)` and `cloudflare({ binding: env.IMAGES })`, with `env` from `cloudflare:workers`. See [media](media.md#r2). The adapter adds the `IMAGES` binding, and a KV `SESSION` binding for Astro sessions unless `session: false` is set. Tenon does not use Astro sessions, so the starter sets it. `wrangler deploy` creates the bucket and namespace for bindings without an ID, once R2 is enabled on the account.
+- Email: `cloudflareEmail(env.EMAIL)` with a `send_email` binding, or `smtp()`. See [email](email.md#cloudflare-email-service).
 
 ### Astro on Vercel
 
