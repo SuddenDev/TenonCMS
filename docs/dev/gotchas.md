@@ -20,6 +20,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - A Durable Object that has set an alarm has the table `_cf_KV`. Any introspection that reads every table (`pragma_table_info`, `pragma_index_list`) fails with `SQLITE_AUTH`. The dialect skips `_cf_` tables; a new tool that introspects MUST do the same.
 - The adapters read `admin.path` from the source of `tenon.config.ts` at startup and write an env var's value into the build. A changed `TENON_ADMIN_PATH` (or any env var the path reads) needs a rebuild, and a dev server restart. The TanStack route file does not follow it: rename it.
 - TanStack Router treats a route file that starts with `_` as a pathless layout, so `_tenon.$.ts` never matches `/_tenon`. Name it `[_]tenon.$.ts`.
+- `tenoncms` has an `imports` field (`#tenon/client-registry`). Vite's resolver therefore throws `Missing "#x" specifier in "tenoncms" package` for any other `#` import inside the package that no alias or `enforce: "pre"` plugin resolves first. `#tenon/config`, `#app` and `#components` work through aliases, `#tenon/admin-html` through a virtual module. A new `#` import inside core needs the same, and so do tests that `vi.mock()` it.
 
 **Watchers and build output**
 
@@ -97,7 +98,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 - A dangling relation id reads as `null` (single) or drops out of the list (`many`) with the default populate. Tests that check stored ids MUST read with `populate: false`.
 - An empty nested object is sent as the path itself over HTTP. `select: { parent: {} }` is `{ id }` locally but the whole value over HTTP. The same goes for `populate`.
 - Browsers compile the HTML `pattern` attribute with the `v` flag, so the server does too. `<textarea>` ignores `pattern`.
-- Hono's `csrf()` only checks form-like content types. JSON is protected because browsers preflight it cross-origin and we send no CORS headers.
+- Hono's `csrf()` only checks form-like content types. JSON is protected because browsers preflight it cross-origin, and CORS allows only the origin of `site.url`, or the origins of the `cors` option, on the content and admin bar routes. There such an origin can write as the signed-in editor.
 - Without a session, a path that matches no public route answers 401, not 404. Test "route missing" cases with a session.
 - consola writes to `process.stderr`, not `console.error`. Tests that assert a log spy on `process.stderr.write`.
 - IPX prefixes ids with `/` and treats an undefined `getMeta()` as not found. The IPX storage strips the slash and returns `{}`.

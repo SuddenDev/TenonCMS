@@ -147,3 +147,18 @@ type SectionChild = BlockOf<Section["children"]>;
 ```
 
 `Image`, `File` and `LinkRead` from `tenoncms` type a populated `image`, `file` and `link` field.
+
+## Reading from another server
+
+A site whose server runs apart from the CMS reads with `createRequestClient()`, one per page request:
+
+```ts
+import { createRequestClient } from "tenoncms/client";
+
+const client = createRequestClient(request, { baseUrl: "https://cms.example.com" });
+const posts = await client.find("posts");
+```
+
+It sends the page request's `cookie` header to the CMS, and nothing else. A signed-in editor with the preview cookie reads drafts; anyone else reads published content as a visitor. The site's server gets those cookies only on two localhost ports, or when the CMS puts them on the shared parent domain with `advanced.crossSubDomainCookies` (see [Live preview](./live-preview.md#2-mark-what-a-field-renders)). Create a new client for each request; never share one between requests.
+
+Writes with a JSON body, like `create()` and `update()`, work the same way. A call without one, like `publish()`, `delete()` or `media.upload()`, answers 403: the CMS's CSRF check wants an `Origin`, and a server sends none. Use a client with an `apiKey` for those.

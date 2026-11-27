@@ -9,6 +9,7 @@ Code: `packages/core/src/media/` (see its README).
 - Media documents live in the normal documents table. A unique index on the media key keeps keys unique.
 - `image` and `file` fields store media ids and use normal relation validation.
 - `url`, `src` and `srcset` are computed on read. They are typed only on the media collection, because adding them to the stored types breaks inference.
+- Media URLs stay relative unless the host declares a CMS origin apart from the site: `site.url` set, `auth.baseURL` a string, and different origins. Then every URL that starts with `/` gets the `auth.baseURL` origin, so a site on another origin loads the files from the CMS. A dynamic base URL (development) keeps them relative. `createMediaCore()` decides the origin once; `decorate()` applies it, so every read path is covered. The provider still gets the stored, relative URL of the original.
 
 ## Ordering rules
 
