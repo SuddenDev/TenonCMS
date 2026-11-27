@@ -606,8 +606,9 @@ export type Client<C extends { schema: Schema } = RegisteredCms> = {
   getSession(): Promise<Session | null>;
 
   /**
-   * Calls any route under `/_tenon`, e.g. a plugin's. `body` is sent as JSON, `query` as the query string.
-   * Throws a `CmsError` for an error status.
+   * Calls any route under `/_tenon`, e.g. a plugin's. `body` is sent as JSON, `query` as the query string. The route
+   * MUST answer JSON or `204`. Throws a `CmsError` for an error status and for a 2xx answer that is not JSON; use
+   * `fetch` for a text or file route.
    * @example
    * await client.request<{ count: number }>('/redirects/lookup', { query: { path } })
    * await client.request('/redirects/import', { method: 'POST', body: rows })

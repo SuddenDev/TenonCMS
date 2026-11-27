@@ -113,9 +113,11 @@ export function authOptions<A extends AuthOptions>(
           ...create,
           // Core MUST run first, so a host hook cannot reopen sign-up. better-auth merges the returned data onto
           // `user`, so the first user's result MUST carry the admin role.
+          // The first user owns the site, so their email counts as verified. better-auth deletes the password and
+          // the sessions of an unverified user on their first magic link.
           async before(user: BeforeCreate[0], ctx: BeforeCreate[1]) {
             const first = await checkCreate(db, ctx);
-            const data = first ? { ...user, role: "admin" } : user;
+            const data = first ? { ...user, role: "admin", emailVerified: true } : user;
             const result = await create?.before?.(data, ctx);
             if (!first || result === false) return result;
             const changes = typeof result === "object" ? result.data : undefined;

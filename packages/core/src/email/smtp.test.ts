@@ -1,8 +1,13 @@
+import type { SMTPPoolOptions } from "nodemailer";
 import { beforeEach, expect, it, vi } from "vitest";
+import { connect as connectTcp } from "node:net";
+import { connect as connectTls } from "node:tls";
 import { createTransport } from "nodemailer";
 import { smtp } from "./smtp.ts";
 
 vi.mock("nodemailer", () => ({ createTransport: vi.fn() }));
+vi.mock("node:net", () => ({ connect: vi.fn(() => "tcp socket") }));
+vi.mock("node:tls", () => ({ connect: vi.fn(() => "tls socket") }));
 
 const sendMail = vi.fn();
 const message = {
@@ -14,6 +19,7 @@ const message = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
   sendMail.mockResolvedValue({ accepted: [message.to], rejected: [] });
   vi.mocked(createTransport).mockReturnValue({ sendMail } as unknown as ReturnType<
     typeof createTransport
@@ -73,4 +79,24 @@ it("rejects a partially rejected recipient list", async () => {
     smtp({ host: "smtp.example.com" }).send({ ...message, to: [message.to, "other@example.com"] }),
   ).rejects.toThrow("recipient");
   expect(sendMail).toHaveBeenCalledOnce();
+});
+
+it("opens the socket by host name on Workers", async () => {
+  vi.stubGlobal("navigator", { userAgent: "Cloudflare-Workers" });
+  await smtp({ host: "smtp.example.com", port: 465 }).send(message);
+  const { getSocket } = vi.mocked(createTransport).mock.calls[0]![0] as SMTPPoolOptions;
+  const callback = vi.fn();
+
+  getSocket!({ host: "smtp.example.com", port: 465, tls: { minVersion: "TLSv1.2" } }, callback);
+  expect(connectTls).toHaveBeenCalledWith({
+    host: "smtp.example.com",
+    port: 465,
+    servername: "smtp.example.com",
+    minVersion: "TLSv1.2",
+  });
+  expect(callback).toHaveBeenLastCalledWith(null, { connection: "tls socket", secured: true });
+
+  getSocket!({ host: "smtp.example.com", port: 587 }, callback);
+  expect(connectTcp).toHaveBeenCalledWith({ host: "smtp.example.com", port: 587 });
+  expect(callback).toHaveBeenLastCalledWith(null, { connection: "tcp socket", secured: false });
 });

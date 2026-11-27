@@ -204,12 +204,21 @@ describe("auth email", () => {
 
   it("delivers email verification without making it a login requirement", async () => {
     const send = vi.fn(async (_message: { text?: string }) => {});
-    const { client, fetch } = setup(defineCms({ ...base, email: { from, adapter: { send } } }));
-    await client.signUp(admin);
+    // Tenon marks every user it creates as verified. A host hook can still create an unverified one.
+    const before = async (user: object) => ({ data: { ...user, emailVerified: false } });
+    const databaseHooks = { user: { create: { before } } };
+    const auth = { ...base.auth, databaseHooks };
+    const cms = defineCms({ ...base, auth, email: { from, adapter: { send } } });
+    await setup(cms).client.signUp(admin);
+    const editor = { name: "Editor", email: "editor@b.co", password: admin.password };
+    await cms.users.create(editor);
+    const { client, fetch } = setup(cms);
+    await client.signIn({ email: editor.email, password: editor.password });
+    expect((await client.getSession())?.user.emailVerified).toBe(false);
     expect(send).not.toHaveBeenCalled();
     await client.request("/auth/send-verification-email", {
       method: "POST",
-      body: { email: admin.email },
+      body: { email: editor.email },
     });
     expect(send).toHaveBeenCalledOnce();
     const link = send.mock.calls[0][0].text!.match(/https?:\/\/\S+/)![0];

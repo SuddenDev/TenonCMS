@@ -100,10 +100,14 @@ await cms.media.delete(doc.id);
 
 ### S3 and R2
 
-`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, publicUrl?, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket.
+`s3({ bucket, region, endpoint?, accessKeyId, secretAccessKey, prefix?, publicUrl?, partSize = 16 MB })` signs with `aws4fetch`, so it runs on Node and Workers. The browser uploads parts straight to the bucket.
 
 - `publicUrl` is where the bucket is public. File URLs are then `<publicUrl>/<key>`.
 - Without `publicUrl`, the bucket stays private. Core serves files at `/_tenon/media/files/<key>`, reading them from the bucket.
+- `prefix` is a folder inside the bucket that holds every file, e.g. `staging`. Several sites can then share one bucket.
+  - Public file URLs are `<publicUrl>/<prefix>/<key>`. The URLs that core serves do not change.
+  - Changing it does not move the files that are already stored.
+  - Lifecycle rules for `.tenon/` and CDN paths MUST include the prefix.
 
 - Bucket CORS MUST allow `PUT` from the admin origin and expose the `ETag` header. Without `ETag` an upload fails with a message that names the CORS setting.
 - Add a lifecycle rule that aborts incomplete multipart uploads after one day.
@@ -118,18 +122,19 @@ Files and variants that core serves carry `Cache-Control: public, max-age=300, s
 
 `r2()` from `tenoncms/media/r2` has two modes:
 
-|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                 | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, publicUrl?, partSize? })` |
-| ------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Through       | A bucket binding (`env` from `cloudflare:workers`)         | R2's S3 API, same as `s3()` with `region: 'auto'`                                         |
-| Runs on       | Workers only                                               | Node and Workers                                                                          |
-| Keys and CORS | Not needed                                                 | Needed, see [S3 and R2](#s3-and-r2)                                                       |
-| `publicUrl`   | Optional. Core serves files at `/_tenon/media/files/<key>` | Optional, as with `s3()`                                                                  |
+|               | `r2(env.MEDIA, { partSize?, publicUrl? })`                 | `r2({ accountId, region?, bucket, accessKeyId, secretAccessKey, prefix?, publicUrl?, partSize? })` |
+| ------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Through       | A bucket binding (`env` from `cloudflare:workers`)         | R2's S3 API, same as `s3()` with `region: 'auto'`                                                  |
+| Runs on       | Workers only                                               | Node and Workers                                                                                   |
+| Keys and CORS | Not needed                                                 | Needed, see [S3 and R2](#s3-and-r2)                                                                |
+| `publicUrl`   | Optional. Core serves files at `/_tenon/media/files/<key>` | Optional, as with `s3()`                                                                           |
+| `prefix`      | None. Give each site its own bucket                        | Optional, as with `s3()`                                                                           |
 
 With the binding:
 
 - `wrangler dev` simulates the bucket.
 - Parts go through the Worker and, with `tenonObject()`, through the CMS object. Each part is held in memory, and `partSize` is at least 5 MB, as R2 requires.
-- A move reads and writes the file, because bindings cannot copy.
+- A move reads and writes the file, because bindings cannot copy. It copies one part at a time, so a large file does not fill the Worker's memory. It does not stream one binding into the other: inside a Durable Object transaction that stream never ends.
 
 With keys, set `region: 'eu'` for a bucket created with that data location. Requests then go to `<account>.eu.r2.cloudflarestorage.com`.
 
@@ -178,6 +183,7 @@ media: {
 - Astro: `adapter: vercel({ imagesConfig: { sizes: [320, 640, 1024, 1536, 1920], domains: [] } })`.
 - Nuxt, TanStack Start and standalone (Nitro): `vercel: { config: { images: { sizes: [320, 640, 1024, 1536, 1920] } } }` in the Nitro config, which is `nitro` in `nuxt.config.ts`.
 - Files in a bucket: set `publicUrl` on `s3()`, and allow its host in `remotePatterns` of the same `images` block.
+- The Vercel starter of `npm create tenoncms` writes this config with the default widths. Change both lists together.
 
 SVG and images above `images.maxSize` get the original as `src` and an empty `srcset`.
 

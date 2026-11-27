@@ -45,4 +45,26 @@ describe("r2 with API keys", () => {
 
     expect(requests[0].url).toBe("https://acc.eu.r2.cloudflarestorage.com/b/x.jpg");
   });
+
+  it("keeps every file under the prefix", async () => {
+    const requests: Request[] = [];
+    const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push(new Request(input, init));
+      return new Response("");
+    };
+    const storage = r2({
+      accountId: "acc",
+      bucket: "b",
+      accessKeyId: "id",
+      secretAccessKey: "secret",
+      prefix: "site-a",
+      publicUrl: "https://media.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+
+    await storage.delete("x.jpg");
+
+    expect(requests[0].url).toBe("https://acc.r2.cloudflarestorage.com/b/site-a/x.jpg");
+    expect(storage.url("x.jpg")).toBe("https://media.example.com/site-a/x.jpg");
+  });
 });

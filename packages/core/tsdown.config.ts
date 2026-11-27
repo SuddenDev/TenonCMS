@@ -29,6 +29,7 @@ export default defineConfig({
     "src/integrations/vite/index.ts",
     "src/presets/index.ts",
     "src/email/smtp.ts",
+    "src/email/cloudflare.ts",
     "src/auth/plugins.ts",
     // Own entries, so `node:fs`, `ipx`, `node:crypto` and `aws4fetch` stay out of bundles that do not use them.
     "src/media/storage/local/index.ts",
