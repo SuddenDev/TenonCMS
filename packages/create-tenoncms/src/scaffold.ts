@@ -90,7 +90,7 @@ export async function readIndex(root: string): Promise<TemplateIndex> {
  * Copies the layers into `dir`: the template, the shared target, the framework's target, then the database, the
  * storage, the image provider and the email adapter, then `_auth/<method>/` for each sign-in method that has one. A target MAY have its own version of a database, storage, image provider or email adapter in `_databases/`, `_storages/`, `_images/` or `_emails/`. Later files
  * overwrite earlier ones; `package.json` files are merged instead. Then fills the markers of the copied files with each
- * layer's `part.json`, names the package, pins `tenoncms`, and writes the env file with a new
+ * layer's `part.json`, names the package (and on Cloudflare the Worker and its bucket), pins `tenoncms`, and writes the env file with a new
  * `TENON_SECRET`.
  */
 export async function scaffold(root: string, dir: string, choices: Choices) {
@@ -152,6 +152,13 @@ export async function scaffold(root: string, dir: string, choices: Choices) {
   if (pkg.dependencies?.tenoncms === "latest" && choices.tenonVersion)
     pkg.dependencies.tenoncms = `^${choices.tenonVersion}`;
   await writeFile(join(dir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+  // Two sites on one Cloudflare account MUST NOT share a Worker or a bucket.
+  const wrangler = join(dir, "wrangler.jsonc");
+  if (existsSync(wrangler))
+    await writeFile(
+      wrangler,
+      (await readFile(wrangler, "utf8")).replaceAll("tenon-site", toWorkerName(choices.name)),
+    );
   await writeEnvFiles(dir);
 }
 
@@ -175,6 +182,20 @@ export function toPackageName(name: string) {
       .toLowerCase()
       .replace(/[^a-z0-9-~._]+/g, "-")
       .replace(/^[-._]+|-+$/g, "") || "tenon-site"
+  );
+}
+
+/**
+ * A Worker name from a package name: lowercase letters, digits and dashes. At most 57 characters, so that the bucket
+ * `<name>-media` stays within R2's 63.
+ */
+export function toWorkerName(name: string) {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .slice(0, 57)
+      .replace(/^-+|-+$/g, "") || "tenon-site"
   );
 }
 

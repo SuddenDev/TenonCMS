@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createClient } from "./index.ts";
+import { CmsError, createClient } from "./index.ts";
 
 // Records each request and answers with `body`.
 function recorder(body: unknown = {}) {
@@ -157,6 +157,35 @@ describe("copy and remove a locale", () => {
       ["POST", "http://x/_tenon/globals/footer/locales/de/copy", { from: "en" }],
       ["DELETE", "http://x/_tenon/globals/footer/locales/de", undefined],
     ]);
+  });
+});
+
+describe("replies", () => {
+  const answering = (...replies: Response[]) => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    for (const reply of replies) fetch.mockResolvedValueOnce(reply);
+    return createClient({ fetch, baseUrl: "http://x" });
+  };
+  const html = () => new Response("<!doctype html>", { headers: { "content-type": "text/html" } });
+
+  it("throws for a 2xx answer that is not JSON, such as a host page in place of the API", async () => {
+    const error = await answering(html())
+      .media.update("m1", { filename: "y.png" })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(CmsError);
+    expect(error).toMatchObject({
+      status: 200,
+      message: "PATCH /media/m1 answered 200 without JSON",
+    });
+    const noUploads = new Response("{}", { status: 404 });
+    await expect(answering(noUploads, html()).import(new Blob(["PK"]))).rejects.toThrow(
+      "POST /import answered 200 without JSON",
+    );
+  });
+
+  it("resolves to null for a 204 and for a JSON null", async () => {
+    expect(await answering(new Response(null, { status: 204 })).media.delete("m1")).toBeNull();
+    expect(await answering(new Response("null")).getSession()).toBeNull();
   });
 });
 

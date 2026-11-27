@@ -39,6 +39,7 @@ export default defineCms({
 - `npm create tenoncms` asks which methods to use and writes this block. See [Create a project](./cli.md#create-a-project).
 - `magicLink()` and `emailOTP()` from `tenoncms/auth` are better-auth's plugins with every option optional. Sign-up is off (`disableSignUp: true`), so they only sign in existing users. Pass `disableSignUp: false` to change that.
 - Without your own `sendMagicLink` or `sendVerificationOTP`, they send the [email templates](./email.md#templates-for-account-emails) `magicLink` and `emailOtp`. A magic link goes only to an existing user. A request for an unknown address answers the same, but sends nothing.
+- better-auth deletes the password and the sessions of a user with an unverified email when they first sign in with a magic link. Every user Tenon creates counts as verified, so they keep both: the first admin, a user who accepts an invite, and a user from `cms.users.create()` or `tenon users create`.
 - Without [email](./email.md) and without your own sender, magic link and email OTP are off: `/auth-status` reports them as `false`. Startup warns when they are the only methods. Sign in with [`tenon users recover`](#recovery) until email is set up.
 - Startup throws when no method is on.
 - With password off, a user cannot remove their last passkey unless a magic link or email OTP is on. The request answers 400.

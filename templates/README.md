@@ -17,6 +17,8 @@ It copies these folders into the project, in order. Later files overwrite earlie
 
 `package.json` files are merged: a layer adds or replaces `scripts` and dependencies. `tenoncms: "latest"` becomes the current version.
 
+In `wrangler.jsonc` (Cloudflare), every `tenon-site` becomes the project's name as a Worker name (`toWorkerName()`): the Worker and the bucket `<name>-media`.
+
 ## part.json
 
 A layer's `part.json` is not copied. It says what the layer adds:

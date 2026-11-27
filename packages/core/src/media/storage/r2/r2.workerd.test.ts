@@ -1,3 +1,4 @@
+import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { r2 } from "./index.ts";
@@ -68,5 +69,28 @@ describe("r2", () => {
     expect(r2(env.MEDIA, { publicUrl: "https://media.test/" }).url("x.png")).toBe(
       "https://media.test/x.png",
     );
+  });
+});
+
+describe("r2 inside a Durable Object transaction", () => {
+  // The CMS moves a file while its write is open, and with a Durable Object database that write is a transaction.
+  it("moves a file of one part and a file of several parts", { timeout: 60_000 }, async () => {
+    const storage = r2(env.MEDIA, { partSize: 5 * MB });
+    const big = new Uint8Array(5 * MB + 3).map((_, i) => i % 251);
+    await storage.put("t/small.txt", new TextEncoder().encode("small"), "text/plain");
+    await storage.put("t/big.png", big, "image/png");
+
+    await runInDurableObject(env.CMS.getByName(crypto.randomUUID()), (_, state) =>
+      state.storage.transaction(async () => {
+        await storage.move("t/small.txt", "u/small.txt");
+        await storage.move("t/big.png", "u/big.png");
+      }),
+    );
+
+    expect(await text((await storage.get("u/small.txt"))!.body)).toBe("small");
+    const moved = await storage.get("u/big.png");
+    expect(new Uint8Array(await new Response(moved!.body).arrayBuffer())).toEqual(big);
+    expect((await env.MEDIA.head("u/big.png"))?.httpMetadata?.contentType).toBe("image/png");
+    expect(await storage.get("t/big.png")).toBeUndefined();
   });
 });

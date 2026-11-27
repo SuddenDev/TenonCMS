@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { sql } from "kysely";
 import { expect, it } from "vitest";
 import { onPglite, testDatabase } from "../../tests/setup.ts";
@@ -67,3 +70,21 @@ it.skipIf(onPglite)("adds the authors of a document, empty for existing rows", a
   const docs = await sql`SELECT created_by, updated_by FROM cms_documents`.execute(db);
   expect(docs.rows).toEqual([{ created_by: null, updated_by: null }]);
 });
+
+// Serverless functions start several instances on one Turso database. A file shows the same race in one process.
+it.skipIf(onPglite)(
+  "migrates one fresh libSQL database from several instances at once",
+  async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tenon-migrate-"));
+    const dbs = Array.from({ length: 4 }, () => createDb(libsql(`file:${join(dir, "cms.db")}`)));
+    try {
+      const results = await Promise.allSettled(
+        dbs.map((db) => migrate(db, { database: { db, type: "sqlite" } })),
+      );
+      expect(results.filter((r) => r.status === "rejected")).toEqual([]);
+    } finally {
+      await Promise.all(dbs.map((db) => db.destroy()));
+      rmSync(dir, { recursive: true, force: true });
+    }
+  },
+);

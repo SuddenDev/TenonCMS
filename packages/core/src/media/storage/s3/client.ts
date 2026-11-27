@@ -13,21 +13,26 @@ export function createClient({
   bucket,
   region,
   endpoint,
+  prefix: folder = "",
   fetch: fetchFn = (...args) => fetch(...args),
   ...keys
 }: S3Options) {
   const sign = createSigner(region, keys);
+  const trimmed = folder.replace(/^\/+|\/+$/g, "");
+  const prefix = trimmed ? `${trimmed}/` : "";
 
   // Path-style URLs for a custom endpoint, virtual-hosted URLs for AWS.
-  function objectUrl(key: string, query: Query = {}) {
+  function bucketUrl(path: string, query: Query = {}) {
     const url = new URL(
       endpoint
-        ? `${endpoint.replace(/\/$/, "")}/${bucket}/${encodePath(key)}`
-        : `https://${bucket}.s3.${region}.amazonaws.com/${encodePath(key)}`,
+        ? `${endpoint.replace(/\/$/, "")}/${bucket}/${encodePath(path)}`
+        : `https://${bucket}.s3.${region}.amazonaws.com/${encodePath(path)}`,
     );
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, String(v));
     return url.href;
   }
+
+  const objectUrl = (key: string, query?: Query) => bucketUrl(prefix + key, query);
 
   /**
    * A signed request. Statuses in `ok` return without a check. Other errors throw, and so does an error inside a 200,
@@ -47,9 +52,11 @@ export function createClient({
   }
 
   return {
+    /** Empty, or the `prefix` option with one trailing slash. Every object key in the bucket starts with it. */
+    prefix,
     send,
-    /** A signed `GET` of `key` without status checks. */
-    fetchSigned: async (key: string, query: Query) => fetchFn(await sign(objectUrl(key, query))),
+    /** A signed `GET` of the bucket itself without status checks, which lists its keys. */
+    fetchBucket: async (query: Query) => fetchFn(await sign(bucketUrl("", query))),
     /** A presigned URL that is valid without further headers. */
     presign: async (method: string, key: string, query: Query) =>
       (await sign(objectUrl(key, query), { method, aws: { signQuery: true } })).url,
@@ -59,7 +66,7 @@ export function createClient({
       return res.status === 404 ? undefined : Number(res.headers.get("content-length"));
     },
     /** The `x-amz-copy-source` header value of `key`. */
-    copySource: (key: string) => `/${bucket}/${encodePath(key)}`,
+    copySource: (key: string) => `/${bucket}/${encodePath(prefix + key)}`,
   };
 }
 
