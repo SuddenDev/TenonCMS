@@ -1,0 +1,29 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": ["import { cloudflareEmail } from \"tenoncms/email/cloudflare\";"],
+      "options": [
+        "email: {",
+        "  adapter: cloudflareEmail({",
+        "    accountId: $CLOUDFLARE_ACCOUNT_ID,",
+        "    apiToken: $CLOUDFLARE_EMAIL_API_TOKEN,",
+        "  }),",
+        "  from: $EMAIL_FROM,",
+        "},"
+      ]
+    }
+  },
+  "env": [
+    { "name": "CLOUDFLARE_ACCOUNT_ID", "comment": "Your Cloudflare account ID.", "example": "" },
+    {
+      "name": "CLOUDFLARE_EMAIL_API_TOKEN",
+      "comment": "An API token with the permission Email Sending Write.",
+      "example": ""
+    },
+    {
+      "name": "EMAIL_FROM",
+      "comment": "The sender. Its domain MUST be onboarded to Cloudflare Email Service.",
+      "example": "My Site <hello@example.test>"
+    }
+  ]
+}

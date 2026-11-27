@@ -3,7 +3,8 @@
     "astro.config.ts": {
       "imports": ["import cloudflare from \"@astrojs/cloudflare\";"],
       "options": ["adapter: cloudflare(),"]
-    }
+    },
+    "wrangler.jsonc": {}
   },
   "ignore": [".wrangler", ".dev.vars", "worker-configuration.d.ts"],
   "builds": ["esbuild", "workerd"]

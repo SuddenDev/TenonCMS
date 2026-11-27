@@ -4,7 +4,7 @@ Email is optional and runs on the server. The CMS uses it for password resets, e
 
 ## Configure
 
-`create-tenoncms` sets this up when you choose SMTP. Otherwise, install Nodemailer, which `tenoncms` does not install for you:
+`create-tenoncms` sets this up when you choose SMTP, or Cloudflare Email Service ([below](#cloudflare-email-service)). Otherwise, install Nodemailer, which `tenoncms` does not install for you:
 
 ```sh
 npm install nodemailer

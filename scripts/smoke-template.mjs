@@ -77,6 +77,6 @@ run("pnpm", ["install"]);
 run("pnpm", ["run", "build"]);
 // Local mode loads the config like the dev server. CI has no Postgres server and no bucket keys, and Cloudflare's config
 // runs only in workerd.
-if (target === "node" && database !== "postgres" && storage !== "s3")
+if (target === "node" && database !== "postgres" && !["s3", "r2"].includes(storage))
   run("pnpm", ["exec", "tenon", "backup", "--dry-run", "--yes"]);
 console.log(`ok: ${name} in ${dir}`);

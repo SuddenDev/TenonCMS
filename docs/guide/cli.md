@@ -12,21 +12,23 @@ npm create tenoncms
 
 It asks one question at a time: the folder, the site name (default `Tenon`, written to `site.name` in `tenon.config.ts`), the framework (Astro, Nuxt, TanStack Start or standalone), the template, where it will run, the database, where media files go, how images are resized, how the CMS sends email, how people sign in to the admin, the package manager, and whether to install dependencies and start a git repository. The database and media questions offer only what works where the site runs, and a question with one answer is skipped. The first answer is the default.
 
-| Runs on                 | Database                                                                                | Media                                |
-| ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------ |
-| Node                    | SQLite / Turso (libSQL: a local file, or Turso by URL), Postgres, PGlite, `node:sqlite` | Local disk (`./.uploads`), S3 bucket |
-| Vercel                  | SQLite / Turso (a file in development, Turso on Vercel), Postgres                       | S3-compatible bucket                 |
-| Cloudflare (Astro only) | Durable Object                                                                          | R2                                   |
+| Runs on                 | Database                                                                                | Media                                    |
+| ----------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Node                    | SQLite / Turso (libSQL: a local file, or Turso by URL), Postgres, PGlite, `node:sqlite` | Local disk (`./.uploads`), S3 bucket, R2 |
+| Vercel                  | SQLite / Turso (a file in development, Turso on Vercel), Postgres                       | S3-compatible bucket, R2                 |
+| Cloudflare (Astro only) | Durable Object                                                                          | R2                                       |
+
+R2 on Cloudflare uses the bucket binding `MEDIA`. On Node and Vercel it uses API keys: `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `.env.example`, and the bucket needs [CORS](./media.md#s3-and-r2), as with S3.
 
 Images offer the [providers](./media.md#image-providers) that work where the site runs. On Node the default is IPX, which adds `ipx` (and sharp) to `package.json`. On Vercel it is none, and on Cloudflare the Images binding. Hosted providers add their URL variable to `.env.example`; Vercel Image Optimization also needs [`images` in the Vercel config](./media.md#vercel). Each choice writes `images: { provider: … }` next to `storage` in `media`.
 
-Email offers none (the default) or SMTP. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, change it to port 587 and `secure: false`. See [Email](./email.md).
+Email offers none (the default), SMTP or Cloudflare Email Service. SMTP adds `nodemailer` to `package.json`, an `email` block with `smtp()` to `tenon.config.ts`, and `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM` to `.env.example`. It uses TLS on port 465. For STARTTLS, change it to port 587 and `secure: false`. Cloudflare Email Service adds `cloudflareEmail()` to `tenon.config.ts`; the sender's domain MUST be onboarded to Email Service. On Cloudflare it uses the `send_email` binding `EMAIL` in `wrangler.jsonc` and adds `EMAIL_FROM` to `.dev.vars.example`. On Node and Vercel it uses the REST API and adds `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_API_TOKEN` and `EMAIL_FROM` to `.env.example`. See [Email](./email.md).
 
 Sign-in offers any mix of password (the default), passkey, magic link and email code. At least one is required. See [Sign-in methods](./auth-and-access.md#sign-in-methods).
 
 - Password alone writes nothing: it is core's default. Without password, `tenon.config.ts` gets `emailAndPassword: { enabled: false }`.
 - Passkey adds `@better-auth/passkey` to `package.json` and its plugin to `tenon.config.ts`.
-- Magic link and email code add `magicLink()` and `emailOTP()` from `tenoncms/auth`. They need [email](./email.md): choose SMTP, or add an adapter later. Until then, `npx tenon users recover <email>` prints a sign-in link.
+- Magic link and email code add `magicLink()` and `emailOTP()` from `tenoncms/auth`. They need [email](./email.md): choose an email adapter, or add one later. Until then, `npx tenon users recover <email>` prints a sign-in link.
 
 Every question has a flag, so it also runs without a terminal:
 

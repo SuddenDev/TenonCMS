@@ -246,6 +246,56 @@ describe("scaffold", () => {
     expect(JSON.parse(read(plain, "package.json")).dependencies).not.toHaveProperty("nodemailer");
   });
 
+  it("uses R2 and Cloudflare Email Service with API keys outside Cloudflare", async () => {
+    const dir = project();
+    await scaffold(templates, dir, {
+      name: "a",
+      framework: "standalone",
+      template: "minimal",
+      target: "node",
+      database: "libsql",
+      storage: "r2",
+      email: "cloudflare",
+    });
+    const config = read(dir, "tenon.config.ts");
+    expect(config).toContain("accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,");
+    expect(config).toContain("accessKeyId: process.env.R2_ACCESS_KEY_ID!,");
+    expect(config).toContain("apiToken: process.env.CLOUDFLARE_EMAIL_API_TOKEN!,");
+    expect(config).not.toContain("cloudflare:workers");
+    const example = read(dir, ".env.example");
+    expect(example.match(/^CLOUDFLARE_ACCOUNT_ID=/gm)).toHaveLength(1);
+    expect(example).toMatch(/^R2_BUCKET=/m);
+    expect(example).toMatch(/^CLOUDFLARE_EMAIL_API_TOKEN=/m);
+    expect(existsSync(join(dir, "_emails"))).toBe(false);
+  });
+
+  it("adds the Cloudflare email adapter and its binding only when chosen", async () => {
+    const choices = {
+      name: "a",
+      framework: "astro",
+      template: "minimal",
+      target: "cloudflare",
+      database: "durable-object",
+      storage: "r2",
+    };
+    const dir = project();
+    await scaffold(templates, dir, { ...choices, email: "cloudflare" });
+    const config = read(dir, "tenon.config.ts");
+    expect(config).toContain('import { cloudflareEmail } from "tenoncms/email/cloudflare";');
+    expect(config).toContain("adapter: cloudflareEmail(env.EMAIL),");
+    expect(config).toContain("storage: r2(env.MEDIA),");
+    expect(existsSync(join(dir, "_emails"))).toBe(false);
+    expect(existsSync(join(dir, "_storages"))).toBe(false);
+    expect(config.match(/from "cloudflare:workers"/g)).toHaveLength(1);
+    expect(read(dir, ".dev.vars.example")).toMatch(/^EMAIL_FROM=/m);
+    expect(read(dir, "wrangler.jsonc")).toContain('  "send_email": [{ "name": "EMAIL" }],\n}');
+
+    const plain = project();
+    await scaffold(templates, plain, choices);
+    expect(read(plain, "tenon.config.ts")).not.toContain("email:");
+    expect(read(plain, "wrangler.jsonc")).not.toMatch(/send_email|@tenon/);
+  });
+
   it("takes the target's own version of a database", async () => {
     const dir = project();
     await scaffold(templates, dir, {
@@ -267,6 +317,8 @@ describe("scaffold", () => {
     for (const target of Object.values(index.targets))
       for (const id of [...target.databases, ...target.storages])
         expect(index.databases[id] ?? index.storages[id]).toBeDefined();
+    for (const target of Object.values(index.targets))
+      for (const id of target.emails) expect(index.emails[id]).toBeDefined();
     expect(index.templates.minimal!.frameworks).toContain("standalone");
   });
 });
