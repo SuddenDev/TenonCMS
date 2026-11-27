@@ -52,7 +52,7 @@ const comments = await cms.find("comments", { where: { post: post.id }, populate
         {post.author.name}
       </p>
     )}
-    {post.publishedAt && <time datetime={post.publishedAt}>{post.publishedAt}</time>}
+    {post.date && <time datetime={post.date}>{post.date}</time>}
     <Image
       image={post.hero}
       sizes="(min-width: 720px) 720px, 100vw"

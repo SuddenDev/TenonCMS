@@ -9,7 +9,7 @@ export const posts = defineCollection({
   fields: {
     title: { type: "text", required: true, description: titleDescription },
     slug: { type: "slug", from: "title", required: true, unique: true },
-    publishedAt: { type: "date", label: "Published at" },
+    date: { type: "datetime", label: "Date" },
     hero: { type: "image", folder: "posts" },
     body: { type: "textarea" },
     links: {
