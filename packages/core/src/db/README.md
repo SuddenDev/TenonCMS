@@ -80,6 +80,7 @@ A localized collection or global keeps shared fields in `cms_documents` / `cms_g
 - `cms_documents` and `cms_versions` have a `rowid` identity column, so `ORDER BY … rowid` works in both.
 - better-auth's columns are camelCase. Raw SQL MUST quote them (`k."createdAt"`), or Postgres folds them to lowercase. Its booleans are `boolean`: compare with `true` / `false`, and read them as a number or a boolean.
 - `migrate()` runs both migration sets in one transaction that holds `pg_advisory_xact_lock`. A transaction lock, not a session lock: behind PgBouncer in transaction mode (Neon's pooled URL), a session lock can stay on another server connection. `migrate.live.test.ts` checks four instances on one fresh database; it needs `POSTGRES_TEST_URL`.
+- On libSQL, `migrate()` runs in a `write` transaction, which takes the database's write lock at `BEGIN`. `migrate()` first checks, read-only, whether anything is pending, so an instance on a migrated database blocks no writer. A file answers `SQLITE_BUSY` to the other instances. `@libsql/client` 0.18 then keeps the failed `BEGIN` open on that connection, and its next commit fails too, so each retry checks again first. `migrate.test.ts` checks four instances on one fresh file.
 - PGlite has one connection. Like `:memory:` libsql, a query outside `trx` during a transaction waits forever.
 
 ## Invite and user queries
