@@ -47,7 +47,7 @@ Docus registers the Nuxt UI prose components. A page uses them where they help, 
 | Links to the next pages           | `::card-group` with `::card`                |
 | Long optional detail              | `::accordion`, `::collapsible`              |
 
-`sync` keeps the reader's framework and package manager across pages.
+`sync` keeps the reader's framework and package manager across pages. It stores the position of the tab, not its label. So every `sync="framework"` group MUST have exactly three tabs, Astro, Nuxt and TanStack Start, in that order. Every `sync="pm"` group MUST have npm, pnpm, yarn and bun.
 
 ## Outline bullets
 
