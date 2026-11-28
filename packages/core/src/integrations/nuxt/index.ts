@@ -9,6 +9,7 @@ import {
   createResolver,
   defineNuxtModule,
   hasNuxtModule,
+  useLogger,
 } from "@nuxt/kit";
 import type {} from "@nuxt/nitro-server/augments";
 import type { NuxtModule } from "@nuxt/schema";
@@ -137,6 +138,15 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
       };
       config.scheduledTasks = withJobsTask(config.scheduledTasks);
     });
+
+    // Nitro 2 makes no Vercel Cron Job of a scheduled task, so the jobs would never run there.
+    if (options.jobs !== false)
+      nuxt.hook("nitro:init", (nitro) => {
+        if (nitro.options.preset.startsWith("vercel"))
+          useLogger("tenoncms").warn(
+            "Jobs do not run on Vercel: Nitro 2 has no Vercel cron. Set `tenonCms: { jobs: false }` and call the clock route: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/jobs.md#the-clock-route",
+          );
+      });
   },
 });
 

@@ -1,21 +1,27 @@
 import { Hono } from "hono";
 import type { Env } from "../../http/middleware/types.ts";
 import { setCookie } from "hono/cookie";
+import type { Core } from "../../cms/runtime/types.ts";
+import { cookieDomain } from "../../auth/cookie-domain.ts";
 import { PREVIEW_COOKIE } from "../../auth/get-caller.ts";
 import { parseBody } from "../../http/parse-body.ts";
 
 /**
- * `POST /preview` sets the preview cookie to `perspective` (`drafts` by default). It answers 400 for another value.
- * The cookie grants nothing without a session.
+ * `POST /preview` sets the preview cookie to `perspective` (`drafts` by default), with the session cookie's domain.
+ * It answers 400 for another value. The cookie grants nothing without a session.
  */
-export function enterEndpoint() {
+export function enterEndpoint(core: Core) {
   return new Hono<Env>().post("/preview", async (c) => {
     const perspective = (await parseBody(c.req))?.perspective ?? "drafts";
     if (perspective !== "drafts" && perspective !== "published") {
       return c.json({ message: 'perspective MUST be "drafts" or "published"' }, 400);
     }
 
-    setCookie(c, PREVIEW_COOKIE, perspective, { sameSite: "Lax", path: "/" });
+    setCookie(c, PREVIEW_COOKIE, perspective, {
+      sameSite: "Lax",
+      path: "/",
+      domain: await cookieDomain(core),
+    });
     return c.body(null, 204);
   });
 }

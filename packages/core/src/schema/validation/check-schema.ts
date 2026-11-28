@@ -79,6 +79,7 @@ export function checkSchema(
     checkLayout(owner.fields, owner, owner.name);
     checkPreview(collections, owner, localization?.routing === false);
     checkLocalized(owner, !!localization);
+    checkReserved(owner);
     if (owner.schedule && owner.drafts === false)
       fail(`"${owner.name}" sets \`schedule\` with \`drafts: false\`; scheduling needs drafts`);
 
@@ -145,8 +146,6 @@ function checkLocalized(
   const kind = global ? "global" : "collection";
   if (syncStructure !== undefined && !localized)
     fail(`${kind} "${name}" sets syncStructure but is not localized`);
-  for (const key of ["syncStructure", "syncStructureDefault"])
-    if (Object.hasOwn(fields, key)) fail(`field "${name}.${key}" is a reserved field name`);
   if (localized && !enabled)
     fail(
       `${global ? "global" : "collection"} "${name}" is localized but the \`localization\` option is missing`,
@@ -172,6 +171,26 @@ function checkLocalized(
 }
 
 // Every reference MUST point to a known collection and use an `onDelete` that fits it.
+// The keys that `toDoc()` adds to a document, and the write options a body carries. A top-level field with one of
+// these names would be overwritten on read. Only a localized document gets the locale keys.
+const RESERVED = [
+  "id",
+  "createdAt",
+  "createdBy",
+  "updatedAt",
+  "updatedBy",
+  "publishedAt",
+  "hasDraft",
+  "syncStructure",
+  "syncStructureDefault",
+];
+const RESERVED_LOCALIZED = ["locale", "locales", "sharedDraft", "alternates"];
+
+function checkReserved({ name, fields, localized }: Owner) {
+  for (const key of localized ? [...RESERVED, ...RESERVED_LOCALIZED] : RESERVED)
+    if (Object.hasOwn(fields, key)) fail(`field "${name}.${key}" is a reserved field name`);
+}
+
 function checkRelations(collections: Collections, { name, fields, global }: Owner) {
   for (const { path, field } of relationPaths(fields)) {
     const at = `${field.type} "${name}.${pathKey(path)}"`;

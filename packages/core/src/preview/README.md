@@ -31,13 +31,20 @@ framework re-render and reports the bound documents. With `morph`, a `saved` mes
 `runtime/preview.ts` → `runtime/admin-bar.ts` → `GET /_tenon/admin-bar` (`endpoints/admin-bar.endpoint.ts` →
 `config/admin-bar.ts`) → `import("tenoncms/admin/bar")` → `mountAdminBar()`
 
-`preview()` starts the bar when `admin` is not `false`, the page is not under the admin's path, and the
-`tenon-session` hint cookie is set (`hasSessionHint()`). `startAdminBar()` asks the endpoint for the page's items
-(`loadAdminBar()`, with the page `url` and the `mode`). The endpoint composes the built-in stubs (`builtIns()`) with the
-registered items from `admin.adminBar.items`, drops hidden ones, runs the loaders of the others and answers
-`{ position, items, branding }`. The endpoint sorts the items, and `fillItems()` turns the built-in stubs into links for the page. A `clientRef()` on an item (`onClick`, `mount`) resolves through the
-`#tenon/client-registry` module, imported on the first item that needs it and only after the session check. The bar
-chunk loads only then, so visitors download nothing extra. It mounts into an open shadow root on a
+`preview()` starts the bar when `admin` is not `false`, the page is not under the admin's path (an `admin` on
+another origin never matches), and the `tenon-session` hint cookie is set (`hasSessionHint()`). `startAdminBar()` asks
+the endpoint for the page's items (`loadAdminBar()`, with the page `url` and the `mode`). The site API calls
+`/_tenon` on the origin of `admin`: relative with `credentials: "same-origin"` on the page's origin, else with
+`credentials: "include"`. The CMS allows only the origin of `site.url`, or the origins of the `cors` option. The hint and preview cookies
+take the `Domain` of the session cookie, so a site on a sibling host reads them with `crossSubDomainCookies`.
+
+The endpoint composes the built-in stubs (`builtIns()`) with the registered items from `admin.adminBar.items`, drops
+hidden ones, runs the loaders of the others and answers `{ position, items, branding }`. The endpoint sorts the items,
+and `fillItems()` turns the built-in stubs into links for the page. A `clientRef()` on an item (`onClick`, `mount`)
+resolves through the `#tenon/client-registry` module, imported on the first item that needs it and only after the
+session check. The bar chunk loads only then, so visitors download nothing extra. Without a Tenon bundler plugin, the
+package's `imports` map the registry to the empty `admin/empty-registry.ts`, and the bar skips those items. It mounts
+into an open shadow root on a
 `<div data-cms-bar>` on `<html>`. The bar renders the context and calls its actions; the runtime owns all state and
 calls `update()` when the bound documents, the edit mode or an item's data change.
 
@@ -50,7 +57,7 @@ The framework-specific `useDraft()` helpers live in [`integrations/vue/preview.t
 | `index.ts`                        | Browser-safe public exports.                                                                                                                                                                                                                                                |
 | `config/types.ts`                 | `Preview`, `Drafts`, `PreviewMessage`, `PreviewOptions` and `Unsubscribe`.                                                                                                                                                                                                  |
 | `config/admin-bar.ts`             | `ADMIN_BAR_POSITIONS` and `checkAdminBarPosition()`.                                                                                                                                                                                                                        |
-| `endpoints/`                      | `POST /preview` sets the preview cookie, `DELETE /preview` clears it.                                                                                                                                                                                                       |
+| `endpoints/`                      | `POST /preview` sets the preview cookie, `DELETE /preview` clears it, both with the session cookie's domain.                                                                                                                                                                |
 | `endpoints/admin-bar.endpoint.ts` | `GET /admin-bar?url=&mode=`: the page's `{ position, items, branding }`. Protected.                                                                                                                                                                                         |
 | `server/resolve-url.ts`           | `previewUrl()` (`preview`, else `permalink`) and `permalinkUrl()`: run the host's function, or fill a template after one relation hop. With `routing`, the `permalink` result gets the locale prefix; without it, `{locale}` is filled. `urlLocale()` validates `?locale=`. |
 | `templates/placeholders.ts`       | `PLACEHOLDER` and `placeholders()`: the dot paths of a template.                                                                                                                                                                                                            |
@@ -139,8 +146,9 @@ responses, and does not reload on mutations or edit-mode toggles. `ctx.tenon.rel
 
 The session cookie is `HttpOnly`, so the page cannot see it. The auth middleware
 [`session-hint.middleware.ts`](../auth/middleware/session-hint.middleware.ts) mirrors it in `tenon-session=1`, which
-page code can read. The hint grants nothing: the endpoint checks the real session, and a 401 clears the hint. Any
-other error or a failed chunk import shows no bar and keeps the hint.
+page code can read. The hint grants nothing: the endpoint checks the real session, and a 401 clears the hint, in the browser and on the
+server (a hint with a `Domain` only goes away there). Any other error or a failed chunk import shows no bar and keeps
+the hint.
 
 The pill is 44 px high and overlays the page at one of eight positions (`bottom-center` by default); the page keeps its layout.
 It hides on scroll down and shows on scroll up (`headroom()` in `packages/admin/src/admin-bar/headroom.ts`), and

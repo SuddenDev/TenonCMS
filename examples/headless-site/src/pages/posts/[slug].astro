@@ -1,0 +1,27 @@
+---
+import { imageAttrs } from "tenoncms/components";
+import { edit } from "tenoncms/preview";
+import Layout from "../../components/Layout.astro";
+import { cmsClient } from "../../lib/cms";
+
+const post = await cmsClient(Astro.request).findOne("posts", {
+  where: { slug: Astro.params.slug! },
+});
+if (!post) return new Response("Not found", { status: 404 });
+
+// `data-cms` on the image also makes the live preview patch `src`, `srcset` and `alt`.
+const hero = imageAttrs(post.hero, {
+  "data-cms": edit("posts", post.id, "hero"),
+  sizes: "(min-width: 720px) 720px, 100vw",
+  style: "max-width: 100%; height: auto",
+});
+---
+
+<Layout title={post.title}>
+  <a href="/">All posts</a>
+  <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
+  {hero && <img {...hero} />}
+  <p style="white-space: pre-wrap" data-cms={edit("posts", post.id, "body")}>
+    {post.body}
+  </p>
+</Layout>

@@ -1,6 +1,6 @@
 {
   "name": "tenoncms-monorepo",
-  "version": "0.27.0",
+  "version": "0.28.0",
   "private": true,
   "license": "MIT",
   "author": {
@@ -19,6 +19,7 @@
     "dev:nuxt": "pnpm build:packages && CMS_URL=http://localhost:3000 pnpm --parallel --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter example-nuxt dev",
     "dev:tanstack": "pnpm build:packages && CMS_URL=http://localhost:3100 pnpm --parallel --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter example-tanstack-start dev",
     "dev:standalone": "pnpm build:packages && CMS_URL=http://localhost:3200 pnpm --parallel --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter example-standalone dev",
+    "dev:headless": "pnpm build:packages && CMS_URL=http://localhost:3200 TENON_CMS_URL=http://localhost:3200 TENON_SITE_URL=http://localhost:4324 pnpm --parallel --filter tenoncms --filter @tenoncms/plugins --filter @tenoncms/admin --filter example-standalone --filter example-headless-site dev",
     "dev:docs": "pnpm --filter @tenoncms/docs dev",
     "build:docs": "pnpm --filter @tenoncms/docs generate",
     "build": "pnpm build:packages && pnpm --filter \"./examples/*\" build && pnpm build:docs",

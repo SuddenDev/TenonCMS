@@ -1,0 +1,11 @@
+{
+  "files": {
+    "tenon.config.ts": {
+      "imports": [
+        "import { env } from \"cloudflare:workers\";",
+        "import { r2 } from \"tenoncms/media/r2\";"
+      ],
+      "media": ["// The bindings are in wrangler.jsonc.", "storage: r2(env.MEDIA),"]
+    }
+  }
+}

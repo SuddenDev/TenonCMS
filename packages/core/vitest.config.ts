@@ -6,8 +6,10 @@ const src = (path: string) => fileURLToPath(new URL(`src/${path}`, import.meta.u
 
 // Core imports its own `tenoncms/media/default` so hosts can swap it by export condition. Tests use the source.
 // `tenoncms/admin/bar` is built by the admin package. Tests mock it, so the alias only has to resolve.
+// Vite rejects a `#` import that the package's `imports` do not list, so `#app` needs Nuxt's alias even when mocked.
 const alias = (mediaDefault: string) => ({
-  "#tenon/client-registry": src("admin/test-registry.ts"),
+  "#app": "nuxt/app",
+  "#tenon/client-registry": src("admin/empty-registry.ts"),
   "tenoncms/media/default": src(mediaDefault),
   "tenoncms/admin/bar": src("admin/bar.d.ts"),
   "tenoncms/admin": src("admin/config.ts"),

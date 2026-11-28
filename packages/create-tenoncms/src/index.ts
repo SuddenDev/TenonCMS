@@ -17,6 +17,8 @@ const AUTH_OPTIONS: { value: AuthMethod; label: string; hint?: string }[] = [
   { value: "email-otp", label: "Email code", hint: "a one-time code by email" },
 ];
 type PackageManager = (typeof PACKAGE_MANAGERS)[number];
+const BUCKET_CORS =
+  "Its CORS MUST allow PUT from the site and expose ETag: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/media.md#s3-and-r2";
 /** The variable with the URL of each hosted image provider. */
 const IMAGE_URLS: Record<string, string> = {
   imgix: "IMGIX_URL",
@@ -34,10 +36,10 @@ const HELP = `Usage: npm create tenoncms [dir] [options]
   --template <name>     The starter. Default: minimal
   --target <name>       node, vercel or cloudflare (Astro only)
   --database <name>     node: libsql, postgres, pglite or sqlite. vercel: libsql or postgres
-  --storage <name>      node: local or s3. vercel: s3
+  --storage <name>      node: local, s3 or r2. vercel: s3 or r2
   --images <name>       How images are resized. node: ipx, none, cloudflare-url, netlify, imgix, cloudinary,
                         imagekit, bunny, imgproxy, thumbor. vercel: none, vercel, ipx, … cloudflare: cloudflare, …
-  --email <name>        none or smtp. Default: none
+  --email <name>        none, smtp or cloudflare. Default: none
   --auth <list>         Sign-in methods: password, passkey, magic-link, email-otp. Default: password
   --pm <name>           npm, pnpm, yarn or bun
   --install, --no-install
@@ -133,7 +135,13 @@ async function main() {
     index.frameworks[framework]!.targets.includes(key),
   );
   const target = await choose(targets, flags.target, "Where will it run?", ask);
-  const { databases, storages, images: providers, envFile = ".env" } = index.targets[target]!;
+  const {
+    databases,
+    storages,
+    images: providers,
+    emails,
+    envFile = ".env",
+  } = index.targets[target]!;
   const env = index.frameworks[framework]!.runtimeConfig ? "NUXT_" : "";
   // The target's order: its first database and storage are the defaults.
   const database = await choose(
@@ -154,7 +162,12 @@ async function main() {
     "How should images be resized?",
     ask,
   );
-  const email = await choose(index.emails, flags.email, "How should the CMS send email?", ask);
+  const email = await choose(
+    Object.fromEntries(emails.map((id) => [id, index.emails[id]!])),
+    flags.email,
+    "How should the CMS send email?",
+    ask,
+  );
   const auth =
     authFlag ??
     (ask
@@ -216,7 +229,13 @@ async function main() {
   if (database === "postgres")
     p.log.info(`Set ${env}DATABASE_URL in ${envFile} to your Postgres database.`);
   if (storage === "s3")
-    p.log.info(`Set the bucket in ${envFile}: ${env}S3_BUCKET and the ${env}AWS_* keys.`);
+    p.log.info(
+      `Set the bucket in ${envFile}: ${env}S3_BUCKET and the ${env}AWS_* keys. ${BUCKET_CORS}`,
+    );
+  if (storage === "r2" && target !== "cloudflare")
+    p.log.info(
+      `Set the bucket in ${envFile}: ${env}CLOUDFLARE_ACCOUNT_ID, ${env}R2_BUCKET and the ${env}R2_* keys. ${BUCKET_CORS}`,
+    );
   if (target === "vercel")
     p.log.info(
       `On Vercel, set the variables of ${envFile} in the project settings.${database === "libsql" ? ` ${env}DATABASE_URL MUST be a Turso URL there.` : ""}`,
@@ -228,6 +247,10 @@ async function main() {
     );
   if (email === "smtp")
     p.log.info(`Set the SMTP server and sender in ${envFile}: ${env}SMTP_* and ${env}EMAIL_FROM.`);
+  else if (email === "cloudflare")
+    p.log.info(
+      `Set ${target === "cloudflare" ? "" : `${env}CLOUDFLARE_ACCOUNT_ID, ${env}CLOUDFLARE_EMAIL_API_TOKEN and `}${env}EMAIL_FROM in ${envFile}. The sender's domain MUST be onboarded to Cloudflare Email Service: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/email.md#cloudflare-email-service`,
+    );
   else if (auth.includes("magic-link") || auth.includes("email-otp"))
     p.log.info(
       "Magic links and email codes need `email` in tenon.config.ts: https://tenoncms.com/docs/core/operations/email. Until then, `npx tenon users recover <email>` prints a sign-in link.",

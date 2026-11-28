@@ -326,6 +326,25 @@ describe("preview", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("asks for no admin bar on the admin's own pages when the admin is a full URL on the page's origin", () => {
+    hint();
+    history.pushState(null, "", "/cms/collections/pages");
+    stop = preview({ admin: `${location.origin}/cms` });
+    history.pushState(null, "", "/");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("asks the admin's origin for the bar when the admin is on another origin, whatever the page's path", async () => {
+    hint();
+    history.replaceState(null, "", "/cms/collections/pages");
+    stop = preview({ admin: "https://cms.example.com/cms" });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/cms\.example\.com\/_tenon\/admin-bar\?/),
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
   it("leaves preview when a preview tab returns to the visual editor", () => {
     window.name = "tenon-preview-posts:back";
     const opener = { postMessage: vi.fn() };

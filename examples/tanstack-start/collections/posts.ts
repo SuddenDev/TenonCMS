@@ -8,7 +8,7 @@ export const posts = defineCollection({
   fields: {
     title: { type: "text", required: true, description: titleDescription },
     slug: { type: "text", required: true },
-    publishedAt: { type: "date", label: "Published at" },
+    date: { type: "datetime", label: "Date" },
     category: { type: "select", options: ["news", "guide"] },
     featured: { type: "boolean" },
     body: { type: "textarea" },

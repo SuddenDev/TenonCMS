@@ -3,7 +3,7 @@
     "tenon.config.ts": {
       "imports": ["import { vercel } from \"tenoncms/media/vercel\";"],
       "media": [
-        "// Needs `images` in the Vercel config: https://tenoncms.com/docs/guide/deployment/vercel",
+        "// Vercel Image Optimization is set up in the framework config, with the same sizes: https://tenoncms.com/docs/guide/deployment/vercel#resize-images",
         "images: { provider: vercel() },"
       ]
     }

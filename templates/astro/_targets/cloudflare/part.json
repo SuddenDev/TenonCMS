@@ -2,8 +2,13 @@
   "files": {
     "astro.config.ts": {
       "imports": ["import cloudflare from \"@astrojs/cloudflare\";"],
-      "options": ["adapter: cloudflare(),"]
-    }
+      "options": [
+        "adapter: cloudflare(),",
+        "// Tenon keeps its own sessions. With Astro's, the adapter binds a KV namespace that a deploy creates.",
+        "session: false,"
+      ]
+    },
+    "wrangler.jsonc": {}
   },
   "ignore": [".wrangler", ".dev.vars", "worker-configuration.d.ts"],
   "builds": ["esbuild", "workerd"]

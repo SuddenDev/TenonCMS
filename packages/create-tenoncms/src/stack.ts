@@ -65,14 +65,23 @@ const AUTH_PLUGINS: Record<Exclude<AuthMethod, "password">, { plugin: string; fr
   "email-otp": { plugin: "emailOTP", from: "tenoncms/auth" },
 };
 
+const CMS_URL: EnvVar = {
+  name: "TENON_CMS_URL",
+  comment:
+    "The CMS origin, when the site runs on another one. Set it with TENON_SITE_URL, else sign-in uses the site's origin",
+  optional: true,
+  url: true,
+};
+
 /**
  * The one `auth` block for the sign-in methods. Password alone writes nothing, because it is core's default. The
  * passkey package comes from the `_auth/passkey` layer.
+ * @param options.headless The CMS can serve a site on another origin, so `auth.baseURL` reads `TENON_CMS_URL`.
  */
-export function authPart(methods: AuthMethod[]): Part {
+export function authPart(methods: AuthMethod[], { headless = false } = {}): Part {
   const plugins = methods.flatMap((method) => (method === "password" ? [] : AUTH_PLUGINS[method]));
   const password = methods.includes("password");
-  if (password && !plugins.length) return {};
+  if (password && !plugins.length && !headless) return {};
 
   const from = [...new Set(plugins.map((p) => p.from))];
   const imports = from.map((module) => {
@@ -81,11 +90,15 @@ export function authPart(methods: AuthMethod[]): Part {
   });
   const options = [
     "auth: {",
+    ...(headless ? ["  baseURL: $TENON_CMS_URL,"] : []),
     ...(password ? [] : ["  emailAndPassword: { enabled: false },"]),
     ...(plugins.length ? [`  plugins: [${plugins.map((p) => `${p.plugin}()`).join(", ")}],`] : []),
     "},",
   ];
-  return { files: { "tenon.config.ts": { imports, options } } };
+  return {
+    files: { "tenon.config.ts": { imports, options } },
+    ...(headless && { env: [CMS_URL] }),
+  };
 }
 
 /**

@@ -2,7 +2,10 @@
   "files": {
     "astro.config.ts": {
       "imports": ["import vercel from \"@astrojs/vercel\";"],
-      "options": ["adapter: vercel(),"]
+      "options": [
+        "// Vercel Image Optimization for `vercel()` images. `sizes` MUST equal `images.sizes` in tenon.config.ts.",
+        "adapter: vercel({ imagesConfig: { sizes: [320, 640, 1024, 1536, 1920], domains: [] } }),"
+      ]
     }
   }
 }

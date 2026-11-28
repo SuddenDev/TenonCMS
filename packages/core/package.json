@@ -1,6 +1,6 @@
 {
   "name": "tenoncms",
-  "version": "0.27.0",
+  "version": "0.28.0",
   "license": "MIT",
   "author": {
     "name": "Dominik Tampe",
@@ -20,6 +20,9 @@
     "dist"
   ],
   "type": "module",
+  "imports": {
+    "#tenon/client-registry": "./dist/admin/empty-registry.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -36,6 +39,10 @@
     "./email/smtp": {
       "types": "./dist/email/smtp.d.mts",
       "default": "./dist/email/smtp.mjs"
+    },
+    "./email/cloudflare": {
+      "types": "./dist/email/cloudflare.d.mts",
+      "default": "./dist/email/cloudflare.mjs"
     },
     "./register": {
       "types": "./dist/client/register.d.ts"

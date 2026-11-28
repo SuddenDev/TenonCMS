@@ -35,7 +35,7 @@ await useTenonSeo(() => (status.value === "success" ? post.value : null));
   <AppHeader />
   <main v-if="post">
     <h1 :data-cms="edit('posts', post.id, 'title')">{{ post.title }}</h1>
-    <time v-if="post.publishedAt" :datetime="post.publishedAt">{{ post.publishedAt }}</time>
+    <time v-if="post.date" :datetime="post.date">{{ post.date }}</time>
     <TenonImage
       :image="post.hero"
       sizes="(min-width: 720px) 720px, 100vw"

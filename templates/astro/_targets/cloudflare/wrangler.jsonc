@@ -27,4 +27,5 @@
   "images": {
     "binding": "IMAGES",
   },
+  // @tenon-options
 }

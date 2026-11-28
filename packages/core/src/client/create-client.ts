@@ -13,7 +13,7 @@ import type { ScheduleOptions } from "../schedule/types.ts";
 import type { Schema } from "../schema/index.ts";
 import { API_BASE, API_KEY_HEADER, DEVICE_CLIENT_ID } from "./constants.ts";
 import { CmsError } from "./errors.ts";
-import { createRequest } from "./create-request.ts";
+import { createRequest, readReply } from "./create-request.ts";
 import { readQuery, type ReadQuery } from "./read-query.ts";
 import type {
   Client,
@@ -354,8 +354,7 @@ export function createClient<C extends { schema: Schema } = RegisteredCms>({
         body: archive,
         signal,
       });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new CmsError(res.status, data);
+      const data = await readReply(res, "POST /import");
       onProgress?.({ loaded: archive.size, total: archive.size });
       return data;
     },

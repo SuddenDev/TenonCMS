@@ -22,11 +22,14 @@ export default defineConfig({
     "src/admin/vue/vue.ts",
     "src/admin/react/react.ts",
     "src/preview/index.ts",
+    // The package's `imports` map `#tenon/client-registry` to it.
+    "src/admin/empty-registry.ts",
     "src/integrations/vue/preview.ts",
     "src/integrations/react/preview.ts",
     "src/integrations/vite/index.ts",
     "src/presets/index.ts",
     "src/email/smtp.ts",
+    "src/email/cloudflare.ts",
     "src/auth/plugins.ts",
     // Own entries, so `node:fs`, `ipx`, `node:crypto` and `aws4fetch` stay out of bundles that do not use them.
     "src/media/storage/local/index.ts",

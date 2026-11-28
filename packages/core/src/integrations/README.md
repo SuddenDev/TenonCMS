@@ -69,6 +69,11 @@ The admin page (`admin/entry.ts`) and the admin bar import this module, and the 
 
 Because the server config MUST NOT run in the browser build, the integration cannot ask the config for its references. It reads the config's source and finds the `clientRef()` calls itself. That is why a `clientRef()` MUST be a literal string. In dev, Astro and `tenonAdmin()` pick up a new reference without a restart. On Nuxt, restart the dev server if it does not appear.
 
+The `imports` field of `tenoncms` maps the specifier to an empty registry (`admin/empty-registry.ts`), so a site
+without an adapter still bundles `tenoncms/preview`. Vite's own resolver reads that field before normal plugins run,
+and its dependency optimizer runs no host plugins. So `clientReferences()` MUST stay `enforce: "pre"` and keep the
+specifier external in `optimizeDeps`, or adapter hosts get the empty registry.
+
 ### How the list is built
 
 `clientReferences()` serves `#tenon/client-registry`. Its `load` hook flows through:
@@ -115,7 +120,7 @@ A reference is a _site_ reference when `adminBar` reaches it. The admin bar runs
 | `sqlite/index.ts`                          | `sqlite()`: the `database` on `node:sqlite`, a SQLite file or `:memory:`.                                                                                                                  |
 | `postgres/index.ts`                        | `postgres()`: the `database` on a Postgres server.                                                                                                                                         |
 | `pglite/index.ts`                          | `pglite()`: the `database` on PGlite.                                                                                                                                                      |
-| `cloudflare/object-client.ts`              | `createObjectClient()`: the client over the object's stub, with the request's origin and cookie.                                                                                           |
+| `cloudflare/object-client.ts`              | `createObjectClient()`: `createRequestClient()` over the object's stub, on the request's origin.                                                                                           |
 | `nuxt/index.ts`                            | The module: aliases, handlers, admin entry and page, preview plugin, types and libsql tracing.                                                                                             |
 | `nuxt/runtime/composables.ts`              | `useTenon()`: the client's read methods in `useAsyncData`, in the route's locale, with preview drafts merged in. `useLocale()`, `useLivePreview()`, `useAlternates()` and `useTenonSeo()`. |
 | `nuxt/runtime/server/site.ts`              | Server middleware: `event.context.tenonSiteUrl = cms.site.url`, which `useTenonSeo()` puts into the payload during SSR.                                                                    |

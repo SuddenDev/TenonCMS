@@ -35,8 +35,7 @@ export const preview: (options?: PreviewOptions) => Unsubscribe = ({
   if (name === undefined) return () => {};
 
   // The admin's own page MAY load this too (Astro injects it into every page).
-  const onAdminPage = admin && (location.pathname + "/").startsWith(`${admin}/`);
-  if (onAdminPage) {
+  if (admin && isAdminPage(admin)) {
     if (name.startsWith("tenon-preview-")) window.name = "";
     return () => {};
   }
@@ -45,6 +44,12 @@ export const preview: (options?: PreviewOptions) => Unsubscribe = ({
   }
   if (!admin || !hasSessionHint()) return () => {};
   return track(startAdminBar("site", admin).stop);
+};
+
+// Whether the page is the admin or below it. An admin on another origin never matches.
+const isAdminPage = (admin: string) => {
+  const url = new URL(admin, location.href);
+  return url.origin === location.origin && (location.pathname + "/").startsWith(`${url.pathname}/`);
 };
 
 // Keeps the running stop function, so a second `preview()` returns it.

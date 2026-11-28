@@ -10,6 +10,7 @@
     "standalone": {
       "label": "Standalone",
       "hint": "headless: API and admin only",
+      "headless": true,
       "targets": ["node", "vercel"]
     }
   },
@@ -25,7 +26,7 @@
       "label": "Node",
       "hint": "a server you run",
       "databases": ["libsql", "postgres", "pglite", "sqlite"],
-      "storages": ["local", "s3"],
+      "storages": ["local", "s3", "r2"],
       "images": [
         "ipx",
         "none",
@@ -37,13 +38,14 @@
         "bunny",
         "imgproxy",
         "thumbor"
-      ]
+      ],
+      "emails": ["none", "smtp", "cloudflare"]
     },
     "vercel": {
       "label": "Vercel",
       "hint": "serverless functions",
       "databases": ["libsql", "postgres"],
-      "storages": ["s3"],
+      "storages": ["s3", "r2"],
       "images": [
         "none",
         "vercel",
@@ -55,7 +57,8 @@
         "bunny",
         "imgproxy",
         "thumbor"
-      ]
+      ],
+      "emails": ["none", "smtp", "cloudflare"]
     },
     "cloudflare": {
       "label": "Cloudflare",
@@ -73,7 +76,8 @@
         "bunny",
         "imgproxy",
         "thumbor"
-      ]
+      ],
+      "emails": ["none", "cloudflare", "smtp"]
     }
   },
   "databases": {
@@ -86,7 +90,7 @@
   "storages": {
     "local": { "label": "Local disk", "hint": "./.uploads" },
     "s3": { "label": "S3-compatible bucket", "hint": "AWS, R2, Neon, MinIO…" },
-    "r2": { "label": "R2", "hint": "a Workers binding" }
+    "r2": { "label": "R2", "hint": "a binding on Cloudflare, API keys elsewhere" }
   },
   "images": {
     "ipx": { "label": "IPX", "hint": "WebP variants rendered by sharp on your server, adds ipx" },
@@ -107,6 +111,10 @@
   },
   "emails": {
     "none": { "label": "None", "hint": "add one later in tenon.config.ts" },
+    "cloudflare": {
+      "label": "Cloudflare Email Service",
+      "hint": "a binding on Cloudflare, an API token elsewhere"
+    },
     "smtp": { "label": "SMTP", "hint": "adds nodemailer" }
   }
 }
