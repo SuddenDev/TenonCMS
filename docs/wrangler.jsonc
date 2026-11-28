@@ -1,0 +1,10 @@
+// Serves the static output of `pnpm build:docs` on tenoncms.com. The build needs NUXT_SITE_URL=https://tenoncms.com.
+{
+  "name": "tenon-docs",
+  "compatibility_date": "2026-11-28",
+  "assets": {
+    "directory": "./.output/public",
+    "not_found_handling": "404-page",
+  },
+  "routes": [{ "pattern": "tenoncms.com", "custom_domain": true }],
+}

@@ -53,6 +53,20 @@ Docus registers the Nuxt UI prose components. A page uses them where they help, 
 
 A page that is not written yet holds its headlines and a few bullets on what belongs there. A bullet that starts with `UI:` names the component for that section. Both go when the page is written.
 
+## Deploy
+
+`pnpm build:docs` writes a static site to `.output/public`. A Cloudflare Worker serves it on tenoncms.com, set up in [`wrangler.jsonc`](wrangler.jsonc). Cloudflare builds the repository on every push to `main`:
+
+| Setting           | Value                                               |
+| ----------------- | --------------------------------------------------- |
+| Root directory    | `/`                                                 |
+| Build command     | `pnpm install --frozen-lockfile && pnpm build:docs` |
+| Deploy command    | `npx wrangler deploy --config docs/wrangler.jsonc`  |
+| Build variable    | `NUXT_SITE_URL=https://tenoncms.com`                |
+| Build watch paths | `docs/*`                                            |
+
+Without `NUXT_SITE_URL`, the sitemap and the OG images point to `localhost`.
+
 ## Docus skill
 
 ```sh
