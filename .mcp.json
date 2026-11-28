@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "docs-mcp-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:yashisrani/Docs-MCP"],
+      "env": {}
+    }
+  }
+}

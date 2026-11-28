@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     nitro({ vercel }),
     // Vercel Hobby allows one cron job a day, so the every-minute job clock is off. Call the clock route instead:
-    // https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/jobs.md#the-clock-route
+    // https://tenoncms.com/docs/core/operations/jobs/clock#the-clock-route
     tenonAdmin({ jobs: false }),
   ],
 });

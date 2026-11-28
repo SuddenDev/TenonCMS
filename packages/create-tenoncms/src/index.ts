@@ -18,7 +18,7 @@ const AUTH_OPTIONS: { value: AuthMethod; label: string; hint?: string }[] = [
 ];
 type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 const BUCKET_CORS =
-  "Its CORS MUST allow PUT from the site and expose ETag: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/media.md#s3-and-r2";
+  "Its CORS MUST allow PUT from the site and expose ETag: https://tenoncms.com/docs/guide/databases-and-storage/media-storage#allow-uploads-from-the-admin";
 /** The variable with the URL of each hosted image provider. */
 const IMAGE_URLS: Record<string, string> = {
   imgix: "IMGIX_URL",
@@ -243,17 +243,17 @@ async function main() {
   if (IMAGE_URLS[images]) p.log.info(`Set ${env}${IMAGE_URLS[images]} in ${envFile}.`);
   if (images === "vercel")
     p.log.info(
-      "Vercel Image Optimization needs `images` in the Vercel config: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/media.md#vercel",
+      "Vercel Image Optimization needs `images` in the Vercel config: https://tenoncms.com/docs/guide/deployment/vercel",
     );
   if (email === "smtp")
     p.log.info(`Set the SMTP server and sender in ${envFile}: ${env}SMTP_* and ${env}EMAIL_FROM.`);
   else if (email === "cloudflare")
     p.log.info(
-      `Set ${target === "cloudflare" ? "" : `${env}CLOUDFLARE_ACCOUNT_ID, ${env}CLOUDFLARE_EMAIL_API_TOKEN and `}${env}EMAIL_FROM in ${envFile}. The sender's domain MUST be onboarded to Cloudflare Email Service: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/email.md#cloudflare-email-service`,
+      `Set ${target === "cloudflare" ? "" : `${env}CLOUDFLARE_ACCOUNT_ID, ${env}CLOUDFLARE_EMAIL_API_TOKEN and `}${env}EMAIL_FROM in ${envFile}. The sender's domain MUST be onboarded to Cloudflare Email Service: https://tenoncms.com/docs/core/operations/email/cloudflare`,
     );
   else if (auth.includes("magic-link") || auth.includes("email-otp"))
     p.log.info(
-      "Magic links and email codes need `email` in tenon.config.ts: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/email.md. Until then, `npx tenon users recover <email>` prints a sign-in link.",
+      "Magic links and email codes need `email` in tenon.config.ts: https://tenoncms.com/docs/core/operations/email. Until then, `npx tenon users recover <email>` prints a sign-in link.",
     );
   p.outro(
     auth.includes("password")

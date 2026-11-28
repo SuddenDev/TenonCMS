@@ -5,7 +5,7 @@
         "// Vercel Image Optimization for `vercel()` images. `sizes` MUST equal `images.sizes` in tenon.config.ts.",
         "nitro: { vercel: { config: { images: { sizes: [320, 640, 1024, 1536, 1920], domains: [] } } } },",
         "// Nitro 2 has no Vercel cron, so the job clock cannot run here. Call the clock route instead:",
-        "// https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/jobs.md#the-clock-route",
+        "// https://tenoncms.com/docs/core/operations/jobs/clock#the-clock-route",
         "tenonCms: { jobs: false },"
       ]
     }

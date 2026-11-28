@@ -144,7 +144,7 @@ const tenonCms: NuxtModule<AdapterOptions> = defineNuxtModule<AdapterOptions>({
       nuxt.hook("nitro:init", (nitro) => {
         if (nitro.options.preset.startsWith("vercel"))
           useLogger("tenoncms").warn(
-            "Jobs do not run on Vercel: Nitro 2 has no Vercel cron. Set `tenonCms: { jobs: false }` and call the clock route: https://github.com/SuddenDev/TenonCMS/blob/main/docs/guide/jobs.md#the-clock-route",
+            "Jobs do not run on Vercel: Nitro 2 has no Vercel cron. Set `tenonCms: { jobs: false }` and call the clock route: https://tenoncms.com/docs/core/operations/jobs/clock#the-clock-route",
           );
       });
   },
