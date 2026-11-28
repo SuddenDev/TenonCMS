@@ -9,6 +9,7 @@ A CMS that runs inside the host app: same repo, same deploy, no second service. 
 - `packages/plugins` (private): the bundled plugins.
 - `packages/create-tenoncms` publishes as `create-tenoncms`. Its starters live in `templates/` ([templates/README.md](templates/README.md)).
 - `examples/`: astro, astro-pglite, cloudflare, headless-site, nuxt, standalone, tanstack-start, vercel.
+  - `headless-nextjs` holds a Next.js site and its CMS. It installs `tenoncms` from npm and stays outside the workspace, so users can copy it.
 - `docs/`: the docs site (tenoncms.com). Pages live in `docs/content/docs/`.
 - `dev/`: knowledge the code cannot show.
 
