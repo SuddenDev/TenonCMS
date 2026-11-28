@@ -1,5 +1,5 @@
 import { defineCms } from "tenoncms";
-import { posts } from "./collections/posts";
+import { posts } from "./cms/collections/posts";
 // @tenon-imports
 
 export default defineCms({

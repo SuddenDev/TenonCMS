@@ -1,0 +1,14 @@
+---
+import { Richtext } from "tenoncms/astro/components";
+import type { BlockProps } from "./types";
+
+type Props = BlockProps<"text">;
+const { block, edit } = Astro.props;
+---
+
+<section class="wrap">
+  <div class="split text">
+    <h2 data-cms={edit("title")}>{block.title}</h2>
+    <Richtext content={block.body} class="prose" data-cms={edit("body")} />
+  </div>
+</section>

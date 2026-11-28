@@ -1,23 +1,40 @@
 ---
+import { Image, Richtext } from "tenoncms/astro/components";
 import { edit } from "tenoncms/preview";
+import Layout from "../../layouts/Layout.astro";
 
 const post = await Astro.locals.tenon.findOne("posts", { where: { slug: Astro.params.slug! } });
 if (!post) return new Response(null, { status: 404 });
+const date = new Date(post.publishedAt ?? post.createdAt).toLocaleDateString("en", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{post.title}</title>
-  </head>
-  <body>
-    <p>
-      <a href="/">All posts</a>
-    </p>
-    <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
-    <p data-cms={edit("posts", post.id, "body")} style="white-space: pre-wrap">
-      {post.body}
-    </p>
-  </body>
-</html>
+<Layout title={post.title}>
+  <article class="wrap narrow">
+    <header class="post-head">
+      <a class="back" href="/">
+        ← All posts
+      </a>
+      <h1 data-cms={edit("posts", post.id, "title")}>{post.title}</h1>
+    </header>
+    <Image
+      image={post.image}
+      class="post-image"
+      sizes="(min-width: 768px) 688px, 100vw"
+      loading="eager"
+      fetchpriority="high"
+      data-cms={edit("posts", post.id, "image")}
+    />
+    <div class="post-body">
+      <div class="stack">
+        <time class="date">{date}</time>
+        <p class="hint">
+          Edit <code class="chip">src/pages/posts/[slug].astro</code> to change this page.
+        </p>
+      </div>
+      <Richtext content={post.body} class="prose" data-cms={edit("posts", post.id, "body")} />
+    </div>
+  </article>
+</Layout>

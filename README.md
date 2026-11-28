@@ -31,7 +31,7 @@ Needs Node 24 or newer.
 npm create tenoncms@latest
 ```
 
-Follow the wizard, select your preffered framework, database, media storage and starter template (currently only minimal available).
+Follow the wizard, select your preferred framework, database, media storage and starter template: `minimal`, or `website` for pages built from blocks with sample content.
 
 ```sh
 cd my-site

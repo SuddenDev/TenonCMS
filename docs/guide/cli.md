@@ -18,6 +18,11 @@ It asks one question at a time: the folder, the site name (default `Tenon`, writ
 | Vercel                  | SQLite / Turso (a file in development, Turso on Vercel), Postgres                       | S3-compatible bucket, R2                 |
 | Cloudflare (Astro only) | Durable Object                                                                          | R2                                       |
 
+The templates:
+
+- `minimal` (the default): a `posts` collection with a title, an image and rich text, and two pages. The home page counts and lists the posts and names the files to change next; each post has its own page. It has the same look and light/dark switch as `website`. Standalone has no site, so its `minimal` is the collection alone.
+- `website` (Astro, Nuxt and TanStack Start): pages from `pagesPreset` with four blocks (hero, image, text and list) in `cms/blocks.ts`, a main menu, and one route that renders any page by its path. A seed in `cms/seed.ts` fills a new database with a Home and an About page, the menu, the site title and one image. The Home page explains how these parts fit together. The colors and fonts are CSS variables at the top of `site.css`; each color is `light-dark(light, dark)`. A switch in the header picks light or dark and remembers it, and the first visit follows the system setting.
+
 R2 on Cloudflare uses the bucket binding `MEDIA`. On Node and Vercel it uses API keys: `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `.env.example`, and the bucket needs [CORS](./media.md#s3-and-r2), as with S3. The optional `R2_PREFIX` and `S3_PREFIX` keep every file in one folder of the bucket, so several sites can share it.
 
 The standalone starter reads `TENON_CMS_URL` into `auth.baseURL`. Set it with `TENON_SITE_URL` when a site on another origin reads the CMS, as in [the headless example](../../examples/headless-site/README.md).

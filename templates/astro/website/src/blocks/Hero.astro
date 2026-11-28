@@ -1,0 +1,29 @@
+---
+import { Link } from "tenoncms/astro/components";
+import type { BlockProps } from "./types";
+
+type Props = BlockProps<"hero">;
+const { block, edit } = Astro.props;
+---
+
+<section class="wrap hero">
+  <h1 data-cms={edit("title")}>{block.title}</h1>
+  {block.intro && (
+    <p class="intro" data-cms={edit("intro")}>
+      {block.intro}
+    </p>
+  )}
+  {block.links?.length ? (
+    <div class="actions">
+      {block.links.map((item, i) => (
+        <Link
+          link={item.link}
+          class={i === 0 ? "button" : undefined}
+          data-cms={edit(`links.${i}.label`)}
+        >
+          {item.label || item.link?.title}
+        </Link>
+      ))}
+    </div>
+  ) : null}
+</section>

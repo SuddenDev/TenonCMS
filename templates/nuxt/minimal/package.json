@@ -8,6 +8,7 @@
     "preview": "nuxt preview"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
     "nuxt": "^4.6.2",
     "tenoncms": "latest",
     "vue": "^3.5.44",

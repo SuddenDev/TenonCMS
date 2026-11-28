@@ -1,0 +1,80 @@
+---
+import "@fontsource-variable/geist";
+import "../styles/site.css";
+import { menuItems } from "tenoncms";
+import { Blocks, Seo } from "tenoncms/astro/components";
+import { edit } from "tenoncms/preview";
+import ThemeSwitch from "../components/ThemeSwitch.astro";
+import Hero from "../blocks/Hero.astro";
+import Image from "../blocks/Image.astro";
+import List from "../blocks/List.astro";
+import Text from "../blocks/Text.astro";
+
+// Every URL lands here and shows the page with that path. `/` is the page with the slug `index`.
+const { tenon } = Astro.locals;
+const path = `/${Astro.params.path ?? ""}`;
+const [page, general, menu] = await Promise.all([
+  tenon.findOne("pages", { where: { path } }),
+  tenon.getGlobal("general"),
+  tenon.getGlobal("mainMenu"),
+]);
+if (!page) return new Response("Not found", { status: 404 });
+const siteName = general.title || "Home";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <Seo page={page} general={general} />
+    <!-- The saved theme, else the system's, before the first paint. -->
+    <script is:inline>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("theme") ??
+          (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <header class="wrap header">
+      <a class="brand" href="/" data-cms={edit("general", null, "title")}>
+        {siteName}
+      </a>
+      <div class="header-end">
+        <nav aria-label="Main">
+          <ul class="nav">
+            {menuItems(menu.items).map((item) => (
+              <li>
+                <a
+                  href={item.href ?? undefined}
+                  target={item.target}
+                  aria-current={item.href === path ? "page" : undefined}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <ThemeSwitch />
+      </div>
+    </header>
+    <Blocks
+      as="main"
+      blocks={page.content}
+      components={{ hero: Hero, image: Image, text: Text, list: List }}
+      edit={{ collection: "pages", id: page.id, path: "content" }}
+    />
+    <footer class="footer">
+      <div class="wrap">
+        <span>
+          © {new Date().getFullYear()} {siteName}
+        </span>
+        <span>
+          Built with <a href="https://github.com/SuddenDev/TenonCMS">tenoncms</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

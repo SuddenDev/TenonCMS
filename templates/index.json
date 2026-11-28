@@ -19,6 +19,11 @@
       "label": "Minimal",
       "hint": "one collection and two pages",
       "frameworks": ["astro", "nuxt", "tanstack", "standalone"]
+    },
+    "website": {
+      "label": "Website",
+      "hint": "pages built from blocks, a menu and sample content",
+      "frameworks": ["astro", "nuxt", "tanstack"]
     }
   },
   "targets": {

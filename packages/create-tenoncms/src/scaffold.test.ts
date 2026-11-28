@@ -137,30 +137,34 @@ describe("scaffold", () => {
 
   it("declares every runtimeConfig key that a Nuxt starter reads, with its NUXT_ variable", async () => {
     const index = await readIndex(templates);
-    for (const target of index.frameworks.nuxt!.targets)
-      for (const database of index.targets[target]!.databases)
-        for (const storage of index.targets[target]!.storages) {
-          const dir = project();
-          const choices = { name: "a", framework: "nuxt", template: "minimal", target };
-          await scaffold(templates, dir, { ...choices, database, storage });
-          const combo = `${target}/${database}/${storage}`;
+    const starters = Object.keys(index.templates).filter((template) =>
+      index.templates[template]!.frameworks.includes("nuxt"),
+    );
+    for (const template of starters)
+      for (const target of index.frameworks.nuxt!.targets)
+        for (const database of index.targets[target]!.databases)
+          for (const storage of index.targets[target]!.storages) {
+            const dir = project();
+            const choices = { name: "a", framework: "nuxt", template, target };
+            await scaffold(templates, dir, { ...choices, database, storage });
+            const combo = `${template}/${target}/${database}/${storage}`;
 
-          const config = read(dir, "tenon.config.ts");
-          const nuxt = read(dir, "nuxt.config.ts");
-          const example = read(dir, ".env.example");
-          const keys = [...nuxt.matchAll(/^ {4}(\w+): ".*",$/gm)].map((m) => m[1]!);
-          const used = [...config.matchAll(/\bconfig\.(\w+)/g)].map((m) => m[1]!);
+            const config = read(dir, "tenon.config.ts");
+            const nuxt = read(dir, "nuxt.config.ts");
+            const example = read(dir, ".env.example");
+            const keys = [...nuxt.matchAll(/^ {4}(\w+): ".*",$/gm)].map((m) => m[1]!);
+            const used = [...config.matchAll(/\bconfig\.(\w+)/g)].map((m) => m[1]!);
 
-          expect(config, combo).not.toContain("process.env");
-          expect(config + nuxt, combo).not.toContain("@tenon-");
-          expect(keys, combo).toContain("tenonSecret");
-          for (const key of used) expect(keys, `${combo}: ${key}`).toContain(key);
-          for (const key of keys) {
-            const name = `NUXT_${key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}`;
-            expect(example, `${combo}: ${name}`).toMatch(new RegExp(`^(# )?${name}=`, "m"));
+            expect(config, combo).not.toContain("process.env");
+            expect(config + nuxt, combo).not.toContain("@tenon-");
+            expect(keys, combo).toContain("tenonSecret");
+            for (const key of used) expect(keys, `${combo}: ${key}`).toContain(key);
+            for (const key of keys) {
+              const name = `NUXT_${key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase()}`;
+              expect(example, `${combo}: ${name}`).toMatch(new RegExp(`^(# )?${name}=`, "m"));
+            }
+            expect(example, combo).not.toMatch(/^(# )?(?!NUXT_)[A-Z_0-9]+=/m);
           }
-          expect(example, combo).not.toMatch(/^(# )?(?!NUXT_)[A-Z_0-9]+=/m);
-        }
   });
 
   it("approves the dependency builds the layers need, for pnpm", async () => {
