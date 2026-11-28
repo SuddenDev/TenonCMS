@@ -1,0 +1,16 @@
+---
+import { Image as CmsImage } from "tenoncms/astro/components";
+import type { BlockProps } from "./types";
+
+type Props = BlockProps<"image">;
+const { block, edit } = Astro.props;
+---
+
+<figure class="wrap figure">
+  <CmsImage
+    image={block.image}
+    sizes="(min-width: 1200px) 1120px, 100vw"
+    data-cms={edit("image")}
+  />
+  {block.caption && <figcaption data-cms={edit("caption")}>{block.caption}</figcaption>}
+</figure>

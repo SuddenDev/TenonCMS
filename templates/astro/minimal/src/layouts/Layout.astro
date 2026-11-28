@@ -1,0 +1,50 @@
+---
+import "@fontsource-variable/geist";
+import "../styles/site.css";
+import ThemeSwitch from "../components/ThemeSwitch.astro";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+// The site title from Settings in the admin.
+const general = await Astro.locals.tenon.getGlobal("general");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <!-- The saved theme, else the system's, before the first paint. -->
+    <script is:inline>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("theme") ??
+          (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <header class="wrap header">
+      <a class="brand" href="/">
+        {general.title || "Home"}
+      </a>
+      <div class="header-end">
+        <a href="/admin">Admin ↗</a>
+        <ThemeSwitch />
+      </div>
+    </header>
+    <slot />
+    <footer class="wrap">
+      <div class="footer">
+        <span>Built with tenoncms</span>
+        <nav aria-label="Tenon">
+          <a href="https://tenoncms.com/docs">Docs</a>
+          <a href="https://github.com/SuddenDev/TenonCMS">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

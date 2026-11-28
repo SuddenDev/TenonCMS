@@ -33,7 +33,7 @@ const HELP = `Usage: npm create tenoncms [dir] [options]
 
   --site-name <name>    The site's name (site.name). Default: Tenon
   --framework <name>    astro, nuxt, tanstack or standalone
-  --template <name>     The starter. Default: minimal
+  --template <name>     minimal (the default) or website (Astro, Nuxt and TanStack Start)
   --target <name>       node, vercel or cloudflare (Astro only)
   --database <name>     node: libsql, postgres, pglite or sqlite. vercel: libsql or postgres
   --storage <name>      node: local, s3 or r2. vercel: s3 or r2

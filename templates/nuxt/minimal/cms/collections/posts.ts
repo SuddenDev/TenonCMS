@@ -6,6 +6,7 @@ export const posts = defineCollection({
   fields: {
     title: { type: "text", required: true },
     slug: { type: "slug", from: "title", required: true, unique: true },
-    body: { type: "textarea" },
+    image: { type: "image" },
+    body: { type: "richtext" },
   },
 });

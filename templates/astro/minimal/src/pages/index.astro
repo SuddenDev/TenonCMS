@@ -1,28 +1,93 @@
 ---
 import { edit } from "tenoncms/preview";
+import Layout from "../layouts/Layout.astro";
 
+// The newest posts come first.
 const posts = await Astro.locals.tenon.find("posts");
+const date = (value: string) =>
+  new Date(value).toLocaleDateString("en", { dateStyle: "medium", timeZone: "UTC" });
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>My site</title>
-  </head>
-  <body>
-    <h1>Posts</h1>
-    <ul>
-      {posts.map((post) => (
-        <li>
-          <a href={`/posts/${post.slug}`} data-cms={edit("posts", post.id, "title")}>
-            {post.title}
-          </a>
-        </li>
-      ))}
-    </ul>
-    <p>
-      <a href="/admin">Admin</a>
-    </p>
-  </body>
-</html>
+<Layout title="Welcome to Tenon">
+  <main class="wrap">
+    <section class="hero">
+      <h1>Welcome to Tenon</h1>
+      <p class="intro">
+        This page reads the posts collection. Add a post in the admin, reload, and the count below
+        goes up.
+      </p>
+      <div class="actions">
+        <a class="button" href="/admin">
+          Open the admin
+        </a>
+        <a href="https://tenoncms.com/docs">Read the docs</a>
+      </div>
+      <p class="hint">
+        Edit <code class="chip">src/pages/index.astro</code> and save to see this page change.
+      </p>
+    </section>
+
+    <section class="section">
+      <div class="split">
+        <div class="stack">
+          <p class="count">{posts.length}</p>
+          <p class="label">
+            {posts.length === 1 ? "Post" : "Posts"} in the <code class="chip">posts</code>{" "}
+            collection
+          </p>
+          <p class="muted">
+            Read with <code>Astro.locals.tenon.find("posts")</code>
+          </p>
+        </div>
+        {posts.length > 0 ? (
+          <ul class="rows posts">
+            {posts.map((post) => (
+              <li>
+                <a href={`/posts/${post.slug}`}>
+                  <strong data-cms={edit("posts", post.id, "title")}>{post.title}</strong>
+                  <time class="date">{date(post.publishedAt ?? post.createdAt)}</time>
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div class="empty">
+            <p class="label">No posts yet.</p>
+            <p class="muted">Sign in, write the first one and reload this page.</p>
+            <a href="/admin">Write a post</a>
+          </div>
+        )}
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="split">
+        <div class="stack">
+          <h2>Make it yours</h2>
+          <p class="muted">Change these files. The page reloads on save.</p>
+        </div>
+        <ul class="rows">
+          <li>
+            <code class="chip">cms/collections/posts.ts</code>
+            <span>
+              The fields of a post: a title, an image and the text. Add one, and the admin shows it
+              after a reload.
+            </span>
+          </li>
+          <li>
+            <code class="chip">src/pages/index.astro</code>
+            <span>This page and how it reads the posts.</span>
+          </li>
+          <li>
+            <code class="chip">src/pages/posts/[slug].astro</code>
+            <span>The page of one post, with its image and text.</span>
+          </li>
+          <li>
+            <code class="chip">tenon.config.ts</code>
+            <span>The collections, the database, media and sign-in.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</Layout>

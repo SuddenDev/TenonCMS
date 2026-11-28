@@ -1,0 +1,22 @@
+---
+import type { BlockProps } from "./types";
+
+type Props = BlockProps<"list">;
+const { block, edit } = Astro.props;
+---
+
+<section class="wrap split">
+  <div class="split-head">
+    <h2 data-cms={edit("title")}>{block.title}</h2>
+    {block.intro && <p data-cms={edit("intro")}>{block.intro}</p>}
+  </div>
+  <ul class="rows">
+    {block.items?.map((item, i) => (
+      <li>
+        <strong data-cms={edit(`items.${i}.title`)}>{item.title}</strong>
+        <span data-cms={edit(`items.${i}.text`)}>{item.text}</span>
+        <code data-cms={edit(`items.${i}.note`)}>{item.note}</code>
+      </li>
+    ))}
+  </ul>
+</section>

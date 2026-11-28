@@ -32,6 +32,17 @@ Every project gets `secret: $TENON_SECRET` (`SECRET_PART`) and `site: { url: $TE
 
 Astro and Nuxt read `admin.path` from `tenon.config.ts`, and standalone's `server.ts` reads `cms.adminPath`. The TanStack route file (`src/routes/admin.$.ts`) MUST match `admin.path`.
 
+## minimal and website
+
+`minimal` (Astro, Nuxt and TanStack Start) and `website` share one look: a `site.css` with `light-dark()` colors and a `ThemeSwitch` in the header. Each starter's `site.css` and `ThemeSwitch` are the same file in all three frameworks, so change them together. Standalone's `minimal` has no site.
+
+The `website` starter is the same site in each framework. Its `cms/blocks.ts`, `cms/seed.ts`, `tenon.config.ts` and `site.css` differ only in the paths and component names they mention. A change to one MUST go to all three.
+
+- The seed passes `cms.site.name` through `siteName()`, a function with a return type. Reading `cms` inside `defineCms()` directly makes TypeScript lose the config's types.
+- The seed image is an SVG built in code, so it needs no file and uploads on every host.
+- The theme switch sets `data-theme` on `<html>` and keeps it in `localStorage`. A script in the head sets it before the first paint, so React (`suppressHydrationWarning`) and Vue find it already there.
+- One catch-all route renders every page by `path`; `/` is the page with the slug `index`. The hero's links are plain `<a>` elements, because a link such as `/admin` is no route of the app.
+
 ## Checks
 
 A new template MUST work with each database and storage of its targets. Locally run `pnpm tarball`, then `pnpm smoke:templates <framework> <target> [database] [storage] [template] [auth]`, where `auth` is the `--auth` list. CI runs the jobs of `scripts/template-matrix.mjs`; each framework runs once with `passkey,magic-link` and no password.
