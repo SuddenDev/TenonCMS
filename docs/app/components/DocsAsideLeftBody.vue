@@ -10,12 +10,13 @@ const route = useRoute();
 const contentNavVariants = useUIConfig("contentNavigation");
 
 // Section headings stay open. Folders below them, like Fields, start closed unless they hold the current page.
+// A section without folders, like CLI, lists its pages at the top level. Those MUST stay links.
 const navigation = computed<ContentNavigationLink[] | undefined>(() =>
-  (props.navigation ?? sidebarNavigation.value)?.map((section) => ({
-    ...section,
-    disabled: true,
-    children: section.children?.map(markFolders),
-  })),
+  (props.navigation ?? sidebarNavigation.value)?.map((section) =>
+    section.children?.length
+      ? { ...section, disabled: true, children: section.children.map(markFolders) }
+      : section,
+  ),
 );
 
 function markFolders(link: ContentNavigationLink): ContentNavigationLink {
