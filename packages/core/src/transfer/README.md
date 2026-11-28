@@ -1,6 +1,6 @@
 # transfer
 
-Export and import of all content as one ZIP archive: `cms.export()`, `cms.import()`, `cms.exportSummary()` and their routes under `/_tenon/export` and `/_tenon/import`. A `full` archive also holds users, accounts, API keys and jobs; the `tenon backup` CLI writes one. Used for backups, for moving content between databases, and as the data of a [seed](../lifecycle/README.md). The guide is [Backup and restore](../../../../temporary_docs/content/1.guide/backup.md).
+Export and import of all content as one ZIP archive: `cms.export()`, `cms.import()`, `cms.exportSummary()` and their routes under `/_tenon/export` and `/_tenon/import`. A `full` archive also holds users, accounts, API keys and jobs; the `tenon backup` CLI writes one. Used for backups, for moving content between databases, and as the data of a [seed](../lifecycle/README.md). The guide is [Backup and restore](../../../../docs/content/docs/1.core/7.operations/4.backup-and-restore.md).
 
 ## Follow an export
 

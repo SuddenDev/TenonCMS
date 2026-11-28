@@ -1,6 +1,6 @@
 # webhooks
 
-Outgoing webhooks. A change of published content queues one `tenon:webhook` job per matching webhook, and the [jobs](../jobs/README.md) clock POSTs it. The host guide is [temporary_docs/content/1.guide/webhooks.md](../../../../temporary_docs/content/1.guide/webhooks.md).
+Outgoing webhooks. A change of published content queues one `tenon:webhook` job per matching webhook, and the [jobs](../jobs/README.md) clock POSTs it. The host guide is [Webhooks](../../../../docs/content/docs/1.core/7.operations/3.webhooks/index.md).
 
 ## Follow a change
 

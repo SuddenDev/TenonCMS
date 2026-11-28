@@ -1,6 +1,6 @@
 # lifecycle
 
-Hooks of the CMS itself: `seed`, `onInit`, `afterImport` and `afterError`. The host sets them on `defineCms()`, plugins on `definePlugin()`. `owners()` lists the plugins in order, then the host (`core.lifecycle`). The guide is [Lifecycle hooks](../../../../temporary_docs/content/1.guide/lifecycle.md).
+Hooks of the CMS itself: `seed`, `onInit`, `afterImport` and `afterError`. The host sets them on `defineCms()`, plugins on `definePlugin()`. `owners()` lists the plugins in order, then the host (`core.lifecycle`). The guide is [Lifecycle hooks](../../../../docs/content/docs/1.core/7.operations/5.lifecycle-hooks.md).
 
 ## The start gate
 

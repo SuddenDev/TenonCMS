@@ -29,7 +29,7 @@ const links = [
   >
     <template #body>
       <h1 class="mb-4 text-5xl font-medium lg:mb-6 lg:text-7xl">
-        The monolythic headless CMS.
+        The monolithic headless CMS.
         <!-- A CMS integrated into your app. -->
       </h1>
       <p class="text-muted max-w-3xl lg:text-lg">

@@ -66,7 +66,7 @@ const project = [
     ],
   },
   {
-    title: "See whats next!",
+    title: "See what's next!",
     description: "Tenon is in version 0.x. The roadmap shows what is done and what comes next.",
     links: [
       {

@@ -29,6 +29,7 @@ Each of these cost a debugging round. Check here when something behaves strangel
 **Dev servers**
 
 - Dev servers bind `[::1]`, and `curl localhost` hits them first. Test a production build on `HOST=127.0.0.1`, another port and its own `DATABASE_URL`. Otherwise you test a leftover dev server and write into its database.
+- A build runs migrations against `DATABASE_URL`. Build with a temp database, never the deployed one.
 - A leftover Astro daemon or `cms.db` makes sign-up return 403, because only the first user may sign up. Astro 7 `dev` and `preview` run as daemons: stop them with `npx astro dev stop` and `npx astro preview logs`.
 - `astro preview` does not load `.env`. The script runs it through `node --env-file-if-exists=.env`.
 - `nuxt preview` runs with its working directory in `.output/`, so a relative `file:./cms.db` lands in the build output and gets wiped. Use absolute paths.

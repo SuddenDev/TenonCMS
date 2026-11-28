@@ -80,7 +80,7 @@ export default defineCms({
     label: "CLI",
     icon: "i-lucide-terminal",
     // image: "/images/henrik-donnestad-HO1Evlp1p1o-unsplash.jpg",
-    title: "Mangage your CMS through the CLI",
+    title: "Manage your CMS through the CLI",
     description:
       "The tenon command comes with the package. It backs up a project, restores it, upgrades it and manages its users.",
     points: [
