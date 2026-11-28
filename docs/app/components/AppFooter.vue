@@ -70,6 +70,12 @@ const columns = [
         </p>
       </template>
 
+      <template #default>
+        <p class="text-muted text-sm">
+          Created by
+          <a class="underline" href="https://dtampe.com?ref=Tenon" target="_blank">Dominik Tampe</a>
+        </p>
+      </template>
       <template #right>
         <AppFooterRight />
       </template>

@@ -281,6 +281,10 @@ I built this project fast, with the help of AI tools. I wanted to have something
 
 [MIT](https://github.com/SuddenDev/TenonCMS/blob/main/LICENSE)
 
+---
+
+Created by [Dominik Tampe](https://dtampe.com?ref=Tenon)
+
 <!-- Absolute links, because the README also ships to npm. -->
 
 [agents-md]: https://github.com/SuddenDev/TenonCMS/blob/main/AGENTS.md
