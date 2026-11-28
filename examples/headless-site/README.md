@@ -111,7 +111,7 @@ The visual editor lists the documents a page marks under "On this page", and the
 4. `createRequestClient()` forwards them to the CMS.
 5. The CMS returns drafts only for a valid session with `tenon-preview=drafts`. A request without a session reads published content, even with the preview cookie.
 
-A statically built site has no page request, so its build reads published content. Rebuild it when content changes, for example with a deploy hook as a [webhook](../../docs/guide/webhooks.md).
+A statically built site has no page request, so its build reads published content. Rebuild it when content changes, for example with a deploy hook as a [webhook](https://tenoncms.com/docs/core/operations/webhooks/rebuild-on-publish).
 
 ## Types
 
