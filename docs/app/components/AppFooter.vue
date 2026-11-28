@@ -58,7 +58,7 @@ const columns = [
               <NuxtLink to="/" class="inline-flex">
                 <img src="/logo/tenon-logo-dark.svg" alt="Tenon CMS" class="h-5 w-auto" />
               </NuxtLink>
-              <p class="text-muted mt-4 max-w-xs text-sm">The CMS that lives inside your app.</p>
+              <p class="text-muted mt-4 max-w-xs text-sm">The monolithic headless CMS.</p>
             </template>
           </UFooterColumns>
         </UContainer>

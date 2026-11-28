@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <strong>The CMS that lives inside your app.</strong>
+  <strong>The monolithic headless CMS.</strong>
   <br>
   The admin, the API and your content run in the app you already deploy.
   <br>
