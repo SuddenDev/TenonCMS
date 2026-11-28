@@ -12,5 +12,8 @@
     "better-sqlite3": "^12.11.1",
     "docus": "^5.15.0",
     "nuxt": "^4.6.2"
+  },
+  "devDependencies": {
+    "wrangler": "^4.154.0"
   }
 }

@@ -61,7 +61,7 @@ A page that is not written yet holds its headlines and a few bullets on what bel
 | ----------------- | --------------------------------------------------- |
 | Root directory    | `/`                                                 |
 | Build command     | `pnpm install --frozen-lockfile && pnpm build:docs` |
-| Deploy command    | `npx wrangler deploy --config docs/wrangler.jsonc`  |
+| Deploy command    | `pnpm deploy:docs`                                  |
 | Build variable    | `NUXT_SITE_URL=https://tenoncms.com`                |
 | Build watch paths | `docs/*`                                            |
 
