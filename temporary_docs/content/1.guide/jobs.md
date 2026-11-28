@@ -41,7 +41,11 @@ Inside a hook, use the `cms` the hook gets. The job joins the write's transactio
 
 ```ts
 hooks: {
-  afterChange: [({ cms, doc }) => cms.jobs.queue("send-digest", { id: doc.id })],
+  afterChange: [
+    async ({ cms, doc }) => {
+      await cms.jobs.queue("send-digest", { id: doc.id });
+    },
+  ],
 }
 ```
 
@@ -53,7 +57,11 @@ Queuing a task that is not defined throws.
 
 ```ts
 // One rebuild per minute at most, however many writes happen.
-afterChange: [({ cms }) => cms.jobs.queue("rebuild", null, { key: "site", runAt: Date.now() + 60_000 })],
+afterChange: [
+  async ({ cms }) => {
+    await cms.jobs.queue("rebuild", null, { key: "site", runAt: Date.now() + 60_000 });
+  },
+],
 ```
 
 `merge(queued, next)` returns the new payload of the job that waits, for a task that needs every call's data:
