@@ -2,11 +2,12 @@
 const appConfig = useAppConfig();
 const repo = useRepoUrl();
 
-const title = "The CMS that lives inside your app";
+const title = "The monolithic headless CMS";
 const description = appConfig.seo.description;
 
 useSeo({ title, description, type: "website" });
-defineOgImage("Landing", {
+// @ts-expect-error: index does not have an og image
+defineOgImage("Docs", {
   title: formatOgTitle(title),
   description: formatOgDescription(title, description),
 });
